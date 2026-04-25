@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Devis Photo</title>
+<style>
+  *{box-sizing:border-box}
+  body{margin:0;font-family:system-ui,-apple-system,sans-serif;background:#fafafa;color:#222}
+  #app{display:flex;min-height:100vh}
+  .sb{width:200px;background:#1f2937;color:#e5e7eb;display:flex;flex-direction:column}
+  .sb h1{font-size:13px;padding:18px 16px 10px;margin:0;opacity:.7;letter-spacing:.05em;text-transform:uppercase}
+  .sb button.tab{display:block;width:100%;background:none;border:0;color:inherit;padding:10px 16px;text-align:left;cursor:pointer;font:inherit;font-size:14px}
+  .sb button.tab:hover{background:#111827}
+  .sb button.tab.active{background:#111827;color:#fff;border-left:3px solid #3b82f6;padding-left:13px}
+  .sb .user{margin-top:auto;padding:12px 16px;font-size:12px;opacity:.75;border-top:1px solid #374151}
+  .sb .user a{color:inherit}
+  main{flex:1;padding:24px 32px;max-width:900px}
+  h2{margin-top:0}
+  h3{margin-top:24px;margin-bottom:8px;font-size:14px;color:#6b7280;text-transform:uppercase;letter-spacing:.05em}
+  .row{display:flex;gap:12px;margin-bottom:8px;flex-wrap:wrap}
+  .field{display:flex;flex-direction:column;flex:1;min-width:180px}
+  .field label{font-size:12px;color:#6b7280;margin-bottom:4px}
+  .field input,.field textarea,.field select{padding:8px 10px;border:1px solid #d1d5db;border-radius:6px;font:inherit;background:#fff}
+  .field textarea{min-height:80px;resize:vertical}
+  .btn{background:#3b82f6;color:#fff;border:0;padding:10px 16px;border-radius:6px;cursor:pointer;font:inherit}
+  .btn:hover{background:#2563eb}
+  .login{display:flex;align-items:center;justify-content:center;height:100vh;flex-direction:column;gap:16px}
+  .saved{font-size:12px;color:#10b981;margin-left:12px;font-weight:normal}
+</style>
+</head>
+<body>
+<div id="app"></div>
+
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+
+<script>
+firebase.initializeApp({
+  apiKey: "AIzaSyCYavugjWaUfm9wP3qnaU9flIBCFTDfiq4",
+  authDomain: "devis-photo-5b23e.firebaseapp.com",
+  projectId: "devis-photo-5b23e",
+  storageBucket: "devis-photo-5b23e.firebasestorage.app",
+  messagingSenderId: "422228820869",
+  appId: "1:422228820869:web:c0daf3af59494e844cfaec"
+});
+const auth = firebase.auth();
+const db = firebase.firestore();
+
+const SK = "devis-photo-data-v1";
+const DEFAULT_S = {
+  devis: {
+    client: { name: "", email: "", phone: "" },
+    event:  { type: "", date: "", location: "" },
+    pricing:{ hours: "", priceHT: "", tva: "20" },
+    notes: ""
+  }
+};
+let S = JSON.parse(localStorage.getItem(SK) || "null") || JSON.parse(JSON.stringify(DEFAULT_S));
+let user = null;
+let tab = "donnees";
+let cloudT = null;
+
+const app = document.getElementById("app");
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+
+function save() {
+  localStorage.setItem(SK, JSON.stringify(S));
+  clearTimeout(cloudT);
+  cloudT = setTimeout(saveToCloud, 800);
+}
+
+async function saveToCloud() {
+  if (!user) return;
+  try {
+    await db.collection("users").doc(user.uid).set({ devis: S.devis }, { merge: true });
+    const e = document.getElementById("savedFlash");
+    if (e) { e.textContent = "Enregistré"; setTimeout(() => { if (e && e.textContent === "Enregistré") e.textContent = ""; }, 1500); }
+  } catch (err) { console.error("saveToCloud", err); }
+}
+
+async function loadFromCloud() {
+  if (!user) return;
+  try {
+    const snap = await db.collection("users").doc(user.uid).get();
+    if (snap.exists) {
+      const d = snap.data();
+      if (d.devis) S.devis = Object.assign(JSON.parse(JSON.stringify(DEFAULT_S.devis)), d.devis);
+      localStorage.setItem(SK, JSON.stringify(S));
+    }
+  } catch (err) { console.error("loadFromCloud", err); }
+  render();
+}
+
+function upd(path, val) {
+  const keys = path.split(".");
+  let o = S;
+  for (let i = 0; i < keys.length - 1; i++) o = o[keys[i]];
+  o[keys[keys.length - 1]] = val;
+  save();
+}
+window.upd = upd;
+
+function render() {
+  if (!user) {
+    app.innerHTML = `<div class="login"><h1>Devis Photo</h1><button class="btn" onclick="signIn()">Se connecter avec Google</button></div>`;
+    return;
+  }
+  const tabs = [["donnees", "Données"]];
+  app.innerHTML = `
+    <aside class="sb">
+      <h1>Devis Photo</h1>
+      ${tabs.map(([k,l]) => `<button class="tab ${tab===k?"active":""}" onclick="setTab('${k}')">${l}</button>`).join("")}
+      <div class="user">${esc(user.email)}<br><a href="#" onclick="signOut();return false">Déconnexion</a></div>
+    </aside>
+    <main>${tab === "donnees" ? rDN() : ""}</main>`;
+}
+
+function rDN() {
+  const d = S.devis;
+  return `
+    <h2>Données du devis <span id="savedFlash" class="saved"></span></h2>
+    <h3>Client</h3>
+    <div class="row">
+      <div class="field"><label>Nom</label><input value="${esc(d.client.name)}" oninput="upd('devis.client.name', this.value)"></div>
+      <div class="field"><label>Email</label><input type="email" value="${esc(d.client.email)}" oninput="upd('devis.client.email', this.value)"></div>
+      <div class="field"><label>Téléphone</label><input value="${esc(d.client.phone)}" oninput="upd('devis.client.phone', this.value)"></div>
+    </div>
+    <h3>Prestation</h3>
+    <div class="row">
+      <div class="field"><label>Type</label><input value="${esc(d.event.type)}" oninput="upd('devis.event.type', this.value)" placeholder="Mariage, portrait, événement…"></div>
+      <div class="field"><label>Date</label><input type="date" value="${esc(d.event.date)}" oninput="upd('devis.event.date', this.value)"></div>
+      <div class="field"><label>Lieu</label><input value="${esc(d.event.location)}" oninput="upd('devis.event.location', this.value)"></div>
+    </div>
+    <h3>Tarification</h3>
+    <div class="row">
+      <div class="field"><label>Durée (h)</label><input type="number" value="${esc(d.pricing.hours)}" oninput="upd('devis.pricing.hours', this.value)"></div>
+      <div class="field"><label>Prix HT (€)</label><input type="number" step="0.01" value="${esc(d.pricing.priceHT)}" oninput="upd('devis.pricing.priceHT', this.value)"></div>
+      <div class="field"><label>TVA (%)</label><input type="number" value="${esc(d.pricing.tva)}" oninput="upd('devis.pricing.tva', this.value)"></div>
+    </div>
+    <h3>Notes</h3>
+    <div class="row"><div class="field"><textarea oninput="upd('devis.notes', this.value)">${esc(d.notes)}</textarea></div></div>
+  `;
+}
+
+window.setTab = k => { tab = k; render(); };
+window.signIn = () => auth.signInWithPopup(new firebase.auth.GoogleAuthProvider()).catch(err => alert(err.message));
+window.signOut = () => auth.signOut();
+
+auth.onAuthStateChanged(async u => {
+  user = u;
+  if (u) await loadFromCloud(); else render();
+});
+
+render();
+</script>
+</body>
+</html>
