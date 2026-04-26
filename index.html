@@ -118,12 +118,14 @@ const DEFAULT_S = {
   clients:  { entries: [] },
   compta:   {},
   abonnements: { entries: [] },
+  investissements: { entries: [] },
   bugs:     {}
 };
 let S = JSON.parse(localStorage.getItem(SK) || "null") || JSON.parse(JSON.stringify(DEFAULT_S));
 if (!S.suivi || !Array.isArray(S.suivi.entries)) S.suivi = { ...DEFAULT_S.suivi };
 if (!S.clients || !Array.isArray(S.clients.entries)) S.clients = { ...DEFAULT_S.clients };
 if (!S.abonnements || !Array.isArray(S.abonnements.entries)) S.abonnements = { ...DEFAULT_S.abonnements };
+if (!S.investissements || !Array.isArray(S.investissements.entries)) S.investissements = { ...DEFAULT_S.investissements };
 let user = null;
 let tab = "mission";
 let cloudT = null;
@@ -158,6 +160,7 @@ async function saveToCloud() {
       clients: S.clients,
       compta:  S.compta,
       abonnements: S.abonnements,
+      investissements: S.investissements,
       bugs:    S.bugs
     }, { merge: true });
     const e = document.getElementById("savedFlash");
@@ -188,6 +191,7 @@ async function loadFromCloud() {
       if (d.clients) S.clients = { ...DEFAULT_S.clients, ...d.clients, entries: Array.isArray(d.clients.entries) ? d.clients.entries : [] };
       if (d.compta)  S.compta  = Object.assign({}, DEFAULT_S.compta,  d.compta);
       if (d.abonnements) S.abonnements = { ...DEFAULT_S.abonnements, ...d.abonnements, entries: Array.isArray(d.abonnements.entries) ? d.abonnements.entries : [] };
+      if (d.investissements) S.investissements = { ...DEFAULT_S.investissements, ...d.investissements, entries: Array.isArray(d.investissements.entries) ? d.investissements.entries : [] };
       if (d.bugs)    S.bugs    = Object.assign({}, DEFAULT_S.bugs,    d.bugs);
       localStorage.setItem(SK, JSON.stringify(S));
     }
@@ -572,6 +576,33 @@ function refreshAbonnementMensuel(id) {
 }
 window.refreshAbonnementMensuel = refreshAbonnementMensuel;
 
+function addInvestissement() {
+  S.investissements.entries.unshift({
+    id:         uid(),
+    date:       new Date().toISOString().slice(0, 10),
+    descriptif: "",
+    prix:       "0"
+  });
+  save();
+  render();
+}
+window.addInvestissement = addInvestissement;
+
+function deleteInvestissement(id) {
+  S.investissements.entries = S.investissements.entries.filter(e => e.id !== id);
+  save();
+  render();
+}
+window.deleteInvestissement = deleteInvestissement;
+
+function editInvestissement(id, field, val) {
+  const e = S.investissements.entries.find(x => x.id === id);
+  if (!e) return;
+  e[field] = val;
+  save();
+}
+window.editInvestissement = editInvestissement;
+
 function rCP() {
   const abEntries = S.abonnements.entries;
   const abRows = abEntries.map(e => `
@@ -580,6 +611,16 @@ function rCP() {
       <td class="amount"><input type="number" step="0.01" value="${esc(e.annuel)}" oninput="editAbonnement('${e.id}','annuel',this.value); refreshAbonnementMensuel('${e.id}')"></td>
       <td class="amount" id="ab-mens-${e.id}" style="text-align:right;color:#6b7280;font-variant-numeric:tabular-nums;padding-right:14px">${fmt(num(e.annuel) / 12)}</td>
       <td class="actions"><button title="Supprimer" onclick="if(confirm('Supprimer cet abonnement ?'))deleteAbonnement('${e.id}')">×</button></td>
+    </tr>
+  `).join("");
+
+  const invEntries = [...S.investissements.entries].sort((a, b) => (b.date || "").localeCompare(a.date || ""));
+  const invRows = invEntries.map(e => `
+    <tr>
+      <td><input type="date" value="${esc(e.date)}" oninput="editInvestissement('${e.id}','date',this.value)"></td>
+      <td><input value="${esc(e.descriptif)}" oninput="editInvestissement('${e.id}','descriptif',this.value)" placeholder="Descriptif"></td>
+      <td class="amount"><input type="number" step="0.01" value="${esc(e.prix)}" oninput="editInvestissement('${e.id}','prix',this.value)"></td>
+      <td class="actions"><button title="Supprimer" onclick="if(confirm('Supprimer cet investissement ?'))deleteInvestissement('${e.id}')">×</button></td>
     </tr>
   `).join("");
 
@@ -604,7 +645,7 @@ function rCP() {
 
     <h3>Investissements et achats ponctuels</h3>
     <div class="toolbar">
-      <button class="btn">+ Ajouter un investissement</button>
+      <button class="btn" onclick="addInvestissement()">+ Ajouter un investissement</button>
     </div>
     <table class="hist">
       <thead>
@@ -615,7 +656,7 @@ function rCP() {
           <th style="width:36px"></th>
         </tr>
       </thead>
-      <tbody></tbody>
+      <tbody>${invRows}</tbody>
     </table>
 
     <h3>Bilan mensuel (calculé automatiquement depuis Suivi)</h3>
