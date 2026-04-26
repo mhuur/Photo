@@ -47,6 +47,9 @@
   table.hist td.actions{text-align:center;width:36px}
   table.hist td.actions button{background:none;border:0;color:#9ca3af;cursor:pointer;font-size:16px;padding:4px 6px;border-radius:4px}
   table.hist td.actions button:hover{background:#fee2e2;color:#dc2626}
+  table.hist tfoot td{padding:10px 12px;border-top:1px solid #e5e7eb;background:#f9fafb;font-weight:600;font-size:13px;text-align:right;font-variant-numeric:tabular-nums}
+  table.hist tfoot td:first-child{text-align:left}
+  table.hist tfoot tr.grandtotal td{background:#f3f4f6;font-size:14px;border-top:2px solid #d1d5db}
   td.statut select{font-weight:600}
   td.statut[data-s="envoye"]   select{color:#1d4ed8;background:#dbeafe}
   td.statut[data-s="attente"]  select{color:#b45309;background:#fef3c7}
@@ -534,7 +537,61 @@ function rCL() {
 function rCP() {
   return `
     <h2>Compta <span id="savedFlash" class="saved"></span></h2>
-    <div class="empty">Onglet Compta — à remplir au prochain tour.</div>`;
+
+    <h3>Abonnements professionnels</h3>
+    <div class="toolbar">
+      <button class="btn">+ Ajouter un abonnement</button>
+    </div>
+    <table class="hist">
+      <thead>
+        <tr>
+          <th>Libellé</th>
+          <th style="width:170px;text-align:right">Coût annuel (€)</th>
+          <th style="width:170px;text-align:right">Coût mensuel (€)</th>
+          <th style="width:36px"></th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+
+    <h3>Investissements et achats ponctuels</h3>
+    <div class="toolbar">
+      <button class="btn">+ Ajouter un investissement</button>
+    </div>
+    <table class="hist">
+      <thead>
+        <tr>
+          <th style="width:130px">Date</th>
+          <th>Descriptif</th>
+          <th style="width:140px;text-align:right">Prix (€)</th>
+          <th style="width:36px"></th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+
+    <h3>Bilan mensuel (calculé automatiquement depuis Suivi)</h3>
+    <table class="hist">
+      <thead>
+        <tr>
+          <th style="width:110px">Mois</th>
+          <th style="text-align:right">Heures</th>
+          <th style="text-align:right">Paiement</th>
+          <th style="text-align:right">CA</th>
+          <th style="text-align:right">Salaire (Perso)</th>
+          <th style="text-align:right">Total vers (Pro)</th>
+          <th style="text-align:right">URSAF (Pro)</th>
+          <th style="text-align:right">Trésorerie (Pro)</th>
+          <th style="text-align:right">Frais débours. (Pro)</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+      <tfoot>
+        <tr class="subtotal"><td>Sous-total annuel</td><td colspan="8"></td></tr>
+        <tr class="grandtotal"><td>Total général</td><td colspan="8"></td></tr>
+      </tfoot>
+    </table>
+  `;
 }
 
 function rBG() {
