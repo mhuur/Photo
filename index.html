@@ -57,6 +57,26 @@
   td.statut[data-s="attente"]  select{color:#b45309;background:#fef3c7}
   td.statut[data-s="paye"]     select{color:#047857;background:#d1fae5}
   td.statut[data-s="annule"]   select{color:#6b7280;background:#f3f4f6;text-decoration:line-through}
+  table.hist th.sortable{cursor:pointer;user-select:none;white-space:nowrap}
+  table.hist th.sortable:hover{background:#f3f4f6}
+  table.hist th .arr{font-size:10px;opacity:.3;margin-left:4px}
+  table.hist th .arr.on{opacity:1;color:#3b82f6}
+  table.hist tr.suv-row{cursor:pointer}
+  table.hist tr.suv-row:hover td{background:#f9fafb}
+  table.hist tr.suv-row.expanded td{background:#eff6ff}
+  table.hist tr.suv-row td{padding:9px 12px;font-size:13px}
+  table.hist tr.suv-row td.amt{text-align:right;font-variant-numeric:tabular-nums}
+  table.hist tr.suv-detail td{background:#f9fafb;padding:0;border-bottom:1px solid #e5e7eb}
+  .suv-panel{padding:16px 20px}
+  .suv-panel h4{margin:0 0 10px;font-size:11px;color:#6b7280;text-transform:uppercase;letter-spacing:.05em}
+  .suv-panel .row{margin-bottom:10px}
+  .suv-meta{display:flex;gap:18px;font-size:13px;color:#374151;margin-bottom:14px;flex-wrap:wrap;padding-bottom:10px;border-bottom:1px solid #e5e7eb}
+  .suv-meta strong{color:#111827;font-weight:600}
+  .suv-actions{display:flex;gap:8px;margin-top:14px;padding-top:12px;border-top:1px solid #e5e7eb}
+  .filter-group{display:flex;gap:6px;align-items:center}
+  .filter-group label{font-size:12px;color:#6b7280}
+  .filter-group select{padding:8px 10px;border:1px solid #d1d5db;border-radius:6px;font:inherit;background:#fff;cursor:pointer}
+  .filter-group select:focus{outline:none;border-color:#3b82f6}
   .toolbar{display:flex;gap:8px;align-items:center;margin:14px 0 4px;flex-wrap:wrap}
   .toolbar .spacer{flex:1}
   .toolbar .search{flex:1;min-width:200px;max-width:340px;padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;font:inherit;background:#fff}
@@ -374,22 +394,26 @@ function suiviAdd() {
   const cat = CATALOG.find(c => c.k === m.object);
   const totalAmount = totals().total.toFixed(2);
   const hoursTotal = num(m.prep.hours) + num(m.prod.hours) + num(m.postprod.hours);
+  const id = uid();
   S.suivi.entries.unshift({
-    id:         uid(),
-    date:       m.objectDate || new Date().toISOString().slice(0, 10),
-    ref:        m.ref || "",
-    client:     m.client.name || "",
-    prestation: cat ? cat.l : "",
-    montant:    String(totalAmount),
-    heures:     String(hoursTotal),
-    paiement:   String(totalAmount),
-    ca:         String(totalAmount),
-    salaire:    "0",
-    ursaf:      "0",
-    tresorerie: "0",
-    frais:      "0",
-    statut:     "attente"
+    id,
+    date:        m.objectDate || new Date().toISOString().slice(0, 10),
+    ref:         m.ref || "",
+    client:      m.client.name || "",
+    prestation:  cat ? cat.l : "",
+    montant:     String(totalAmount),
+    heures:      String(hoursTotal),
+    echeance:    "",
+    paiement:    String(totalAmount),
+    ca:          String(totalAmount),
+    salaire:     "0",
+    ursaf:       "0",
+    tresorerie:  "0",
+    frais:       "0",
+    commentaires:"",
+    statut:      "attente"
   });
+  suiviExpanded = id;
   save();
   render();
 }
@@ -557,22 +581,19 @@ function suiviUpd(id, field, val) {
 }
 window.suiviUpd = suiviUpd;
 
-function suiviStatut(id, val, td) {
+function suiviStatut(id, val) {
   suiviUpd(id, "statut", val);
-  if (td) td.dataset.s = val;
-  refreshSuiviStats();
+  render();
 }
 window.suiviStatut = suiviStatut;
 
-function suiviStats() {
+function suiviStats(list) {
   const by = { envoye: 0, attente: 0, paye: 0, annule: 0 };
-  let total = 0;
-  for (const e of S.suivi.entries) {
+  for (const e of list) {
     const m = num(e.montant);
     by[e.statut] = (by[e.statut] || 0) + m;
-    total += m;
   }
-  return { by, total, count: S.suivi.entries.length };
+  return { by, count: list.length };
 }
 
 function suiviStatsHtml(s) {
@@ -585,56 +606,205 @@ function suiviStatsHtml(s) {
   `;
 }
 
-function refreshSuiviStats() {
-  const el = document.getElementById("suiviStats");
-  if (el) el.innerHTML = suiviStatsHtml(suiviStats());
+let suiviExpanded = null;
+let suiviSort = { field: "date", dir: "desc" };
+let suiviFilterStatut = "all";
+let suiviFilterYear = "all";
+
+const SUIVI_NUMERIC = new Set(["montant","heures","paiement","ca","salaire","ursaf","tresorerie","frais"]);
+
+function suiviToggle(id) {
+  suiviExpanded = (suiviExpanded === id ? null : id);
+  render();
+}
+window.suiviToggle = suiviToggle;
+
+function suiviSortKey(field) {
+  if (suiviSort.field === field) {
+    suiviSort.dir = suiviSort.dir === "asc" ? "desc" : "asc";
+  } else {
+    suiviSort.field = field;
+    suiviSort.dir = field === "date" ? "desc" : "asc";
+  }
+  render();
+}
+window.suiviSortKey = suiviSortKey;
+
+function suiviSetFilterStatut(v) { suiviFilterStatut = v; render(); }
+window.suiviSetFilterStatut = suiviSetFilterStatut;
+
+function suiviSetFilterYear(v) { suiviFilterYear = v; render(); }
+window.suiviSetFilterYear = suiviSetFilterYear;
+
+function suiviYears() {
+  const ys = new Set();
+  for (const e of S.suivi.entries) {
+    const y = (e.date || "").slice(0, 4);
+    if (y) ys.add(y);
+  }
+  return [...ys].sort().reverse();
 }
 
+function suiviFilteredSorted() {
+  let list = S.suivi.entries.slice();
+  if (suiviFilterStatut !== "all") list = list.filter(e => e.statut === suiviFilterStatut);
+  if (suiviFilterYear   !== "all") list = list.filter(e => (e.date || "").startsWith(suiviFilterYear));
+  const dir = suiviSort.dir === "asc" ? 1 : -1;
+  const f = suiviSort.field;
+  list.sort((a, b) => {
+    if (SUIVI_NUMERIC.has(f)) return (num(a[f]) - num(b[f])) * dir;
+    return String(a[f] || "").localeCompare(String(b[f] || ""), "fr", { numeric: true }) * dir;
+  });
+  return list;
+}
+
+function suiviTauxHoraire(e) {
+  const h = num(e.heures);
+  return h > 0 ? num(e.montant) / h : 0;
+}
+
+function suiviRefreshTaux(id) {
+  const e = S.suivi.entries.find(x => x.id === id);
+  const cell = document.getElementById("taux-" + id);
+  if (!e || !cell) return;
+  const t = suiviTauxHoraire(e);
+  cell.textContent = t > 0 ? fmt(t) : "—";
+}
+window.suiviRefreshTaux = suiviRefreshTaux;
+
+function dateFR(iso) {
+  if (!iso || iso.length < 10) return "—";
+  const [y, m, d] = iso.split("-");
+  return `${d}/${m}/${y}`;
+}
+
+function arr(field) {
+  if (suiviSort.field !== field) return `<span class="arr">↕</span>`;
+  return `<span class="arr on">${suiviSort.dir === "asc" ? "▲" : "▼"}</span>`;
+}
+
+function statutLabel(k) { const s = STATUTS.find(x => x[0] === k); return s ? s[1] : k; }
+
 function rSV() {
-  const entries = S.suivi.entries;
-  const stats = suiviStats();
-  const rows = entries.map(e => `
-    <tr>
-      <td><input type="date" value="${esc(e.date)}" oninput="suiviUpd('${e.id}','date',this.value)"></td>
-      <td><input value="${esc(e.ref)}" oninput="suiviUpd('${e.id}','ref',this.value)" placeholder="DEVIS-…"></td>
-      <td><input value="${esc(e.client)}" oninput="suiviUpd('${e.id}','client',this.value)" placeholder="Client"></td>
-      <td><input value="${esc(e.prestation)}" oninput="suiviUpd('${e.id}','prestation',this.value)" placeholder="Prestation"></td>
-      <td class="amount"><input type="number" step="0.01" value="${esc(e.montant)}" oninput="suiviUpd('${e.id}','montant',this.value); refreshSuiviStats()"></td>
-      <td class="statut" data-s="${esc(e.statut)}">
-        <select onchange="suiviStatut('${e.id}', this.value, this.parentNode)">
-          ${STATUTS.map(([k,l]) => `<option value="${k}" ${e.statut===k?"selected":""}>${esc(l)}</option>`).join("")}
-        </select>
-      </td>
-      <td class="actions"><button title="Supprimer" onclick="if(confirm('Supprimer cette ligne ?'))suiviDel('${e.id}')">×</button></td>
-    </tr>
-  `).join("");
+  const list = suiviFilteredSorted();
+  const stats = suiviStats(list);
+  const years = suiviYears();
+  const totalEntries = S.suivi.entries.length;
+
+  const stop = "event.stopPropagation();";
+
+  const rowsHtml = list.map(e => {
+    const expanded = suiviExpanded === e.id;
+    const summary = `
+      <tr class="suv-row ${expanded ? "expanded" : ""}" onclick="suiviToggle('${e.id}')">
+        <td class="statut" data-s="${esc(e.statut)}" onclick="${stop}">
+          <select onchange="suiviStatut('${e.id}', this.value)" onclick="${stop}">
+            ${STATUTS.map(([k,l]) => `<option value="${k}" ${e.statut===k?"selected":""}>${esc(l)}</option>`).join("")}
+          </select>
+        </td>
+        <td>${esc(dateFR(e.date))}</td>
+        <td>${esc(e.ref) || "—"}</td>
+        <td><strong>${esc(e.client) || "—"}</strong></td>
+        <td>${esc(e.prestation) || "—"}</td>
+        <td class="amt">${fmt(e.montant)}</td>
+        <td class="actions" onclick="${stop}"><button title="Supprimer" onclick="if(confirm('Supprimer cette ligne ?'))suiviDel('${e.id}')">×</button></td>
+      </tr>`;
+
+    if (!expanded) return summary;
+
+    const taux = suiviTauxHoraire(e);
+    const detail = `
+      <tr class="suv-detail">
+        <td colspan="7">
+          <div class="suv-panel">
+            <div class="suv-meta">
+              <span><strong>${esc(e.client) || "—"}</strong></span>
+              <span>${esc(e.prestation) || "—"}</span>
+              <span>Date : <strong>${esc(dateFR(e.date))}</strong></span>
+              <span>Statut : <strong>${esc(statutLabel(e.statut))}</strong></span>
+              <span>Montant : <strong>${fmt(e.montant)}</strong></span>
+            </div>
+
+            <h4>Identification</h4>
+            <div class="row">
+              <div class="field sm"><label>Date</label><input type="date" value="${esc(e.date)}" oninput="suiviUpd('${e.id}','date',this.value)"></div>
+              <div class="field"><label>Référence</label><input value="${esc(e.ref)}" oninput="suiviUpd('${e.id}','ref',this.value)" placeholder="DEVIS-…"></div>
+              <div class="field"><label>Client</label><input value="${esc(e.client)}" oninput="suiviUpd('${e.id}','client',this.value)" placeholder="Client"></div>
+              <div class="field"><label>Prestation</label><input value="${esc(e.prestation)}" oninput="suiviUpd('${e.id}','prestation',this.value)" placeholder="Prestation"></div>
+            </div>
+
+            <h4>Heures &amp; tarif</h4>
+            <div class="row">
+              <div class="field sm"><label>Heures</label><input type="number" step="0.25" value="${esc(e.heures)}" oninput="suiviUpd('${e.id}','heures',this.value); suiviRefreshTaux('${e.id}')"></div>
+              <div class="field sm"><label>Montant (€)</label><input type="number" step="0.01" value="${esc(e.montant)}" oninput="suiviUpd('${e.id}','montant',this.value); suiviRefreshTaux('${e.id}')"></div>
+              <div class="field sm"><label>Taux horaire pratiqué</label><div id="taux-${e.id}" style="padding:8px 10px;color:#374151;font-variant-numeric:tabular-nums">${taux > 0 ? fmt(taux) : "—"}</div></div>
+              <div class="field sm"><label>Échéance</label><input type="date" value="${esc(e.echeance || "")}" oninput="suiviUpd('${e.id}','echeance',this.value)"></div>
+            </div>
+
+            <h4>Comptabilité</h4>
+            <div class="row">
+              <div class="field sm"><label>Paiement (€)</label><input type="number" step="0.01" value="${esc(e.paiement)}" oninput="suiviUpd('${e.id}','paiement',this.value)"></div>
+              <div class="field sm"><label>CA (€)</label><input type="number" step="0.01" value="${esc(e.ca)}" oninput="suiviUpd('${e.id}','ca',this.value)"></div>
+              <div class="field sm"><label>URSAF (€)</label><input type="number" step="0.01" value="${esc(e.ursaf)}" oninput="suiviUpd('${e.id}','ursaf',this.value)"></div>
+              <div class="field sm"><label>Trésorerie (€)</label><input type="number" step="0.01" value="${esc(e.tresorerie)}" oninput="suiviUpd('${e.id}','tresorerie',this.value)"></div>
+              <div class="field sm"><label>Frais débours (€)</label><input type="number" step="0.01" value="${esc(e.frais)}" oninput="suiviUpd('${e.id}','frais',this.value)"></div>
+              <div class="field sm"><label>Salaire (€)</label><input type="number" step="0.01" value="${esc(e.salaire)}" oninput="suiviUpd('${e.id}','salaire',this.value)"></div>
+            </div>
+
+            <h4>Commentaires</h4>
+            <div class="row">
+              <div class="field"><textarea oninput="suiviUpd('${e.id}','commentaires',this.value)" placeholder="Notes, contexte, particularités…">${esc(e.commentaires || "")}</textarea></div>
+            </div>
+
+            <div class="suv-actions">
+              <button class="btn ghost" onclick="suiviToggle('${e.id}')">Fermer</button>
+            </div>
+          </div>
+        </td>
+      </tr>`;
+
+    return summary + detail;
+  }).join("");
+
+  const yearOpts = [`<option value="all" ${suiviFilterYear==="all"?"selected":""}>Toutes les années</option>`]
+    .concat(years.map(y => `<option value="${esc(y)}" ${suiviFilterYear===y?"selected":""}>${esc(y)}</option>`)).join("");
+  const statutOpts = [`<option value="all" ${suiviFilterStatut==="all"?"selected":""}>Tous les statuts</option>`]
+    .concat(STATUTS.map(([k,l]) => `<option value="${k}" ${suiviFilterStatut===k?"selected":""}>${esc(l)}</option>`)).join("");
+
+  const filteredEmpty = totalEntries > 0 && list.length === 0;
 
   return `
     <h2>Suivi <span id="savedFlash" class="saved"></span></h2>
 
-    <div class="stats" id="suiviStats">${suiviStatsHtml(stats)}</div>
+    <div class="stats">${suiviStatsHtml(stats)}</div>
 
     <div class="toolbar">
       <button class="btn" onclick="suiviAdd()">+ Ajouter une prestation</button>
       <button class="btn ghost" onclick="suiviImport()">Importer depuis l'Excel (${SUIVI_SEED.length})</button>
       <span class="spacer"></span>
-      <span class="hint" style="margin:0">« Ajouter » pré-remplit la ligne avec la mission en cours. L'import ignore les doublons (date + client).</span>
+      <div class="filter-group"><label>Statut</label>
+        <select onchange="suiviSetFilterStatut(this.value)">${statutOpts}</select>
+      </div>
+      <div class="filter-group"><label>Année</label>
+        <select onchange="suiviSetFilterYear(this.value)">${yearOpts}</select>
+      </div>
     </div>
 
-    ${entries.length === 0 ? `<div class="empty">Aucune prestation enregistrée. Cliquez sur « + Ajouter une prestation » pour commencer.</div>` : `
+    ${totalEntries === 0 ? `<div class="empty">Aucune prestation enregistrée. Cliquez sur « Importer depuis l'Excel » ou « + Ajouter une prestation » pour commencer.</div>` :
+      filteredEmpty ? `<div class="empty">Aucune prestation ne correspond aux filtres sélectionnés.</div>` : `
     <table class="hist">
       <thead>
         <tr>
-          <th style="width:130px">Date</th>
-          <th style="width:160px">Référence</th>
-          <th>Client</th>
-          <th>Prestation</th>
-          <th style="width:110px;text-align:right">Montant</th>
-          <th style="width:130px">Statut</th>
-          <th></th>
+          <th class="sortable" style="width:140px" onclick="suiviSortKey('statut')">Statut${arr('statut')}</th>
+          <th class="sortable" style="width:110px" onclick="suiviSortKey('date')">Date${arr('date')}</th>
+          <th class="sortable" style="width:160px" onclick="suiviSortKey('ref')">Référence${arr('ref')}</th>
+          <th class="sortable" onclick="suiviSortKey('client')">Client${arr('client')}</th>
+          <th class="sortable" onclick="suiviSortKey('prestation')">Prestation${arr('prestation')}</th>
+          <th class="sortable" style="width:120px;text-align:right" onclick="suiviSortKey('montant')">Montant${arr('montant')}</th>
+          <th style="width:36px"></th>
         </tr>
       </thead>
-      <tbody>${rows}</tbody>
+      <tbody>${rowsHtml}</tbody>
     </table>`}
   `;
 }
