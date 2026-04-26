@@ -66,6 +66,8 @@
   table.hist tr.suv-row.expanded td{background:#eff6ff}
   table.hist tr.suv-row td{padding:9px 12px;font-size:13px}
   table.hist tr.suv-row td.amt{text-align:right;font-variant-numeric:tabular-nums}
+  table.hist td.cb,table.hist th:first-child{text-align:center;width:34px;padding:6px 4px}
+  table.hist td.cb input,table.hist th input[type="checkbox"]{cursor:pointer;width:16px;height:16px}
   table.hist tr.suv-detail td{background:#f9fafb;padding:0;border-bottom:1px solid #e5e7eb}
   .suv-panel{padding:16px 20px}
   .suv-panel h4{margin:0 0 10px;font-size:11px;color:#6b7280;text-transform:uppercase;letter-spacing:.05em}
@@ -693,6 +695,45 @@ let suiviExpanded = null;
 let suiviSort = { field: "date", dir: "desc" };
 let suiviFilterStatut = "all";
 let suiviFilterYear = "all";
+let suiviSelected = new Set();
+
+function suiviToggleOne(id, checked, ev) {
+  if (ev) ev.stopPropagation();
+  if (checked) suiviSelected.add(id); else suiviSelected.delete(id);
+  const info = document.getElementById("suiviSelInfo");
+  if (info) info.innerHTML = suiviSelInfoHtml();
+  const cb = document.getElementById("suiviSelectAll");
+  if (cb) {
+    const list = suiviFilteredSorted();
+    cb.checked = list.length > 0 && list.every(e => suiviSelected.has(e.id));
+  }
+}
+window.suiviToggleOne = suiviToggleOne;
+
+function suiviSelectAll(checked) {
+  const list = suiviFilteredSorted();
+  if (checked) for (const e of list) suiviSelected.add(e.id);
+  else for (const e of list) suiviSelected.delete(e.id);
+  render();
+}
+window.suiviSelectAll = suiviSelectAll;
+
+function suiviDeleteSelected() {
+  if (suiviSelected.size === 0) return;
+  const n = suiviSelected.size;
+  if (!confirm(`Supprimer ${n} prestation${n > 1 ? "s" : ""} sélectionnée${n > 1 ? "s" : ""} ? Cette action est irréversible.`)) return;
+  S.suivi.entries = S.suivi.entries.filter(e => !suiviSelected.has(e.id));
+  suiviSelected.clear();
+  save();
+  render();
+}
+window.suiviDeleteSelected = suiviDeleteSelected;
+
+function suiviSelInfoHtml() {
+  const n = suiviSelected.size;
+  if (n === 0) return "";
+  return `<button class="btn" style="background:#dc2626" onclick="suiviDeleteSelected()">Supprimer la sélection (${n})</button>`;
+}
 
 const SUIVI_NUMERIC = new Set(["montant","heures","paiement","ca","salaire","ursaf","tresorerie","frais"]);
 
@@ -781,6 +822,7 @@ function rSV() {
     const expanded = suiviExpanded === e.id;
     const summary = `
       <tr class="suv-row ${expanded ? "expanded" : ""}" onclick="suiviToggle('${e.id}')">
+        <td class="cb" onclick="${stop}"><input type="checkbox" ${suiviSelected.has(e.id) ? "checked" : ""} onclick="suiviToggleOne('${e.id}', this.checked, event)"></td>
         <td class="statut" data-s="${esc(e.statut)}" onclick="${stop}">
           <select onchange="suiviStatut('${e.id}', this.value)" onclick="${stop}">
             ${STATUTS.map(([k,l]) => `<option value="${k}" ${e.statut===k?"selected":""}>${esc(l)}</option>`).join("")}
@@ -799,7 +841,7 @@ function rSV() {
     const taux = suiviTauxHoraire(e);
     const detail = `
       <tr class="suv-detail">
-        <td colspan="7">
+        <td colspan="8">
           <div class="suv-panel">
             <div class="suv-meta">
               <span><strong>${esc(e.client) || "—"}</strong></span>
@@ -865,6 +907,7 @@ function rSV() {
     <div class="toolbar">
       <button class="btn" onclick="suiviAdd()">+ Ajouter une prestation</button>
       <button class="btn ghost" onclick="suiviImport()">${missing > 0 ? `Importer ${missing} prestation${missing > 1 ? "s" : ""} manquante${missing > 1 ? "s" : ""} (Excel : ${SUIVI_SEED.length})` : `Importer depuis l'Excel (${SUIVI_SEED.length})`}</button>
+      <span id="suiviSelInfo">${suiviSelInfoHtml()}</span>
       <span class="spacer"></span>
       <div class="filter-group"><label>Statut</label>
         <select onchange="suiviSetFilterStatut(this.value)">${statutOpts}</select>
@@ -879,6 +922,7 @@ function rSV() {
     <table class="hist">
       <thead>
         <tr>
+          <th style="width:34px;text-align:center" title="Tout sélectionner / désélectionner"><input type="checkbox" id="suiviSelectAll" ${list.length > 0 && list.every(e => suiviSelected.has(e.id)) ? "checked" : ""} onclick="suiviSelectAll(this.checked)"></th>
           <th class="sortable" style="width:140px" onclick="suiviSortKey('statut')">Statut${arr('statut')}</th>
           <th class="sortable" style="width:110px" onclick="suiviSortKey('date')">Date${arr('date')}</th>
           <th class="sortable" style="width:160px" onclick="suiviSortKey('ref')">Référence${arr('ref')}</th>
