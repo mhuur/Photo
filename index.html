@@ -31,6 +31,11 @@
   .login{display:flex;align-items:center;justify-content:center;height:100vh;flex-direction:column;gap:16px}
   .saved{font-size:12px;color:#10b981;margin-left:12px;font-weight:normal}
   .empty{background:#fff;border:1px dashed #d1d5db;border-radius:8px;padding:32px;text-align:center;color:#9ca3af;font-size:14px}
+  .totals{background:#fff;border:1px solid #e5e7eb;border-radius:8px;padding:14px 18px;margin-top:24px}
+  .totals .line{display:flex;justify-content:space-between;padding:5px 0;font-size:14px}
+  .totals .line.total{border-top:1px solid #e5e7eb;margin-top:6px;padding-top:10px;font-weight:600;font-size:16px}
+  .totals .line.muted{color:#6b7280;font-size:13px}
+  .hint{font-size:11px;color:#9ca3af;margin:-4px 0 8px}
 </style>
 </head>
 <body>
@@ -52,9 +57,38 @@ firebase.initializeApp({
 const auth = firebase.auth();
 const db = firebase.firestore();
 
+const CATALOG = [
+  { k:"shoot_solo_dehors",   l:"Shoot solo - Dehors",                       p:124 },
+  { k:"shoot_solo_prive",    l:"Shoot solo - Lieu privé",                   p:136 },
+  { k:"shoot_solo_studio",   l:"Shoot solo - Studio",                       p:162 },
+  { k:"corporate",           l:"Corporate / Commerce local",                p:92  },
+  { k:"shoot_duo_dehors",    l:"Shoot duo - Dehors",                        p:125 },
+  { k:"shoot_duo_prive",     l:"Shoot duo - Lieu privé",                    p:181 },
+  { k:"shoot_duo_studio",    l:"Shoot duo - Studio",                        p:143 },
+  { k:"shoot_groupe_dehors", l:"Shoot groupe - Dehors",                     p:181 },
+  { k:"shoot_groupe_prive",  l:"Shoot groupe - Lieu privé",                 p:207 },
+  { k:"shoot_groupe_studio", l:"Shoot groupe - Studio",                     p:258 },
+  { k:"concert",             l:"Shoot concert",                             p:222 },
+  { k:"mariage",             l:"Mariage photo",                             p:181 },
+  { k:"tournage_short",      l:"Tournage vidéo - Short réseaux sociaux",     p:156 },
+  { k:"clip",                l:"Tournage - Clip musical",                   p:284 },
+  { k:"captation",           l:"Captations vidéo + photo + ITW",             p:181 }
+];
+
 const SK = "devis-photo-data-v2";
 const DEFAULT_S = {
-  mission:  {},
+  mission: {
+    ref: "", dateEmission: "", dateValidite: "",
+    object: "", objectDate: "", objectLieu: "",
+    client: { num: "", name: "", contact: "", address: "", phone: "", email: "" },
+    prep:        { hours: "0", rate: "" },
+    prod:        { hours: "0", rate: "" },
+    postprod:    { hours: "0", rate: "" },
+    deplacement: { km: "0", peages: "0", trajetH: "0", ticket: "0" },
+    autres:      { desc: "", montant: "0" },
+    remisePct: "0",
+    notes: ""
+  },
   devis:    {},
   suivi:    {},
   clients:  {},
@@ -77,6 +111,8 @@ const TABS = [
 
 const app = document.getElementById("app");
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const num = v => { const n = parseFloat(String(v).replace(",", ".")); return isFinite(n) ? n : 0; };
+const fmt = v => num(v).toFixed(2).replace(".", ",") + " €";
 
 function save() {
   localStorage.setItem(SK, JSON.stringify(S));
@@ -106,7 +142,18 @@ async function loadFromCloud() {
     const snap = await db.collection("users").doc(user.uid).get();
     if (snap.exists) {
       const d = snap.data();
-      if (d.mission) S.mission = Object.assign({}, DEFAULT_S.mission, d.mission);
+      if (d.mission) {
+        const m = d.mission, dm = DEFAULT_S.mission;
+        S.mission = {
+          ...dm, ...m,
+          client:      { ...dm.client,      ...(m.client      || {}) },
+          prep:        { ...dm.prep,        ...(m.prep        || {}) },
+          prod:        { ...dm.prod,        ...(m.prod        || {}) },
+          postprod:    { ...dm.postprod,    ...(m.postprod    || {}) },
+          deplacement: { ...dm.deplacement, ...(m.deplacement || {}) },
+          autres:      { ...dm.autres,      ...(m.autres      || {}) }
+        };
+      }
       if (d.devis)   S.devis   = Object.assign({}, DEFAULT_S.devis,   d.devis);
       if (d.suivi)   S.suivi   = Object.assign({}, DEFAULT_S.suivi,   d.suivi);
       if (d.clients) S.clients = Object.assign({}, DEFAULT_S.clients, d.clients);
@@ -124,8 +171,55 @@ function upd(path, val) {
   for (let i = 0; i < keys.length - 1; i++) o = o[keys[i]];
   o[keys[keys.length - 1]] = val;
   save();
+  if (path.startsWith("mission.prep") || path.startsWith("mission.prod") || path.startsWith("mission.postprod") || path.startsWith("mission.deplacement") || path.startsWith("mission.autres") || path === "mission.remisePct") {
+    refreshTotals();
+  }
 }
 window.upd = upd;
+
+function pickObject(k) {
+  S.mission.object = k;
+  const item = CATALOG.find(c => c.k === k);
+  if (item) S.mission.prod.rate = String(item.p);
+  save();
+  render();
+}
+window.pickObject = pickObject;
+
+function totals() {
+  const d = S.mission;
+  const prep = num(d.prep.hours) * num(d.prep.rate);
+  const prod = num(d.prod.hours) * num(d.prod.rate);
+  const post = num(d.postprod.hours) * num(d.postprod.rate);
+  const depl = num(d.deplacement.km) * 0.40 + num(d.deplacement.peages) + num(d.deplacement.trajetH) * 40 + num(d.deplacement.ticket);
+  const autres = num(d.autres.montant);
+  const subtotal = prep + prod + post + depl + autres;
+  const remise = subtotal * num(d.remisePct) / 100;
+  const total = subtotal - remise;
+  return { prep, prod, post, depl, autres, subtotal, remise, total, acompte: total * 0.30, reste: total * 0.70 };
+}
+
+function refreshTotals() {
+  const t = totals();
+  const el = document.getElementById("totals");
+  if (el) el.innerHTML = totalsHtml(t);
+}
+
+function totalsHtml(t) {
+  return `
+    <div class="line muted"><span>Préparation</span><span>${fmt(t.prep)}</span></div>
+    <div class="line muted"><span>Shooting / production</span><span>${fmt(t.prod)}</span></div>
+    <div class="line muted"><span>Post-production</span><span>${fmt(t.post)}</span></div>
+    <div class="line muted"><span>Frais de déplacement</span><span>${fmt(t.depl)}</span></div>
+    <div class="line muted"><span>Autres</span><span>${fmt(t.autres)}</span></div>
+    <div class="line"><span>Sous-total</span><span>${fmt(t.subtotal)}</span></div>
+    <div class="line muted"><span>Remise (${esc(S.mission.remisePct)} %)</span><span>−${fmt(t.remise)}</span></div>
+    <div class="line total"><span>Total HT</span><span>${fmt(t.total)}</span></div>
+    <div class="line muted"><span>Acompte 30 %</span><span>${fmt(t.acompte)}</span></div>
+    <div class="line muted"><span>Reste 70 %</span><span>${fmt(t.reste)}</span></div>
+    <div class="line muted" style="font-size:11px;color:#9ca3af;margin-top:6px">TVA non applicable, art. 293 B du CGI</div>
+  `;
+}
 
 function render() {
   if (!user) {
@@ -144,9 +238,74 @@ function render() {
 }
 
 function rMS() {
+  const d = S.mission;
+  const t = totals();
   return `
     <h2>Mission <span id="savedFlash" class="saved"></span></h2>
-    <div class="empty">Onglet Mission — à remplir au prochain tour.</div>`;
+
+    <h3>Devis</h3>
+    <div class="row">
+      <div class="field"><label>Référence</label><input value="${esc(d.ref)}" oninput="upd('mission.ref', this.value)" placeholder="DEVIS-116-2026-04-25"></div>
+      <div class="field sm"><label>Date d'émission</label><input type="date" value="${esc(d.dateEmission)}" oninput="upd('mission.dateEmission', this.value)"></div>
+      <div class="field sm"><label>Validité</label><input type="date" value="${esc(d.dateValidite)}" oninput="upd('mission.dateValidite', this.value)"></div>
+    </div>
+
+    <h3>Client</h3>
+    <div class="row">
+      <div class="field sm"><label>N° Client</label><input value="${esc(d.client.num)}" oninput="upd('mission.client.num', this.value)"></div>
+      <div class="field"><label>Nom / Société</label><input value="${esc(d.client.name)}" oninput="upd('mission.client.name', this.value)"></div>
+      <div class="field"><label>Contact</label><input value="${esc(d.client.contact)}" oninput="upd('mission.client.contact', this.value)"></div>
+    </div>
+    <div class="row">
+      <div class="field"><label>Adresse</label><input value="${esc(d.client.address)}" oninput="upd('mission.client.address', this.value)"></div>
+      <div class="field"><label>Téléphone</label><input value="${esc(d.client.phone)}" oninput="upd('mission.client.phone', this.value)"></div>
+      <div class="field"><label>Email</label><input type="email" value="${esc(d.client.email)}" oninput="upd('mission.client.email', this.value)"></div>
+    </div>
+
+    <h3>Prestation</h3>
+    <div class="row">
+      <div class="field"><label>Type de prestation</label>
+        <select onchange="pickObject(this.value)">
+          <option value="">— choisir —</option>
+          ${CATALOG.map(c => `<option value="${c.k}" ${d.object===c.k?"selected":""}>${esc(c.l)} (${c.p} €)</option>`).join("")}
+        </select>
+      </div>
+      <div class="field sm"><label>Date prestation</label><input type="date" value="${esc(d.objectDate)}" oninput="upd('mission.objectDate', this.value)"></div>
+      <div class="field"><label>Lieu</label><input value="${esc(d.objectLieu)}" oninput="upd('mission.objectLieu', this.value)"></div>
+    </div>
+    <div class="hint">Choisir une prestation pré-remplit automatiquement le P.U. shooting avec le tarif arrondi du catalogue.</div>
+
+    <h3>Lignes</h3>
+    <div class="row">
+      <div class="field sm"><label>Préparation (h)</label><input type="number" step="0.25" value="${esc(d.prep.hours)}" oninput="upd('mission.prep.hours', this.value)"></div>
+      <div class="field sm"><label>P.U. préparation</label><input type="number" step="0.01" value="${esc(d.prep.rate)}" oninput="upd('mission.prep.rate', this.value)"></div>
+      <div class="field sm"><label>Shooting (h)</label><input type="number" step="0.25" value="${esc(d.prod.hours)}" oninput="upd('mission.prod.hours', this.value)"></div>
+      <div class="field sm"><label>P.U. shooting</label><input type="number" step="0.01" value="${esc(d.prod.rate)}" oninput="upd('mission.prod.rate', this.value)"></div>
+      <div class="field sm"><label>Post-prod (h)</label><input type="number" step="0.25" value="${esc(d.postprod.hours)}" oninput="upd('mission.postprod.hours', this.value)"></div>
+      <div class="field sm"><label>P.U. post-prod</label><input type="number" step="0.01" value="${esc(d.postprod.rate)}" oninput="upd('mission.postprod.rate', this.value)"></div>
+    </div>
+
+    <h3>Déplacement</h3>
+    <div class="row">
+      <div class="field sm"><label>Distance (km)</label><input type="number" step="0.1" value="${esc(d.deplacement.km)}" oninput="upd('mission.deplacement.km', this.value)"></div>
+      <div class="field sm"><label>Péages (€)</label><input type="number" step="0.01" value="${esc(d.deplacement.peages)}" oninput="upd('mission.deplacement.peages', this.value)"></div>
+      <div class="field sm"><label>Temps trajet (h)</label><input type="number" step="0.25" value="${esc(d.deplacement.trajetH)}" oninput="upd('mission.deplacement.trajetH', this.value)"></div>
+      <div class="field sm"><label>Ticket TC (€)</label><input type="number" step="0.01" value="${esc(d.deplacement.ticket)}" oninput="upd('mission.deplacement.ticket', this.value)"></div>
+    </div>
+    <div class="hint">Indemnité km : 0,40 € · Valorisation temps trajet : 40 €/h</div>
+
+    <h3>Autres &amp; remise</h3>
+    <div class="row">
+      <div class="field"><label>Description « autres »</label><input value="${esc(d.autres.desc)}" oninput="upd('mission.autres.desc', this.value)"></div>
+      <div class="field sm"><label>Montant (€)</label><input type="number" step="0.01" value="${esc(d.autres.montant)}" oninput="upd('mission.autres.montant', this.value)"></div>
+      <div class="field sm"><label>Remise (%)</label><input type="number" step="0.1" value="${esc(d.remisePct)}" oninput="upd('mission.remisePct', this.value)"></div>
+    </div>
+
+    <h3>Notes</h3>
+    <div class="row"><div class="field"><textarea oninput="upd('mission.notes', this.value)">${esc(d.notes)}</textarea></div></div>
+
+    <div class="totals" id="totals">${totalsHtml(t)}</div>
+  `;
 }
 
 function rDV() {
