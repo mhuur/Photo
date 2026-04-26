@@ -481,21 +481,161 @@ function rSV() {
   `;
 }
 
+const CLIENTS_SEED = [
+  {num:"11",name:"Groupe MACOHA",address:"8 bis Quai François Mitterrand",compAddress:"",cityPostal:"44200 - Nantes",contact:"Hadrien LAROUSSINIE",email:"contact@macoha-nantes.com",phone:"06 52 35 71 24",rencontre:""},
+  {num:"12",name:"Tosma SAS",address:"",compAddress:"",cityPostal:"",contact:"Cyrille VANHULLE Théophile NOGRIX",email:"tosma.org@gmail.com cyrille.vanhulle@tosma.org",phone:"07 66 04 91 05",rencontre:"Ecole de Design"},
+  {num:"13",name:"Pick Up Production",address:"17 rue Sanlecque",compAddress:"",cityPostal:"44000 - Nantes",contact:"Jérémy TOURNEUR",email:"jeremy.pickupprod@gmail.com",phone:"02 40 35 28 44",rencontre:""},
+  {num:"14",name:"Les Films du Dissident - Nantes",address:"19 Bd Bâtonnier Cholet",compAddress:"",cityPostal:"44100 - Nantes",contact:"William MONBILLARD",email:"william@lesfilmsdissident.com",phone:"07 63 87 31 61",rencontre:"Linkedin via une connaissance de l'école (portraits entreprise)"},
+  {num:"15",name:"Unpointcinq",address:"",compAddress:"",cityPostal:"",contact:"",email:"",phone:"",rencontre:""},
+  {num:"16",name:"Robyn Roper",address:"",compAddress:"",cityPostal:"",contact:"",email:"",phone:"",rencontre:""},
+  {num:"17",name:"Clément Bretaud",address:"",compAddress:"",cityPostal:"",contact:"",email:"",phone:"",rencontre:""},
+  {num:"18",name:"Atelier Tour de la Terre",address:"5 Rue Urvoy de Saint-Bedan",compAddress:"",cityPostal:"44000 - Nantes",contact:"Yulie Echavídre",email:"atelier.tourdelaterre@gmail.com",phone:"07 82 19 03 16",rencontre:"Via Résilience Factory (domaine du sport associatif)"},
+  {num:"19",name:"linda marques",address:"",compAddress:"",cityPostal:"",contact:"",email:"",phone:"",rencontre:"Recommandation d'un gars en soirée (facebook post)"},
+  {num:"20",name:"saad artaud",address:"",compAddress:"",cityPostal:"",contact:"",email:"",phone:"",rencontre:"Ami d'un ami (musique)"},
+  {num:"21",name:"Maiwenn Callarec",address:"",compAddress:"",cityPostal:"",contact:"",email:"",phone:"",rencontre:"Démarchage"},
+  {num:"22",name:"Sonsofthevillain",address:"",compAddress:"",cityPostal:"",contact:"",email:"",phone:"",rencontre:"Anciens copains dans la musique"},
+  {num:"23",name:"Mouna Khalifa",address:"",compAddress:"",cityPostal:"",contact:"",email:"",phone:"",rencontre:"Léo Boulestreau (Clips et la vidéo)"},
+  {num:"24",name:"Max Adams",address:"",compAddress:"",cityPostal:"",contact:"",email:"",phone:"",rencontre:"Réseau social (profil d'amankaya danseuse chanteuse)"},
+  {num:"25",name:"Matilda",address:"",compAddress:"",cityPostal:"",contact:"",email:"",phone:"",rencontre:""},
+  {num:"26",name:"Bain de Midi",address:"",compAddress:"",cityPostal:"",contact:"",email:"",phone:"",rencontre:""},
+  {num:"27",name:"homeloop",address:"",compAddress:"",cityPostal:"",contact:"",email:"",phone:"",rencontre:""},
+  {num:"28",name:"ibtissam.naji@hotmail.com",address:"",compAddress:"",cityPostal:"",contact:"",email:"",phone:"",rencontre:""},
+  {num:"29",name:"levéso",address:"",compAddress:"",cityPostal:"",contact:"",email:"",phone:"",rencontre:""},
+  {num:"30",name:"lucilia bayot",address:"",compAddress:"",cityPostal:"",contact:"",email:"",phone:"",rencontre:""},
+  {num:"32",name:"menthol moose",address:"",compAddress:"",cityPostal:"",contact:"",email:"",phone:"",rencontre:""},
+  {num:"33",name:"alexandre meme clermont",address:"",compAddress:"",cityPostal:"",contact:"",email:"",phone:"",rencontre:""},
+  {num:"34",name:"Groupe Main Avenue, Mstream",address:"5 Prom. Europa",compAddress:"",cityPostal:"44200 - Nantes",contact:"Nicolas BERRIVIN - Main Avenue Group",email:"nberrivin@mainavenue.fr",phone:"06 09 42 07 82",rencontre:"Stage motion design"},
+  {num:"35",name:"mauve collectif",address:"",compAddress:"",cityPostal:"",contact:"",email:"",phone:"",rencontre:""},
+  {num:"36",name:"Trempo",address:"",compAddress:"",cityPostal:"",contact:"",email:"guillaume@trempo.com jeoffrey@trempo.com",phone:"",rencontre:""},
+  {num:"37",name:"Andrea Jouaud",address:"",compAddress:"",cityPostal:"",contact:"",email:"",phone:"",rencontre:""},
+  {num:"38",name:"MyPhotobooth",address:"21 Rue Léon Durocher",compAddress:"",cityPostal:"44200 - Nantes",contact:"Victor VILETTE",email:"photoboothlocations@gmail.com",phone:"06 61 02 31 57",rencontre:""},
+  {num:"39",name:"xavier hubert",address:"",compAddress:"",cityPostal:"",contact:"",email:"xav.hubert@gmail.com",phone:"06 61 96 11 20",rencontre:""},
+  {num:"40",name:"chainons manquants 44",address:"",compAddress:"",cityPostal:"",contact:"",email:"",phone:"",rencontre:""},
+  {num:"41",name:"bureau des congrès",address:"",compAddress:"",cityPostal:"",contact:"Servane DE BOUDEMANGE",email:"servane.deboudemange@nantes-saintnazaire.fr",phone:"06 84 98 99 61",rencontre:"Via l'alternante en communication, qui a cherché (insta ou linkedin)"},
+  {num:"42",name:"OWLOVE",address:"",compAddress:"",cityPostal:"",contact:"",email:"",phone:"",rencontre:""},
+  {num:"43",name:"camille charrol",address:"",compAddress:"",cityPostal:"",contact:"",email:"",phone:"",rencontre:""},
+  {num:"44",name:"clément masson",address:"",compAddress:"",cityPostal:"",contact:"",email:"",phone:"",rencontre:""},
+  {num:"45",name:"Océane Feugueur",address:"",compAddress:"",cityPostal:"",contact:"",email:"",phone:"",rencontre:""},
+  {num:"46",name:"daria",address:"",compAddress:"",cityPostal:"",contact:"",email:"",phone:"",rencontre:""},
+  {num:"47",name:"diva",address:"",compAddress:"",cityPostal:"",contact:"",email:"",phone:"",rencontre:""},
+  {num:"48",name:"cravate solidaire",address:"",compAddress:"",cityPostal:"",contact:"",email:"nantes@lacravatesolidaire.org",phone:"",rencontre:""},
+  {num:"49",name:"Poulinet Brianne",address:"",compAddress:"",cityPostal:"",contact:"",email:"",phone:"",rencontre:""},
+  {num:"50",name:"Aguado Daniel",address:"",compAddress:"",cityPostal:"",contact:"",email:"",phone:"",rencontre:""},
+  {num:"51",name:"Ooshot",address:"",compAddress:"",cityPostal:"",contact:"",email:"nicolas.simon@ooshot.com",phone:"",rencontre:""},
+  {num:"52",name:"Nonovibe",address:"",compAddress:"",cityPostal:"",contact:"",email:"",phone:"",rencontre:""},
+  {num:"53",name:"Zahou",address:"",compAddress:"",cityPostal:"",contact:"",email:"",phone:"",rencontre:""},
+  {num:"54",name:"dorian clair",address:"",compAddress:"",cityPostal:"",contact:"",email:"",phone:"",rencontre:""},
+  {num:"54",name:"vautier emmanuelle",address:"",compAddress:"",cityPostal:"",contact:"",email:"",phone:"",rencontre:""},
+  {num:"55",name:"camus le floch",address:"",compAddress:"",cityPostal:"",contact:"",email:"",phone:"",rencontre:""},
+  {num:"56",name:"francois bourdin",address:"",compAddress:"",cityPostal:"",contact:"",email:"",phone:"",rencontre:""},
+  {num:"57",name:"marie mauret cepas",address:"",compAddress:"",cityPostal:"",contact:"",email:"",phone:"",rencontre:""},
+  {num:"58",name:"victoire rousseau",address:"",compAddress:"",cityPostal:"",contact:"",email:"",phone:"",rencontre:""},
+  {num:"59",name:"lucie desirat",address:"",compAddress:"",cityPostal:"",contact:"",email:"",phone:"",rencontre:""},
+  {num:"60",name:"Krack Records",address:"22 Mail Pablo Picasso",compAddress:"",cityPostal:"44000 - Nantes",contact:"Lyod Moyamy",email:"info@krackrecords.com",phone:"06 44 72 93 68",rencontre:""},
+  {num:"61",name:"Cléophée Gourlet-Cloarec",address:"",compAddress:"",cityPostal:"",contact:"",email:"",phone:"",rencontre:""},
+  {num:"62",name:"Take Off Com",address:"",compAddress:"",cityPostal:"",contact:"",email:"",phone:"",rencontre:""},
+  {num:"63",name:"Margot Voisin",address:"",compAddress:"",cityPostal:"",contact:"",email:"",phone:"",rencontre:"par tunjay (rappeur nantais)"},
+  {num:"64",name:"Lensman",address:"",compAddress:"",cityPostal:"",contact:"",email:"",phone:"",rencontre:""},
+  {num:"65",name:"Léa Jacquot",address:"",compAddress:"",cityPostal:"",contact:"",email:"lea-jacquot@outlook.fr",phone:"06 07 26 13 20",rencontre:"ami d'ami"},
+  {num:"66",name:"Sarah Martinache",address:"",compAddress:"",cityPostal:"",contact:"",email:"",phone:"",rencontre:"prospection paris"},
+  {num:"67",name:"L'Assaucisse Association",address:"9 Bd Emile Romanet",compAddress:"",cityPostal:"44100 - Nantes",contact:"Mathéo DESMARRES",email:"matheodesmarres.contact@gmail.com",phone:"06 05 29 99 80",rencontre:"Via Camus"},
+  {num:"68",name:"Tom Verdois",address:"14 Rue du Chapeau Rouge",compAddress:"",cityPostal:"44000 - Nantes",contact:"",email:"tom.verdois@icloud.com",phone:"06 47 61 93 02",rencontre:"Via suggestion insta"},
+  {num:"69",name:"Marie Ambroise",address:"108 Rue du Patis Clos",compAddress:"",cityPostal:"49270 - La Varenne",contact:"",email:"ambroise.marie@outlook.fr",phone:"06 41 76 91 06",rencontre:"via études motion design"},
+  {num:"70",name:"Théo Alexandre BEEMYPHONE",address:"11 rue maître Pierre",compAddress:"",cityPostal:"44330 - Vallet",contact:"",email:"theoalexandre842@gmail.com",phone:"06 28 70 18 23",rencontre:"Via Loris ami de Flo qui travaille à beemyphone"},
+  {num:"71",name:"Safa Farban",address:"10 boulevard président René Coty",compAddress:"",cityPostal:"44100 - Nantes",contact:"",email:"safa.farban@outlook.com",phone:"06 48 65 60 21",rencontre:"Amie de Rencontres par Insta (Ilona, Antoine)"},
+  {num:"72",name:"La Ville est Belle",address:"11 rue La Noue Bras de Fer",compAddress:"",cityPostal:"44200 - Nantes",contact:"Léopold Grosvenor",email:"leopold.grosvenor@la-ville-est-belle.fr",phone:"07 63 20 03 29",rencontre:"Via démarchage"},
+  {num:"73",name:"Manal BARNETT",address:"8 rue de la barillerie",compAddress:"",cityPostal:"44000 - Nantes",contact:"",email:"manalbarnett09@gmail.com",phone:"06 24 25 42 55",rencontre:"via tunjay"},
+  {num:"74",name:"Fedelin Kerro",address:"43 rue bouchaud",compAddress:"",cityPostal:"44100 - Nantes",contact:"",email:"kerro.san44@gmail.com",phone:"06 45 73 12 79",rencontre:"sur insta"},
+  {num:"75",name:"Onepoint",address:"29 rue des sablons",compAddress:"",cityPostal:"75016 - Paris",contact:"Mariem Zamouri",email:"m.zamouri@groupeonepoint.com",phone:"33668767953",rencontre:""},
+  {num:"76",name:"Clarisse Valcy",address:"20 rue Barbara",compAddress:"",cityPostal:"44300 - Nantes",contact:"",email:"valcyclarisse@gmail.com",phone:"06 95 58 82 18",rencontre:"sur google"},
+  {num:"77",name:"Jonathan Lefebvre",address:"",compAddress:"",cityPostal:"",contact:"",email:"vjblind@gmail.com",phone:"",rencontre:"via hortense mauny"},
+  {num:"78",name:"Wilson Comba",address:"3 Rue de Cholet",compAddress:"",cityPostal:"44800 - St Herblain",contact:"",email:"wilson.comba-lima@hotmail.com",phone:"06 10 38 31 97",rencontre:"via eliyah / resilience / davis"},
+  {num:"97",name:"Arnaud Sollayr",address:"",compAddress:"",cityPostal:"",contact:"",email:"",phone:"",rencontre:"recommandation linkedin"},
+  {num:"111",name:"Association Confluence",address:"1 bis avenue de Langeais",compAddress:"",cityPostal:"44800 - St Herblain",contact:"Alexis Desmars",email:"confluencemusique@gmail.com",phone:"06 95 02 37 24",rencontre:"Amis de soirées"},
+  {num:"129",name:"UFOLEP",address:"",compAddress:"",cityPostal:"",contact:"",email:"",phone:"",rencontre:"photopresta"},
+  {num:"144",name:"RÉUNION DU SPORT DE L'EMPLOI ET DE LA CULTURE (RSLC - RESILIENCE)",address:"43 Rue de Michel Chauty",compAddress:"",cityPostal:"44800 - Saint Herblain",contact:"Davis MOUKALA",email:"contact@resiliencefactory.org",phone:"06 41 93 08 65",rencontre:"ami d'ami"},
+  {num:"188",name:"adèle ansuz",address:"",compAddress:"",cityPostal:"",contact:"",email:"",phone:"",rencontre:"ami d'ami"},
+  {num:"227",name:"Salma.choukri",address:"",compAddress:"",cityPostal:"",contact:"",email:"",phone:"",rencontre:""},
+  {num:"231",name:"cenea pays de la loire",address:"",compAddress:"",cityPostal:"",contact:"",email:"",phone:"",rencontre:"soeur d'agathe rousseau alternante aux Films du Dissident"},
+  {num:"441",name:"sabrina artaud",address:"",compAddress:"",cityPostal:"",contact:"",email:"",phone:"",rencontre:"linkedin recherche"},
+  {num:"511",name:"SILVESTRODICE",address:"",compAddress:"",cityPostal:"",contact:"",email:"",phone:"",rencontre:""},
+  {num:"555",name:"Mike & cheese",address:"",compAddress:"",cityPostal:"",contact:"",email:"",phone:"",rencontre:""},
+  {num:"771",name:"cafeprod",address:"",compAddress:"",cityPostal:"",contact:"",email:"",phone:"",rencontre:""},
+  {num:"879",name:"NOCTAMBULE",address:"",compAddress:"",cityPostal:"",contact:"",email:"",phone:"",rencontre:""},
+  {num:"1024",name:"LEIDA",address:"",compAddress:"",cityPostal:"",contact:"",email:"",phone:"",rencontre:""},
+  {num:"1076",name:"CWF",address:"6 rue de la Tisonnière",compAddress:"",cityPostal:"85500 - Les Herbiers",contact:"Manon BOUTIN Barbara GENDRE Cécile PROCOPE",email:"Manon.BOUTIN@cwf.fr Barbara.GENDRE@cwf.fr Cecile.PROCOPE@cwf.fr",phone:"06 32 83 48 35 06 08 80 51 94 02 51 66 39 68",rencontre:"trouvée sur linkedin \"photographe nantes\""},
+  {num:"1256",name:"MARINE BELLEE",address:"",compAddress:"",cityPostal:"",contact:"",email:"",phone:"",rencontre:""},
+  {num:"79",name:"Nicolas Halet",address:"7 Rue Pitre Chevalier",compAddress:"",cityPostal:"44000 - Nantes",contact:"",email:"halet.nicolas@outlook.fr",phone:"06 77 56 51 01",rencontre:"via laetitia amie du lycée (c'est son frère)"},
+  {num:"80",name:"Fanny LORCET",address:"",compAddress:"",cityPostal:"",contact:"",email:"f.lorcet@free.fr",phone:"06 40 30 96 57",rencontre:""},
+  {num:"81",name:"Léonie Hubert",address:"9 bd émile romanet",compAddress:"",cityPostal:"44100 - Nantes",contact:"",email:"leonie.hubert35@gmail.com",phone:"06 95 03 13 03",rencontre:"par Amankaya"},
+  {num:"82",name:"Isabelle Nehlig",address:"8 Rue des Épinettes",compAddress:"",cityPostal:"44830 - Bouaye",contact:"",email:"natacha.lebras@gmail.com",phone:"06 77 77 12 56",rencontre:"par Natacha"},
+  {num:"83",name:"Boris Gbahi",address:"",compAddress:"",cityPostal:"",contact:"Océane Rocton",email:"or.studiophoto@gmail.com",phone:"06 16 82 37 95",rencontre:"insta (océane)"},
+  {num:"84",name:"Julie Clénet",address:"5 Le Freuche La Limouzinière",compAddress:"",cityPostal:"44310 - St Philbert de Grand Lieu",contact:"",email:"julieclenetdu44@gmail.com",phone:"06 14 30 81 74",rencontre:"par Mélissa"},
+  {num:"85",name:"Éva Lory",address:"",compAddress:"",cityPostal:"",contact:"",email:"eva.lory@essca.eu",phone:"",rencontre:""},
+  {num:"86",name:"Axelle Martinelli",address:"9 avenue de Normandie",compAddress:"",cityPostal:"44300 - Nantes",contact:"",email:"axelle@coachevolution.fr",phone:"06 83 19 18 66",rencontre:"par maman"},
+  {num:"87",name:"Nicolas Thévenin",address:"1 rue Paul Dubois",compAddress:"",cityPostal:"44000 - Nantes",contact:"",email:"ntvn@me.com",phone:"06 20 31 02 35",rencontre:"par l'école de design (mon prof de cinéma)"},
+  {num:"88",name:"WAPOLLI",address:"14 avenue de la libération",compAddress:"",cityPostal:"44143 - Rezé",contact:"Apolline Watrelot",email:"apollinewatrelot@gmail.com",phone:"07 66 17 30 32",rencontre:"lyod krack records"},
+  {num:"89",name:"Nolan Guisneuf",address:"5 rue du 11 novembre",compAddress:"",cityPostal:"44120 - Vertou",contact:"",email:"nolan.guisneuf@lagencelocale.com",phone:"07 68 79 15 65",rencontre:"insta"},
+  {num:"90",name:"Éric Boistard",address:"",compAddress:"",cityPostal:"Nantes",contact:"",email:"ericboistard@free.fr",phone:"06 16 30 24 92",rencontre:"par romain charrier"},
+  {num:"91",name:"Rozenn et Ziad Zeitoun",address:"71 rue Colmet Lépinay",compAddress:"",cityPostal:"93100 Montreuil",contact:"",email:"rozenn.ollivier@gmail.com",phone:"06 95 01 04 91",rencontre:"par flore hubert (c'est sa soeur)"},
+  {num:"92",name:"Ségolène Fourmy",address:"",compAddress:"",cityPostal:"Boulevard du Massacre, Nantes (44109)",contact:"",email:"segolene.fourmy@outlook.fr",phone:"06 73 36 23 66",rencontre:"amie"},
+  {num:"93",name:"Ronan Virginie",address:"",compAddress:"",cityPostal:"",contact:"",email:"ronanvirginie@gmail.com",phone:"06 99 23 10 27",rencontre:"bota binks"},
+  {num:"94",name:"Tristan Rousseau",address:"69 rue du largeau",compAddress:"",cityPostal:"44230 Saint Sébastien sur Loire",contact:"",email:"tristan.rousseau1806@gmail.com",phone:"07.71.68.04.12",rencontre:""},
+  {num:"95",name:"Cleblue",address:"",compAddress:"",cityPostal:"",contact:"",email:"cleblue2015@gmail.com",phone:"",rencontre:""},
+  {num:"96",name:"Mélodie Contu-Favry",address:"7 Chemin Bretonnelle",compAddress:"",cityPostal:"44100 Nantes",contact:"",email:"contufavrymelodie@gmail.com",phone:"06 83 83 40 68",rencontre:""},
+  {num:"98",name:"Louise Vayer",address:"72 rue Gambetta",compAddress:"",cityPostal:"44000 - Nantes",contact:"",email:"louveho@gmail.com",phone:"06 87 61 27 61",rencontre:"insta"},
+  {num:"99",name:"Lucas Jacquet",address:"4 square de sendai",compAddress:"",cityPostal:"35700 - Rennes",contact:"",email:"potalakompote@gmail.com",phone:"",rencontre:"insta"},
+  {num:"100",name:"Emma Bonneau",address:"95 rue de la patouillerie",compAddress:"",cityPostal:"44700 - Orvault",contact:"",email:"emmaa.bonneau@gmail.com",phone:"06 60 76 69 70",rencontre:"par ami d'ami"},
+  {num:"101",name:"Lilly Nadia",address:"",compAddress:"",cityPostal:"",contact:"",email:"uwimpuhwe@yahoo.fr",phone:"",rencontre:"nantes tribe up"},
+  {num:"102",name:"Angèle Simon",address:"",compAddress:"",cityPostal:"",contact:"",email:"angele.simon.em@gmail.com",phone:"06 71 23 92 24",rencontre:""},
+  {num:"103",name:"Valentine Rabreau",address:"4 RUE René Cassin",compAddress:"",cityPostal:"44230.0",contact:"",email:"Valentine.rabreau@gmail.com",phone:"06 05 01 77 31",rencontre:""},
+  {num:"104",name:"Juliette Ollivier",address:"",compAddress:"",cityPostal:"",contact:"",email:"juliette.ollivier@outlook.fr",phone:"07 83 15 60 91",rencontre:"mariage Flore et Rozenn"},
+  {num:"105",name:"Sibylle Baeyens-Bruyere",address:"",compAddress:"",cityPostal:"",contact:"",email:"sidelphe@gmail.com",phone:"07 81 70 97 98",rencontre:""},
+  {num:"106",name:"Loic Renaud - Atelier NOIZY",address:"",compAddress:"",cityPostal:"",contact:"",email:"loic5euro@gmail.com",phone:"06 95 61 05 82",rencontre:"école de design"},
+  {num:"107",name:"Billy Buck Chicken",address:"Place du grand Pré",compAddress:"644 697 936 00018",cityPostal:"44620 - La Montagne",contact:"",email:"",phone:"02 59 28 39 36",rencontre:""},
+  {num:"108",name:"Sohan Legras",address:"",compAddress:"",cityPostal:"",contact:"",email:"sohan808music@icloud.com",phone:"06 71 73 78 10",rencontre:"dj (camus?)"},
+  {num:"109",name:"Victoria SMAÏL",address:"",compAddress:"",cityPostal:"",contact:"",email:"Nuarap@hotmail.com",phone:"06.74.70.82.23",rencontre:"jjims"},
+  {num:"110",name:"Christelle Lepetit",address:"",compAddress:"",cityPostal:"",contact:"",email:"clepetit@viadyssee.com",phone:"06 62 38 21 89",rencontre:"event job à la cordée - eventbrite"},
+  {num:"112",name:"Oceanne Zabolonne",address:"",compAddress:"",cityPostal:"",contact:"",email:"sabinejnn@gmail.com",phone:"",rencontre:"amis communs"},
+  {num:"113",name:"Benjamin Latouche",address:"",compAddress:"",cityPostal:"22000 - St Brieuc",contact:"",email:"Contact.youngsmusic@gmail.com",phone:"06 58 96 22 44",rencontre:"insta"},
+  {num:"114",name:"Influenci",address:"Rte de la Corniche",compAddress:"",cityPostal:"20110 - Propriano",contact:"",email:"contact@influenci.com",phone:"06 50 77 98 60",rencontre:"OnePoint - Pierre Alexandre Kintzinger (vidéaste)"},
+  {num:"115",name:"Carla M.",address:"",compAddress:"",cityPostal:"",contact:"",email:"m.carla2008@outlook.fr",phone:"",rencontre:""},
+  {num:"116",name:"Euphorbia",address:"42 Quai de la Fosse",compAddress:"",cityPostal:"44000 Nantes",contact:"",email:"",phone:"",rencontre:"irl devant leur salon par hasard"},
+];
 function clientsAdd() {
   const c = S.mission.client;
   S.clients.entries.unshift({
-    id:      uid(),
-    num:     c.num     || "",
-    name:    c.name    || "",
-    contact: c.contact || "",
-    address: c.address || "",
-    phone:   c.phone   || "",
-    email:   c.email   || ""
+    id:          uid(),
+    num:         c.num     || "",
+    name:        c.name    || "",
+    contact:     c.contact || "",
+    address:     c.address || "",
+    compAddress: "",
+    cityPostal:  "",
+    phone:       c.phone   || "",
+    email:       c.email   || "",
+    rencontre:   ""
   });
   save();
   render();
 }
 window.clientsAdd = clientsAdd;
+
+function clientsImport() {
+  const existing = new Set(S.clients.entries.map(e => (e.num || "").trim()).filter(Boolean));
+  const toImport = CLIENTS_SEED.filter(s => !existing.has(s.num));
+  if (toImport.length === 0) {
+    alert("Tous les clients de l'Excel sont déjà importés.");
+    return;
+  }
+  if (!confirm(`Importer ${toImport.length} client(s) depuis l'Excel ?`)) return;
+  for (const s of toImport) {
+    S.clients.entries.push({ id: uid(), ...s });
+  }
+  save();
+  render();
+}
+window.clientsImport = clientsImport;
 
 function clientsDel(id) {
   S.clients.entries = S.clients.entries.filter(e => e.id !== id);
@@ -518,10 +658,13 @@ function rCL() {
     <tr>
       <td><input value="${esc(e.num)}" oninput="clientsUpd('${e.id}','num',this.value)" placeholder="N°"></td>
       <td><input value="${esc(e.name)}" oninput="clientsUpd('${e.id}','name',this.value)" placeholder="Nom / Société"></td>
-      <td><input value="${esc(e.contact)}" oninput="clientsUpd('${e.id}','contact',this.value)" placeholder="Contact"></td>
       <td><input value="${esc(e.address)}" oninput="clientsUpd('${e.id}','address',this.value)" placeholder="Adresse"></td>
-      <td><input value="${esc(e.phone)}" oninput="clientsUpd('${e.id}','phone',this.value)" placeholder="Téléphone"></td>
+      <td><input value="${esc(e.compAddress)}" oninput="clientsUpd('${e.id}','compAddress',this.value)" placeholder="Compl."></td>
+      <td><input value="${esc(e.cityPostal)}" oninput="clientsUpd('${e.id}','cityPostal',this.value)" placeholder="CP - Ville"></td>
+      <td><input value="${esc(e.contact)}" oninput="clientsUpd('${e.id}','contact',this.value)" placeholder="Contact"></td>
       <td><input type="email" value="${esc(e.email)}" oninput="clientsUpd('${e.id}','email',this.value)" placeholder="Email"></td>
+      <td><input value="${esc(e.phone)}" oninput="clientsUpd('${e.id}','phone',this.value)" placeholder="Téléphone"></td>
+      <td><input value="${esc(e.rencontre)}" oninput="clientsUpd('${e.id}','rencontre',this.value)" placeholder="Rencontré via"></td>
       <td class="actions"><button title="Supprimer" onclick="if(confirm('Supprimer ce client ?'))clientsDel('${e.id}')">×</button></td>
     </tr>
   `).join("");
@@ -531,25 +674,31 @@ function rCL() {
 
     <div class="toolbar">
       <button class="btn" onclick="clientsAdd()">+ Ajouter un client</button>
+      <button class="btn ghost" onclick="clientsImport()">Importer depuis l'Excel (${CLIENTS_SEED.length})</button>
       <span class="spacer"></span>
-      <span class="hint" style="margin:0">Le bouton pré-remplit la ligne avec le client de la mission en cours.</span>
+      <span class="hint" style="margin:0">« Ajouter » pré-remplit avec le client de la mission. L'import ignore les N° déjà présents.</span>
     </div>
 
-    ${entries.length === 0 ? `<div class="empty">Aucun client enregistré. Cliquez sur « + Ajouter un client » pour commencer.</div>` : `
+    ${entries.length === 0 ? `<div class="empty">Aucun client enregistré. Cliquez sur « + Ajouter un client » ou « Importer depuis l'Excel » pour commencer.</div>` : `
+    <div style="overflow-x:auto">
     <table class="hist">
       <thead>
         <tr>
-          <th style="width:80px">N°</th>
-          <th>Nom / Société</th>
-          <th>Contact</th>
-          <th>Adresse</th>
-          <th style="width:140px">Téléphone</th>
-          <th style="width:200px">Email</th>
+          <th style="width:70px">N°</th>
+          <th style="min-width:180px">Nom / Société</th>
+          <th style="min-width:200px">Adresse</th>
+          <th style="min-width:120px">Compl.</th>
+          <th style="min-width:160px">CP - Ville</th>
+          <th style="min-width:160px">Contact</th>
+          <th style="min-width:200px">Email</th>
+          <th style="min-width:140px">Téléphone</th>
+          <th style="min-width:200px">Rencontré via</th>
           <th></th>
         </tr>
       </thead>
       <tbody>${rows}</tbody>
-    </table>`}
+    </table>
+    </div>`}
   `;
 }
 
