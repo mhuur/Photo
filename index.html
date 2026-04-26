@@ -112,12 +112,13 @@ const DEFAULT_S = {
   },
   devis:    {},
   suivi:    { entries: [] },
-  clients:  {},
+  clients:  { entries: [] },
   compta:   {},
   bugs:     {}
 };
 let S = JSON.parse(localStorage.getItem(SK) || "null") || JSON.parse(JSON.stringify(DEFAULT_S));
 if (!S.suivi || !Array.isArray(S.suivi.entries)) S.suivi = { ...DEFAULT_S.suivi };
+if (!S.clients || !Array.isArray(S.clients.entries)) S.clients = { ...DEFAULT_S.clients };
 let user = null;
 let tab = "mission";
 let cloudT = null;
@@ -178,7 +179,7 @@ async function loadFromCloud() {
       }
       if (d.devis)   S.devis   = Object.assign({}, DEFAULT_S.devis,   d.devis);
       if (d.suivi)   S.suivi   = { ...DEFAULT_S.suivi, ...d.suivi, entries: Array.isArray(d.suivi.entries) ? d.suivi.entries : [] };
-      if (d.clients) S.clients = Object.assign({}, DEFAULT_S.clients, d.clients);
+      if (d.clients) S.clients = { ...DEFAULT_S.clients, ...d.clients, entries: Array.isArray(d.clients.entries) ? d.clients.entries : [] };
       if (d.compta)  S.compta  = Object.assign({}, DEFAULT_S.compta,  d.compta);
       if (d.bugs)    S.bugs    = Object.assign({}, DEFAULT_S.bugs,    d.bugs);
       localStorage.setItem(SK, JSON.stringify(S));
@@ -458,10 +459,76 @@ function rSV() {
   `;
 }
 
+function clientsAdd() {
+  const c = S.mission.client;
+  S.clients.entries.unshift({
+    id:      uid(),
+    num:     c.num     || "",
+    name:    c.name    || "",
+    contact: c.contact || "",
+    address: c.address || "",
+    phone:   c.phone   || "",
+    email:   c.email   || ""
+  });
+  save();
+  render();
+}
+window.clientsAdd = clientsAdd;
+
+function clientsDel(id) {
+  S.clients.entries = S.clients.entries.filter(e => e.id !== id);
+  save();
+  render();
+}
+window.clientsDel = clientsDel;
+
+function clientsUpd(id, field, val) {
+  const e = S.clients.entries.find(x => x.id === id);
+  if (!e) return;
+  e[field] = val;
+  save();
+}
+window.clientsUpd = clientsUpd;
+
 function rCL() {
+  const entries = S.clients.entries;
+  const rows = entries.map(e => `
+    <tr>
+      <td><input value="${esc(e.num)}" oninput="clientsUpd('${e.id}','num',this.value)" placeholder="N°"></td>
+      <td><input value="${esc(e.name)}" oninput="clientsUpd('${e.id}','name',this.value)" placeholder="Nom / Société"></td>
+      <td><input value="${esc(e.contact)}" oninput="clientsUpd('${e.id}','contact',this.value)" placeholder="Contact"></td>
+      <td><input value="${esc(e.address)}" oninput="clientsUpd('${e.id}','address',this.value)" placeholder="Adresse"></td>
+      <td><input value="${esc(e.phone)}" oninput="clientsUpd('${e.id}','phone',this.value)" placeholder="Téléphone"></td>
+      <td><input type="email" value="${esc(e.email)}" oninput="clientsUpd('${e.id}','email',this.value)" placeholder="Email"></td>
+      <td class="actions"><button title="Supprimer" onclick="if(confirm('Supprimer ce client ?'))clientsDel('${e.id}')">×</button></td>
+    </tr>
+  `).join("");
+
   return `
     <h2>Clients <span id="savedFlash" class="saved"></span></h2>
-    <div class="empty">Onglet Clients — à remplir au prochain tour.</div>`;
+
+    <div class="toolbar">
+      <button class="btn" onclick="clientsAdd()">+ Ajouter un client</button>
+      <span class="spacer"></span>
+      <span class="hint" style="margin:0">Le bouton pré-remplit la ligne avec le client de la mission en cours.</span>
+    </div>
+
+    ${entries.length === 0 ? `<div class="empty">Aucun client enregistré. Cliquez sur « + Ajouter un client » pour commencer.</div>` : `
+    <table class="hist">
+      <thead>
+        <tr>
+          <th style="width:80px">N°</th>
+          <th>Nom / Société</th>
+          <th>Contact</th>
+          <th>Adresse</th>
+          <th style="width:140px">Téléphone</th>
+          <th style="width:200px">Email</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>${rows}</tbody>
+    </table>`}
+  `;
 }
 
 function rCP() {
