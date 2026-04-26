@@ -117,11 +117,13 @@ const DEFAULT_S = {
   suivi:    { entries: [] },
   clients:  { entries: [] },
   compta:   {},
+  abonnements: { entries: [] },
   bugs:     {}
 };
 let S = JSON.parse(localStorage.getItem(SK) || "null") || JSON.parse(JSON.stringify(DEFAULT_S));
 if (!S.suivi || !Array.isArray(S.suivi.entries)) S.suivi = { ...DEFAULT_S.suivi };
 if (!S.clients || !Array.isArray(S.clients.entries)) S.clients = { ...DEFAULT_S.clients };
+if (!S.abonnements || !Array.isArray(S.abonnements.entries)) S.abonnements = { ...DEFAULT_S.abonnements };
 let user = null;
 let tab = "mission";
 let cloudT = null;
@@ -155,6 +157,7 @@ async function saveToCloud() {
       suivi:   S.suivi,
       clients: S.clients,
       compta:  S.compta,
+      abonnements: S.abonnements,
       bugs:    S.bugs
     }, { merge: true });
     const e = document.getElementById("savedFlash");
@@ -184,6 +187,7 @@ async function loadFromCloud() {
       if (d.suivi)   S.suivi   = { ...DEFAULT_S.suivi, ...d.suivi, entries: Array.isArray(d.suivi.entries) ? d.suivi.entries : [] };
       if (d.clients) S.clients = { ...DEFAULT_S.clients, ...d.clients, entries: Array.isArray(d.clients.entries) ? d.clients.entries : [] };
       if (d.compta)  S.compta  = Object.assign({}, DEFAULT_S.compta,  d.compta);
+      if (d.abonnements) S.abonnements = { ...DEFAULT_S.abonnements, ...d.abonnements, entries: Array.isArray(d.abonnements.entries) ? d.abonnements.entries : [] };
       if (d.bugs)    S.bugs    = Object.assign({}, DEFAULT_S.bugs,    d.bugs);
       localStorage.setItem(SK, JSON.stringify(S));
     }
@@ -534,13 +538,57 @@ function rCL() {
   `;
 }
 
+function addAbonnement() {
+  S.abonnements.entries.unshift({
+    id:      uid(),
+    libelle: "",
+    annuel:  "0"
+  });
+  save();
+  render();
+}
+window.addAbonnement = addAbonnement;
+
+function deleteAbonnement(id) {
+  S.abonnements.entries = S.abonnements.entries.filter(e => e.id !== id);
+  save();
+  render();
+}
+window.deleteAbonnement = deleteAbonnement;
+
+function editAbonnement(id, field, val) {
+  const e = S.abonnements.entries.find(x => x.id === id);
+  if (!e) return;
+  e[field] = val;
+  save();
+}
+window.editAbonnement = editAbonnement;
+
+function refreshAbonnementMensuel(id) {
+  const e = S.abonnements.entries.find(x => x.id === id);
+  if (!e) return;
+  const cell = document.getElementById("ab-mens-" + id);
+  if (cell) cell.textContent = fmt(num(e.annuel) / 12);
+}
+window.refreshAbonnementMensuel = refreshAbonnementMensuel;
+
 function rCP() {
+  const abEntries = S.abonnements.entries;
+  const abRows = abEntries.map(e => `
+    <tr>
+      <td><input value="${esc(e.libelle)}" oninput="editAbonnement('${e.id}','libelle',this.value)" placeholder="Libellé"></td>
+      <td class="amount"><input type="number" step="0.01" value="${esc(e.annuel)}" oninput="editAbonnement('${e.id}','annuel',this.value); refreshAbonnementMensuel('${e.id}')"></td>
+      <td class="amount" id="ab-mens-${e.id}" style="text-align:right;color:#6b7280;font-variant-numeric:tabular-nums;padding-right:14px">${fmt(num(e.annuel) / 12)}</td>
+      <td class="actions"><button title="Supprimer" onclick="if(confirm('Supprimer cet abonnement ?'))deleteAbonnement('${e.id}')">×</button></td>
+    </tr>
+  `).join("");
+
   return `
     <h2>Compta <span id="savedFlash" class="saved"></span></h2>
 
     <h3>Abonnements professionnels</h3>
     <div class="toolbar">
-      <button class="btn">+ Ajouter un abonnement</button>
+      <button class="btn" onclick="addAbonnement()">+ Ajouter un abonnement</button>
     </div>
     <table class="hist">
       <thead>
@@ -551,7 +599,7 @@ function rCP() {
           <th style="width:36px"></th>
         </tr>
       </thead>
-      <tbody></tbody>
+      <tbody>${abRows}</tbody>
     </table>
 
     <h3>Investissements et achats ponctuels</h3>
