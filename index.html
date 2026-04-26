@@ -50,6 +50,8 @@
   table.hist tfoot td{padding:10px 12px;border-top:1px solid #e5e7eb;background:#f9fafb;font-weight:600;font-size:13px;text-align:right;font-variant-numeric:tabular-nums}
   table.hist tfoot td:first-child{text-align:left}
   table.hist tfoot tr.grandtotal td{background:#f3f4f6;font-size:14px;border-top:2px solid #d1d5db}
+  table.hist tbody tr.subtotal td{padding:8px 12px;background:#f9fafb;font-weight:600;font-size:13px;border-top:1px solid #e5e7eb;text-align:right;font-variant-numeric:tabular-nums}
+  table.hist tbody tr.subtotal td:first-child{text-align:left}
   td.statut select{font-weight:600}
   td.statut[data-s="envoye"]   select{color:#1d4ed8;background:#dbeafe}
   td.statut[data-s="attente"]  select{color:#b45309;background:#fef3c7}
@@ -360,13 +362,22 @@ function uid() { return Date.now().toString(36) + Math.random().toString(36).sli
 function suiviAdd() {
   const m = S.mission;
   const cat = CATALOG.find(c => c.k === m.object);
+  const totalAmount = totals().total.toFixed(2);
+  const hoursTotal = num(m.prep.hours) + num(m.prod.hours) + num(m.postprod.hours);
   S.suivi.entries.unshift({
     id:         uid(),
     date:       m.objectDate || new Date().toISOString().slice(0, 10),
     ref:        m.ref || "",
     client:     m.client.name || "",
     prestation: cat ? cat.l : "",
-    montant:    String(totals().total.toFixed(2)),
+    montant:    String(totalAmount),
+    heures:     String(hoursTotal),
+    paiement:   String(totalAmount),
+    ca:         String(totalAmount),
+    salaire:    "0",
+    ursaf:      "0",
+    tresorerie: "0",
+    frais:      "0",
     statut:     "attente"
   });
   save();
@@ -603,6 +614,106 @@ function editInvestissement(id, field, val) {
 }
 window.editInvestissement = editInvestissement;
 
+const MOIS_FR = ["janv.","févr.","mars","avr.","mai","juin","juil.","août","sept.","oct.","nov.","déc."];
+
+function bilanCompute() {
+  const byMonth = {};
+  for (const e of S.suivi.entries) {
+    const date = e.date || "";
+    if (date.length < 7) continue;
+    const ym = date.slice(0, 7);
+    if (!byMonth[ym]) byMonth[ym] = { heures:0, paiement:0, ca:0, salaire:0, ursaf:0, tresorerie:0, frais:0 };
+    const b = byMonth[ym];
+    const paid = e.statut === "paye";
+    if (paid) {
+      b.heures     += num(e.heures);
+      b.paiement   += num(e.paiement != null && e.paiement !== "" ? e.paiement : e.montant);
+      b.ca         += num(e.ca       != null && e.ca       !== "" ? e.ca       : e.montant);
+      b.salaire    += num(e.salaire);
+      b.tresorerie += num(e.tresorerie);
+      b.frais      += num(e.frais);
+    }
+    b.ursaf += num(e.ursaf);
+  }
+  const months = Object.keys(byMonth).sort((a, b) => b.localeCompare(a));
+  return months.map(ym => {
+    const b = byMonth[ym];
+    return { ym, ...b, totalPro: b.ursaf + b.tresorerie + b.frais };
+  });
+}
+
+function bilanRender() {
+  const data = bilanCompute();
+  if (data.length === 0) return { body: "", foot: "" };
+
+  const monthLabel = ym => {
+    const [y, m] = ym.split("-");
+    return `${MOIS_FR[parseInt(m, 10) - 1]} ${y}`;
+  };
+  const cellH = v => `<td style="text-align:right;font-variant-numeric:tabular-nums;padding-right:14px">${num(v).toFixed(2).replace(".", ",")}</td>`;
+  const cell  = v => `<td style="text-align:right;font-variant-numeric:tabular-nums;padding-right:14px">${fmt(v)}</td>`;
+
+  const annual = {};
+  const grand = { heures:0, paiement:0, ca:0, salaire:0, totalPro:0, ursaf:0, tresorerie:0, frais:0 };
+  for (const r of data) {
+    const y = r.ym.slice(0, 4);
+    if (!annual[y]) annual[y] = { heures:0, paiement:0, ca:0, salaire:0, totalPro:0, ursaf:0, tresorerie:0, frais:0 };
+    for (const k of Object.keys(grand)) { annual[y][k] += r[k]; grand[k] += r[k]; }
+  }
+
+  const rows = [];
+  for (let i = 0; i < data.length; i++) {
+    const r = data[i];
+    const y = r.ym.slice(0, 4);
+    rows.push(`
+      <tr>
+        <td>${esc(monthLabel(r.ym))}</td>
+        ${cellH(r.heures)}
+        ${cell(r.paiement)}
+        ${cell(r.ca)}
+        ${cell(r.salaire)}
+        ${cell(r.totalPro)}
+        ${cell(r.ursaf)}
+        ${cell(r.tresorerie)}
+        ${cell(r.frais)}
+      </tr>
+    `);
+    const next = data[i + 1];
+    if (!next || next.ym.slice(0, 4) !== y) {
+      const a = annual[y];
+      rows.push(`
+        <tr class="subtotal">
+          <td>Sous-total ${esc(y)}</td>
+          ${cellH(a.heures)}
+          ${cell(a.paiement)}
+          ${cell(a.ca)}
+          ${cell(a.salaire)}
+          ${cell(a.totalPro)}
+          ${cell(a.ursaf)}
+          ${cell(a.tresorerie)}
+          ${cell(a.frais)}
+        </tr>
+      `);
+    }
+  }
+
+  const foot = `
+    <tr class="grandtotal">
+      <td>Total général</td>
+      ${cellH(grand.heures)}
+      ${cell(grand.paiement)}
+      ${cell(grand.ca)}
+      ${cell(grand.salaire)}
+      ${cell(grand.totalPro)}
+      ${cell(grand.ursaf)}
+      ${cell(grand.tresorerie)}
+      ${cell(grand.frais)}
+    </tr>
+  `;
+
+  return { body: rows.join(""), foot };
+}
+
 function rCP() {
   const abEntries = S.abonnements.entries;
   const abRows = abEntries.map(e => `
@@ -623,6 +734,8 @@ function rCP() {
       <td class="actions"><button title="Supprimer" onclick="if(confirm('Supprimer cet investissement ?'))deleteInvestissement('${e.id}')">×</button></td>
     </tr>
   `).join("");
+
+  const bilan = bilanRender();
 
   return `
     <h2>Compta <span id="savedFlash" class="saved"></span></h2>
@@ -674,11 +787,8 @@ function rCP() {
           <th style="text-align:right">Frais débours. (Pro)</th>
         </tr>
       </thead>
-      <tbody></tbody>
-      <tfoot>
-        <tr class="subtotal"><td>Sous-total annuel</td><td colspan="8"></td></tr>
-        <tr class="grandtotal"><td>Total général</td><td colspan="8"></td></tr>
-      </tfoot>
+      <tbody>${bilan.body}</tbody>
+      ${bilan.foot ? `<tfoot>${bilan.foot}</tfoot>` : ""}
     </table>
   `;
 }
