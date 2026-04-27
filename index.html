@@ -73,6 +73,20 @@
   table.hist td.cb,table.hist th:first-child{text-align:center;width:34px;padding:6px 4px}
   table.hist td.cb input,table.hist th input[type="checkbox"]{cursor:pointer;width:16px;height:16px}
   table.hist tr.suv-detail td{background:#f9fafb;padding:0;border-bottom:1px solid #e5e7eb}
+  table.hist tr.suv-multi td{font-weight:500}
+  .suv-multi-tag{display:inline-flex;align-items:center;gap:4px;font-size:11px;color:#4b5563;background:#eef2ff;padding:2px 8px;border-radius:10px;margin-left:8px;font-weight:500}
+  table.hist tr.suv-sub{background:#fbfbfd;cursor:pointer}
+  table.hist tr.suv-sub:hover td{background:#f3f4f6}
+  table.hist tr.suv-sub.expanded td{background:#eff6ff}
+  table.hist tr.suv-sub td{padding:7px 10px;font-size:12.5px;color:#4b5563;border-bottom:1px solid #f1f5f9}
+  table.hist tr.suv-sub td.muted{color:#9ca3af;font-size:14px;text-align:center;width:18px;padding-right:0}
+  table.hist tr.suv-sub td.sub-lib{color:#374151}
+  table.hist td.actions:has(.suv-row-actions){text-align:right;width:auto;min-width:240px}
+  .suv-row-actions{display:flex;gap:4px;align-items:center;justify-content:flex-end;flex-wrap:wrap}
+  .suv-row-actions .btn{padding:4px 10px;font-size:11.5px;border-radius:4px;line-height:1.2}
+  .suv-row-actions .btn.ghost{padding:4px 8px}
+  .suv-row-actions button:not(.btn){background:none;border:0;color:#9ca3af;cursor:pointer;font-size:16px;padding:4px 6px;border-radius:4px}
+  .suv-row-actions button:not(.btn):hover{background:#fee2e2;color:#dc2626}
   .suv-panel{padding:16px 20px}
   .suv-panel h4{margin:0 0 10px;font-size:11px;color:#6b7280;text-transform:uppercase;letter-spacing:.05em}
   .suv-panel .row{margin-bottom:10px}
@@ -755,11 +769,26 @@ function suiviMissingCount() {
 
 
 function suiviDel(id) {
+  const e = S.suivi.entries.find(x => x.id === id);
+  const did = e && e.devisId;
   S.suivi.entries = S.suivi.entries.filter(e => e.id !== id);
+  if (did && S.suivi.entries.every(x => x.devisId !== did)) {
+    if (S.suivi.devis) delete S.suivi.devis[did];
+  }
   save();
   render();
 }
 window.suiviDel = suiviDel;
+
+function suiviDelDevis(devisId) {
+  S.suivi.entries = S.suivi.entries.filter(e => e.devisId !== devisId);
+  if (S.suivi.devis) delete S.suivi.devis[devisId];
+  suiviSelected.delete(devisId);
+  if (suiviGroupExpanded === devisId) suiviGroupExpanded = null;
+  save();
+  render();
+}
+window.suiviDelDevis = suiviDelDevis;
 
 function suiviUpd(id, field, val) {
   const e = S.suivi.entries.find(x => x.id === id);
@@ -846,11 +875,46 @@ function suiviRevert(id) {
 }
 window.suiviRevert = suiviRevert;
 
-function suiviActionsHtml(e) {
+function suiviDevisRevertAccept(devisId) {
+  for (const x of suiviGroupLigne(devisId)) x.statut = "envoye";
+  save();
+  render();
+}
+window.suiviDevisRevertAccept = suiviDevisRevertAccept;
+
+function suiviDevisRevertRefus(devisId) {
+  for (const x of suiviGroupLigne(devisId)) {
+    x.statut = x.statutAvantRefus || "envoye";
+    delete x.statutAvantRefus;
+  }
+  save();
+  render();
+}
+window.suiviDevisRevertRefus = suiviDevisRevertRefus;
+
+function devisActionsHtml(g) {
+  const stop = "event.stopPropagation();";
+  if (g.statutGlobal === "envoye") {
+    return `
+      <button class="btn" style="background:#10b981" onclick="${stop}suiviDevisAccepter('${g.devisId}')">Accepté</button>
+      <button class="btn" style="background:#dc2626" onclick="${stop}suiviDevisRefuser('${g.devisId}')">Refusé</button>`;
+  }
+  if (g.statutGlobal === "accepte") {
+    return `<button class="btn ghost" title="Revenir : Accepté → Envoyé (devis)" onclick="${stop}suiviDevisRevertAccept('${g.devisId}')">↩</button>`;
+  }
+  if (g.statutGlobal === "refuse") {
+    return `<button class="btn ghost" title="Revenir : annule le refus du devis" onclick="${stop}suiviDevisRevertRefus('${g.devisId}')">↩</button>`;
+  }
+  return "";
+}
+
+function suiviActionsHtml(e, opts) {
   const s = entryStatut(e);
   const did = e.devisId;
   const stop = "event.stopPropagation();";
+  const hidePhase1 = opts && opts.hidePhase1;
   if (s === "envoye") {
+    if (hidePhase1) return "";
     return `
       <button class="btn" style="background:#10b981" onclick="${stop}suiviDevisAccepter('${did}')">Accepté</button>
       <button class="btn" style="background:#dc2626" onclick="${stop}suiviDevisRefuser('${did}')">Refusé</button>`;
@@ -875,49 +939,62 @@ function suiviActionsHtml(e) {
   return "";
 }
 
-function suiviStats(list) {
+function devisStatutGlobal(lignes) {
+  if (!lignes.length) return "envoye";
+  const ss = lignes.map(entryStatut);
+  if (ss.every(s => s === "termine")) return "termine";
+  if (ss.some(s => s === "refuse")) return "refuse";
+  if (ss.some(s => s === "attente")) return "attente";
+  if (ss.every(s => s === "envoye")) return "envoye";
+  return "accepte";
+}
+
+function suiviStats(groups) {
   const by = { envoye: 0, accepte: 0, attente: 0, termine: 0, refuse: 0 };
-  for (const e of list) {
-    const m = num(e.montant);
-    const k = entryStatut(e);
-    by[k] = (by[k] || 0) + m;
+  let total = 0;
+  for (const g of groups) {
+    by[g.statutGlobal] = (by[g.statutGlobal] || 0) + 1;
+    if (g.statutGlobal !== "refuse") total += g.total;
   }
-  return { by, count: list.length };
+  return { by, count: groups.length, total };
 }
 
 function suiviStatsHtml(s) {
   return `
-    <div class="stat">Prestations<strong>${s.count}</strong></div>
-    <div class="stat">Terminé<strong>${fmt(s.by.termine)}</strong></div>
-    <div class="stat">Attente paiement<strong>${fmt(s.by.attente)}</strong></div>
-    <div class="stat">Envoyé<strong>${fmt(s.by.envoye)}</strong></div>
-    <div class="stat">Total facturé<strong>${fmt(s.by.envoye + s.by.accepte + s.by.attente + s.by.termine)}</strong></div>
+    <div class="stat">Devis<strong>${s.count}</strong></div>
+    <div class="stat">Envoyé<strong>${s.by.envoye}</strong></div>
+    <div class="stat">Accepté<strong>${s.by.accepte}</strong></div>
+    <div class="stat">Attente paiement<strong>${s.by.attente}</strong></div>
+    <div class="stat">Terminé<strong>${s.by.termine}</strong></div>
+    <div class="stat">Refusé / Annulé<strong>${s.by.refuse}</strong></div>
+    <div class="stat">Total facturé<strong>${fmt(s.total)}</strong></div>
   `;
 }
 
 let suiviExpanded = null;
+let suiviGroupExpanded = null;
 let suiviSort = { field: "date", dir: "desc" };
 let suiviFilterStatut = "all";
 let suiviFilterYear = "all";
 let suiviSelected = new Set();
 
-function suiviToggleOne(id, checked, ev) {
+function suiviToggleOne(devisId, checked, ev) {
   if (ev) ev.stopPropagation();
-  if (checked) suiviSelected.add(id); else suiviSelected.delete(id);
+  if (checked) suiviSelected.add(devisId); else suiviSelected.delete(devisId);
   const info = document.getElementById("suiviSelInfo");
   if (info) info.innerHTML = suiviSelInfoHtml();
   const cb = document.getElementById("suiviSelectAll");
   if (cb) {
-    const list = suiviFilteredSorted();
-    cb.checked = list.length > 0 && list.every(e => suiviSelected.has(e.id));
+    const list = suiviGroups();
+    cb.checked = list.length > 0 && list.every(g => suiviSelected.has(g.devisId));
   }
 }
 window.suiviToggleOne = suiviToggleOne;
 
 function suiviSelectAll(checked) {
-  const list = suiviFilteredSorted();
-  if (checked) for (const e of list) suiviSelected.add(e.id);
-  else for (const e of list) suiviSelected.delete(e.id);
+  const list = suiviGroups();
+  if (checked) for (const g of list) suiviSelected.add(g.devisId);
+  else for (const g of list) suiviSelected.delete(g.devisId);
   render();
 }
 window.suiviSelectAll = suiviSelectAll;
@@ -925,8 +1002,11 @@ window.suiviSelectAll = suiviSelectAll;
 function suiviDeleteSelected() {
   if (suiviSelected.size === 0) return;
   const n = suiviSelected.size;
-  if (!confirm(`Supprimer ${n} prestation${n > 1 ? "s" : ""} sélectionnée${n > 1 ? "s" : ""} ? Cette action est irréversible.`)) return;
-  S.suivi.entries = S.suivi.entries.filter(e => !suiviSelected.has(e.id));
+  if (!confirm(`Supprimer ${n} devis sélectionné${n > 1 ? "s" : ""} (toutes les lignes incluses) ? Cette action est irréversible.`)) return;
+  for (const devisId of suiviSelected) {
+    S.suivi.entries = S.suivi.entries.filter(e => e.devisId !== devisId);
+    if (S.suivi.devis) delete S.suivi.devis[devisId];
+  }
   suiviSelected.clear();
   save();
   render();
@@ -936,7 +1016,7 @@ window.suiviDeleteSelected = suiviDeleteSelected;
 function suiviSelInfoHtml() {
   const n = suiviSelected.size;
   if (n === 0) return "";
-  return `<button class="btn" style="background:#dc2626" onclick="suiviDeleteSelected()">Supprimer la sélection (${n})</button>`;
+  return `<button class="btn" style="background:#dc2626" onclick="suiviDeleteSelected()">Supprimer ${n} devis</button>`;
 }
 
 const SUIVI_NUMERIC = new Set(["montant","heures","paiement","ca","salaire","ursaf","tresorerie","frais"]);
@@ -946,6 +1026,18 @@ function suiviToggle(id) {
   render();
 }
 window.suiviToggle = suiviToggle;
+
+function suiviGroupToggle(devisId) {
+  if (suiviGroupExpanded === devisId) {
+    suiviGroupExpanded = null;
+    const lignes = suiviGroupLigne(devisId);
+    if (suiviExpanded && lignes.some(e => e.id === suiviExpanded)) suiviExpanded = null;
+  } else {
+    suiviGroupExpanded = devisId;
+  }
+  render();
+}
+window.suiviGroupToggle = suiviGroupToggle;
 
 function suiviSortKey(field) {
   if (suiviSort.field === field) {
@@ -973,16 +1065,43 @@ function suiviYears() {
   return [...ys].sort().reverse();
 }
 
-function suiviFilteredSorted() {
-  let list = S.suivi.entries.slice();
-  if (suiviFilterStatut !== "all") list = list.filter(e => entryStatut(e) === suiviFilterStatut);
-  if (suiviFilterYear   !== "all") list = list.filter(e => (e.date || "").startsWith(suiviFilterYear));
+const STATUT_ORDER = { envoye: 0, accepte: 1, attente: 2, termine: 3, refuse: 4 };
+
+function suiviGroups() {
+  const groups = new Map();
+  for (const e of S.suivi.entries) {
+    const did = e.devisId || ("__orphan_" + e.id);
+    if (!groups.has(did)) groups.set(did, []);
+    groups.get(did).push(e);
+  }
+  let list = [];
+  for (const [devisId, lignes] of groups) {
+    lignes.sort((a, b) => (a.date || "").localeCompare(b.date || ""));
+    const statutGlobal = devisStatutGlobal(lignes);
+    const total = lignes.reduce((s, e) => s + num(e.montant), 0);
+    const dates = lignes.map(e => e.date || "").filter(Boolean);
+    const dateMin = dates[0] || "";
+    const dateMax = dates[dates.length - 1] || "";
+    const ref = (S.suivi.devis && S.suivi.devis[devisId] && S.suivi.devis[devisId].ref) || "";
+    const lead = lignes[0] || {};
+    list.push({
+      devisId, ref, lignes, statutGlobal, total,
+      dateMin, dateMax,
+      client: lead.client || "",
+      prestation: lead.prestation || ""
+    });
+  }
+  if (suiviFilterStatut !== "all") list = list.filter(g => g.statutGlobal === suiviFilterStatut);
+  if (suiviFilterYear   !== "all") list = list.filter(g => g.lignes.some(e => (e.date || "").startsWith(suiviFilterYear)));
   const dir = suiviSort.dir === "asc" ? 1 : -1;
   const f = suiviSort.field;
   list.sort((a, b) => {
-    if (SUIVI_NUMERIC.has(f)) return (num(a[f]) - num(b[f])) * dir;
-    if (f === "ref") return entryRef(a).localeCompare(entryRef(b), "fr", { numeric: true }) * dir;
-    return String(a[f] || "").localeCompare(String(b[f] || ""), "fr", { numeric: true }) * dir;
+    if (f === "statut")     return ((STATUT_ORDER[a.statutGlobal] ?? 99) - (STATUT_ORDER[b.statutGlobal] ?? 99)) * dir;
+    if (f === "date")       return (a.dateMax || "").localeCompare(b.dateMax || "") * dir;
+    if (f === "ref")        return a.ref.localeCompare(b.ref, "fr", { numeric: true }) * dir;
+    if (f === "montant")    return (a.total - b.total) * dir;
+    if (f === "prestation") return a.prestation.localeCompare(b.prestation, "fr") * dir;
+    return a.client.localeCompare(b.client, "fr") * dir;
   });
   return list;
 }
@@ -1014,33 +1133,9 @@ function arr(field) {
 
 function statutLabel(k) { const s = STATUTS.find(x => x[0] === k); return s ? s[1] : k; }
 
-function rSV() {
-  const list = suiviFilteredSorted();
-  const stats = suiviStats(list);
-  const years = suiviYears();
-  const totalEntries = S.suivi.entries.length;
-  const missing = suiviMissingCount();
-
-  const stop = "event.stopPropagation();";
-
-  const rowsHtml = list.map(e => {
-    const expanded = suiviExpanded === e.id;
-    const summary = `
-      <tr class="suv-row ${expanded ? "expanded" : ""}" onclick="suiviToggle('${e.id}')">
-        <td class="cb" onclick="${stop}"><input type="checkbox" ${suiviSelected.has(e.id) ? "checked" : ""} onclick="suiviToggleOne('${e.id}', this.checked, event)"></td>
-        <td class="statut">${pastille(entryStatut(e))}</td>
-        <td>${esc(dateFR(e.date))}</td>
-        <td>${esc(entryRef(e)) || "—"}</td>
-        <td><strong>${esc(e.client) || "—"}</strong></td>
-        <td>${esc(e.prestation) || "—"}</td>
-        <td class="amt">${fmt(e.montant)}</td>
-        <td class="actions" onclick="${stop}"><button title="Supprimer" onclick="if(confirm('Supprimer cette ligne ?'))suiviDel('${e.id}')">×</button></td>
-      </tr>`;
-
-    if (!expanded) return summary;
-
-    const taux = suiviTauxHoraire(e);
-    const detail = `
+function suiviDetailPanelHtml(e) {
+  const taux = suiviTauxHoraire(e);
+  return `
       <tr class="suv-detail">
         <td colspan="8">
           <div class="suv-panel">
@@ -1048,7 +1143,7 @@ function rSV() {
               <span><strong>${esc(e.client) || "—"}</strong></span>
               <span>${esc(e.prestation) || "—"}</span>
               <span>Date : <strong>${esc(dateFR(e.date))}</strong></span>
-              <span style="display:inline-flex;align-items:center;gap:6px">Statut : ${pastille(entryStatut(e))} <strong>${esc(statutLabel(entryStatut(e)))}</strong></span>
+              <span style="display:inline-flex;align-items:center;gap:6px">Statut ligne : ${pastille(entryStatut(e))} <strong>${esc(statutLabel(entryStatut(e)))}</strong></span>
               <span>Montant : <strong>${fmt(e.montant)}</strong></span>
             </div>
 
@@ -1065,7 +1160,7 @@ function rSV() {
               <div class="field sm"><label>Heures</label><input type="number" step="0.25" value="${esc(e.heures)}" oninput="suiviUpd('${e.id}','heures',this.value); suiviRefreshTaux('${e.id}')"></div>
               <div class="field sm"><label>Montant (€)</label><input type="number" step="0.01" value="${esc(e.montant)}" oninput="suiviUpd('${e.id}','montant',this.value); suiviRefreshTaux('${e.id}')"></div>
               <div class="field sm"><label>Taux horaire pratiqué</label><div id="taux-${e.id}" style="padding:8px 10px;color:#374151;font-variant-numeric:tabular-nums">${taux > 0 ? fmt(taux) : "—"}</div></div>
-              <div class="field sm"><label>Échéance</label><input type="date" value="${esc(e.echeance || "")}" oninput="suiviUpd('${e.id}','echeance',this.value)"></div>
+              <div class="field"><label>Échéance / libellé</label><input value="${esc(e.echeance || "")}" oninput="suiviUpd('${e.id}','echeance',this.value)" placeholder="Acompte, Reste à payer, …"></div>
             </div>
 
             <h4>Comptabilité</h4>
@@ -1091,8 +1186,84 @@ function rSV() {
           </div>
         </td>
       </tr>`;
+}
 
-    return summary + detail;
+function rSV() {
+  const list = suiviGroups();
+  const stats = suiviStats(list);
+  const years = suiviYears();
+  const totalEntries = S.suivi.entries.length;
+  const missing = suiviMissingCount();
+
+  const stop = "event.stopPropagation();";
+
+  const rowsHtml = list.map(g => {
+    if (g.lignes.length === 1) {
+      const e = g.lignes[0];
+      const expanded = suiviExpanded === e.id;
+      const summary = `
+        <tr class="suv-row ${expanded ? "expanded" : ""}" onclick="suiviToggle('${e.id}')">
+          <td class="cb" onclick="${stop}"><input type="checkbox" ${suiviSelected.has(g.devisId) ? "checked" : ""} onclick="suiviToggleOne('${g.devisId}', this.checked, event)"></td>
+          <td class="statut">${pastille(g.statutGlobal)}</td>
+          <td>${esc(dateFR(e.date))}</td>
+          <td>${esc(g.ref) || "—"}</td>
+          <td><strong>${esc(e.client) || "—"}</strong></td>
+          <td>${esc(e.prestation) || "—"}</td>
+          <td class="amt">${fmt(e.montant)}</td>
+          <td class="actions" onclick="${stop}">
+            <div class="suv-row-actions">
+              ${suiviActionsHtml(e)}
+              <button title="Supprimer le devis" onclick="if(confirm('Supprimer ce devis ?'))suiviDelDevis('${g.devisId}')">×</button>
+            </div>
+          </td>
+        </tr>`;
+      return expanded ? summary + suiviDetailPanelHtml(e) : summary;
+    }
+
+    const groupExpanded = suiviGroupExpanded === g.devisId;
+    const dateLabel = g.dateMin === g.dateMax
+      ? esc(dateFR(g.dateMin))
+      : `${esc(dateFR(g.dateMin))} → ${esc(dateFR(g.dateMax))}`;
+    const summary = `
+      <tr class="suv-row suv-multi ${groupExpanded ? "expanded" : ""}" onclick="suiviGroupToggle('${g.devisId}')">
+        <td class="cb" onclick="${stop}"><input type="checkbox" ${suiviSelected.has(g.devisId) ? "checked" : ""} onclick="suiviToggleOne('${g.devisId}', this.checked, event)"></td>
+        <td class="statut">${pastille(g.statutGlobal)}</td>
+        <td>${dateLabel}</td>
+        <td>${esc(g.ref) || "—"}</td>
+        <td><strong>${esc(g.client) || "—"}</strong></td>
+        <td>${esc(g.prestation) || "—"} <span class="suv-multi-tag">${groupExpanded ? "▾" : "▸"} ${g.lignes.length} paiements</span></td>
+        <td class="amt">${fmt(g.total)}</td>
+        <td class="actions" onclick="${stop}">
+          <div class="suv-row-actions">
+            ${devisActionsHtml(g)}
+            <button title="Supprimer le devis" onclick="if(confirm('Supprimer ce devis et toutes ses lignes ?'))suiviDelDevis('${g.devisId}')">×</button>
+          </div>
+        </td>
+      </tr>`;
+    if (!groupExpanded) return summary;
+
+    const subRows = g.lignes.map(e => {
+      const ligneExpanded = suiviExpanded === e.id;
+      const lib = esc(e.echeance || "Paiement");
+      const sub = `
+        <tr class="suv-sub ${ligneExpanded ? "expanded" : ""}" onclick="suiviToggle('${e.id}')">
+          <td></td>
+          <td class="statut">${pastille(entryStatut(e))}</td>
+          <td>${esc(dateFR(e.date))}</td>
+          <td class="muted">↳</td>
+          <td colspan="2" class="sub-lib">${lib}</td>
+          <td class="amt">${fmt(e.montant)}</td>
+          <td class="actions" onclick="${stop}">
+            <div class="suv-row-actions">
+              ${suiviActionsHtml(e, { hidePhase1: true })}
+              <button title="Supprimer cette ligne" onclick="if(confirm('Supprimer cette ligne du devis ?'))suiviDel('${e.id}')">×</button>
+            </div>
+          </td>
+        </tr>`;
+      return ligneExpanded ? sub + suiviDetailPanelHtml(e) : sub;
+    }).join("");
+
+    return summary + subRows;
   }).join("");
 
   const yearOpts = [`<option value="all" ${suiviFilterYear==="all"?"selected":""}>Toutes les années</option>`]
@@ -1127,14 +1298,14 @@ function rSV() {
     <table class="hist">
       <thead>
         <tr>
-          <th style="width:34px;text-align:center" title="Tout sélectionner / désélectionner"><input type="checkbox" id="suiviSelectAll" ${list.length > 0 && list.every(e => suiviSelected.has(e.id)) ? "checked" : ""} onclick="suiviSelectAll(this.checked)"></th>
+          <th style="width:34px;text-align:center" title="Tout sélectionner / désélectionner"><input type="checkbox" id="suiviSelectAll" ${list.length > 0 && list.every(g => suiviSelected.has(g.devisId)) ? "checked" : ""} onclick="suiviSelectAll(this.checked)"></th>
           <th class="sortable" style="width:80px;text-align:center" onclick="suiviSortKey('statut')">Statut${arr('statut')}</th>
-          <th class="sortable" style="width:110px" onclick="suiviSortKey('date')">Date${arr('date')}</th>
+          <th class="sortable" style="width:160px" onclick="suiviSortKey('date')">Date${arr('date')}</th>
           <th class="sortable" style="width:160px" onclick="suiviSortKey('ref')">Référence${arr('ref')}</th>
           <th class="sortable" onclick="suiviSortKey('client')">Client${arr('client')}</th>
           <th class="sortable" onclick="suiviSortKey('prestation')">Prestation${arr('prestation')}</th>
           <th class="sortable" style="width:120px;text-align:right" onclick="suiviSortKey('montant')">Montant${arr('montant')}</th>
-          <th style="width:36px"></th>
+          <th style="width:240px;text-align:right">Actions</th>
         </tr>
       </thead>
       <tbody>${rowsHtml}</tbody>
