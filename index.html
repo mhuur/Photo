@@ -783,6 +783,98 @@ function suiviStatut(id, val) {
 }
 window.suiviStatut = suiviStatut;
 
+function suiviGroupLigne(devisId) {
+  return S.suivi.entries.filter(e => e.devisId === devisId);
+}
+
+function suiviDevisAccepter(devisId) {
+  for (const e of suiviGroupLigne(devisId)) {
+    delete e.statutAvantRefus;
+    e.statut = "accepte";
+  }
+  save();
+  render();
+}
+window.suiviDevisAccepter = suiviDevisAccepter;
+
+function suiviDevisRefuser(devisId) {
+  for (const e of suiviGroupLigne(devisId)) {
+    e.statutAvantRefus = entryStatut(e);
+    e.statut = "refuse";
+  }
+  save();
+  render();
+}
+window.suiviDevisRefuser = suiviDevisRefuser;
+
+function suiviLigneRealise(id) {
+  const e = S.suivi.entries.find(x => x.id === id);
+  if (!e) return;
+  e.statut = "attente";
+  save();
+  render();
+}
+window.suiviLigneRealise = suiviLigneRealise;
+
+function suiviLignePaye(id) {
+  const e = S.suivi.entries.find(x => x.id === id);
+  if (!e) return;
+  e.statut = "termine";
+  save();
+  render();
+}
+window.suiviLignePaye = suiviLignePaye;
+
+function suiviRevert(id) {
+  const e = S.suivi.entries.find(x => x.id === id);
+  if (!e) return;
+  const s = entryStatut(e);
+  if (s === "termine") {
+    e.statut = "attente";
+  } else if (s === "attente") {
+    e.statut = "accepte";
+  } else if (s === "accepte") {
+    for (const x of suiviGroupLigne(e.devisId)) x.statut = "envoye";
+  } else if (s === "refuse") {
+    for (const x of suiviGroupLigne(e.devisId)) {
+      x.statut = x.statutAvantRefus || "envoye";
+      delete x.statutAvantRefus;
+    }
+  }
+  save();
+  render();
+}
+window.suiviRevert = suiviRevert;
+
+function suiviActionsHtml(e) {
+  const s = entryStatut(e);
+  const did = e.devisId;
+  const stop = "event.stopPropagation();";
+  if (s === "envoye") {
+    return `
+      <button class="btn" style="background:#10b981" onclick="${stop}suiviDevisAccepter('${did}')">Accepté</button>
+      <button class="btn" style="background:#dc2626" onclick="${stop}suiviDevisRefuser('${did}')">Refusé</button>`;
+  }
+  if (s === "accepte") {
+    return `
+      <button class="btn" onclick="${stop}suiviLigneRealise('${e.id}')">Réalisé</button>
+      <button class="btn" style="background:#dc2626" onclick="${stop}suiviDevisRefuser('${did}')">Annulé (devis)</button>
+      <button class="btn ghost" title="Revenir : Accepté → Envoyé (devis)" onclick="${stop}suiviRevert('${e.id}')">↩</button>`;
+  }
+  if (s === "attente") {
+    return `
+      <button class="btn" style="background:#10b981" onclick="${stop}suiviLignePaye('${e.id}')">Payé</button>
+      <button class="btn ghost" title="Revenir : Attente paiement → Accepté" onclick="${stop}suiviRevert('${e.id}')">↩</button>`;
+  }
+  if (s === "termine") {
+    return `<button class="btn ghost" title="Revenir : Terminé → Attente paiement" onclick="${stop}suiviRevert('${e.id}')">↩</button>`;
+  }
+  if (s === "refuse") {
+    return `<button class="btn ghost" title="Revenir : annule le refus du devis" onclick="${stop}suiviRevert('${e.id}')">↩</button>`;
+  }
+  return "";
+}
+
 function suiviStats(list) {
   const by = { envoye: 0, accepte: 0, attente: 0, termine: 0, refuse: 0 };
   for (const e of list) {
@@ -992,6 +1084,8 @@ function rSV() {
             </div>
 
             <div class="suv-actions">
+              ${suiviActionsHtml(e)}
+              <span style="flex:1"></span>
               <button class="btn ghost" onclick="suiviToggle('${e.id}')">Fermer</button>
             </div>
           </div>
