@@ -3119,72 +3119,116 @@ function refreshTauxMatos() {
 //   4. Walk investissements chronologically, deduct each one's cost from cumulative cash.
 //   5. Mark each as ✓ amorti if fully covered, partial otherwise.
 function amortizationAnalysis() {
-  // Step 1 — group treasury by year, only counting payments actually received (statut paid-like)
-  // Money is "received" if statut is in this set; "envoye" alone is just a quote, not paid.
+  const CURRENT_YEAR = new Date().getFullYear();
+  // Step 1 — group treasury by year (received payments only)
   const RECEIVED_STATUSES = new Set(["accepte", "attente", "termine"]);
-  const tresorerieByYear = {}; // { 2024: 1234.56, 2025: ... }
+  const tresorerieByYear = {};
   for (const e of (S.suivi.entries || [])) {
     if (!RECEIVED_STATUSES.has(entryStatut(e))) continue;
     const year = (e.date || "").slice(0, 4);
     if (!year || !/^\d{4}$/.test(year)) continue;
     tresorerieByYear[year] = (tresorerieByYear[year] || 0) + num(e.tresorerie);
   }
-  // Step 2 — abonnements: for each year, sum annual cost of subscriptions that were active during that year
+  // Step 2 — abonnements per year (only when active during that year)
   const abonnementsByYear = {};
   for (const a of (S.abonnements.entries || [])) {
     const annual = num(a.annuel);
     if (annual <= 0) continue;
     const startYear = a.dateDebut ? parseInt(a.dateDebut.slice(0, 4), 10) : null;
     const endYear   = a.dateFin   ? parseInt(a.dateFin.slice(0, 4), 10)   : null;
-    // For each tresorerie year, check if abonnement was active
     for (const y of Object.keys(tresorerieByYear)) {
       const yi = parseInt(y, 10);
       const wasActive = (startYear === null || yi >= startYear) && (endYear === null || yi <= endYear);
       if (wasActive) abonnementsByYear[y] = (abonnementsByYear[y] || 0) + annual;
     }
   }
-  // Step 3 — build year-by-year breakdown, sorted chronologically
-  const allYears = Array.from(new Set([...Object.keys(tresorerieByYear), ...Object.keys(abonnementsByYear)])).sort();
-  let cumulCash = 0;
+  // Step 3 — for each investment, build per-year amortization schedule (option B: prorata on purchase year, full thereafter)
+  const inv = [...(S.investissements.entries || [])].filter(x => num(x.prix) > 0);
+  // amortByYear[year][invId] = amount amortized that year for that investment
+  const amortByYear = {};
+  // Map investment id → { schedule: { year: amount }, totalScheduled }
+  const invSchedule = {};
+  for (const item of inv) {
+    const prix = r2(num(item.prix));
+    const dureeAnnees = num(item.dureeVie) || 5;
+    if (dureeAnnees <= 0) continue;
+    const annualFull = prix / dureeAnnees; // theoretical annual amortization
+    if (!item.date || !/^\d{4}-\d{2}/.test(item.date)) continue;
+    const purchaseYear = parseInt(item.date.slice(0, 4), 10);
+    const purchaseMonth = parseInt(item.date.slice(5, 7), 10) || 1;
+    // Prorata for purchase year: (13 - purchaseMonth) / 12 months remaining in year
+    const proratPurchaseYear = (13 - purchaseMonth) / 12;
+    // Total months to amortize over (in months): dureeAnnees * 12
+    // We distribute the full prix over months: dureeAnnees * 12 months starting from purchaseMonth/purchaseYear
+    // For year Y > purchaseYear, full year (12 months) until amortization is complete
+    // For year Y = purchaseYear, only (13-purchaseMonth) months
+    // For the last year (when remainder runs out), we may have a partial last year too
+    const monthlyAmort = prix / (dureeAnnees * 12);
+    const schedule = {};
+    let monthsLeft = dureeAnnees * 12;
+    let y = purchaseYear;
+    let monthsThisYear = 13 - purchaseMonth; // first year
+    while (monthsLeft > 0) {
+      const monthsToAmort = Math.min(monthsThisYear, monthsLeft);
+      const yKey = String(y);
+      schedule[yKey] = (schedule[yKey] || 0) + monthlyAmort * monthsToAmort;
+      monthsLeft -= monthsToAmort;
+      y++;
+      monthsThisYear = 12; // subsequent years are full
+    }
+    // Round each schedule entry
+    for (const k of Object.keys(schedule)) schedule[k] = r2(schedule[k]);
+    invSchedule[item.id] = { schedule, prix, descriptif: item.descriptif, date: item.date };
+    // Aggregate into amortByYear
+    for (const [yk, val] of Object.entries(schedule)) {
+      amortByYear[yk] = r2((amortByYear[yk] || 0) + val);
+    }
+  }
+  // Step 4 — build year-by-year P&L
+  // Years to consider: union of treasury years, abonnement years, amortization years
+  const allYearsSet = new Set([
+    ...Object.keys(tresorerieByYear),
+    ...Object.keys(abonnementsByYear),
+    ...Object.keys(amortByYear)
+  ]);
+  // Filter out years from the future (beyond current year + 1) to keep the table clean
+  // — keep up to current year inclusive; future schedule is just info but useful so let's keep all years up to current
+  const allYears = Array.from(allYearsSet).filter(y => parseInt(y, 10) <= CURRENT_YEAR).sort();
+  let cumulSolde = 0;
   const yearRows = allYears.map(y => {
     const tres = r2(tresorerieByYear[y] || 0);
     const abo = r2(abonnementsByYear[y] || 0);
-    const dispo = r2(tres - abo);
-    cumulCash = r2(cumulCash + dispo);
-    return { year: y, tres, abo, dispo, cumul: cumulCash };
+    const amort = r2(amortByYear[y] || 0);
+    const solde = r2(tres - abo - amort);
+    cumulSolde = r2(cumulSolde + solde);
+    return { year: y, tres, abo, amort, solde, cumul: cumulSolde };
   });
-  const totalCashAvailable = cumulCash;
 
-  // Step 4 — walk investments chronologically, deduct from available cash
-  const inv = [...(S.investissements.entries || [])]
-    .filter(x => num(x.prix) > 0)
-    .sort((a, b) => (a.date || "").localeCompare(b.date || ""));
-  let remainingCash = totalCashAvailable;
+  // Step 5 — per-investment status: amortization to date (sum of schedule entries up to current year)
   const invStatus = inv.map(item => {
+    const sched = invSchedule[item.id] ? invSchedule[item.id].schedule : {};
     const prix = r2(num(item.prix));
-    let amorti = 0, reste = prix;
-    if (remainingCash >= prix) {
-      amorti = prix;
-      reste = 0;
-      remainingCash = r2(remainingCash - prix);
-    } else if (remainingCash > 0) {
-      amorti = r2(remainingCash);
-      reste = r2(prix - amorti);
-      remainingCash = 0;
-    } else {
-      amorti = 0;
-      reste = prix;
+    let amorti = 0;
+    for (const [yk, val] of Object.entries(sched)) {
+      if (parseInt(yk, 10) <= CURRENT_YEAR) amorti = r2(amorti + val);
     }
+    if (amorti > prix) amorti = prix;
+    const reste = r2(prix - amorti);
     return { ...item, prix, amorti, reste, fullyAmorti: reste === 0 };
   });
 
+  const totalInvested = r2(invStatus.reduce((s, x) => s + x.prix, 0));
+  const totalAmorti = r2(invStatus.reduce((s, x) => s + x.amorti, 0));
+
   return {
     yearRows,
-    totalCashAvailable,
     invStatus,
-    cashLeftover: remainingCash,
-    totalInvested: r2(invStatus.reduce((s, x) => s + x.prix, 0)),
-    totalAmorti: r2(invStatus.reduce((s, x) => s + x.amorti, 0))
+    totalInvested,
+    totalAmorti,
+    cumulSolde,
+    // Legacy keys kept for backward compat with existing UI references
+    totalCashAvailable: r2(yearRows.reduce((s, r) => s + (r.tres - r.abo), 0)),
+    cashLeftover: cumulSolde > 0 ? cumulSolde : 0
   };
 }
 
@@ -3499,21 +3543,22 @@ function rTR() {
     </table>
     <div class="hint" style="margin-top:8px;max-width:680px">À intégrer dans ton tarif horaire facturé : <code>net souhaité + URSSAF + ${fmt(tm.tauxTotal)} (matériel) + marge de sécurité</code>. Les tarifs catalogue ci-dessus restent à ta main.</div>
 
-    <h3>Trésorerie disponible pour amortissement (par année)</h3>
-    <div class="hint" style="max-width:880px">Calcul à partir des paiements <strong>effectivement reçus</strong> dans le Suivi (statut Accepté / Attente / Terminé), moins les abonnements actifs cette année (selon les dates de début / fin saisies dans le tableau ci-dessus). Le statut d'amortissement de chaque investissement apparaît dans le tableau ci-dessus.</div>
+    <h3>Bilan année par année</h3>
+    <div class="hint" style="max-width:880px">Pour chaque année : trésorerie effectivement reçue (Suivi avec statut Accepté / Attente / Terminé) − abonnements actifs cette année − amortissement matériel de l'année (prorata mensuel sur l'année d'achat, années pleines ensuite). Un solde annuel positif signifie que l'année a couvert ses propres charges ; négatif qu'il a fallu puiser ailleurs.</div>
     ${(() => {
       if (am.yearRows.length === 0) {
         return `<div class="empty">Aucune donnée de trésorerie reçue dans le Suivi pour l'instant.</div>`;
       }
       const yearTable = `
-        <table class="hist" style="max-width:880px">
+        <table class="hist" style="max-width:920px">
           <thead>
             <tr>
               <th style="width:90px">Année</th>
               <th style="text-align:right">Trésorerie reçue</th>
               <th style="text-align:right">− Abonnements</th>
-              <th style="text-align:right">= Disponible</th>
-              <th style="text-align:right">Cumul disponible</th>
+              <th style="text-align:right">− Amortissement</th>
+              <th style="text-align:right">= Solde annuel</th>
+              <th style="text-align:right">Cumul</th>
             </tr>
           </thead>
           <tbody>
@@ -3521,32 +3566,24 @@ function rTR() {
               <tr>
                 <td><strong>${esc(r.year)}</strong></td>
                 <td style="text-align:right;color:var(--text);font-variant-numeric:tabular-nums">${fmt(r.tres)}</td>
-                <td style="text-align:right;color:var(--text-muted);font-variant-numeric:tabular-nums">−${fmt(r.abo)}</td>
-                <td style="text-align:right;color:${r.dispo >= 0 ? "var(--text)" : "var(--danger)"};font-variant-numeric:tabular-nums;font-weight:500">${fmt(r.dispo)}</td>
-                <td style="text-align:right;color:var(--primary);font-variant-numeric:tabular-nums;font-weight:600">${fmt(r.cumul)}</td>
+                <td style="text-align:right;color:var(--text-muted);font-variant-numeric:tabular-nums">${r.abo > 0 ? "−" + fmt(r.abo) : fmt(r.abo)}</td>
+                <td style="text-align:right;color:var(--text-muted);font-variant-numeric:tabular-nums">${r.amort > 0 ? "−" + fmt(r.amort) : fmt(r.amort)}</td>
+                <td style="text-align:right;color:${r.solde >= 0 ? "var(--success)" : "var(--danger)"};font-variant-numeric:tabular-nums;font-weight:600">${fmt(r.solde)}</td>
+                <td style="text-align:right;color:${r.cumul >= 0 ? "var(--primary)" : "var(--warning)"};font-variant-numeric:tabular-nums;font-weight:600">${fmt(r.cumul)}</td>
               </tr>
             `).join("")}
           </tbody>
           <tfoot>
             <tr style="background:var(--surface-hi)">
-              <td colspan="4"><strong>Trésorerie totale disponible pour amortissement</strong></td>
-              <td style="text-align:right;color:var(--primary);font-weight:700;font-variant-numeric:tabular-nums;font-size:14px">${fmt(am.totalCashAvailable)}</td>
-            </tr>
-            <tr>
-              <td colspan="4" style="color:var(--text-muted)">− Total parc à amortir</td>
-              <td style="text-align:right;color:var(--text-muted);font-variant-numeric:tabular-nums">−${fmt(am.totalInvested)}</td>
-            </tr>
-            <tr style="background:var(--surface-hi)">
-              <td colspan="4"><strong>= Solde après amortissement complet</strong></td>
-              <td style="text-align:right;color:${am.totalCashAvailable - am.totalInvested >= 0 ? 'var(--success)' : 'var(--warning)'};font-weight:700;font-variant-numeric:tabular-nums;font-size:14px">${fmt(r2(am.totalCashAvailable - am.totalInvested))}</td>
+              <td colspan="4"><strong>Solde cumulé toutes années</strong></td>
+              <td style="text-align:right;color:${am.cumulSolde >= 0 ? "var(--success)" : "var(--danger)"};font-weight:700;font-variant-numeric:tabular-nums;font-size:14px">${fmt(am.cumulSolde)}</td>
+              <td></td>
             </tr>
           </tfoot>
         </table>`;
-      const summary = am.cashLeftover > 0
-        ? `<div class="hint" style="margin-top:8px;max-width:880px;color:var(--success)">✓ Tout le matériel est amorti et il te reste <strong>${fmt(am.cashLeftover)}</strong> de trésorerie disponible.</div>`
-        : am.totalAmorti >= am.totalInvested
-        ? `<div class="hint" style="margin-top:8px;max-width:880px;color:var(--success)">✓ Tout le matériel est amorti.</div>`
-        : `<div class="hint" style="margin-top:8px;max-width:880px;color:var(--warning)">⚠ Il reste <strong>${fmt(r2(am.totalInvested - am.totalAmorti))}</strong> à amortir avec les futures missions.</div>`;
+      const summary = am.cumulSolde >= 0
+        ? `<div class="hint" style="margin-top:8px;max-width:880px;color:var(--success)">✓ Le cumul des soldes annuels est positif (${fmt(am.cumulSolde)}). Activité rentable sur l'historique disponible.</div>`
+        : `<div class="hint" style="margin-top:8px;max-width:880px;color:var(--warning)">⚠ Le cumul des soldes annuels est négatif (${fmt(am.cumulSolde)}). Sur la période analysée, les encaissements ne couvrent pas encore l'ensemble des abonnements + amortissements.</div>`;
       return yearTable + summary;
     })()}
   `;
