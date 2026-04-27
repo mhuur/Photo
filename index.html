@@ -3540,6 +3540,14 @@ function rTR() {
               <td colspan="4"><strong>Trésorerie totale disponible pour amortissement</strong></td>
               <td style="text-align:right;color:var(--primary);font-weight:700;font-variant-numeric:tabular-nums;font-size:14px">${fmt(am.totalCashAvailable)}</td>
             </tr>
+            <tr>
+              <td colspan="4" style="color:var(--text-muted)">− Total parc à amortir</td>
+              <td style="text-align:right;color:var(--text-muted);font-variant-numeric:tabular-nums">−${fmt(am.totalInvested)}</td>
+            </tr>
+            <tr style="background:var(--surface-hi)">
+              <td colspan="4"><strong>= Solde après amortissement complet</strong></td>
+              <td style="text-align:right;color:${am.totalCashAvailable - am.totalInvested >= 0 ? 'var(--success)' : 'var(--warning)'};font-weight:700;font-variant-numeric:tabular-nums;font-size:14px">${fmt(r2(am.totalCashAvailable - am.totalInvested))}</td>
+            </tr>
           </tfoot>
         </table>`;
       const summary = am.cashLeftover > 0
