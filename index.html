@@ -192,6 +192,8 @@
   .row .field{max-width:320px}
   .row .field.lg{max-width:520px}
   .row .field.xl{max-width:none}
+  .row .field.narrow{max-width:130px}
+  .row .field.tiny{max-width:100px}
 
   /* Client picker */
   .cli-pick{position:relative;max-width:320px}
@@ -281,7 +283,7 @@
   .presta-rate.empty{color:var(--text-dim);font-size:11px;font-weight:500}
 
   /* Locked field with ⋮ menu (URSSAF) */
-  .lock-field{display:flex;align-items:stretch;gap:0;max-width:320px;position:relative}
+  .lock-field{display:flex;align-items:stretch;gap:0;max-width:130px;position:relative}
   .lock-field input{flex:1}
   .lock-field input:disabled{opacity:.75;cursor:not-allowed;background:var(--surface-2);color:var(--text-muted)}
   .lock-menu-btn{background:var(--surface);border:1px solid var(--border-light);border-left:0;border-radius:0 6px 6px 0;color:var(--text-muted);cursor:pointer;padding:0 11px;font-size:16px;line-height:1;font-weight:700;transition:all .15s}
@@ -318,6 +320,32 @@
   .devis-preview .dp-footer{margin-top:18px;padding-top:14px;border-top:1px solid var(--border-soft);font-size:11px;color:var(--text-dim);text-align:center;line-height:1.6}
   .devis-preview .dp-actions{display:flex;gap:10px;margin-top:18px;justify-content:flex-end}
   .devis-preview .dp-empty{text-align:center;padding:30px;color:var(--text-dim);font-size:13px}
+
+  /* Devis header 2-col: photographer left, client+meta right */
+  .devis-preview .dp-header-grid{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:18px}
+  .devis-preview .dp-header-left{font-size:13px;color:var(--text);line-height:1.6;white-space:pre-wrap;border-right:1px solid var(--border-soft);padding-right:18px}
+  .devis-preview .dp-header-left.empty{color:var(--text-dim);font-style:italic;font-size:12px}
+  .devis-preview .dp-header-right{display:flex;flex-direction:column;align-items:flex-end;gap:14px}
+  .devis-preview .dp-meta-block{text-align:right;font-size:12px;color:var(--text-muted);line-height:1.6}
+  .devis-preview .dp-meta-block .ref{color:var(--primary);font-weight:600;font-size:14px;font-variant-numeric:tabular-nums;margin-bottom:6px}
+  .devis-preview .dp-meta-block strong{color:var(--text);font-weight:600}
+  .devis-preview .dp-client-block{text-align:right;font-size:13px;color:var(--text);line-height:1.6;background:var(--surface-2);border-radius:6px;padding:10px 14px;border:1px solid var(--border-soft);min-width:220px}
+  .devis-preview .dp-client-block .num{color:var(--text-muted);font-size:11px;font-variant-numeric:tabular-nums;display:block;margin-bottom:2px}
+  .devis-preview .dp-client-block .name{font-weight:600;font-size:14px;color:var(--text);display:block}
+  @media (max-width:680px){
+    .devis-preview .dp-header-grid{grid-template-columns:1fr}
+    .devis-preview .dp-header-left{border-right:0;border-bottom:1px solid var(--border-soft);padding-right:0;padding-bottom:14px}
+    .devis-preview .dp-header-right{align-items:flex-start}
+    .devis-preview .dp-meta-block,.devis-preview .dp-client-block{text-align:left}
+  }
+
+  /* Conditions de paiement block (in devis) */
+  .devis-preview .dp-conditions{margin-top:18px;padding:14px 16px;background:var(--surface-2);border-left:3px solid var(--accent);border-radius:0 6px 6px 0;font-size:12px;color:var(--text);line-height:1.7;white-space:pre-wrap}
+  .devis-preview .dp-conditions h4{margin:0 0 8px;border:0;padding:0}
+
+  /* Photographe textarea + conditions textarea in Mission */
+  .multi-text{width:100%;max-width:520px;min-height:80px;padding:9px 12px;border:1px solid var(--border-light);border-radius:6px;background:var(--surface);color:var(--text);font:inherit;font-size:13px;line-height:1.5;resize:vertical}
+  .multi-text:focus{outline:none;border-color:var(--primary)}
 
   /* Lignes section */
   .lg-add{display:flex;gap:8px;margin-bottom:10px}
@@ -398,7 +426,9 @@ const DEFAULT_S = {
     urssafPct: "22",
     remisePct: "0",
     notes: "",
-    lignes: []
+    lignes: [],
+    photographe: "",
+    conditionsPaiement: "Acompte de 30 % à la commande, solde de 70 % à la livraison.\nRèglement par virement bancaire.\nEn cas de retard de paiement, des pénalités de 3 fois le taux d'intérêt légal seront appliquées."
   },
   devis:    {},
   suivi:    { entries: [], devis: {} },
@@ -692,26 +722,22 @@ function rDevisPreview() {
   }
 
   return `<div class="devis-preview" id="devisPreview">
-    <div class="dp-head">
-      <div>
-        <h3 class="dp-title">DEVIS</h3>
-        <div class="dp-ref">${esc(d.ref || "Référence en attente…")}</div>
-      </div>
-      <div class="dp-meta">
-        <div>Émission : <strong>${dateFR(d.dateEmission) || "—"}</strong></div>
-        <div>Validité : <strong>${dateFR(d.dateValidite) || "—"}</strong></div>
-        ${cat ? `<div>Tarif horaire : <strong style="color:var(--primary)">${tarifH > 0 ? `${tarifH.toFixed(2).replace(".",",")} €/h` : "à définir"}</strong></div>` : ""}
-      </div>
-    </div>
-
-    <div class="dp-section">
-      <h4>Client</h4>
-      <div class="dp-client">
-        <div><span class="num">${esc(cli.num || "—")}</span><span class="name">${esc(cli.name || "(Sélectionner un client)")}</span></div>
-        ${cli.contact ? `<div>${esc(cli.contact)}</div>` : ""}
-        ${cli.address ? `<div>${esc(cli.address)}</div>` : ""}
-        ${cli.email ? `<div>${esc(cli.email)}</div>` : ""}
-        ${cli.phone ? `<div>${esc(cli.phone)}</div>` : ""}
+    <div class="dp-header-grid">
+      <div class="dp-header-left ${(d.photographe || "").trim() ? "" : "empty"}">${(d.photographe || "").trim() ? esc(d.photographe) : "Renseigner vos coordonnées dans la section « Photographe » de l'onglet Mission."}</div>
+      <div class="dp-header-right">
+        <div class="dp-meta-block">
+          <div class="ref">${esc(d.ref || "DEVIS-…-…")}</div>
+          <div>Émission : <strong>${dateFR(d.dateEmission) || "—"}</strong></div>
+          <div>Validité : <strong>${dateFR(d.dateValidite) || "—"}</strong></div>
+        </div>
+        <div class="dp-client-block">
+          <span class="num">${esc(cli.num || "—")}</span>
+          <span class="name">${esc(cli.name || "(Sélectionner un client)")}</span>
+          ${cli.contact ? `<div>${esc(cli.contact)}</div>` : ""}
+          ${cli.address ? `<div>${esc(cli.address)}</div>` : ""}
+          ${cli.email ? `<div>${esc(cli.email)}</div>` : ""}
+          ${cli.phone ? `<div>${esc(cli.phone)}</div>` : ""}
+        </div>
       </div>
     </div>
 
@@ -737,6 +763,10 @@ function rDevisPreview() {
     ${deboursHtml ? `<div class="dp-section" style="margin-top:14px">
       <h4 style="color:var(--accent)">Frais de débours détaillés</h4>
       ${deboursHtml}
+    </div>` : ""}
+
+    ${(d.conditionsPaiement || "").trim() ? `<div class="dp-conditions">
+      <h4>Conditions de paiement</h4>${esc(d.conditionsPaiement)}
     </div>` : ""}
 
     <div class="dp-footer">TVA non applicable, art. 293 B du CGI</div>
@@ -1248,6 +1278,11 @@ function rMS() {
   return `
     <h2>Mission <span id="savedFlash" class="saved"></span></h2>
 
+    <h3>Photographe (en-tête du devis)</h3>
+    <div class="row"><div class="field lg"><label>Vos coordonnées telles qu'elles apparaîtront en haut à gauche du devis</label>
+      <textarea class="multi-text" placeholder="Nom Prénom&#10;Statut (auto-entrepreneur, micro-entreprise…)&#10;Adresse&#10;Code postal Ville&#10;SIRET / numéro&#10;Téléphone · Email" oninput="upd('mission.photographe', this.value)">${esc(d.photographe || "")}</textarea>
+    </div></div>
+
     <h3>Devis</h3>
     <div class="row"><div class="field"><label>Date d'émission</label><input type="date" value="${esc(d.dateEmission)}" oninput="upd('mission.dateEmission', this.value)"></div></div>
     <div class="row"><div class="field"><label>Validité</label><input type="date" value="${esc(d.dateValidite)}" oninput="upd('mission.dateValidite', this.value)"></div></div>
@@ -1262,7 +1297,7 @@ function rMS() {
         <button class="${!declare?"on warn":""}" onclick="updMissionDeclare(false)">● Au black</button>
       </div>
     </div></div>
-    <div class="row"><div class="field"><label>Taux URSSAF (%)</label>
+    <div class="row"><div class="field narrow"><label>Taux URSSAF (%)</label>
       <div class="lock-field">
         <input id="urssafInput" type="number" step="0.1" value="${esc(d.urssafPct ?? "22")}" ${urssafUnlocked ? `oninput="upd('mission.urssafPct', this.value)"` : "disabled"}>
         <button class="lock-menu-btn" onclick="urssafToggleMenu()" title="Options">⋮</button>
@@ -1311,10 +1346,12 @@ function rMS() {
     <div class="hint">Renseigner le temps de trajet uniquement si le trajet excède 1 h (hors trajet domicile / transport). Valorisation : 40 €/h.</div>
 
     <h3>Remise</h3>
-    <div class="row"><div class="field"><label>Remise (%)</label><input type="number" step="0.1" value="${esc(d.remisePct)}" oninput="upd('mission.remisePct', this.value)"></div></div>
+    <div class="row"><div class="field tiny"><label>Remise (%)</label><input type="number" step="0.1" value="${esc(d.remisePct)}" oninput="upd('mission.remisePct', this.value)"></div></div>
 
-    <h3>Notes</h3>
-    <div class="row"><div class="field"><textarea oninput="upd('mission.notes', this.value)">${esc(d.notes)}</textarea></div></div>
+    <h3>Conditions de paiement</h3>
+    <div class="row"><div class="field lg"><label>Texte affiché en bas du devis, sous le total</label>
+      <textarea class="multi-text" placeholder="Acompte de 30 % à la commande, solde de 70 % à la livraison.&#10;Règlement par virement bancaire.&#10;…" oninput="upd('mission.conditionsPaiement', this.value)">${esc(d.conditionsPaiement || "")}</textarea>
+    </div></div>
 
     ${rDevisPreview()}
   `;
@@ -2489,9 +2526,11 @@ function rCL() {
 
 function addAbonnement() {
   S.abonnements.entries.unshift({
-    id:      uid(),
-    libelle: "",
-    annuel:  "0"
+    id:        uid(),
+    libelle:   "",
+    annuel:    "0",
+    dateDebut: "",
+    dateFin:   ""
   });
   save();
   render();
@@ -2691,15 +2730,23 @@ function rTR() {
 
   // Abonnements
   const abEntries = S.abonnements.entries;
-  const abTotalAnnuel = abEntries.reduce((s, e) => s + num(e.annuel), 0);
-  const abRows = abEntries.map(e => `
-    <tr>
+  const abActif = abEntries.filter(e => !e.dateFin);
+  const abTotalAnnuel = abActif.reduce((s, e) => s + num(e.annuel), 0);
+  const abRows = abEntries.map(e => {
+    const isActif = !e.dateFin;
+    return `
+    <tr ${isActif ? "" : 'style="opacity:.6"'}>
       <td><input value="${esc(e.libelle)}" oninput="editAbonnement('${e.id}','libelle',this.value)" placeholder="Libellé"></td>
+      <td><input type="date" value="${esc(e.dateDebut || "")}" oninput="editAbonnement('${e.id}','dateDebut',this.value)"></td>
+      <td>
+        <input type="date" value="${esc(e.dateFin || "")}" oninput="editAbonnement('${e.id}','dateFin',this.value)" style="${isActif ? 'opacity:.4' : ''}" placeholder="actif">
+        ${isActif ? `<span style="display:block;font-size:10px;color:var(--success);text-align:center;margin-top:2px;font-weight:600;text-transform:uppercase;letter-spacing:.04em">● Actif</span>` : ""}
+      </td>
       <td class="amount"><input type="number" step="0.01" value="${esc(e.annuel)}" oninput="editAbonnement('${e.id}','annuel',this.value); refreshAbonnementMensuel('${e.id}')"></td>
       <td class="amount" id="ab-mens-${e.id}" style="text-align:right;color:var(--text-muted);font-variant-numeric:tabular-nums;padding-right:14px">${fmt(num(e.annuel) / 12)}</td>
       <td class="actions"><button title="Supprimer" onclick="if(confirm('Supprimer cet abonnement ?'))deleteAbonnement('${e.id}')">×</button></td>
-    </tr>
-  `).join("");
+    </tr>`;
+  }).join("");
 
   // Investissements (amortissement)
   const invEntries = [...S.investissements.entries].sort((a, b) => (b.date || "").localeCompare(a.date || ""));
@@ -2726,7 +2773,7 @@ function rTR() {
     </div>
 
     <h3>Abonnements professionnels</h3>
-    <div class="hint">Coût mensuel calculé automatiquement à partir du coût annuel.</div>
+    <div class="hint">Coût mensuel calculé automatiquement à partir du coût annuel. Le total ne compte que les abonnements actifs (sans date de fin). Si la date de fin n'est pas renseignée, l'abonnement est marqué <span style="color:var(--success);font-weight:600">● Actif</span>.</div>
     <div class="toolbar">
       <button class="btn" onclick="addAbonnement()">+ Ajouter un abonnement</button>
     </div>
@@ -2734,13 +2781,15 @@ function rTR() {
       <thead>
         <tr>
           <th>Libellé</th>
-          <th style="width:170px;text-align:right">Coût annuel (€)</th>
-          <th style="width:170px;text-align:right">Coût mensuel (€)</th>
+          <th style="width:140px">Date début</th>
+          <th style="width:160px">Date fin</th>
+          <th style="width:150px;text-align:right">Coût annuel (€)</th>
+          <th style="width:150px;text-align:right">Coût mensuel (€)</th>
           <th style="width:36px"></th>
         </tr>
       </thead>
       <tbody>${abRows}</tbody>
-      ${abEntries.length ? `<tfoot><tr><td>Total</td><td style="text-align:right">${fmt(abTotalAnnuel)}</td><td style="text-align:right">${fmt(abTotalAnnuel/12)}</td><td></td></tr></tfoot>` : ""}
+      ${abActif.length ? `<tfoot><tr><td colspan="3">Total des abonnements actifs</td><td style="text-align:right">${fmt(abTotalAnnuel)}</td><td style="text-align:right">${fmt(abTotalAnnuel/12)}</td><td></td></tr></tfoot>` : ""}
     </table>
 
     <h3>Investissements et amortissement matériel</h3>
