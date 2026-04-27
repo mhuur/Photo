@@ -3143,14 +3143,6 @@ function amortizationAnalysis() {
       if (wasActive) abonnementsByYear[y] = (abonnementsByYear[y] || 0) + annual;
     }
   }
-  // Hypothesis: pre-existing yearly subscription cost of 300€/year for years where no abonnements data is tracked
-  // (covers cases where subscriptions existed historically but weren't recorded with explicit start dates)
-  const ASSUMED_BASELINE_ABONNEMENT = 300;
-  for (const y of Object.keys(tresorerieByYear)) {
-    if (!abonnementsByYear[y] || abonnementsByYear[y] === 0) {
-      abonnementsByYear[y] = ASSUMED_BASELINE_ABONNEMENT;
-    }
-  }
   // Step 3 — build year-by-year breakdown, sorted chronologically
   const allYears = Array.from(new Set([...Object.keys(tresorerieByYear), ...Object.keys(abonnementsByYear)])).sort();
   let cumulCash = 0;
@@ -3508,7 +3500,7 @@ function rTR() {
     <div class="hint" style="margin-top:8px;max-width:680px">À intégrer dans ton tarif horaire facturé : <code>net souhaité + URSSAF + ${fmt(tm.tauxTotal)} (matériel) + marge de sécurité</code>. Les tarifs catalogue ci-dessus restent à ta main.</div>
 
     <h3>Trésorerie disponible pour amortissement (par année)</h3>
-    <div class="hint" style="max-width:880px">Calcul à partir des paiements <strong>effectivement reçus</strong> dans le Suivi (statut Accepté / Attente / Terminé), moins les abonnements actifs cette année. <em>Hypothèse : 300 €/an d'abonnements pour les années sans données enregistrées.</em> Le statut d'amortissement de chaque investissement apparaît dans le tableau ci-dessus.</div>
+    <div class="hint" style="max-width:880px">Calcul à partir des paiements <strong>effectivement reçus</strong> dans le Suivi (statut Accepté / Attente / Terminé), moins les abonnements actifs cette année (selon les dates de début / fin saisies dans le tableau ci-dessus). Le statut d'amortissement de chaque investissement apparaît dans le tableau ci-dessus.</div>
     ${(() => {
       if (am.yearRows.length === 0) {
         return `<div class="empty">Aucune donnée de trésorerie reçue dans le Suivi pour l'instant.</div>`;
