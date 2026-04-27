@@ -73,7 +73,7 @@
   table.hist td.cb,table.hist th:first-child{text-align:center;width:34px;padding:6px 4px}
   table.hist td.cb input,table.hist th input[type="checkbox"]{cursor:pointer;width:16px;height:16px}
   table.hist tr.suv-detail td{background:transparent;padding:0;border-bottom:0}
-  table.hist tr.suv-multi{cursor:pointer}
+  table.hist tr.suv-multi.clickable{cursor:pointer}
   table.hist tr.suv-multi td{font-weight:500}
   .suv-caret{display:inline-block;color:#9ca3af;font-size:11px;margin-right:2px}
   table.hist tbody.devis-grp{border-bottom:1px solid #e5e7eb;transition:background .12s ease, box-shadow .12s ease}
@@ -95,8 +95,12 @@
   table.hist tr.suv-sub td.sub-lib{color:#374151;font-style:italic}
   table.hist tr.suv-sub td.amt{color:#374151;padding-right:12px}
   table.hist tr.suv-row td.amt,table.hist tr.suv-sub td.amt{font-variant-numeric:tabular-nums;text-align:right;padding-right:12px}
-  table.hist td.actions:has(.suv-row-actions){text-align:right;width:auto;min-width:160px;padding:4px 8px}
-  .suv-row-actions{display:inline-flex;gap:10px;align-items:center;justify-content:flex-end}
+  table.hist td.actions:has(.suv-row-actions){text-align:right;width:auto;min-width:200px;padding:4px 8px}
+  .suv-row-actions{display:inline-flex;gap:8px;align-items:center;justify-content:flex-end;opacity:0;transition:opacity .12s ease}
+  table.hist tbody.devis-grp:hover .suv-row-actions,
+  table.hist tbody.devis-grp.expanded .suv-row-actions,
+  table.hist tbody.devis-grp.editing .suv-row-actions{opacity:1}
+  table.hist tr.suv-detail .suv-row-actions{opacity:1}
   .btn.btn-vert{background:#10b981;color:#fff}.btn.btn-vert:hover{background:#059669}
   .btn.btn-rouge{background:#dc2626;color:#fff}.btn.btn-rouge:hover{background:#b91c1c}
   .btn.btn-gris{background:#6b7280;color:#fff}.btn.btn-gris:hover{background:#4b5563}
@@ -111,6 +115,12 @@
   .btn.btn-icon.btn-bleu:hover{background:rgba(59,130,246,.14);color:#2563eb}
   .btn.btn-icon.ghost{background:transparent;border:0;color:#9ca3af}
   .btn.btn-icon.ghost:hover{background:rgba(0,0,0,.06);color:#374151}
+  .btn-act{display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border-radius:8px;border:0;font-size:12.5px;font-weight:600;color:#fff;cursor:pointer;line-height:1;white-space:nowrap;font-family:inherit;box-shadow:0 1px 2px rgba(0,0,0,.08)}
+  .btn-act .ico{font-size:13px;font-weight:700;line-height:1}
+  .btn-act.act-vert{background:#10b981}
+  .btn-act.act-vert:hover{background:#059669;box-shadow:0 2px 6px rgba(16,185,129,.4)}
+  .btn-act.act-rouge{background:#dc2626}
+  .btn-act.act-rouge:hover{background:#b91c1c;box-shadow:0 2px 6px rgba(220,38,38,.4)}
   .ico-btn{background:transparent;color:#9ca3af;border:0;border-radius:3px;padding:3px 5px;cursor:pointer;font-size:15px;line-height:1;font-weight:600;min-width:0}
   .ico-btn:hover{background:rgba(0,0,0,.06);color:#374151}
   .ico-btn[title*="Supprimer"]:hover{background:#fee2e2;color:#dc2626}
@@ -971,14 +981,14 @@ function devisActionsHtml(g) {
   const stop = "event.stopPropagation();";
   if (g.statutGlobal === "envoye") {
     return `
-      <button class="btn btn-vert btn-icon" title="Accepté — le devis est validé. Toutes les lignes passent à « Accepté »." onclick="${stop}suiviDevisAccepter('${g.devisId}')">✓</button>
-      <button class="btn btn-rouge btn-icon" title="Refusé — le client a refusé. Toutes les lignes passent à « Refusé »." onclick="${stop}suiviDevisRefuser('${g.devisId}')">✗</button>`;
+      <button class="btn-act act-vert" title="Accepté — le devis est validé. Toutes les lignes passent à « Accepté »." onclick="${stop}suiviDevisAccepter('${g.devisId}')"><span class="ico">✓</span> Accepté</button>
+      <button class="btn-act act-rouge" title="Refusé — le client a refusé. Toutes les lignes passent à « Refusé »." onclick="${stop}suiviDevisRefuser('${g.devisId}')"><span class="ico">✗</span> Refusé</button>`;
   }
   if (g.statutGlobal === "accepte") {
-    return `<button class="btn ghost btn-icon" title="Revenir : Accepté → Envoyé (toutes les lignes du devis)" onclick="${stop}suiviDevisRevertAccept('${g.devisId}')">↩</button>`;
+    return `<button class="btn btn-icon ghost" title="Revenir : Accepté → Envoyé (toutes les lignes du devis)" onclick="${stop}suiviDevisRevertAccept('${g.devisId}')">↩</button>`;
   }
   if (g.statutGlobal === "refuse") {
-    return `<button class="btn ghost btn-icon" title="Annuler le refus du devis et restaurer l'état précédent" onclick="${stop}suiviDevisRevertRefus('${g.devisId}')">↩</button>`;
+    return `<button class="btn btn-icon ghost" title="Annuler le refus du devis et restaurer l'état précédent" onclick="${stop}suiviDevisRevertRefus('${g.devisId}')">↩</button>`;
   }
   return "";
 }
@@ -991,25 +1001,25 @@ function suiviActionsHtml(e, opts) {
   if (s === "envoye") {
     if (hidePhase1) return "";
     return `
-      <button class="btn btn-vert btn-icon" title="Accepté — le devis est validé. Toutes les lignes passent à « Accepté »." onclick="${stop}suiviDevisAccepter('${did}')">✓</button>
-      <button class="btn btn-rouge btn-icon" title="Refusé — le client a refusé. Toutes les lignes passent à « Refusé »." onclick="${stop}suiviDevisRefuser('${did}')">✗</button>`;
+      <button class="btn-act act-vert" title="Accepté — le devis est validé. Toutes les lignes passent à « Accepté »." onclick="${stop}suiviDevisAccepter('${did}')"><span class="ico">✓</span> Accepté</button>
+      <button class="btn-act act-rouge" title="Refusé — le client a refusé. Toutes les lignes passent à « Refusé »." onclick="${stop}suiviDevisRefuser('${did}')"><span class="ico">✗</span> Refusé</button>`;
   }
   if (s === "accepte") {
     return `
-      <button class="btn btn-bleu btn-icon" title="Réalisé — la prestation est livrée. Cette ligne passe à « Attente paiement »." onclick="${stop}suiviLigneRealise('${e.id}')">→</button>
-      <button class="btn btn-rouge btn-icon" title="Annulé — annule tout le devis. Toutes les lignes passent à « Refusé »." onclick="${stop}suiviDevisRefuser('${did}')">✗</button>
-      <button class="btn ghost btn-icon" title="Revenir : Accepté → Envoyé (toutes les lignes du devis)" onclick="${stop}suiviRevert('${e.id}')">↩</button>`;
+      <button class="btn btn-icon btn-bleu" title="Réalisé — la prestation est livrée. Cette ligne passe à « Attente paiement »." onclick="${stop}suiviLigneRealise('${e.id}')">→</button>
+      <button class="btn btn-icon btn-rouge" title="Annulé — annule tout le devis. Toutes les lignes passent à « Refusé »." onclick="${stop}suiviDevisRefuser('${did}')">✗</button>
+      <button class="btn btn-icon ghost" title="Revenir : Accepté → Envoyé (toutes les lignes du devis)" onclick="${stop}suiviRevert('${e.id}')">↩</button>`;
   }
   if (s === "attente") {
     return `
-      <button class="btn btn-vert btn-icon" title="Payé — le paiement est reçu. Cette ligne passe à « Terminé »." onclick="${stop}suiviLignePaye('${e.id}')">€</button>
-      <button class="btn ghost btn-icon" title="Revenir : Attente paiement → Accepté (cette ligne)" onclick="${stop}suiviRevert('${e.id}')">↩</button>`;
+      <button class="btn btn-icon btn-vert" title="Payé — le paiement est reçu. Cette ligne passe à « Terminé »." onclick="${stop}suiviLignePaye('${e.id}')">€</button>
+      <button class="btn btn-icon ghost" title="Revenir : Attente paiement → Accepté (cette ligne)" onclick="${stop}suiviRevert('${e.id}')">↩</button>`;
   }
   if (s === "termine") {
-    return `<button class="btn ghost btn-icon" title="Revenir : Terminé → Attente paiement (cette ligne)" onclick="${stop}suiviRevert('${e.id}')">↩</button>`;
+    return `<button class="btn btn-icon ghost" title="Revenir : Terminé → Attente paiement (cette ligne)" onclick="${stop}suiviRevert('${e.id}')">↩</button>`;
   }
   if (s === "refuse") {
-    return `<button class="btn ghost btn-icon" title="Annuler le refus du devis et restaurer l'état précédent" onclick="${stop}suiviRevert('${e.id}')">↩</button>`;
+    return `<button class="btn btn-icon ghost" title="Annuler le refus du devis et restaurer l'état précédent" onclick="${stop}suiviRevert('${e.id}')">↩</button>`;
   }
   return "";
 }
@@ -1292,20 +1302,24 @@ function rSV() {
       return `<tbody class="${cls.join(" ")}">${inner}</tbody>`;
     }
 
-    const groupExpanded = suiviGroupExpanded === g.devisId;
+    const canExpand = g.statutGlobal !== "envoye";
+    const groupExpanded = canExpand && suiviGroupExpanded === g.devisId;
     const dateLabel = g.dateMin === g.dateMax
       ? esc(dateFR(g.dateMin))
       : `${esc(dateFR(g.dateMin))} → ${esc(dateFR(g.dateMax))}`;
     const cls = ["devis-grp", "is-multi"];
     if (selected) cls.push("sel");
     if (groupExpanded) cls.push("expanded");
+    const trClick = canExpand ? `onclick="suiviGroupToggle('${g.devisId}')"` : "";
+    const trCls = "suv-row suv-multi" + (canExpand ? " clickable" : "");
+    const caret = canExpand ? `<span class="suv-caret">${groupExpanded ? "▾" : "▸"}</span> ` : "";
     const summary = `
-      <tr class="suv-row suv-multi" onclick="suiviGroupToggle('${g.devisId}')">
+      <tr class="${trCls}" ${trClick}>
         <td class="cb" onclick="${stop}"><input type="checkbox" ${selected ? "checked" : ""} onclick="suiviToggleOne('${g.devisId}', this.checked, event)"></td>
         <td class="statut">${pastille(g.statutGlobal)}</td>
         <td>${dateLabel}</td>
         <td class="ref-cell">${esc(g.ref) || `<span class="muted">—</span>`}</td>
-        <td><span class="suv-caret">${groupExpanded ? "▾" : "▸"}</span> <strong>${esc(g.client) || "—"}</strong></td>
+        <td>${caret}<strong>${esc(g.client) || "—"}</strong></td>
         <td class="amt">${fmt(g.total)}</td>
         <td class="actions" onclick="${stop}">
           <div class="suv-row-actions">
