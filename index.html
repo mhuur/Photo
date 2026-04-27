@@ -194,26 +194,26 @@
   .row .field.xl{max-width:none}
 
   /* Client picker */
-  .cli-pick{position:relative;max-width:320px;z-index:50}
-  .cli-pick.open{z-index:200}
+  .cli-pick{position:relative;max-width:320px}
   .cli-pick .selected{display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--surface);border:1px solid var(--border-light);border-radius:6px;font-size:13px}
   .cli-pick .selected .name{flex:1;color:var(--text);font-weight:500}
   .cli-pick .selected .num{color:var(--text-muted);font-size:11px;font-variant-numeric:tabular-nums}
   .cli-pick .selected .change{background:transparent;border:0;color:var(--primary);font-size:12px;cursor:pointer;padding:2px 6px;border-radius:4px}
   .cli-pick .selected .change:hover{background:var(--primary-soft)}
   .cli-search-wrap{position:relative}
-  .cli-search-wrap .ico{position:absolute;left:11px;top:50%;transform:translateY(-50%);color:var(--text-dim);font-size:13px;pointer-events:none}
+  .cli-search-wrap .ico{position:absolute;left:11px;top:50%;transform:translateY(-50%);color:var(--text-dim);font-size:13px;pointer-events:none;z-index:1}
   .cli-search-wrap input{width:100%;padding:9px 12px 9px 32px;border:1px solid var(--border-light);border-radius:6px;background:var(--surface);color:var(--text);font:inherit;font-size:13px}
   .cli-search-wrap input:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 3px var(--primary-soft)}
-  .cli-pick .results{display:none;position:absolute;left:0;right:0;top:100%;margin-top:4px;background:var(--surface-2);border:1px solid var(--primary);border-radius:6px;max-height:280px;overflow-y:auto;z-index:200;box-shadow:0 8px 24px rgba(0,0,0,.5)}
-  .cli-pick.open .results{display:block}
-  .cli-pick .results .item{padding:9px 12px;cursor:pointer;border-bottom:1px solid var(--border-soft);font-size:13px;color:var(--text)}
-  .cli-pick .results .item:last-child{border-bottom:0}
-  .cli-pick .results .item:hover{background:var(--surface-hi)}
-  .cli-pick .results .item .num{color:var(--text-muted);font-size:11px;margin-right:8px;font-variant-numeric:tabular-nums}
-  .cli-pick .results .create{padding:9px 12px;cursor:pointer;color:var(--accent);background:var(--surface);font-size:13px;font-weight:500;border-top:1px solid var(--border)}
-  .cli-pick .results .create:hover{background:var(--surface-hi)}
-  .cli-pick .results .empty{padding:14px 12px;color:var(--text-dim);font-size:12px;font-style:italic}
+  /* The dropdown is portaled to body and uses position:fixed - escapes ALL parent stacking contexts */
+  #cliPickPortal{display:none;position:fixed;background:var(--surface-2);border:1px solid var(--primary);border-radius:6px;max-height:280px;overflow-y:auto;z-index:9999;box-shadow:0 12px 32px rgba(0,0,0,.6)}
+  #cliPickPortal.open{display:block}
+  #cliPickPortal .item{padding:9px 12px;cursor:pointer;border-bottom:1px solid var(--border-soft);font-size:13px;color:var(--text)}
+  #cliPickPortal .item:last-child{border-bottom:0}
+  #cliPickPortal .item:hover{background:var(--surface-hi)}
+  #cliPickPortal .item .num{color:var(--text-muted);font-size:11px;margin-right:8px;font-variant-numeric:tabular-nums}
+  #cliPickPortal .create{padding:9px 12px;cursor:pointer;color:var(--accent);background:var(--surface);font-size:13px;font-weight:500;border-top:1px solid var(--border)}
+  #cliPickPortal .create:hover{background:var(--surface-hi)}
+  #cliPickPortal .empty{padding:14px 12px;color:var(--text-dim);font-size:12px;font-style:italic}
   .cli-create-panel{margin-top:8px;padding:14px;background:var(--surface);border:1px solid var(--primary);border-radius:8px;max-width:520px}
   .cli-create-panel h4{margin:0 0 10px;font-size:12px;color:var(--accent);text-transform:uppercase;letter-spacing:.05em;font-weight:600}
   .cli-create-panel .grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
@@ -252,6 +252,57 @@
   .bug-pill{display:inline-block;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.04em}
   .bug-pill.open{background:var(--warning-soft);color:var(--warning)}
   .bug-pill.fixed{background:var(--success-soft);color:var(--success)}
+
+  /* Prestation row with rate beside */
+  .presta-row{display:flex;gap:10px;align-items:stretch}
+  .presta-row select{flex:1;min-width:0}
+  .presta-rate{display:flex;align-items:center;padding:0 14px;background:var(--surface-2);border:1px solid var(--border);border-radius:6px;color:var(--primary);font-size:14px;font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap;min-width:90px;justify-content:center}
+  .presta-rate.empty{color:var(--text-dim);font-size:11px;font-weight:500}
+
+  /* Lignes section */
+  .lg-add{display:flex;gap:8px;margin-bottom:10px}
+  .lg-add .btn{display:inline-flex;align-items:center;gap:6px;font-size:13px;padding:8px 14px}
+  .lg-list{display:flex;flex-direction:column;gap:8px}
+  .lg-card{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:10px 12px;max-width:720px}
+  .lg-card.lg-heures{border-left:3px solid var(--primary)}
+  .lg-card.lg-materiel{border-left:3px solid var(--accent)}
+  .lg-head{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .lg-ico{font-size:16px}
+  .lg-title{flex:1;min-width:160px;padding:7px 10px;border:1px solid transparent;border-radius:5px;background:transparent;color:var(--text);font:inherit;font-size:13px;font-weight:500}
+  .lg-title:hover{border-color:var(--border)}
+  .lg-title:focus{outline:none;border-color:var(--primary);background:var(--surface-2)}
+  .lg-dur{display:flex;align-items:center;gap:6px}
+  .lg-dur input{width:70px;padding:6px 8px;border:1px solid var(--border-light);border-radius:5px;background:var(--surface-2);color:var(--text);font:inherit;font-size:13px;text-align:right;font-variant-numeric:tabular-nums}
+  .lg-dur input:focus{outline:none;border-color:var(--primary)}
+  .lg-prix{display:flex;align-items:center;gap:4px;background:var(--surface-2);border:1px solid var(--border-light);border-radius:5px;padding:0 10px}
+  .lg-prix input{width:80px;border:0;background:transparent;color:var(--text);font:inherit;font-size:13px;font-variant-numeric:tabular-nums;text-align:right;padding:6px 0}
+  .lg-prix input:focus{outline:none}
+  .lg-prix .unit{color:var(--text-dim);font-size:12px}
+  .lg-seg button{padding:5px 10px;font-size:12px}
+  .lg-seg-devis button{padding:5px 12px;font-size:12px}
+  .lg-del{background:transparent;border:0;color:var(--text-dim);font-size:18px;line-height:1;cursor:pointer;padding:4px 8px;border-radius:4px}
+  .lg-del:hover{background:var(--danger-soft);color:var(--danger)}
+  .lg-desc{width:100%;margin-top:8px;padding:7px 10px;border:1px solid var(--border-light);border-radius:5px;background:var(--surface-2);color:var(--text-muted);font:inherit;font-size:12px;resize:vertical;min-height:36px}
+  .lg-desc:focus{outline:none;border-color:var(--primary);color:var(--text)}
+
+  /* Notes (rich text) editor */
+  .notes-editor-wrap{background:var(--surface);border:1px solid var(--border);border-radius:8px;overflow:hidden;max-width:840px;margin-top:6px}
+  .notes-toolbar{display:flex;flex-wrap:wrap;gap:2px;padding:8px 10px;background:var(--surface-2);border-bottom:1px solid var(--border);align-items:center}
+  .ntb{background:transparent;border:1px solid transparent;color:var(--text-muted);padding:4px 9px;border-radius:4px;cursor:pointer;font-size:12px;font-family:inherit;line-height:1;min-width:28px}
+  .ntb:hover{background:var(--surface);border-color:var(--border-light);color:var(--text)}
+  .ntb:active{background:var(--primary-soft);color:var(--primary)}
+  .ntsep{display:inline-block;width:1px;height:18px;background:var(--border);margin:0 4px}
+  .notes-editor{min-height:300px;padding:14px 18px;color:var(--text);font:inherit;font-size:14px;line-height:1.6;outline:none;overflow-y:auto;max-height:60vh}
+  .notes-editor:empty::before{content:attr(data-placeholder);color:var(--text-dim);pointer-events:none}
+  .notes-editor h2,.notes-editor h3{color:var(--accent);margin:14px 0 6px;font-weight:600}
+  .notes-editor h2{font-size:18px}
+  .notes-editor h3{font-size:15px}
+  .notes-editor p{margin:6px 0}
+  .notes-editor ul,.notes-editor ol{margin:6px 0;padding-left:24px}
+  .notes-editor li{margin:3px 0}
+  .notes-editor strong{color:#fff}
+  .notes-editor em{color:var(--text)}
+  .notes-status-bar{display:flex;justify-content:space-between;align-items:center;font-size:11px;color:var(--text-muted);max-width:840px;margin-top:6px;padding:0 4px}
 </style>
 </head>
 <body>
@@ -305,7 +356,8 @@ const DEFAULT_S = {
     declare: true,
     urssafPct: "22",
     remisePct: "0",
-    notes: ""
+    notes: "",
+    lignes: []
   },
   devis:    {},
   suivi:    { entries: [], devis: {} },
@@ -314,7 +366,7 @@ const DEFAULT_S = {
   abonnements: { entries: [] },
   investissements: { entries: [] },
   tarifs: { catalog: JSON.parse(JSON.stringify(DEFAULT_CATALOG)) },
-  bugs: { entries: [] }
+  bugs: { html: "", entries: [] }
 };
 let S = JSON.parse(localStorage.getItem(SK) || "null") || JSON.parse(JSON.stringify(DEFAULT_S));
 if (!S.suivi || !Array.isArray(S.suivi.entries)) S.suivi = { entries: [], devis: {} };
@@ -323,11 +375,27 @@ if (!S.clients || !Array.isArray(S.clients.entries)) S.clients = { ...DEFAULT_S.
 if (!S.abonnements || !Array.isArray(S.abonnements.entries)) S.abonnements = { ...DEFAULT_S.abonnements };
 if (!S.investissements || !Array.isArray(S.investissements.entries)) S.investissements = { ...DEFAULT_S.investissements };
 if (!S.tarifs || !Array.isArray(S.tarifs.catalog) || !S.tarifs.catalog.length) S.tarifs = { catalog: JSON.parse(JSON.stringify(DEFAULT_CATALOG)) };
-if (!S.bugs || !Array.isArray(S.bugs.entries)) S.bugs = { entries: [] };
+if (!S.bugs || (typeof S.bugs.html !== "string" && !Array.isArray(S.bugs.entries))) S.bugs = { html: "", entries: [] };
+if (!S.bugs.html && Array.isArray(S.bugs.entries) && S.bugs.entries.length) {
+  S.bugs.html = S.bugs.entries.map(e => {
+    const status = e.status === "fixed" ? " <em>(fait)</em>" : "";
+    const desc = e.desc ? `<p>${e.desc.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")}</p>` : "";
+    return `<h3>${(e.title||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")}${status}</h3>${desc}`;
+  }).join("");
+  S.bugs.entries = [];
+}
 if (S.mission) {
   S.mission = { ...DEFAULT_S.mission, ...S.mission,
     deplacement: { ...DEFAULT_S.mission.deplacement, ...(S.mission.deplacement || {}) }
   };
+  if (!Array.isArray(S.mission.lignes)) S.mission.lignes = [];
+  // Migrate old prep/prod/postprod into lignes if lignes is empty and old data has hours
+  if (S.mission.lignes.length === 0) {
+    const prep = S.mission.prep || {}, prod = S.mission.prod || {}, post = S.mission.postprod || {};
+    if (parseFloat(prep.hours) > 0) S.mission.lignes.push({ id: Date.now().toString(36)+"a", type:"heures", intitule:"Préparation", duree: String(prep.hours), unit:"h", description:"" });
+    if (parseFloat(prod.hours) > 0) S.mission.lignes.push({ id: Date.now().toString(36)+"b", type:"heures", intitule:"Shooting / production", duree: String(prod.hours), unit:"h", description:"" });
+    if (parseFloat(post.hours) > 0) S.mission.lignes.push({ id: Date.now().toString(36)+"c", type:"heures", intitule:"Post-production", duree: String(post.hours), unit:"h", description:"" });
+  }
   recomputeRef();
 }
 let user = null;
@@ -418,7 +486,7 @@ function upd(path, val) {
     refreshRefDisplay();
   }
   save();
-  if (path.startsWith("mission.prep") || path.startsWith("mission.prod") || path.startsWith("mission.postprod") || path.startsWith("mission.deplacement") || path.startsWith("mission.autres") || path === "mission.remisePct") {
+  if (path.startsWith("mission.prep") || path.startsWith("mission.prod") || path.startsWith("mission.postprod") || path.startsWith("mission.deplacement") || path.startsWith("mission.autres") || path.startsWith("mission.lignes") || path === "mission.remisePct" || path === "mission.object") {
     refreshTotals();
   }
 }
@@ -479,25 +547,12 @@ function rClientPicker() {
       </div>
     </div></div>`;
   }
-  const q = cliPickQuery.trim().toLowerCase();
-  const matches = q ? S.clients.entries.filter(e =>
-    (e.name||"").toLowerCase().includes(q) ||
-    (e.num||"").toLowerCase().includes(q) ||
-    (e.contact||"").toLowerCase().includes(q) ||
-    (e.email||"").toLowerCase().includes(q)
-  ).slice(0, 12) : S.clients.entries.slice(0, 12);
-  const showCreate = q && !S.clients.entries.some(e => (e.name||"").toLowerCase() === q);
   const draft = cliPickDraft;
   return `<div class="row"><div class="cli-pick" id="cliPickRoot">
     <div class="cli-search-wrap">
       <span class="ico">🔍</span>
-      <input type="text" placeholder="Rechercher un client par nom, n°, contact, email…" value="${esc(cliPickQuery)}" oninput="cliPickSearch(this.value)" onfocus="cliPickShowDropdown()" onblur="cliPickHideDropdown()" autocomplete="off">
+      <input id="cliPickInput" type="text" placeholder="Rechercher un client par nom, n°, contact, email…" value="${esc(cliPickQuery)}" oninput="cliPickSearch(this.value)" onfocus="cliPickShowDropdown()" onblur="cliPickHideDropdown()" onclick="cliPickShowDropdown()" autocomplete="off">
     </div>
-    ${cliPickCreating ? "" : `<div class="results">
-      ${matches.length === 0 && !showCreate ? `<div class="empty">${q ? "Aucun client trouvé. Tape un nom puis « Créer »…" : "Tape pour rechercher un client…"}</div>` : ""}
-      ${matches.map(e => `<div class="item" onmousedown="cliPickSelect('${e.id}')"><span class="num">${esc(e.num || "—")}</span>${esc(e.name || "(sans nom)")}</div>`).join("")}
-      ${showCreate ? `<div class="create" onmousedown="cliPickStartCreate()">+ Créer le client « ${esc(cliPickQuery)} »</div>` : (S.clients.entries.length === 0 ? `<div class="create" onmousedown="cliPickStartCreate()">+ Créer un nouveau client</div>` : "")}
-    </div>`}
   </div></div>
   ${cliPickCreating ? `
     <div class="cli-create-panel">
@@ -520,38 +575,63 @@ function rClientPicker() {
   ` : ""}`;
 }
 
+function cliPickEnsurePortal() {
+  let p = document.getElementById("cliPickPortal");
+  if (!p) {
+    p = document.createElement("div");
+    p.id = "cliPickPortal";
+    document.body.appendChild(p);
+  }
+  return p;
+}
+
+function cliPickPositionPortal() {
+  const inp = document.getElementById("cliPickInput");
+  const p = cliPickEnsurePortal();
+  if (!inp) return;
+  const r = inp.getBoundingClientRect();
+  p.style.top = (r.bottom + 4) + "px";
+  p.style.left = r.left + "px";
+  p.style.width = r.width + "px";
+}
+
+function cliPickRenderPortal() {
+  const p = cliPickEnsurePortal();
+  const q = cliPickQuery.trim().toLowerCase();
+  const matches = q ? S.clients.entries.filter(e =>
+    (e.name||"").toLowerCase().includes(q) ||
+    (e.num||"").toLowerCase().includes(q) ||
+    (e.contact||"").toLowerCase().includes(q) ||
+    (e.email||"").toLowerCase().includes(q)
+  ).slice(0, 12) : S.clients.entries.slice(0, 12);
+  const showCreate = q && !S.clients.entries.some(e => (e.name||"").toLowerCase() === q);
+  const html =
+    (matches.length === 0 && !showCreate ? `<div class="empty">${q ? "Aucun client trouvé. Tape un nom puis « Créer »…" : "Aucun client enregistré. Tape pour créer le premier."}</div>` : "") +
+    matches.map(e => `<div class="item" onmousedown="cliPickSelect('${e.id}')"><span class="num">${esc(e.num || "—")}</span>${esc(e.name || "(sans nom)")}</div>`).join("") +
+    (showCreate ? `<div class="create" onmousedown="cliPickStartCreate()">+ Créer le client « ${esc(cliPickQuery)} »</div>` : (S.clients.entries.length === 0 ? `<div class="create" onmousedown="cliPickStartCreate()">+ Créer un nouveau client</div>` : ""));
+  p.innerHTML = html;
+}
+
 function cliPickShowDropdown() {
-  const r = document.getElementById("cliPickRoot");
-  if (r) r.classList.add("open");
+  const p = cliPickEnsurePortal();
+  cliPickRenderPortal();
+  cliPickPositionPortal();
+  p.classList.add("open");
 }
 window.cliPickShowDropdown = cliPickShowDropdown;
 
 function cliPickHideDropdown() {
   setTimeout(() => {
-    const r = document.getElementById("cliPickRoot");
-    if (r) r.classList.remove("open");
-  }, 150);
+    const p = document.getElementById("cliPickPortal");
+    if (p) p.classList.remove("open");
+  }, 180);
 }
 window.cliPickHideDropdown = cliPickHideDropdown;
 
 function cliPickSearch(v) {
   cliPickQuery = v;
-  // Targeted DOM update to avoid losing input focus
-  const wrap = document.querySelector(".cli-pick .results");
-  if (wrap) {
-    const q = v.trim().toLowerCase();
-    const matches = q ? S.clients.entries.filter(e =>
-      (e.name||"").toLowerCase().includes(q) ||
-      (e.num||"").toLowerCase().includes(q) ||
-      (e.contact||"").toLowerCase().includes(q) ||
-      (e.email||"").toLowerCase().includes(q)
-    ).slice(0, 12) : S.clients.entries.slice(0, 12);
-    const showCreate = q && !S.clients.entries.some(e => (e.name||"").toLowerCase() === q);
-    wrap.innerHTML =
-      (matches.length === 0 && !showCreate ? `<div class="empty">Aucun client. Tape un nom puis « Créer »…</div>` : "") +
-      matches.map(e => `<div class="item" onclick="cliPickSelect('${e.id}')"><span class="num">${esc(e.num || "—")}</span>${esc(e.name || "(sans nom)")}</div>`).join("") +
-      (showCreate ? `<div class="create" onclick="cliPickStartCreate()">+ Créer le client « ${esc(v)} »</div>` : (S.clients.entries.length > 0 ? "" : `<div class="create" onclick="cliPickStartCreate()">+ Créer un nouveau client</div>`));
-  }
+  cliPickRenderPortal();
+  cliPickPositionPortal();
 }
 window.cliPickSearch = cliPickSearch;
 
@@ -681,22 +761,164 @@ let bugFilter = "all";
 function bugSetFilter(v) { bugFilter = v; render(); }
 window.bugSetFilter = bugSetFilter;
 
+// ============ LIGNES (Mission) ============
+const HOURS_PER_DAY = 8;
+
+function ligneAdd(type) {
+  const id = uid();
+  if (type === "heures") {
+    S.mission.lignes.push({ id, type: "heures", intitule: "", duree: "", unit: "h", description: "" });
+  } else if (type === "materiel") {
+    S.mission.lignes.push({ id, type: "materiel", intitule: "", prix: "", devis: "principal" });
+  }
+  save();
+  render();
+}
+window.ligneAdd = ligneAdd;
+
+function ligneDel(id) {
+  if (!confirm("Supprimer cette ligne ?")) return;
+  S.mission.lignes = S.mission.lignes.filter(l => l.id !== id);
+  save();
+  render();
+}
+window.ligneDel = ligneDel;
+
+function ligneUpd(id, field, val) {
+  const l = S.mission.lignes.find(x => x.id === id);
+  if (!l) return;
+  l[field] = val;
+  save();
+  refreshTotals();
+}
+window.ligneUpd = ligneUpd;
+
+function ligneSetUnit(id, unit) {
+  const l = S.mission.lignes.find(x => x.id === id);
+  if (!l) return;
+  l.unit = unit;
+  save();
+  render();
+}
+window.ligneSetUnit = ligneSetUnit;
+
+function ligneSetDevis(id, devis) {
+  const l = S.mission.lignes.find(x => x.id === id);
+  if (!l) return;
+  l.devis = devis;
+  save();
+  render();
+}
+window.ligneSetDevis = ligneSetDevis;
+
+function rLigne(l) {
+  if (l.type === "heures") {
+    return `<div class="lg-card lg-heures">
+      <div class="lg-head">
+        <span class="lg-ico">⏱️</span>
+        <input class="lg-title" placeholder="Intitulé (ex : Préparation, Shooting, Post-prod…)" value="${esc(l.intitule)}" oninput="ligneUpd('${l.id}','intitule',this.value)">
+        <div class="lg-dur">
+          <input type="number" step="0.25" placeholder="0" value="${esc(l.duree)}" oninput="ligneUpd('${l.id}','duree',this.value)">
+          <div class="seg lg-seg">
+            <button class="${l.unit==='h'?'on':''}" onclick="ligneSetUnit('${l.id}','h')">heures</button>
+            <button class="${l.unit==='j'?'on':''}" onclick="ligneSetUnit('${l.id}','j')">jours</button>
+          </div>
+        </div>
+        <button class="lg-del" onclick="ligneDel('${l.id}')" title="Supprimer">×</button>
+      </div>
+      <textarea class="lg-desc" placeholder="Description (optionnelle)…" oninput="ligneUpd('${l.id}','description',this.value)">${esc(l.description||"")}</textarea>
+    </div>`;
+  } else {
+    return `<div class="lg-card lg-materiel">
+      <div class="lg-head">
+        <span class="lg-ico">🛒</span>
+        <input class="lg-title" placeholder="Intitulé (ex : Pellicule, Location studio…)" value="${esc(l.intitule)}" oninput="ligneUpd('${l.id}','intitule',this.value)">
+        <div class="lg-prix">
+          <input type="number" step="0.01" placeholder="0,00" value="${esc(l.prix)}" oninput="ligneUpd('${l.id}','prix',this.value)">
+          <span class="unit">€</span>
+        </div>
+        <div class="seg lg-seg-devis">
+          <button class="${(l.devis||'principal')==='principal'?'on':''}" onclick="ligneSetDevis('${l.id}','principal')">Devis principal</button>
+          <button class="${l.devis==='debours'?'on warn':''}" onclick="ligneSetDevis('${l.id}','debours')">Frais débours</button>
+        </div>
+        <button class="lg-del" onclick="ligneDel('${l.id}')" title="Supprimer">×</button>
+      </div>
+    </div>`;
+  }
+}
+
+// ============ NOTES editor (rich text) ============
+let notesSaveTimer = null;
+
+function notesOnInput(html) {
+  S.bugs.html = html;
+  try { localStorage.setItem(SK, JSON.stringify(S)); } catch(e) {}
+  const status = document.getElementById("notesStatus");
+  if (status) { status.textContent = "✏ Modifications…"; status.style.color = "var(--text-muted)"; }
+  clearTimeout(notesSaveTimer);
+  notesSaveTimer = setTimeout(() => {
+    saveToCloud();
+    if (status) { status.textContent = "💾 Sauvegardé"; status.style.color = "var(--success)"; }
+  }, 600);
+  notesUpdateCount();
+}
+window.notesOnInput = notesOnInput;
+
+function notesUpdateCount() {
+  const ed = document.getElementById("notesEditor");
+  const c = document.getElementById("notesCount");
+  if (!ed || !c) return;
+  const text = ed.innerText || "";
+  c.textContent = `${text.length} caractère${text.length>1?"s":""}`;
+}
+window.notesUpdateCount = notesUpdateCount;
+
+function notesCmd(cmd, arg) {
+  const ed = document.getElementById("notesEditor");
+  if (ed) ed.focus();
+  document.execCommand(cmd, false, arg || null);
+  if (ed) notesOnInput(ed.innerHTML);
+}
+window.notesCmd = notesCmd;
+
 function totals() {
   const d = S.mission;
-  const prep = num(d.prep.hours) * num(d.prep.rate);
-  const prod = num(d.prod.hours) * num(d.prod.rate);
-  const post = num(d.postprod.hours) * num(d.postprod.rate);
+  // Hourly rate from selected prestation
+  const cat = (S.tarifs.catalog || DEFAULT_CATALOG).find(c => c.k === d.object);
+  const tarifH = cat ? num(cat.p) : 0;
+  const HOURS_PER_DAY = 8;
+  // Walk lignes
+  let lignesAmount = 0, debours = 0, totalHeures = 0;
+  for (const l of d.lignes || []) {
+    if (l.type === "heures") {
+      const h = num(l.duree) * (l.unit === "j" ? HOURS_PER_DAY : 1);
+      totalHeures += h;
+      lignesAmount += h * tarifH;
+    } else if (l.type === "materiel") {
+      const p = num(l.prix);
+      if (l.devis === "debours") debours += p;
+      else lignesAmount += p;
+    }
+  }
+  // Déplacement
   const mode = d.deplacement.mode || "voiture";
   const tauxKm = num(d.deplacement.tauxKm) || 0.40;
   const trajet = num(d.deplacement.trajetH) * 40;
   const depl = mode === "voiture"
     ? num(d.deplacement.km) * tauxKm + num(d.deplacement.peages) + trajet
     : num(d.deplacement.ticket) + trajet;
+  // Autres (kept as-is for misc charges)
   const autres = num(d.autres.montant);
-  const subtotal = prep + prod + post + depl + autres;
+  const subtotal = lignesAmount + depl + autres;
   const remise = subtotal * num(d.remisePct) / 100;
   const total = subtotal - remise;
-  return { prep, prod, post, depl, autres, subtotal, remise, total, acompte: total * 0.30, reste: total * 0.70 };
+  return {
+    lignes: lignesAmount, debours, depl, autres,
+    subtotal, remise, total, totalHeures, tarifH,
+    acompte: total * 0.30, reste: total * 0.70,
+    // legacy keys (kept for backward compat with totalsHtml)
+    prep: 0, prod: lignesAmount, post: 0
+  };
 }
 
 function refreshTotals() {
@@ -707,9 +929,7 @@ function refreshTotals() {
 
 function totalsHtml(t) {
   return `
-    <div class="line muted"><span>Préparation</span><span>${fmt(t.prep)}</span></div>
-    <div class="line muted"><span>Shooting / production</span><span>${fmt(t.prod)}</span></div>
-    <div class="line muted"><span>Post-production</span><span>${fmt(t.post)}</span></div>
+    <div class="line muted"><span>Prestations (${t.totalHeures.toFixed(2).replace(".",",")} h × ${num(t.tarifH).toFixed(2).replace(".",",")} €/h + matériel)</span><span>${fmt(t.lignes)}</span></div>
     <div class="line muted"><span>Frais de déplacement</span><span>${fmt(t.depl)}</span></div>
     <div class="line muted"><span>Autres</span><span>${fmt(t.autres)}</span></div>
     <div class="line"><span>Sous-total</span><span>${fmt(t.subtotal)}</span></div>
@@ -717,6 +937,7 @@ function totalsHtml(t) {
     <div class="line total"><span>Total HT</span><span>${fmt(t.total)}</span></div>
     <div class="line muted"><span>Acompte 30 %</span><span>${fmt(t.acompte)}</span></div>
     <div class="line muted"><span>Reste 70 %</span><span>${fmt(t.reste)}</span></div>
+    ${t.debours > 0 ? `<div class="line muted" style="margin-top:6px;color:var(--accent)"><span>+ Frais de débours (à rembourser)</span><span>${fmt(t.debours)}</span></div>` : ""}
     <div class="line muted" style="font-size:11px;color:#9ca3af;margin-top:6px">TVA non applicable, art. 293 B du CGI</div>
   `;
 }
@@ -766,23 +987,29 @@ function rMS() {
     <div class="row"><div class="field"><label>Taux URSSAF (%)</label><input type="number" step="0.1" value="${esc(d.urssafPct ?? "22")}" oninput="upd('mission.urssafPct', this.value)"></div></div>
 
     <h3>Prestation</h3>
-    <div class="row"><div class="field"><label>Type de prestation</label>
-      <select onchange="pickObject(this.value)">
-        <option value="">— choisir —</option>
-        ${(S.tarifs.catalog || DEFAULT_CATALOG).map(c => `<option value="${c.k}" ${d.object===c.k?"selected":""}>${esc(c.l)} (${c.p} €)</option>`).join("")}
-      </select>
-    </div></div>
-    <div class="row"><div class="field"><label>Date prestation</label><input type="date" value="${esc(d.objectDate)}" oninput="upd('mission.objectDate', this.value)"></div></div>
-    <div class="row"><div class="field"><label>Lieu</label><input value="${esc(d.objectLieu)}" oninput="upd('mission.objectLieu', this.value)"></div></div>
-    <div class="hint">Choisir une prestation pré-remplit automatiquement le P.U. shooting avec le tarif arrondi du catalogue.</div>
+    ${(() => {
+      const cat = (S.tarifs.catalog || DEFAULT_CATALOG).find(c => c.k === d.object);
+      const tarifH = cat ? num(cat.p) : 0;
+      return `<div class="row"><div class="field"><label>Type de prestation</label>
+        <div class="presta-row">
+          <select onchange="pickObject(this.value)">
+            <option value="">— choisir —</option>
+            ${(S.tarifs.catalog || DEFAULT_CATALOG).map(c => `<option value="${c.k}" ${d.object===c.k?"selected":""}>${esc(c.l)}</option>`).join("")}
+          </select>
+          <div class="presta-rate ${cat && tarifH > 0 ? "" : "empty"}">${cat ? (tarifH > 0 ? `${num(tarifH).toFixed(2).replace(".",",")} €/h` : "Tarif à définir") : "—"}</div>
+        </div>
+      </div></div>`;
+    })()}
+    <div class="hint">Le tarif horaire de la prestation sélectionnée s'applique automatiquement aux lignes de type « heures ». Les tarifs sont gérés dans l'onglet « Frais & Tarifs ».</div>
 
     <h3>Lignes</h3>
-    <div class="row"><div class="field"><label>Préparation (h)</label><input type="number" step="0.25" value="${esc(d.prep.hours)}" oninput="upd('mission.prep.hours', this.value)"></div></div>
-    <div class="row"><div class="field"><label>P.U. préparation (€/h)</label><input type="number" step="0.01" value="${esc(d.prep.rate)}" oninput="upd('mission.prep.rate', this.value)"></div></div>
-    <div class="row"><div class="field"><label>Shooting (h)</label><input type="number" step="0.25" value="${esc(d.prod.hours)}" oninput="upd('mission.prod.hours', this.value)"></div></div>
-    <div class="row"><div class="field"><label>P.U. shooting (€/h)</label><input type="number" step="0.01" value="${esc(d.prod.rate)}" oninput="upd('mission.prod.rate', this.value)"></div></div>
-    <div class="row"><div class="field"><label>Post-prod (h)</label><input type="number" step="0.25" value="${esc(d.postprod.hours)}" oninput="upd('mission.postprod.hours', this.value)"></div></div>
-    <div class="row"><div class="field"><label>P.U. post-prod (€/h)</label><input type="number" step="0.01" value="${esc(d.postprod.rate)}" oninput="upd('mission.postprod.rate', this.value)"></div></div>
+    <div class="lg-add">
+      <button class="btn ghost" onclick="ligneAdd('heures')"><span style="font-size:14px">⏱️</span> + Heures</button>
+      <button class="btn ghost" onclick="ligneAdd('materiel')"><span style="font-size:14px">🛒</span> + Matériel</button>
+    </div>
+    <div class="lg-list">
+      ${(d.lignes || []).length === 0 ? `<div class="empty">Aucune ligne. Clique sur « + Heures » ou « + Matériel » ci-dessus pour commencer.</div>` : (d.lignes || []).map(l => rLigne(l)).join("")}
+    </div>
 
     <h3>Déplacement</h3>
     <div class="row"><div class="field"><label>Mode de transport</label>
@@ -930,7 +1157,7 @@ function suiviAdd() {
   const m = S.mission;
   const cat = (S.tarifs.catalog || DEFAULT_CATALOG).find(c => c.k === m.object);
   const t = totals();
-  const hoursTotal = num(m.prep.hours) + num(m.prod.hours) + num(m.postprod.hours);
+  const hoursTotal = (m.lignes || []).filter(l => l.type === "heures").reduce((s, l) => s + num(l.duree) * (l.unit === "j" ? HOURS_PER_DAY : 1), 0);
   const date = m.objectDate || new Date().toISOString().slice(0, 10);
   const client = m.client.name || "";
   const prestation = cat ? cat.l : "";
@@ -2265,61 +2492,61 @@ function rTR() {
 }
 
 function rBG() {
-  const entries = S.bugs.entries || [];
-  const filtered = bugFilter === "all" ? entries
-    : bugFilter === "open"  ? entries.filter(e => e.status === "open")
-    : entries.filter(e => e.status === "fixed");
-  const counts = {
-    all: entries.length,
-    open: entries.filter(e => e.status === "open").length,
-    fixed: entries.filter(e => e.status === "fixed").length
-  };
-  const rows = filtered.length === 0
-    ? `<div class="empty">${bugFilter === "all" ? "Aucune note pour l'instant." : `Aucune note ${bugFilter === "open" ? "à faire" : "faite"}.`}</div>`
-    : filtered.map(e => `
-      <div class="bug-card ${e.status === "fixed" ? "fixed" : ""}">
-        <div class="head">
-          <span class="bug-pill ${e.status}">${e.status === "fixed" ? "Faite" : "À faire"}</span>
-          <span class="title">${esc(e.title)}</span>
-          <span class="date">${dateFR(e.date) || ""}</span>
-        </div>
-        ${e.desc ? `<div class="desc">${esc(e.desc)}</div>` : ""}
-        <div class="actions">
-          ${e.status === "open"
-            ? `<button class="btn-act act-vert" onclick="bugStatus('${e.id}','fixed')"><span class="ico">✓</span>Marquer comme faite</button>`
-            : `<button class="btn ghost" onclick="bugStatus('${e.id}','open')">Réactiver</button>`}
-          <button class="btn-act act-rouge" onclick="bugDel('${e.id}')"><span class="ico">×</span>Supprimer</button>
-        </div>
-      </div>
-    `).join("");
+  const html = (S.bugs && S.bugs.html) || "";
+  // After rendering, wire up the editor
+  setTimeout(() => {
+    const ed = document.getElementById("notesEditor");
+    if (ed) {
+      // Set initial content
+      if (ed.innerHTML !== html) ed.innerHTML = html;
+      // Bind input event (overwrite each render to avoid duplicates)
+      ed.oninput = () => notesOnInput(ed.innerHTML);
+      notesUpdateCount();
+    }
+  }, 0);
 
   return `
     <h2>Notes <span id="savedFlash" class="saved"></span></h2>
+    <div class="hint">Espace libre pour tes notes, idées, bugs à corriger, suggestions… Sauvegarde automatique (local + cloud).</div>
 
-    <h3>Ajouter une note</h3>
-    <div class="bug-form">
-      <input type="text" placeholder="Titre de la note (ex : corriger la date d'émission, idée nouvelle prestation…)" value="${esc(bugDraft.title)}" oninput="bugDraftSet('title', this.value)">
-      <textarea placeholder="Description : détails, contexte, étapes à suivre…" oninput="bugDraftSet('desc', this.value)">${esc(bugDraft.desc)}</textarea>
-      <div style="display:flex;justify-content:flex-end">
-        <button class="btn" onclick="bugAdd()">+ Ajouter la note</button>
+    <div class="notes-editor-wrap">
+      <div class="notes-toolbar">
+        <button type="button" class="ntb" onclick="notesCmd('bold')" title="Gras"><b>B</b></button>
+        <button type="button" class="ntb" onclick="notesCmd('italic')" title="Italique"><i>I</i></button>
+        <button type="button" class="ntb" onclick="notesCmd('underline')" title="Souligné"><u>U</u></button>
+        <button type="button" class="ntb" onclick="notesCmd('strikeThrough')" title="Barré"><s>S</s></button>
+        <span class="ntsep"></span>
+        <button type="button" class="ntb" onclick="notesCmd('insertUnorderedList')" title="Liste à puces">• Liste</button>
+        <button type="button" class="ntb" onclick="notesCmd('insertOrderedList')" title="Liste numérotée">1. Liste</button>
+        <span class="ntsep"></span>
+        <button type="button" class="ntb" onclick="notesCmd('formatBlock','H2')" title="Titre">H</button>
+        <button type="button" class="ntb" onclick="notesCmd('formatBlock','P')" title="Paragraphe">¶</button>
+        <span class="ntsep"></span>
+        <button type="button" class="ntb" onclick="notesCmd('removeFormat')" title="Retirer le formatage">✕ format</button>
       </div>
+      <div id="notesEditor" class="notes-editor" contenteditable="true" data-placeholder="Commence à écrire ici…"></div>
     </div>
 
-    <h3>Notes enregistrées</h3>
-    <div class="toolbar">
-      <div class="seg">
-        <button class="${bugFilter==='all'?'on':''}" onclick="bugSetFilter('all')">Toutes (${counts.all})</button>
-        <button class="${bugFilter==='open'?'on warn':''}" onclick="bugSetFilter('open')">À faire (${counts.open})</button>
-        <button class="${bugFilter==='fixed'?'on':''}" onclick="bugSetFilter('fixed')">Faites (${counts.fixed})</button>
-      </div>
+    <div class="notes-status-bar">
+      <span id="notesStatus" style="color:var(--success)">💾 Sauvegardé automatiquement</span>
+      <span id="notesCount">0 caractère</span>
     </div>
-    ${rows}
   `;
 }
 
 window.setTab = k => { tab = k; render(); };
 window.signIn = () => auth.signInWithPopup(new firebase.auth.GoogleAuthProvider()).catch(err => alert(err.message));
 window.signOut = () => auth.signOut();
+
+// Reposition picker portal on scroll/resize so it tracks the input
+window.addEventListener('scroll', () => {
+  const p = document.getElementById('cliPickPortal');
+  if (p && p.classList.contains('open')) cliPickPositionPortal();
+}, true);
+window.addEventListener('resize', () => {
+  const p = document.getElementById('cliPickPortal');
+  if (p && p.classList.contains('open')) cliPickPositionPortal();
+});
 
 auth.onAuthStateChanged(async u => {
   user = u;
