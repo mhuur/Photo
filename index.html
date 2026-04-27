@@ -237,21 +237,42 @@
   .tarif-row .rate.empty{border-color:var(--warning);background:var(--warning-soft)}
 
   /* Bug tab */
-  .bug-form{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:14px;max-width:620px;margin-bottom:16px}
-  .bug-form input,.bug-form textarea{width:100%;padding:8px 10px;border:1px solid var(--border-light);border-radius:5px;background:var(--surface-2);color:var(--text);font:inherit;font-size:13px;margin-bottom:8px}
-  .bug-form input:focus,.bug-form textarea:focus{outline:none;border-color:var(--primary)}
-  .bug-form textarea{min-height:70px;resize:vertical}
-  .bug-card{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:12px 14px;margin-bottom:8px;max-width:720px}
-  .bug-card.fixed{opacity:.6}
-  .bug-card .head{display:flex;align-items:center;gap:10px;margin-bottom:6px}
-  .bug-card .head .title{flex:1;color:var(--text);font-weight:600;font-size:14px}
-  .bug-card.fixed .head .title{text-decoration:line-through}
-  .bug-card .head .date{color:var(--text-dim);font-size:11px;font-variant-numeric:tabular-nums}
-  .bug-card .desc{color:var(--text-muted);font-size:13px;white-space:pre-wrap;margin:6px 0 8px}
-  .bug-card .actions{display:flex;gap:6px;justify-content:flex-end}
-  .bug-pill{display:inline-block;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.04em}
-  .bug-pill.open{background:var(--warning-soft);color:var(--warning)}
-  .bug-pill.fixed{background:var(--success-soft);color:var(--success)}
+  /* Notes (todolist-style: items + sous-étapes) */
+  .fb-bar{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px;flex-wrap:wrap;max-width:720px}
+  .fb-title{color:var(--accent);font-size:14px;font-weight:700}
+  .fb-subtitle{color:var(--text-dim);font-size:11px;margin-bottom:10px;max-width:720px}
+  .fb-add-row{display:flex;gap:6px;align-items:center;margin-bottom:14px;max-width:720px}
+  .fb-add-row input{flex:1;padding:9px 12px;border:1px solid var(--border-light);border-radius:6px;background:var(--surface);color:var(--text);font:inherit;font-size:13px}
+  .fb-add-row input:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 3px var(--primary-soft)}
+  .fb-add-row input::placeholder{color:var(--text-dim)}
+  .fb-add-row button{border:0;border-radius:6px;padding:9px 16px;font-size:14px;font-weight:700;font-family:inherit;cursor:pointer;background:var(--success);color:#fff;flex-shrink:0;transition:background .15s}
+  .fb-add-row button:hover{background:var(--success-dark)}
+  .fb-card{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:10px 12px;margin-bottom:6px;max-width:720px;transition:opacity .15s,background .15s}
+  .fb-card.fb-done{opacity:.55;background:var(--surface-2)}
+  .fb-card.fb-done .fb-text{text-decoration:line-through;color:var(--text-dim)}
+  .fb-card.fb-done .fb-step-text{text-decoration:line-through;color:var(--text-dim)}
+  .fb-hd{display:flex;align-items:center;gap:8px}
+  .fb-check{border:1.5px solid var(--border-light);background:transparent;color:transparent;width:20px;height:20px;border-radius:5px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .12s;padding:0;font-size:13px;line-height:1}
+  .fb-check:hover{border-color:var(--success)}
+  .fb-check.on{background:var(--success);border-color:var(--success);color:#fff}
+  .fb-text{flex:1;border:0;background:transparent;font-family:inherit;font-size:13px;font-weight:600;color:var(--text);outline:none;padding:5px 7px;border-radius:4px;min-width:0}
+  .fb-text:hover{background:rgba(74,158,255,.06)}
+  .fb-text:focus{background:rgba(74,158,255,.10)}
+  .fb-del{border:0;background:transparent;color:var(--text-dim);cursor:pointer;flex-shrink:0;padding:5px 7px;border-radius:4px;transition:all .12s;font-size:13px;line-height:1}
+  .fb-del:hover{color:var(--danger);background:var(--danger-soft)}
+  .fb-step{display:flex;align-items:center;gap:6px;padding:2px 0 2px 28px;margin-top:3px}
+  .fb-step-bul{color:var(--text-dim);font-size:12px;flex-shrink:0;font-weight:700}
+  .fb-step-text{flex:1;border:0;background:transparent;font-family:inherit;font-size:12px;color:var(--text-muted);outline:none;padding:3px 6px;border-radius:3px;min-width:0}
+  .fb-step-text:hover{background:rgba(74,158,255,.06)}
+  .fb-step-text:focus{background:rgba(74,158,255,.10);color:var(--text)}
+  .fb-step-del{border:0;background:transparent;color:var(--text-dim);cursor:pointer;font-size:11px;flex-shrink:0;padding:2px 5px;border-radius:3px;opacity:0;transition:all .12s}
+  .fb-step:hover .fb-step-del{opacity:1}
+  .fb-step-del:hover{color:var(--danger);background:var(--danger-soft)}
+  .fb-add-step{margin:5px 0 0 28px;border:0;background:transparent;color:var(--primary);font-family:inherit;font-size:11px;cursor:pointer;padding:4px 10px;border-radius:4px;font-weight:600;transition:all .12s}
+  .fb-add-step:hover{background:var(--primary-soft)}
+  .fb-copy-btn{display:inline-flex;align-items:center;gap:5px;padding:6px 14px;border-radius:6px;border:1px solid var(--border-light);background:var(--surface);color:var(--text-muted);font-family:inherit;font-size:12px;font-weight:600;cursor:pointer;transition:all .15s}
+  .fb-copy-btn:hover{border-color:var(--primary);color:var(--primary);background:var(--primary-soft)}
+  .fb-copy-btn.copied{border-color:var(--success);color:var(--success);background:var(--success-soft)}
 
   /* Prestation row with rate beside */
   .presta-row{display:flex;gap:10px;align-items:stretch}
@@ -284,25 +305,6 @@
   .lg-del:hover{background:var(--danger-soft);color:var(--danger)}
   .lg-desc{width:100%;margin-top:8px;padding:7px 10px;border:1px solid var(--border-light);border-radius:5px;background:var(--surface-2);color:var(--text-muted);font:inherit;font-size:12px;resize:vertical;min-height:36px}
   .lg-desc:focus{outline:none;border-color:var(--primary);color:var(--text)}
-
-  /* Notes (rich text) editor */
-  .notes-editor-wrap{background:var(--surface);border:1px solid var(--border);border-radius:8px;overflow:hidden;max-width:840px;margin-top:6px}
-  .notes-toolbar{display:flex;flex-wrap:wrap;gap:2px;padding:8px 10px;background:var(--surface-2);border-bottom:1px solid var(--border);align-items:center}
-  .ntb{background:transparent;border:1px solid transparent;color:var(--text-muted);padding:4px 9px;border-radius:4px;cursor:pointer;font-size:12px;font-family:inherit;line-height:1;min-width:28px}
-  .ntb:hover{background:var(--surface);border-color:var(--border-light);color:var(--text)}
-  .ntb:active{background:var(--primary-soft);color:var(--primary)}
-  .ntsep{display:inline-block;width:1px;height:18px;background:var(--border);margin:0 4px}
-  .notes-editor{min-height:300px;padding:14px 18px;color:var(--text);font:inherit;font-size:14px;line-height:1.6;outline:none;overflow-y:auto;max-height:60vh}
-  .notes-editor:empty::before{content:attr(data-placeholder);color:var(--text-dim);pointer-events:none}
-  .notes-editor h2,.notes-editor h3{color:var(--accent);margin:14px 0 6px;font-weight:600}
-  .notes-editor h2{font-size:18px}
-  .notes-editor h3{font-size:15px}
-  .notes-editor p{margin:6px 0}
-  .notes-editor ul,.notes-editor ol{margin:6px 0;padding-left:24px}
-  .notes-editor li{margin:3px 0}
-  .notes-editor strong{color:#fff}
-  .notes-editor em{color:var(--text)}
-  .notes-status-bar{display:flex;justify-content:space-between;align-items:center;font-size:11px;color:var(--text-muted);max-width:840px;margin-top:6px;padding:0 4px}
 </style>
 </head>
 <body>
@@ -366,7 +368,7 @@ const DEFAULT_S = {
   abonnements: { entries: [] },
   investissements: { entries: [] },
   tarifs: { catalog: JSON.parse(JSON.stringify(DEFAULT_CATALOG)) },
-  bugs: { html: "", entries: [] }
+  bugs: { items: [] }
 };
 let S = JSON.parse(localStorage.getItem(SK) || "null") || JSON.parse(JSON.stringify(DEFAULT_S));
 if (!S.suivi || !Array.isArray(S.suivi.entries)) S.suivi = { entries: [], devis: {} };
@@ -375,14 +377,34 @@ if (!S.clients || !Array.isArray(S.clients.entries)) S.clients = { ...DEFAULT_S.
 if (!S.abonnements || !Array.isArray(S.abonnements.entries)) S.abonnements = { ...DEFAULT_S.abonnements };
 if (!S.investissements || !Array.isArray(S.investissements.entries)) S.investissements = { ...DEFAULT_S.investissements };
 if (!S.tarifs || !Array.isArray(S.tarifs.catalog) || !S.tarifs.catalog.length) S.tarifs = { catalog: JSON.parse(JSON.stringify(DEFAULT_CATALOG)) };
-if (!S.bugs || (typeof S.bugs.html !== "string" && !Array.isArray(S.bugs.entries))) S.bugs = { html: "", entries: [] };
-if (!S.bugs.html && Array.isArray(S.bugs.entries) && S.bugs.entries.length) {
-  S.bugs.html = S.bugs.entries.map(e => {
-    const status = e.status === "fixed" ? " <em>(fait)</em>" : "";
-    const desc = e.desc ? `<p>${e.desc.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")}</p>` : "";
-    return `<h3>${(e.title||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")}${status}</h3>${desc}`;
-  }).join("");
-  S.bugs.entries = [];
+if (!S.bugs || (!Array.isArray(S.bugs.items) && !Array.isArray(S.bugs.entries) && typeof S.bugs.html !== "string")) S.bugs = { items: [] };
+if (!Array.isArray(S.bugs.items)) S.bugs.items = [];
+// Migrate from old structured entries (title/desc/status)
+if (S.bugs.items.length === 0 && Array.isArray(S.bugs.entries) && S.bugs.entries.length) {
+  S.bugs.items = S.bugs.entries.map(e => ({
+    id: e.id || (Date.now().toString(36) + Math.random().toString(36).slice(2,7)),
+    text: e.title || "",
+    steps: e.desc ? [e.desc] : [],
+    validated: e.status === "fixed",
+    createdAt: e.date ? new Date(e.date).getTime() || Date.now() : Date.now()
+  }));
+  delete S.bugs.entries;
+}
+// Migrate from rich-text html (single item with stripped text)
+if (S.bugs.items.length === 0 && typeof S.bugs.html === "string" && S.bugs.html.trim()) {
+  const tmp = document.createElement("div");
+  tmp.innerHTML = S.bugs.html;
+  const text = (tmp.textContent || "").trim();
+  if (text) {
+    S.bugs.items = [{
+      id: Date.now().toString(36) + "n",
+      text: text.slice(0, 200),
+      steps: text.length > 200 ? [text.slice(200)] : [],
+      validated: false,
+      createdAt: Date.now()
+    }];
+  }
+  delete S.bugs.html;
 }
 if (S.mission) {
   S.mission = { ...DEFAULT_S.mission, ...S.mission,
@@ -467,7 +489,7 @@ async function loadFromCloud() {
       if (d.abonnements) S.abonnements = { ...DEFAULT_S.abonnements, ...d.abonnements, entries: Array.isArray(d.abonnements.entries) ? d.abonnements.entries : [] };
       if (d.investissements) S.investissements = { ...DEFAULT_S.investissements, ...d.investissements, entries: Array.isArray(d.investissements.entries) ? d.investissements.entries : [] };
       if (d.tarifs && Array.isArray(d.tarifs.catalog) && d.tarifs.catalog.length) S.tarifs = { catalog: d.tarifs.catalog };
-      if (d.bugs)    S.bugs    = { entries: Array.isArray(d.bugs && d.bugs.entries) ? d.bugs.entries : [] };
+      if (d.bugs)    S.bugs    = { items: Array.isArray(d.bugs.items) ? d.bugs.items : (Array.isArray(d.bugs.entries) ? d.bugs.entries.map(e => ({ id: e.id, text: e.title || "", steps: e.desc ? [e.desc] : [], validated: e.status === "fixed", createdAt: e.date ? new Date(e.date).getTime() || Date.now() : Date.now() })) : []) };
       suiviMigrate();
       recomputeRef();
       localStorage.setItem(SK, JSON.stringify(S));
@@ -715,51 +737,144 @@ function tarifReset() {
 }
 window.tarifReset = tarifReset;
 
-// ============ BUGS ============
-let bugDraft = { title: "", desc: "" };
+// ============ NOTES (todolist-style: items + steps) ============
+let bugQ = "";
 
-function bugDraftSet(field, val) {
-  bugDraft[field] = val;
-}
-window.bugDraftSet = bugDraftSet;
+function bugQSet(v) { bugQ = v; }
+window.bugQSet = bugQSet;
 
 function bugAdd() {
-  const t = bugDraft.title.trim();
-  if (!t) { alert("Donne un titre au bug."); return; }
-  const today = new Date().toISOString().slice(0, 10);
-  S.bugs.entries.unshift({
+  const t = bugQ.trim();
+  if (!t) return;
+  if (!Array.isArray(S.bugs.items)) S.bugs.items = [];
+  S.bugs.items.unshift({
     id: uid(),
-    date: today,
-    title: t,
-    desc: bugDraft.desc.trim(),
-    status: "open"
+    text: t,
+    steps: [],
+    validated: false,
+    createdAt: Date.now()
   });
-  bugDraft = { title: "", desc: "" };
+  bugQ = "";
   save();
   render();
+  requestAnimationFrame(() => {
+    const el = document.getElementById("bugInput");
+    if (el) el.focus();
+  });
 }
 window.bugAdd = bugAdd;
 
-function bugStatus(id, st) {
-  const e = S.bugs.entries.find(x => x.id === id);
-  if (!e) return;
-  e.status = st;
-  save();
-  render();
-}
-window.bugStatus = bugStatus;
-
 function bugDel(id) {
-  if (!confirm("Supprimer ce bug ?")) return;
-  S.bugs.entries = S.bugs.entries.filter(x => x.id !== id);
+  S.bugs.items = (S.bugs.items || []).filter(x => x.id !== id);
   save();
   render();
 }
 window.bugDel = bugDel;
 
-let bugFilter = "all";
-function bugSetFilter(v) { bugFilter = v; render(); }
-window.bugSetFilter = bugSetFilter;
+function bugToggleValid(id) {
+  const it = (S.bugs.items || []).find(x => x.id === id);
+  if (!it) return;
+  it.validated = !it.validated;
+  save();
+  render();
+}
+window.bugToggleValid = bugToggleValid;
+
+function bugUpdateText(id, v) {
+  const it = (S.bugs.items || []).find(x => x.id === id);
+  if (!it) return;
+  it.text = v;
+  save();
+}
+window.bugUpdateText = bugUpdateText;
+
+function bugAddStep(id) {
+  const it = (S.bugs.items || []).find(x => x.id === id);
+  if (!it) return;
+  if (!Array.isArray(it.steps)) it.steps = [];
+  it.steps.push("");
+  save();
+  render();
+  requestAnimationFrame(() => {
+    const els = document.querySelectorAll(`[data-bug-step^="${id}-"]`);
+    if (els.length) els[els.length - 1].focus();
+  });
+}
+window.bugAddStep = bugAddStep;
+
+function bugUpdateStep(id, idx, v) {
+  const it = (S.bugs.items || []).find(x => x.id === id);
+  if (!it || !Array.isArray(it.steps)) return;
+  it.steps[idx] = v;
+  save();
+}
+window.bugUpdateStep = bugUpdateStep;
+
+function bugDelStep(id, idx) {
+  const it = (S.bugs.items || []).find(x => x.id === id);
+  if (!it || !Array.isArray(it.steps)) return;
+  it.steps.splice(idx, 1);
+  save();
+  render();
+}
+window.bugDelStep = bugDelStep;
+
+function bugBuildText() {
+  const items = ((S.bugs && S.bugs.items) || []).filter(it => !it.validated && (it.text || "").trim());
+  if (!items.length) return "";
+  let txt = "";
+  items.forEach((it, i) => {
+    txt += `${i + 1}. ${(it.text || "").trim()}\n`;
+    (it.steps || []).forEach(s => {
+      const st = (s || "").trim();
+      if (st) txt += `   - ${st}\n`;
+    });
+  });
+  return txt.trimEnd();
+}
+
+function bugCopy() {
+  const txt = bugBuildText();
+  const btn = document.getElementById("bug-copy-btn");
+  if (!txt) {
+    if (btn) {
+      const old = btn.textContent;
+      btn.textContent = "Aucune action en cours";
+      setTimeout(() => { btn.textContent = old; }, 1500);
+    }
+    return;
+  }
+  const done = () => {
+    if (btn) {
+      const old = btn.textContent;
+      btn.textContent = "✓ Copié !";
+      btn.classList.add("copied");
+      setTimeout(() => { btn.textContent = old; btn.classList.remove("copied"); }, 1800);
+    }
+  };
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(txt).then(done).catch(() => bugCopyFallback(txt, done));
+  } else {
+    bugCopyFallback(txt, done);
+  }
+}
+window.bugCopy = bugCopy;
+
+function bugCopyFallback(txt, done) {
+  try {
+    const ta = document.createElement("textarea");
+    ta.value = txt;
+    ta.style.position = "fixed";
+    ta.style.left = "-9999px";
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand("copy");
+    document.body.removeChild(ta);
+    done();
+  } catch (e) {
+    prompt("Copie manuellement :", txt);
+  }
+}
 
 // ============ LIGNES (Mission) ============
 const HOURS_PER_DAY = 8;
@@ -846,40 +961,6 @@ function rLigne(l) {
     </div>`;
   }
 }
-
-// ============ NOTES editor (rich text) ============
-let notesSaveTimer = null;
-
-function notesOnInput(html) {
-  S.bugs.html = html;
-  try { localStorage.setItem(SK, JSON.stringify(S)); } catch(e) {}
-  const status = document.getElementById("notesStatus");
-  if (status) { status.textContent = "✏ Modifications…"; status.style.color = "var(--text-muted)"; }
-  clearTimeout(notesSaveTimer);
-  notesSaveTimer = setTimeout(() => {
-    saveToCloud();
-    if (status) { status.textContent = "💾 Sauvegardé"; status.style.color = "var(--success)"; }
-  }, 600);
-  notesUpdateCount();
-}
-window.notesOnInput = notesOnInput;
-
-function notesUpdateCount() {
-  const ed = document.getElementById("notesEditor");
-  const c = document.getElementById("notesCount");
-  if (!ed || !c) return;
-  const text = ed.innerText || "";
-  c.textContent = `${text.length} caractère${text.length>1?"s":""}`;
-}
-window.notesUpdateCount = notesUpdateCount;
-
-function notesCmd(cmd, arg) {
-  const ed = document.getElementById("notesEditor");
-  if (ed) ed.focus();
-  document.execCommand(cmd, false, arg || null);
-  if (ed) notesOnInput(ed.innerHTML);
-}
-window.notesCmd = notesCmd;
 
 function totals() {
   const d = S.mission;
@@ -2492,46 +2573,42 @@ function rTR() {
 }
 
 function rBG() {
-  const html = (S.bugs && S.bugs.html) || "";
-  // After rendering, wire up the editor
-  setTimeout(() => {
-    const ed = document.getElementById("notesEditor");
-    if (ed) {
-      // Set initial content
-      if (ed.innerHTML !== html) ed.innerHTML = html;
-      // Bind input event (overwrite each render to avoid duplicates)
-      ed.oninput = () => notesOnInput(ed.innerHTML);
-      notesUpdateCount();
-    }
-  }, 0);
-
-  return `
-    <h2>Notes <span id="savedFlash" class="saved"></span></h2>
-    <div class="hint">Espace libre pour tes notes, idées, bugs à corriger, suggestions… Sauvegarde automatique (local + cloud).</div>
-
-    <div class="notes-editor-wrap">
-      <div class="notes-toolbar">
-        <button type="button" class="ntb" onclick="notesCmd('bold')" title="Gras"><b>B</b></button>
-        <button type="button" class="ntb" onclick="notesCmd('italic')" title="Italique"><i>I</i></button>
-        <button type="button" class="ntb" onclick="notesCmd('underline')" title="Souligné"><u>U</u></button>
-        <button type="button" class="ntb" onclick="notesCmd('strikeThrough')" title="Barré"><s>S</s></button>
-        <span class="ntsep"></span>
-        <button type="button" class="ntb" onclick="notesCmd('insertUnorderedList')" title="Liste à puces">• Liste</button>
-        <button type="button" class="ntb" onclick="notesCmd('insertOrderedList')" title="Liste numérotée">1. Liste</button>
-        <span class="ntsep"></span>
-        <button type="button" class="ntb" onclick="notesCmd('formatBlock','H2')" title="Titre">H</button>
-        <button type="button" class="ntb" onclick="notesCmd('formatBlock','P')" title="Paragraphe">¶</button>
-        <span class="ntsep"></span>
-        <button type="button" class="ntb" onclick="notesCmd('removeFormat')" title="Retirer le formatage">✕ format</button>
-      </div>
-      <div id="notesEditor" class="notes-editor" contenteditable="true" data-placeholder="Commence à écrire ici…"></div>
-    </div>
-
-    <div class="notes-status-bar">
-      <span id="notesStatus" style="color:var(--success)">💾 Sauvegardé automatiquement</span>
-      <span id="notesCount">0 caractère</span>
-    </div>
-  `;
+  if (!S.bugs || !Array.isArray(S.bugs.items)) S.bugs = { items: [] };
+  let h = `<h2>Notes <span id="savedFlash" class="saved"></span></h2>`;
+  h += `<div class="fb-bar">
+    <div class="fb-title">Notes & Remarques</div>
+    <button class="fb-copy-btn" onclick="bugCopy()" id="bug-copy-btn">📋 Copier les actions en cours</button>
+  </div>`;
+  h += `<div class="fb-subtitle">Note ici les remarques ou bugs à transmettre à Claude. Chaque action peut recevoir des étapes complémentaires, être validée ou supprimée.</div>`;
+  h += `<div class="fb-add-row">
+    <input id="bugInput" placeholder="Nouvelle action / remarque…" value="${esc(bugQ || "")}" oninput="bugQSet(this.value)" onkeydown="if(event.key==='Enter'){event.preventDefault();bugAdd()}">
+    <button onclick="bugAdd()">＋</button>
+  </div>`;
+  const items = [...S.bugs.items].sort((a, b) => {
+    if (!!a.validated !== !!b.validated) return a.validated ? 1 : -1;
+    return (b.createdAt || 0) - (a.createdAt || 0);
+  });
+  if (!items.length) {
+    h += `<div class="empty">Aucune note pour l'instant.</div>`;
+  }
+  items.forEach(it => {
+    h += `<div class="fb-card ${it.validated ? "fb-done" : ""}">`;
+    h += `<div class="fb-hd">`;
+    h += `<button class="fb-check ${it.validated ? "on" : ""}" onclick="bugToggleValid('${it.id}')" title="${it.validated ? "Marquer en cours" : "Valider"}">✓</button>`;
+    h += `<input class="fb-text" value="${esc(it.text || "")}" placeholder="Note…" oninput="bugUpdateText('${it.id}',this.value)">`;
+    h += `<button class="fb-del" onclick="bugDel('${it.id}')" title="Supprimer">×</button>`;
+    h += `</div>`;
+    (it.steps || []).forEach((st, idx) => {
+      h += `<div class="fb-step">
+        <span class="fb-step-bul">↳</span>
+        <input class="fb-step-text" data-bug-step="${it.id}-${idx}" value="${esc(st || "")}" placeholder="Étape complémentaire…" oninput="bugUpdateStep('${it.id}',${idx},this.value)" onkeydown="if(event.key==='Enter'){event.preventDefault();bugAddStep('${it.id}')}">
+        <button class="fb-step-del" onclick="bugDelStep('${it.id}',${idx})" title="Supprimer étape">✕</button>
+      </div>`;
+    });
+    h += `<button class="fb-add-step" onclick="bugAddStep('${it.id}')">＋ étape</button>`;
+    h += `</div>`;
+  });
+  return h;
 }
 
 window.setTab = k => { tab = k; render(); };
