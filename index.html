@@ -74,7 +74,7 @@
   table.hist td.cb input,table.hist th input[type="checkbox"]{cursor:pointer;width:16px;height:16px}
   table.hist tr.suv-detail td{background:#f9fafb;padding:0;border-bottom:1px solid #e5e7eb}
   table.hist tr.suv-multi td{font-weight:500}
-  .suv-multi-tag{display:inline-flex;align-items:center;gap:4px;font-size:11px;color:#4b5563;background:#eef2ff;padding:2px 8px;border-radius:10px;margin-left:8px;font-weight:500}
+  .suv-caret{display:inline-block;color:#9ca3af;font-size:11px;margin-right:2px}
   table.hist tr.suv-sub{background:#fbfbfd;cursor:pointer}
   table.hist tr.suv-sub:hover td{background:#f3f4f6}
   table.hist tr.suv-sub.expanded td{background:#eff6ff}
@@ -89,14 +89,22 @@
   .btn.btn-vert{background:#10b981;color:#fff}.btn.btn-vert:hover{background:#059669}
   .btn.btn-rouge{background:#dc2626;color:#fff}.btn.btn-rouge:hover{background:#b91c1c}
   .btn.btn-gris{background:#6b7280;color:#fff}.btn.btn-gris:hover{background:#4b5563}
+  .btn.btn-bleu{background:#3b82f6;color:#fff}.btn.btn-bleu:hover{background:#2563eb}
+  .btn.btn-icon{min-width:32px;padding:5px 8px;font-size:14px;font-weight:700;text-align:center;line-height:1}
   .suv-row-actions button:not(.btn){background:none;border:0;color:#9ca3af;cursor:pointer;font-size:16px;padding:4px 6px;border-radius:4px}
   .suv-row-actions button:not(.btn):hover{background:#fee2e2;color:#dc2626}
-  .suv-panel{padding:16px 20px}
-  .suv-panel h4{margin:0 0 10px;font-size:11px;color:#6b7280;text-transform:uppercase;letter-spacing:.05em}
-  .suv-panel .row{margin-bottom:10px}
-  .suv-meta{display:flex;gap:18px;font-size:13px;color:#374151;margin-bottom:14px;flex-wrap:wrap;padding-bottom:10px;border-bottom:1px solid #e5e7eb}
-  .suv-meta strong{color:#111827;font-weight:600}
-  .suv-actions{display:flex;gap:8px;margin-top:14px;padding-top:12px;border-top:1px solid #e5e7eb}
+  .suv-panel{padding:12px 16px}
+  .suv-actions{display:flex;gap:8px;margin-top:10px;padding-top:10px;border-top:1px solid #e5e7eb;align-items:center}
+  .suv-compact-row{display:flex;gap:6px;flex-wrap:wrap;align-items:flex-end;margin-bottom:8px}
+  .suv-compact-row label{display:flex;flex-direction:column;font-size:10px;color:#6b7280;text-transform:uppercase;letter-spacing:.03em;flex:0 0 auto}
+  .suv-compact-row label span{margin-bottom:2px}
+  .suv-compact-row label input,.suv-compact-row label .ro,.suv-compact-row label textarea{padding:4px 6px;border:1px solid #d1d5db;border-radius:4px;font:inherit;font-size:12.5px;color:#111827;background:#fff;width:80px}
+  .suv-compact-row label .ro{background:#f9fafb;color:#374151;font-variant-numeric:tabular-nums}
+  .suv-compact-row label.lib{flex:1;min-width:160px}
+  .suv-compact-row label.lib input{width:100%}
+  .suv-compact-row label.wide{flex:1}
+  .suv-compact-row label.wide textarea{width:100%;min-height:48px;resize:vertical}
+  .suv-compact-row label input:focus,.suv-compact-row label textarea:focus{outline:none;border-color:#3b82f6}
   .filter-group{display:flex;gap:6px;align-items:center}
   .filter-group label{font-size:12px;color:#6b7280}
   .filter-group select{padding:8px 10px;border:1px solid #d1d5db;border-radius:6px;font:inherit;background:#fff;cursor:pointer}
@@ -397,6 +405,10 @@ function rMS() {
     <div class="row"><div class="field"><textarea oninput="upd('mission.notes', this.value)">${esc(d.notes)}</textarea></div></div>
 
     <div class="totals" id="totals">${totalsHtml(t)}</div>
+
+    <div style="margin-top:16px">
+      <button class="btn" onclick="suiviAdd()">+ Créer le devis dans Suivi (acompte 30 % + reste 70 %)</button>
+    </div>
   `;
 }
 
@@ -839,6 +851,13 @@ function suiviRefUpd(id, val) {
 }
 window.suiviRefUpd = suiviRefUpd;
 
+function suiviDevisRefUpd(devisId, val) {
+  if (!S.suivi.devis[devisId]) S.suivi.devis[devisId] = { ref: "" };
+  S.suivi.devis[devisId].ref = val;
+  save();
+}
+window.suiviDevisRefUpd = suiviDevisRefUpd;
+
 function suiviStatut(id, val) {
   suiviUpd(id, "statut", val);
   render();
@@ -929,14 +948,14 @@ function devisActionsHtml(g) {
   const stop = "event.stopPropagation();";
   if (g.statutGlobal === "envoye") {
     return `
-      <button class="btn btn-vert" onclick="${stop}suiviDevisAccepter('${g.devisId}')">Accepté</button>
-      <button class="btn btn-rouge" onclick="${stop}suiviDevisRefuser('${g.devisId}')">Refusé</button>`;
+      <button class="btn btn-vert btn-icon" title="Accepté — le devis est validé. Toutes les lignes passent à « Accepté »." onclick="${stop}suiviDevisAccepter('${g.devisId}')">✓</button>
+      <button class="btn btn-rouge btn-icon" title="Refusé — le client a refusé. Toutes les lignes passent à « Refusé »." onclick="${stop}suiviDevisRefuser('${g.devisId}')">✗</button>`;
   }
   if (g.statutGlobal === "accepte") {
-    return `<button class="btn ghost" title="Revenir : Accepté → Envoyé (devis)" onclick="${stop}suiviDevisRevertAccept('${g.devisId}')">↩ Revenir</button>`;
+    return `<button class="btn ghost btn-icon" title="Revenir : Accepté → Envoyé (toutes les lignes du devis)" onclick="${stop}suiviDevisRevertAccept('${g.devisId}')">↩</button>`;
   }
   if (g.statutGlobal === "refuse") {
-    return `<button class="btn ghost" title="Revenir : annule le refus du devis" onclick="${stop}suiviDevisRevertRefus('${g.devisId}')">↩ Revenir</button>`;
+    return `<button class="btn ghost btn-icon" title="Annuler le refus du devis et restaurer l'état précédent" onclick="${stop}suiviDevisRevertRefus('${g.devisId}')">↩</button>`;
   }
   return "";
 }
@@ -949,25 +968,25 @@ function suiviActionsHtml(e, opts) {
   if (s === "envoye") {
     if (hidePhase1) return "";
     return `
-      <button class="btn btn-vert" onclick="${stop}suiviDevisAccepter('${did}')">Accepté</button>
-      <button class="btn btn-rouge" onclick="${stop}suiviDevisRefuser('${did}')">Refusé</button>`;
+      <button class="btn btn-vert btn-icon" title="Accepté — le devis est validé. Toutes les lignes passent à « Accepté »." onclick="${stop}suiviDevisAccepter('${did}')">✓</button>
+      <button class="btn btn-rouge btn-icon" title="Refusé — le client a refusé. Toutes les lignes passent à « Refusé »." onclick="${stop}suiviDevisRefuser('${did}')">✗</button>`;
   }
   if (s === "accepte") {
     return `
-      <button class="btn" onclick="${stop}suiviLigneRealise('${e.id}')">Réalisé – À payer</button>
-      <button class="btn btn-rouge" onclick="${stop}suiviDevisRefuser('${did}')">Annulé (devis)</button>
-      <button class="btn ghost" title="Revenir : Accepté → Envoyé (devis)" onclick="${stop}suiviRevert('${e.id}')">↩ Revenir</button>`;
+      <button class="btn btn-bleu btn-icon" title="Réalisé — la prestation est livrée. Cette ligne passe à « Attente paiement »." onclick="${stop}suiviLigneRealise('${e.id}')">→</button>
+      <button class="btn btn-rouge btn-icon" title="Annulé — annule tout le devis. Toutes les lignes passent à « Refusé »." onclick="${stop}suiviDevisRefuser('${did}')">✗</button>
+      <button class="btn ghost btn-icon" title="Revenir : Accepté → Envoyé (toutes les lignes du devis)" onclick="${stop}suiviRevert('${e.id}')">↩</button>`;
   }
   if (s === "attente") {
     return `
-      <button class="btn btn-vert" onclick="${stop}suiviLignePaye('${e.id}')">Payé</button>
-      <button class="btn ghost" title="Revenir : Attente paiement → Accepté" onclick="${stop}suiviRevert('${e.id}')">↩ Revenir</button>`;
+      <button class="btn btn-vert btn-icon" title="Payé — le paiement est reçu. Cette ligne passe à « Terminé »." onclick="${stop}suiviLignePaye('${e.id}')">€</button>
+      <button class="btn ghost btn-icon" title="Revenir : Attente paiement → Accepté (cette ligne)" onclick="${stop}suiviRevert('${e.id}')">↩</button>`;
   }
   if (s === "termine") {
-    return `<button class="btn ghost" title="Revenir : Terminé → Attente paiement" onclick="${stop}suiviRevert('${e.id}')">↩ Revenir</button>`;
+    return `<button class="btn ghost btn-icon" title="Revenir : Terminé → Attente paiement (cette ligne)" onclick="${stop}suiviRevert('${e.id}')">↩</button>`;
   }
   if (s === "refuse") {
-    return `<button class="btn ghost" title="Revenir : annule le refus du devis" onclick="${stop}suiviRevert('${e.id}')">↩ Revenir</button>`;
+    return `<button class="btn ghost btn-icon" title="Annuler le refus du devis et restaurer l'état précédent" onclick="${stop}suiviRevert('${e.id}')">↩</button>`;
   }
   return "";
 }
@@ -1172,48 +1191,25 @@ function suiviDetailPanelHtml(e) {
       <tr class="suv-detail">
         <td colspan="7">
           <div class="suv-panel">
-            <div class="suv-meta">
-              <span><strong>${esc(e.client) || "—"}</strong></span>
-              <span>${esc(e.prestation) || "—"}</span>
-              <span>Date : <strong>${esc(dateFR(e.date))}</strong></span>
-              <span style="display:inline-flex;align-items:center;gap:6px">Statut ligne : ${pastille(entryStatut(e))} <strong>${esc(statutLabel(entryStatut(e)))}</strong></span>
-              <span>Montant : <strong>${fmt(e.montant)}</strong></span>
+            <div class="suv-compact-row">
+              <label class="lib"><span>Échéance</span><input value="${esc(e.echeance || "")}" oninput="suiviUpd('${e.id}','echeance',this.value)" placeholder="Acompte, Reste à payer, …"></label>
+              <label><span>Date</span><input type="date" value="${esc(e.date)}" oninput="suiviUpd('${e.id}','date',this.value)"></label>
+              <label><span>Heures</span><input type="number" step="0.25" value="${esc(e.heures)}" oninput="suiviUpd('${e.id}','heures',this.value); suiviRefreshTaux('${e.id}')"></label>
+              <label><span>Montant</span><input type="number" step="0.01" value="${esc(e.montant)}" oninput="suiviUpd('${e.id}','montant',this.value); suiviRefreshTaux('${e.id}')"></label>
+              <label><span>Taux/h</span><span id="taux-${e.id}" class="ro">${taux > 0 ? fmt(taux) : "—"}</span></label>
+              <label><span>Paiement</span><input type="number" step="0.01" value="${esc(e.paiement)}" oninput="suiviUpd('${e.id}','paiement',this.value)"></label>
+              <label><span>CA</span><input type="number" step="0.01" value="${esc(e.ca)}" oninput="suiviUpd('${e.id}','ca',this.value)"></label>
+              <label><span>URSAF</span><input type="number" step="0.01" value="${esc(e.ursaf)}" oninput="suiviUpd('${e.id}','ursaf',this.value)"></label>
+              <label><span>Trésor.</span><input type="number" step="0.01" value="${esc(e.tresorerie)}" oninput="suiviUpd('${e.id}','tresorerie',this.value)"></label>
+              <label><span>Frais</span><input type="number" step="0.01" value="${esc(e.frais)}" oninput="suiviUpd('${e.id}','frais',this.value)"></label>
+              <label><span>Salaire</span><input type="number" step="0.01" value="${esc(e.salaire)}" oninput="suiviUpd('${e.id}','salaire',this.value)"></label>
             </div>
-
-            <h4>Identification</h4>
-            <div class="row">
-              <div class="field sm"><label>Date</label><input type="date" value="${esc(e.date)}" oninput="suiviUpd('${e.id}','date',this.value)"></div>
-              <div class="field"><label>Référence (devis)</label><input value="${esc(entryRef(e))}" oninput="suiviRefUpd('${e.id}', this.value)" placeholder="DEVIS-…"></div>
-              <div class="field"><label>Client</label><input value="${esc(e.client)}" oninput="suiviUpd('${e.id}','client',this.value)" placeholder="Client"></div>
-              <div class="field"><label>Prestation</label><input value="${esc(e.prestation)}" oninput="suiviUpd('${e.id}','prestation',this.value)" placeholder="Prestation"></div>
+            <div class="suv-compact-row">
+              <label class="wide"><span>Commentaires</span><textarea oninput="suiviUpd('${e.id}','commentaires',this.value)" placeholder="Notes, contexte, particularités…">${esc(e.commentaires || "")}</textarea></label>
             </div>
-
-            <h4>Heures &amp; tarif</h4>
-            <div class="row">
-              <div class="field sm"><label>Heures</label><input type="number" step="0.25" value="${esc(e.heures)}" oninput="suiviUpd('${e.id}','heures',this.value); suiviRefreshTaux('${e.id}')"></div>
-              <div class="field sm"><label>Montant (€)</label><input type="number" step="0.01" value="${esc(e.montant)}" oninput="suiviUpd('${e.id}','montant',this.value); suiviRefreshTaux('${e.id}')"></div>
-              <div class="field sm"><label>Taux horaire pratiqué</label><div id="taux-${e.id}" style="padding:8px 10px;color:#374151;font-variant-numeric:tabular-nums">${taux > 0 ? fmt(taux) : "—"}</div></div>
-              <div class="field"><label>Échéance / libellé</label><input value="${esc(e.echeance || "")}" oninput="suiviUpd('${e.id}','echeance',this.value)" placeholder="Acompte, Reste à payer, …"></div>
-            </div>
-
-            <h4>Comptabilité</h4>
-            <div class="row">
-              <div class="field sm"><label>Paiement (€)</label><input type="number" step="0.01" value="${esc(e.paiement)}" oninput="suiviUpd('${e.id}','paiement',this.value)"></div>
-              <div class="field sm"><label>CA (€)</label><input type="number" step="0.01" value="${esc(e.ca)}" oninput="suiviUpd('${e.id}','ca',this.value)"></div>
-              <div class="field sm"><label>URSAF (€)</label><input type="number" step="0.01" value="${esc(e.ursaf)}" oninput="suiviUpd('${e.id}','ursaf',this.value)"></div>
-              <div class="field sm"><label>Trésorerie (€)</label><input type="number" step="0.01" value="${esc(e.tresorerie)}" oninput="suiviUpd('${e.id}','tresorerie',this.value)"></div>
-              <div class="field sm"><label>Frais débours (€)</label><input type="number" step="0.01" value="${esc(e.frais)}" oninput="suiviUpd('${e.id}','frais',this.value)"></div>
-              <div class="field sm"><label>Salaire (€)</label><input type="number" step="0.01" value="${esc(e.salaire)}" oninput="suiviUpd('${e.id}','salaire',this.value)"></div>
-            </div>
-
-            <h4>Commentaires</h4>
-            <div class="row">
-              <div class="field"><textarea oninput="suiviUpd('${e.id}','commentaires',this.value)" placeholder="Notes, contexte, particularités…">${esc(e.commentaires || "")}</textarea></div>
-            </div>
-
             <div class="suv-actions">
               ${suiviActionsHtml(e)}
-              <button class="btn ghost" onclick="suiviAddLigne('${e.devisId}')">+ Ajouter une ligne de paiement</button>
+              <button class="btn ghost btn-icon" title="Ajouter une ligne de paiement à ce devis" onclick="suiviAddLigne('${e.devisId}')">+</button>
               <span style="flex:1"></span>
               <button class="btn ghost" onclick="suiviToggle('${e.id}')">Fermer</button>
             </div>
@@ -1240,7 +1236,7 @@ function rSV() {
           <td class="cb" onclick="${stop}"><input type="checkbox" ${suiviSelected.has(g.devisId) ? "checked" : ""} onclick="suiviToggleOne('${g.devisId}', this.checked, event)"></td>
           <td class="statut">${pastille(g.statutGlobal)}</td>
           <td>${esc(dateFR(e.date))}</td>
-          <td>${esc(g.ref) || "—"}</td>
+          <td onclick="${stop}"><input value="${esc(g.ref)}" oninput="suiviDevisRefUpd('${g.devisId}', this.value)" placeholder="DEVIS-…"></td>
           <td><strong>${esc(e.client) || "—"}</strong></td>
           <td class="amt">${fmt(e.montant)}</td>
           <td class="actions" onclick="${stop}">
@@ -1262,8 +1258,8 @@ function rSV() {
         <td class="cb" onclick="${stop}"><input type="checkbox" ${suiviSelected.has(g.devisId) ? "checked" : ""} onclick="suiviToggleOne('${g.devisId}', this.checked, event)"></td>
         <td class="statut">${pastille(g.statutGlobal)}</td>
         <td>${dateLabel}</td>
-        <td>${esc(g.ref) || "—"}</td>
-        <td><strong>${esc(g.client) || "—"}</strong> <span class="suv-multi-tag">${groupExpanded ? "▾" : "▸"} ${g.lignes.length} paiements</span></td>
+        <td onclick="${stop}"><input value="${esc(g.ref)}" oninput="suiviDevisRefUpd('${g.devisId}', this.value)" placeholder="DEVIS-…"></td>
+        <td><span class="suv-caret">${groupExpanded ? "▾" : "▸"}</span> <strong>${esc(g.client) || "—"}</strong></td>
         <td class="amt">${fmt(g.total)}</td>
         <td class="actions" onclick="${stop}">
           <div class="suv-row-actions">
@@ -1313,7 +1309,6 @@ function rSV() {
     <div class="stats">${suiviStatsHtml(stats)}</div>
 
     <div class="toolbar">
-      <button class="btn" onclick="suiviAdd()">+ Ajouter une prestation</button>
       <button class="btn ghost" onclick="suiviImport()">${missing > 0 ? `Importer ${missing} prestation${missing > 1 ? "s" : ""} manquante${missing > 1 ? "s" : ""} (Excel : ${SUIVI_SEED.length})` : `Importer depuis l'Excel (${SUIVI_SEED.length})`}</button>
       <span id="suiviSelInfo">${suiviSelInfoHtml()}</span>
       <span class="spacer"></span>
