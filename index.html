@@ -512,7 +512,7 @@ const DEFAULT_S = {
   compta:   {},
   abonnements: { entries: [] },
   investissements: { entries: [] },
-  tarifs: { catalog: JSON.parse(JSON.stringify(DEFAULT_CATALOG)), heuresAnnuelles: "900" },
+  tarifs: { catalog: JSON.parse(JSON.stringify(DEFAULT_CATALOG)), heuresAnnuelles: "900", facteurSecurite: "0" },
   bugs: { items: [] }
 };
 let S = JSON.parse(localStorage.getItem(SK) || "null") || JSON.parse(JSON.stringify(DEFAULT_S));
@@ -544,8 +544,9 @@ S.clients.entries.forEach(c => {
 });
 if (!S.abonnements || !Array.isArray(S.abonnements.entries)) S.abonnements = { ...DEFAULT_S.abonnements };
 if (!S.investissements || !Array.isArray(S.investissements.entries)) S.investissements = { ...DEFAULT_S.investissements };
-if (!S.tarifs || !Array.isArray(S.tarifs.catalog) || !S.tarifs.catalog.length) S.tarifs = { catalog: JSON.parse(JSON.stringify(DEFAULT_CATALOG)), heuresAnnuelles: "900" };
+if (!S.tarifs || !Array.isArray(S.tarifs.catalog) || !S.tarifs.catalog.length) S.tarifs = { catalog: JSON.parse(JSON.stringify(DEFAULT_CATALOG)), heuresAnnuelles: "900", facteurSecurite: "0" };
 if (!S.tarifs.heuresAnnuelles) S.tarifs.heuresAnnuelles = "900";
+if (typeof S.tarifs.facteurSecurite === "undefined") S.tarifs.facteurSecurite = "0";
 if (!S.bugs || (!Array.isArray(S.bugs.items) && !Array.isArray(S.bugs.entries) && typeof S.bugs.html !== "string")) S.bugs = { items: [] };
 if (!Array.isArray(S.bugs.items)) S.bugs.items = [];
 // Migrate from old structured entries (title/desc/status)
@@ -675,7 +676,7 @@ async function loadFromCloud() {
       if (d.compta)  S.compta  = Object.assign({}, DEFAULT_S.compta,  d.compta);
       if (d.abonnements) S.abonnements = { ...DEFAULT_S.abonnements, ...d.abonnements, entries: Array.isArray(d.abonnements.entries) ? d.abonnements.entries : [] };
       if (d.investissements) S.investissements = { ...DEFAULT_S.investissements, ...d.investissements, entries: Array.isArray(d.investissements.entries) ? d.investissements.entries : [] };
-      if (d.tarifs && Array.isArray(d.tarifs.catalog) && d.tarifs.catalog.length) S.tarifs = { catalog: d.tarifs.catalog };
+      if (d.tarifs && Array.isArray(d.tarifs.catalog) && d.tarifs.catalog.length) S.tarifs = { catalog: d.tarifs.catalog, heuresAnnuelles: d.tarifs.heuresAnnuelles || S.tarifs.heuresAnnuelles || "900", facteurSecurite: d.tarifs.facteurSecurite || S.tarifs.facteurSecurite || "0" };
       if (d.bugs)    S.bugs    = { items: Array.isArray(d.bugs.items) ? d.bugs.items : (Array.isArray(d.bugs.entries) ? d.bugs.entries.map(e => ({ id: e.id, text: e.title || "", steps: e.desc ? [e.desc] : [], validated: e.status === "fixed", createdAt: e.date ? new Date(e.date).getTime() || Date.now() : Date.now() })) : []) };
       suiviMigrate();
       recomputeRef();
@@ -2721,6 +2722,65 @@ function clientsAdd() {
 }
 window.clientsAdd = clientsAdd;
 
+// Import unique clients from SUIVI_SEED + S.suivi.entries
+function clientsImportFromSuivi() {
+  const sources = [
+    ...(typeof SUIVI_SEED !== "undefined" ? SUIVI_SEED : []),
+    ...(S.suivi && Array.isArray(S.suivi.entries) ? S.suivi.entries : [])
+  ];
+  // Extract unique clients by name from "#NNN Name" or "Name" patterns
+  const seen = new Set();
+  const candidates = [];
+  for (const e of sources) {
+    const raw = (e.client || "").trim();
+    if (!raw || seen.has(raw)) continue;
+    seen.add(raw);
+    // Parse "#NNN Name" → num "NNN", name "Name"; else num "", name = raw
+    const match = raw.match(/^#?(\d+)\s+(.+)$/);
+    if (match) {
+      candidates.push({ num: match[1], name: match[2].trim() });
+    } else {
+      candidates.push({ num: "", name: raw });
+    }
+  }
+  // Filter out clients that already exist (match by name OR by num)
+  const existing = S.clients.entries;
+  const toAdd = candidates.filter(c => {
+    return !existing.some(x =>
+      (x.name || "").trim().toLowerCase() === c.name.toLowerCase()
+      || (c.num && (x.num || "").trim() === c.num)
+    );
+  });
+  if (toAdd.length === 0) {
+    alert("Tous les clients du Suivi sont déjà dans la liste — aucun ajout nécessaire.");
+    return;
+  }
+  if (!confirm(`Importer ${toAdd.length} client${toAdd.length > 1 ? "s" : ""} depuis le Suivi ?\n\nLes fiches seront créées avec un contact vide à compléter.\nLes clients existants ne seront pas modifiés.`)) return;
+  for (const c of toAdd) {
+    S.clients.entries.push({
+      id: uid(),
+      num: c.num,
+      name: c.name,
+      contacts: [{ id: uid(), name: "", phone: "", email: "" }],
+      contact: "", phone: "", email: "",
+      address: "",
+      cityPostal: "",
+      rencontre: ""
+    });
+  }
+  // Sort clients by num then name for tidiness
+  S.clients.entries.sort((a, b) => {
+    const an = parseInt(a.num, 10) || 999999;
+    const bn = parseInt(b.num, 10) || 999999;
+    if (an !== bn) return an - bn;
+    return (a.name || "").localeCompare(b.name || "", "fr");
+  });
+  save();
+  render();
+  alert(`${toAdd.length} client${toAdd.length > 1 ? "s" : ""} importé${toAdd.length > 1 ? "s" : ""}. À toi de compléter les contacts (nom + téléphone + email) dans chaque fiche.`);
+}
+window.clientsImportFromSuivi = clientsImportFromSuivi;
+
 function clientsToggle(id) {
   if (clientsExpanded === id) {
     clientsExpanded = null;
@@ -2948,6 +3008,7 @@ function rCL() {
 
     <div class="toolbar">
       <button class="btn" onclick="clientsAdd()">+ Ajouter un client</button>
+      <button class="btn ghost" onclick="clientsImportFromSuivi()" title="Crée des fiches clients à partir des libellés du Suivi (#numéro Nom)">↓ Importer depuis le Suivi</button>
       <input id="clientsSearchInput" class="search" type="text" placeholder="Rechercher…" oninput="clientsFilter(this.value)" autocomplete="off">
     </div>
 
@@ -3073,68 +3134,130 @@ function tarifHeuresRelock() {
 }
 window.tarifHeuresRelock = tarifHeuresRelock;
 
+function tarifFacteurSecurite(val) {
+  S.tarifs.facteurSecurite = val;
+  save();
+  refreshTauxMatos();
+}
+window.tarifFacteurSecurite = tarifFacteurSecurite;
+
+let facteurSecuriteLocked = true;
+function facteurSecuriteLockToggle() {
+  const p = document.getElementById("facteurMenu");
+  if (p) p.classList.toggle("open");
+}
+window.facteurSecuriteLockToggle = facteurSecuriteLockToggle;
+function facteurSecuriteUnlock() {
+  facteurSecuriteLocked = false;
+  const p = document.getElementById("facteurMenu");
+  if (p) p.classList.remove("open");
+  render();
+  requestAnimationFrame(() => {
+    const inp = document.getElementById("facteurInput");
+    if (inp) { inp.focus(); inp.select(); }
+  });
+}
+window.facteurSecuriteUnlock = facteurSecuriteUnlock;
+function facteurSecuriteRelock() {
+  facteurSecuriteLocked = true;
+  render();
+}
+window.facteurSecuriteRelock = facteurSecuriteRelock;
+
 // Compute amortization rates (per hour)
 function tauxMatos() {
   const heures = num(S.tarifs.heuresAnnuelles) || 900;
-  const CURRENT_YEAR = new Date().getFullYear();
-  // Abonnements : seulement ceux actifs en année courante
-  // Actif si dateDebut ≤ année courante (ou vide) ET dateFin ≥ année courante (ou vide)
-  let abonnementsAnnuels = 0;
+  const heuresParMois = heures / 12;
+  const today = new Date();
+  const CURRENT_YEAR = today.getFullYear();
+  const CURRENT_MONTH = today.getMonth() + 1; // 1..12
+  const monthsElapsed = CURRENT_MONTH; // mois passés ou en cours dans l'année (avril → 4)
+
+  // ABONNEMENTS — actifs aujourd'hui (date début passée, pas de date fin ou future)
+  // Coût mensuel = annuel ÷ 12
+  let mensuelActif = 0;
   for (const e of (S.abonnements.entries || [])) {
     const annual = num(e.annuel);
     if (annual <= 0) continue;
-    const startYear = e.dateDebut ? parseInt(e.dateDebut.slice(0, 4), 10) : null;
-    const endYear   = e.dateFin   ? parseInt(e.dateFin.slice(0, 4), 10)   : null;
-    const isActiveCurrent = (startYear === null || startYear <= CURRENT_YEAR) &&
-                             (endYear === null || endYear >= CURRENT_YEAR);
-    if (isActiveCurrent) abonnementsAnnuels += annual;
+    const startDate = e.dateDebut || null;
+    const endDate = e.dateFin || null;
+    const isActiveNow = (!startDate || startDate <= today.toISOString().slice(0, 10))
+                     && (!endDate   || endDate   >= today.toISOString().slice(0, 10));
+    if (isActiveNow) mensuelActif += annual / 12;
   }
-  // Investissements : amortissement de l'année courante uniquement
-  // Pour chaque équipement encore en cours d'amortissement cette année (ni complètement amorti, ni acheté après l'année courante)
-  let investissementsAnnuels = 0;
+  // Total dépensé en abonnements depuis le 1er janvier de cette année (mois × mensuel)
+  // Note : suppose que les abos actifs maintenant l'étaient toute l'année. Approximation acceptable.
+  const abonnementsDepensesYTD = r2(monthsElapsed * mensuelActif);
+  // Taux horaire abonnement = (mois écoulés × mensuel) ÷ heures du mois
+  const tauxAbo = heuresParMois > 0 ? r2(abonnementsDepensesYTD / (monthsElapsed * heuresParMois)) : 0;
+  // Equivalent simplifié : tauxAbo = mensuelActif / heuresParMois (les "monthsElapsed" se simplifient)
+  // Mais on garde la formule explicite pour la lisibilité
+
+  // MATÉRIEL — pour chaque équipement encore en cours d'amortissement, on compte les mensualités qui tomberont dans les 12 mois à venir.
+  // Si l'équipement termine son amortissement dans X mois (X < 12), on ne compte que X mensualités.
+  // Cela lisse la transition : pas de discontinuité au dernier mois.
+  let materielAnnuel = 0;
   for (const inv of (S.investissements.entries || [])) {
     const prix = num(inv.prix);
     const duree = num(inv.dureeVie) || 5;
     if (duree <= 0 || prix <= 0) continue;
     if (!inv.date || !/^\d{4}-\d{2}/.test(inv.date)) continue;
-    const purchaseYear  = parseInt(inv.date.slice(0, 4), 10);
-    const purchaseMonth = parseInt(inv.date.slice(5, 7), 10) || 1;
-    if (purchaseYear > CURRENT_YEAR) continue; // pas encore acheté
-    const monthlyAmort = prix / (duree * 12);
-    // Combien de mois de cette année courante sont couverts ?
-    let monthsThisYear;
-    if (purchaseYear === CURRENT_YEAR) {
-      // Année d'achat : prorata depuis purchaseMonth
-      monthsThisYear = 13 - purchaseMonth;
-    } else {
-      // Année postérieure à l'achat
-      // Vérifier si l'amortissement n'est pas déjà fini
-      const monthsElapsedBeforeCurrentYear = (CURRENT_YEAR - purchaseYear) * 12 - (purchaseMonth - 1);
-      const totalMonths = duree * 12;
-      const monthsLeftAtStart = totalMonths - monthsElapsedBeforeCurrentYear;
-      if (monthsLeftAtStart <= 0) continue; // déjà entièrement amorti
-      monthsThisYear = Math.min(12, monthsLeftAtStart);
-    }
-    investissementsAnnuels += monthlyAmort * monthsThisYear;
+    const totalMonths = duree * 12;
+    const monthlyAmort = prix / totalMonths;
+    const purchaseDate = new Date(inv.date);
+    if (isNaN(purchaseDate.getTime())) continue;
+    const monthsSincePurchase = (today.getFullYear() - purchaseDate.getFullYear()) * 12
+                              + (today.getMonth() - purchaseDate.getMonth());
+    if (monthsSincePurchase < 0) continue; // pas encore acheté
+    const monthsLeft = totalMonths - monthsSincePurchase;
+    if (monthsLeft <= 0) continue; // déjà entièrement amorti
+    // Sur les 12 prochains mois : min(12, monthsLeft) mensualités
+    const monthsToCount = Math.min(12, monthsLeft);
+    materielAnnuel += monthlyAmort * monthsToCount;
   }
-  abonnementsAnnuels = r2(abonnementsAnnuels);
-  investissementsAnnuels = r2(investissementsAnnuels);
-  const totalAnnuel = r2(abonnementsAnnuels + investissementsAnnuels);
-  const tauxAbo = r2(abonnementsAnnuels / heures);
-  const tauxInv = r2(investissementsAnnuels / heures);
-  const tauxTotal = r2(totalAnnuel / heures);
-  return { heures, abonnementsAnnuels, investissementsAnnuels, totalAnnuel, tauxAbo, tauxInv, tauxTotal, currentYear: CURRENT_YEAR };
+  materielAnnuel = r2(materielAnnuel);
+  const tauxMatHoraire = heures > 0 ? r2(materielAnnuel / heures) : 0;
+
+  // Total + facteur sécurité
+  const tauxBrut = r2(tauxAbo + tauxMatHoraire);
+  const facteur = num(S.tarifs.facteurSecurite) || 0;
+  const tauxAvecSecurite = r2(tauxBrut * (1 + facteur / 100));
+
+  return {
+    heures,
+    heuresParMois: r2(heuresParMois),
+    monthsElapsed,
+    mensuelActif: r2(mensuelActif),
+    abonnementsDepensesYTD,
+    materielAnnuel,
+    tauxAbo,
+    tauxInv: tauxMatHoraire,
+    tauxBrut,
+    facteur,
+    tauxAvecSecurite,
+    // legacy keys retained for any other consumer
+    abonnementsAnnuels: r2(mensuelActif * 12),
+    investissementsAnnuels: materielAnnuel,
+    totalAnnuel: r2(r2(mensuelActif * 12) + materielAnnuel),
+    tauxTotal: tauxBrut,
+    currentYear: CURRENT_YEAR
+  };
 }
 
 function refreshTauxMatos() {
-  const t = tauxMatos();
-  const set = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
-  set("tm-abo-an", fmt(t.abonnementsAnnuels));
-  set("tm-inv-an", fmt(t.investissementsAnnuels));
-  set("tm-tot-an", fmt(t.totalAnnuel));
-  set("tm-abo-h", fmt(t.tauxAbo));
-  set("tm-inv-h", fmt(t.tauxInv));
-  set("tm-tot-h", fmt(t.tauxTotal));
+  // Save focus + caret position, re-render, then restore
+  const active = document.activeElement;
+  const id = active && active.id;
+  const start = active && active.selectionStart;
+  const end = active && active.selectionEnd;
+  render();
+  if (id) {
+    const el = document.getElementById(id);
+    if (el) {
+      el.focus();
+      try { if (start != null && end != null) el.setSelectionRange(start, end); } catch(e) {}
+    }
+  }
 }
 
 // ============ AMORTIZATION ANALYSIS ============
@@ -3230,17 +3353,41 @@ function amortizationAnalysis() {
     return { year: y, tres, abo, amort, solde, cumul: cumulSolde };
   });
 
-  // Step 5 — per-investment status: amortization to date (sum of schedule entries up to current year)
-  const invStatus = inv.map(item => {
-    const sched = invSchedule[item.id] ? invSchedule[item.id].schedule : {};
+  // Step 5 — per-investment status: cash-based allocation
+  // Available cash = sum of (tresorerie - abonnements) over all years
+  const totalCashDispo = r2(yearRows.reduce((s, r) => s + Math.max(0, r.tres - r.abo), 0));
+  // Sort investments chronologically (oldest first)
+  const invSortedAsc = [...inv].sort((a, b) => (a.date || "").localeCompare(b.date || ""));
+  const today = new Date();
+  let remainingCash = totalCashDispo;
+  const invStatus = invSortedAsc.map(item => {
     const prix = r2(num(item.prix));
-    let amorti = 0;
-    for (const [yk, val] of Object.entries(sched)) {
-      if (parseInt(yk, 10) <= CURRENT_YEAR) amorti = r2(amorti + val);
+    const dureeAnnees = num(item.dureeVie) || 5;
+    // Is this equipment still in amortization period (purchase + duration > today)?
+    let stillAmortizing = true;
+    if (item.date && /^\d{4}-\d{2}/.test(item.date)) {
+      const purchaseDate = new Date(item.date);
+      if (!isNaN(purchaseDate.getTime())) {
+        const endDate = new Date(purchaseDate);
+        endDate.setMonth(endDate.getMonth() + Math.round(dureeAnnees * 12));
+        stillAmortizing = endDate > today;
+      }
     }
-    if (amorti > prix) amorti = prix;
-    const reste = r2(prix - amorti);
-    return { ...item, prix, amorti, reste, fullyAmorti: reste === 0 };
+    let amorti = 0, reste = prix;
+    if (!stillAmortizing) {
+      // Equipment is past its amortization period — show 100% amorti (it's done, period closed)
+      amorti = prix;
+      reste = 0;
+    } else if (remainingCash >= prix) {
+      amorti = prix;
+      reste = 0;
+      remainingCash = r2(remainingCash - prix);
+    } else if (remainingCash > 0) {
+      amorti = r2(remainingCash);
+      reste = r2(prix - amorti);
+      remainingCash = 0;
+    }
+    return { ...item, prix, amorti, reste, fullyAmorti: reste === 0, stillAmortizing };
   });
 
   const totalInvested = r2(invStatus.reduce((s, x) => s + x.prix, 0));
@@ -3252,9 +3399,10 @@ function amortizationAnalysis() {
     totalInvested,
     totalAmorti,
     cumulSolde,
+    totalCashDispo,
+    cashLeftover: remainingCash,
     // Legacy keys kept for backward compat with existing UI references
-    totalCashAvailable: r2(yearRows.reduce((s, r) => s + (r.tres - r.abo), 0)),
-    cashLeftover: cumulSolde > 0 ? cumulSolde : 0
+    totalCashAvailable: r2(yearRows.reduce((s, r) => s + (r.tres - r.abo), 0))
   };
 }
 
@@ -3521,10 +3669,12 @@ function rTR() {
       </tr></tfoot>` : ""}
     </table>
 
-    <h3>Synthèse coûts horaires (année en cours : ${tm.currentYear})</h3>
-    <div class="hint">Calcul automatique : tes <strong>frais récurrents de l'année en cours</strong> (abonnements actifs cette année + amortissement matériel de l'année avec prorata) divisés par tes <strong>heures facturables annuelles</strong>. Ce coût horaire indicatif peut être ajouté à ton tarif de main-d'œuvre.</div>
+    <h3>Synthèse coûts horaires</h3>
+    <div class="hint" style="max-width:880px">Calcul du coût horaire à intégrer à ton tarif facturé.<br>
+      <strong>Abonnements</strong> : (mois écoulés cette année × coût mensuel des abonnements actifs) ÷ heures du mois (= heures annuelles ÷ 12).<br>
+      <strong>Matériel</strong> : pour chaque équipement encore en cours d'amortissement, mensualités à amortir sur les 12 prochains mois — sommé puis divisé par les heures annuelles.</div>
 
-    <div class="row" style="margin-bottom:14px">
+    <div class="row" style="margin-bottom:14px;gap:18px">
       <div class="field narrow"><label>Heures facturables annuelles</label>
         <div class="lock-field">
           <input id="heuresInput" type="number" step="10" min="1" value="${esc(S.tarifs.heuresAnnuelles || "900")}" ${tarifHeuresLocked ? "disabled" : `oninput="tarifHeuresAnnuelles(this.value)"`}>
@@ -3536,38 +3686,59 @@ function rTR() {
           </div>
         </div>
       </div>
+      <div class="field narrow"><label>Facteur sécurité (%)</label>
+        <div class="lock-field">
+          <input id="facteurInput" type="number" step="1" min="0" max="100" value="${esc(S.tarifs.facteurSecurite || "0")}" ${facteurSecuriteLocked ? "disabled" : `oninput="tarifFacteurSecurite(this.value)"`}>
+          <button class="lock-menu-btn" onclick="facteurSecuriteLockToggle()" title="Options">⋮</button>
+          <div class="lock-popup" id="facteurMenu">
+            ${facteurSecuriteLocked
+              ? `<button onclick="facteurSecuriteUnlock()">🔓 Modifier</button>`
+              : `<button onclick="facteurSecuriteRelock()">🔒 Verrouiller</button>`}
+          </div>
+        </div>
+      </div>
     </div>
-    <div class="hint" style="margin-top:-10px">Estimation prudente : 45 sem × 40 h × 50 % facturable ≈ 900 h. À ajuster selon ta réalité (prospection, admin, formation déduits du temps total).</div>
+    <div class="hint" style="margin-top:-10px">Heures : estimation prudente ≈ 900 h/an. Facteur sécurité : pour gonfler ton tarif (ex. 15 % d'imprévus / marge).</div>
 
-    <table class="hist" style="max-width:680px">
+    <table class="hist" style="max-width:780px">
       <thead>
         <tr>
           <th>Source</th>
-          <th style="width:170px;text-align:right">Coût annuel</th>
-          <th style="width:170px;text-align:right">Coût horaire</th>
+          <th style="width:200px;text-align:right">Détail (${tm.currentYear})</th>
+          <th style="width:140px;text-align:right">Coût horaire</th>
         </tr>
       </thead>
       <tbody>
         <tr>
-          <td>Abonnements professionnels<div style="font-size:11px;color:var(--text-dim);margin-top:2px">Abonnements actifs en ${tm.currentYear} (selon dates de début / fin)</div></td>
-          <td class="amount" id="tm-abo-an" style="text-align:right;color:var(--text);font-variant-numeric:tabular-nums;padding-right:14px">${fmt(tm.abonnementsAnnuels)}</td>
-          <td class="amount" id="tm-abo-h" style="text-align:right;color:var(--text);font-variant-numeric:tabular-nums;padding-right:14px">${fmt(tm.tauxAbo)}</td>
+          <td>Abonnements professionnels<div style="font-size:11px;color:var(--text-dim);margin-top:2px">${tm.monthsElapsed} mois écoulés × ${fmt(tm.mensuelActif)}/mois</div></td>
+          <td class="amount" id="tm-abo-an" style="text-align:right;color:var(--text);font-variant-numeric:tabular-nums;padding-right:14px">${fmt(tm.abonnementsDepensesYTD)}<div style="font-size:11px;color:var(--text-dim);margin-top:2px">dépensés depuis le 1er janv.</div></td>
+          <td class="amount" id="tm-abo-h" style="text-align:right;color:var(--text);font-variant-numeric:tabular-nums;padding-right:14px;font-weight:600">${fmt(tm.tauxAbo)}</td>
         </tr>
         <tr>
-          <td>Amortissement matériel<div style="font-size:11px;color:var(--text-dim);margin-top:2px">Prorata de l'amortissement de chaque équipement sur l'année ${tm.currentYear}</div></td>
-          <td class="amount" id="tm-inv-an" style="text-align:right;color:var(--text);font-variant-numeric:tabular-nums;padding-right:14px">${fmt(tm.investissementsAnnuels)}</td>
-          <td class="amount" id="tm-inv-h" style="text-align:right;color:var(--text);font-variant-numeric:tabular-nums;padding-right:14px">${fmt(tm.tauxInv)}</td>
+          <td>Amortissement matériel<div style="font-size:11px;color:var(--text-dim);margin-top:2px">Mensualités à amortir sur les 12 prochains mois (équipements en cours)</div></td>
+          <td class="amount" id="tm-inv-an" style="text-align:right;color:var(--text);font-variant-numeric:tabular-nums;padding-right:14px">${fmt(tm.materielAnnuel)}<div style="font-size:11px;color:var(--text-dim);margin-top:2px">amortissement annuel</div></td>
+          <td class="amount" id="tm-inv-h" style="text-align:right;color:var(--text);font-variant-numeric:tabular-nums;padding-right:14px;font-weight:600">${fmt(tm.tauxInv)}</td>
         </tr>
       </tbody>
       <tfoot>
         <tr style="background:var(--surface-hi)">
-          <td><strong>Coût horaire matériel total</strong></td>
-          <td class="amount" id="tm-tot-an" style="text-align:right;color:var(--primary);font-weight:700;font-variant-numeric:tabular-nums;padding-right:14px;font-size:14px">${fmt(tm.totalAnnuel)}</td>
-          <td class="amount" id="tm-tot-h" style="text-align:right;color:var(--primary);font-weight:700;font-variant-numeric:tabular-nums;padding-right:14px;font-size:14px">${fmt(tm.tauxTotal)}</td>
+          <td><strong>Coût horaire brut</strong></td>
+          <td></td>
+          <td class="amount" id="tm-brut-h" style="text-align:right;color:var(--text);font-weight:700;font-variant-numeric:tabular-nums;padding-right:14px;font-size:14px">${fmt(tm.tauxBrut)}</td>
+        </tr>
+        ${tm.facteur > 0 ? `<tr>
+          <td style="color:var(--text-muted)">+ Facteur sécurité (${tm.facteur} %)</td>
+          <td></td>
+          <td class="amount" id="tm-sec-h" style="text-align:right;color:var(--text-muted);font-variant-numeric:tabular-nums;padding-right:14px">+${fmt(r2(tm.tauxAvecSecurite - tm.tauxBrut))}</td>
+        </tr>` : ""}
+        <tr style="background:var(--primary-soft)">
+          <td><strong style="color:var(--primary)">Coût horaire matériel total à intégrer</strong></td>
+          <td></td>
+          <td class="amount" id="tm-tot-h" style="text-align:right;color:var(--primary);font-weight:700;font-variant-numeric:tabular-nums;padding-right:14px;font-size:16px">${fmt(tm.tauxAvecSecurite)}</td>
         </tr>
       </tfoot>
     </table>
-    <div class="hint" style="margin-top:8px;max-width:680px">À intégrer dans ton tarif horaire facturé : <code>net souhaité + URSSAF + ${fmt(tm.tauxTotal)} (matériel) + marge de sécurité</code>. Les tarifs catalogue ci-dessus restent à ta main.</div>
+    <div class="hint" style="margin-top:8px;max-width:780px">À intégrer dans ton tarif horaire facturé : <code>net souhaité + URSSAF + ${fmt(tm.tauxAvecSecurite)} (matériel + sécurité)</code>. Les tarifs catalogue ci-dessus restent à ta main.</div>
 
     <h3>Bilan année par année</h3>
     <div class="hint" style="max-width:880px">Pour chaque année : trésorerie effectivement reçue (Suivi avec statut Accepté / Attente / Terminé) − abonnements actifs cette année − amortissement matériel de l'année (prorata mensuel sur l'année d'achat, années pleines ensuite). Un solde annuel positif signifie que l'année a couvert ses propres charges ; négatif qu'il a fallu puiser ailleurs.</div>
