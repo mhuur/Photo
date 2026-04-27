@@ -72,15 +72,29 @@
   table.hist tr.suv-row td.amt{text-align:right;font-variant-numeric:tabular-nums}
   table.hist td.cb,table.hist th:first-child{text-align:center;width:34px;padding:6px 4px}
   table.hist td.cb input,table.hist th input[type="checkbox"]{cursor:pointer;width:16px;height:16px}
-  table.hist tr.suv-detail td{background:#f9fafb;padding:0;border-bottom:1px solid #e5e7eb}
+  table.hist tr.suv-detail td{background:transparent;padding:0;border-bottom:0}
+  table.hist tr.suv-multi{cursor:pointer}
   table.hist tr.suv-multi td{font-weight:500}
   .suv-caret{display:inline-block;color:#9ca3af;font-size:11px;margin-right:2px}
-  table.hist tr.suv-sub{background:#fbfbfd;cursor:pointer}
-  table.hist tr.suv-sub:hover td{background:#f3f4f6}
-  table.hist tr.suv-sub.expanded td{background:#eff6ff}
-  table.hist tr.suv-sub td{padding:7px 10px;font-size:12.5px;color:#4b5563;border-bottom:1px solid #f1f5f9}
-  table.hist tr.suv-sub td.muted{color:#9ca3af;font-size:14px;text-align:center;width:18px;padding-right:0}
-  table.hist tr.suv-sub td.sub-lib{color:#374151}
+  table.hist tbody.devis-grp{border-bottom:1px solid #e5e7eb;transition:background .12s ease, box-shadow .12s ease}
+  table.hist tbody.devis-grp:last-child{border-bottom:0}
+  table.hist tbody.devis-grp tr td{background:#fff}
+  table.hist tbody.devis-grp:hover tr.suv-row td{background:#f9fafb}
+  table.hist tbody.devis-grp.expanded{box-shadow:inset 4px 0 0 #3b82f6}
+  table.hist tbody.devis-grp.expanded tr.suv-row td,
+  table.hist tbody.devis-grp.expanded tr.suv-sub td,
+  table.hist tbody.devis-grp.expanded tr.suv-detail td{background:#eff6ff}
+  table.hist tbody.devis-grp.editing{box-shadow:inset 4px 0 0 #f59e0b}
+  table.hist tbody.devis-grp.editing tr.suv-row td,
+  table.hist tbody.devis-grp.editing tr.suv-detail td{background:#fffbeb}
+  table.hist tbody.devis-grp.sel:not(.editing):not(.expanded){box-shadow:inset 4px 0 0 #f59e0b}
+  table.hist tbody.devis-grp.sel tr.suv-row td{background:#fef9c3}
+  table.hist tbody.devis-grp.sel.expanded tr.suv-row td{background:#fef3c7}
+  table.hist tr.suv-sub td{padding:6px 10px;font-size:12.5px;color:#4b5563;border-bottom:0}
+  table.hist tr.suv-sub td.statut{padding-left:30px}
+  table.hist tr.suv-sub td.muted{color:#bcc1cb;font-size:13px;text-align:center;padding:0;width:18px}
+  table.hist tr.suv-sub td.sub-lib{color:#374151;font-style:italic}
+  table.hist tr.suv-sub td.amt{color:#374151}
   table.hist td.actions:has(.suv-row-actions){text-align:right;width:auto;min-width:240px}
   .suv-row-actions{display:flex;gap:6px;align-items:center;justify-content:flex-end;flex-wrap:wrap}
   .suv-row-actions .btn{padding:5px 10px;font-size:12px;border-radius:4px;line-height:1.3;font-weight:500}
@@ -91,8 +105,11 @@
   .btn.btn-gris{background:#6b7280;color:#fff}.btn.btn-gris:hover{background:#4b5563}
   .btn.btn-bleu{background:#3b82f6;color:#fff}.btn.btn-bleu:hover{background:#2563eb}
   .btn.btn-icon{min-width:32px;padding:5px 8px;font-size:14px;font-weight:700;text-align:center;line-height:1}
-  .suv-row-actions button:not(.btn){background:none;border:0;color:#9ca3af;cursor:pointer;font-size:16px;padding:4px 6px;border-radius:4px}
-  .suv-row-actions button:not(.btn):hover{background:#fee2e2;color:#dc2626}
+  .ico-btn{background:#f3f4f6;color:#4b5563;border:1px solid #d1d5db;border-radius:4px;padding:4px 8px;cursor:pointer;font-size:13px;line-height:1;font-weight:600;min-width:28px}
+  .ico-btn:hover{background:#e5e7eb;color:#111827}
+  .ico-btn[title*="Supprimer"]:hover{background:#fee2e2;color:#dc2626;border-color:#fca5a5}
+  td.ref-cell{color:#374151;font-variant-numeric:tabular-nums}
+  td.ref-cell .muted{color:#9ca3af}
   .suv-panel{padding:12px 16px}
   .suv-actions{display:flex;gap:8px;margin-top:10px;padding-top:10px;border-top:1px solid #e5e7eb;align-items:center}
   .suv-compact-row{display:flex;gap:6px;flex-wrap:wrap;align-items:flex-end;margin-bottom:8px}
@@ -1025,6 +1042,7 @@ function suiviStatsHtml(s) {
 
 let suiviExpanded = null;
 let suiviGroupExpanded = null;
+let suiviGroupRefEdit = null;
 let suiviSort = { field: "date", dir: "desc" };
 let suiviFilterStatut = "all";
 let suiviFilterYear = "all";
@@ -1084,12 +1102,24 @@ function suiviGroupToggle(devisId) {
     suiviGroupExpanded = null;
     const lignes = suiviGroupLigne(devisId);
     if (suiviExpanded && lignes.some(e => e.id === suiviExpanded)) suiviExpanded = null;
+    if (suiviGroupRefEdit === devisId) suiviGroupRefEdit = null;
   } else {
     suiviGroupExpanded = devisId;
   }
   render();
 }
 window.suiviGroupToggle = suiviGroupToggle;
+
+function suiviGroupEditRef(devisId) {
+  if (suiviGroupRefEdit === devisId) {
+    suiviGroupRefEdit = null;
+  } else {
+    suiviGroupRefEdit = devisId;
+    suiviGroupExpanded = devisId;
+  }
+  render();
+}
+window.suiviGroupEditRef = suiviGroupEditRef;
 
 function suiviSortKey(field) {
   if (suiviSort.field === field) {
@@ -1192,6 +1222,7 @@ function suiviDetailPanelHtml(e) {
         <td colspan="7">
           <div class="suv-panel">
             <div class="suv-compact-row">
+              <label class="lib"><span>Référence devis</span><input value="${esc(entryRef(e))}" oninput="suiviRefUpd('${e.id}', this.value)" placeholder="DEVIS-…"></label>
               <label class="lib"><span>Échéance</span><input value="${esc(e.echeance || "")}" oninput="suiviUpd('${e.id}','echeance',this.value)" placeholder="Acompte, Reste à payer, …"></label>
               <label><span>Date</span><input type="date" value="${esc(e.date)}" oninput="suiviUpd('${e.id}','date',this.value)"></label>
               <label><span>Heures</span><input type="number" step="0.25" value="${esc(e.heures)}" oninput="suiviUpd('${e.id}','heures',this.value); suiviRefreshTaux('${e.id}')"></label>
@@ -1228,70 +1259,97 @@ function rSV() {
   const stop = "event.stopPropagation();";
 
   const rowsHtml = list.map(g => {
+    const selected = suiviSelected.has(g.devisId);
     if (g.lignes.length === 1) {
       const e = g.lignes[0];
-      const expanded = suiviExpanded === e.id;
+      const editing = suiviExpanded === e.id;
+      const cls = ["devis-grp"];
+      if (selected) cls.push("sel");
+      if (editing) cls.push("editing");
       const summary = `
-        <tr class="suv-row ${expanded ? "expanded" : ""}" onclick="suiviToggle('${e.id}')">
-          <td class="cb" onclick="${stop}"><input type="checkbox" ${suiviSelected.has(g.devisId) ? "checked" : ""} onclick="suiviToggleOne('${g.devisId}', this.checked, event)"></td>
+        <tr class="suv-row">
+          <td class="cb"><input type="checkbox" ${selected ? "checked" : ""} onclick="suiviToggleOne('${g.devisId}', this.checked, event)"></td>
           <td class="statut">${pastille(g.statutGlobal)}</td>
           <td>${esc(dateFR(e.date))}</td>
-          <td onclick="${stop}"><input value="${esc(g.ref)}" oninput="suiviDevisRefUpd('${g.devisId}', this.value)" placeholder="DEVIS-…"></td>
+          <td class="ref-cell">${esc(g.ref) || `<span class="muted">—</span>`}</td>
           <td><strong>${esc(e.client) || "—"}</strong></td>
           <td class="amt">${fmt(e.montant)}</td>
-          <td class="actions" onclick="${stop}">
+          <td class="actions">
             <div class="suv-row-actions">
               ${suiviActionsHtml(e)}
-              <button title="Supprimer le devis" onclick="if(confirm('Supprimer ce devis ?'))suiviDelDevis('${g.devisId}')">×</button>
+              <button class="ico-btn" title="Modifier les détails de la ligne" onclick="suiviToggle('${e.id}')">⋮</button>
+              <button class="ico-btn" title="Supprimer le devis" onclick="if(confirm('Supprimer ce devis ?'))suiviDelDevis('${g.devisId}')">×</button>
             </div>
           </td>
         </tr>`;
-      return expanded ? summary + suiviDetailPanelHtml(e) : summary;
+      const inner = editing ? summary + suiviDetailPanelHtml(e) : summary;
+      return `<tbody class="${cls.join(" ")}">${inner}</tbody>`;
     }
 
     const groupExpanded = suiviGroupExpanded === g.devisId;
     const dateLabel = g.dateMin === g.dateMax
       ? esc(dateFR(g.dateMin))
       : `${esc(dateFR(g.dateMin))} → ${esc(dateFR(g.dateMax))}`;
+    const cls = ["devis-grp", "is-multi"];
+    if (selected) cls.push("sel");
+    if (groupExpanded) cls.push("expanded");
     const summary = `
-      <tr class="suv-row suv-multi ${groupExpanded ? "expanded" : ""}" onclick="suiviGroupToggle('${g.devisId}')">
-        <td class="cb" onclick="${stop}"><input type="checkbox" ${suiviSelected.has(g.devisId) ? "checked" : ""} onclick="suiviToggleOne('${g.devisId}', this.checked, event)"></td>
+      <tr class="suv-row suv-multi" onclick="suiviGroupToggle('${g.devisId}')">
+        <td class="cb" onclick="${stop}"><input type="checkbox" ${selected ? "checked" : ""} onclick="suiviToggleOne('${g.devisId}', this.checked, event)"></td>
         <td class="statut">${pastille(g.statutGlobal)}</td>
         <td>${dateLabel}</td>
-        <td onclick="${stop}"><input value="${esc(g.ref)}" oninput="suiviDevisRefUpd('${g.devisId}', this.value)" placeholder="DEVIS-…"></td>
+        <td class="ref-cell">${esc(g.ref) || `<span class="muted">—</span>`}</td>
         <td><span class="suv-caret">${groupExpanded ? "▾" : "▸"}</span> <strong>${esc(g.client) || "—"}</strong></td>
         <td class="amt">${fmt(g.total)}</td>
         <td class="actions" onclick="${stop}">
           <div class="suv-row-actions">
             ${devisActionsHtml(g)}
-            <button title="Supprimer le devis" onclick="if(confirm('Supprimer ce devis et toutes ses lignes ?'))suiviDelDevis('${g.devisId}')">×</button>
+            <button class="ico-btn" title="Modifier la référence du devis" onclick="suiviGroupEditRef('${g.devisId}')">⋮</button>
+            <button class="ico-btn" title="Supprimer le devis" onclick="if(confirm('Supprimer ce devis et toutes ses lignes ?'))suiviDelDevis('${g.devisId}')">×</button>
           </div>
         </td>
       </tr>`;
-    if (!groupExpanded) return summary;
+    if (!groupExpanded) return `<tbody class="${cls.join(" ")}">${summary}</tbody>`;
+
+    const refEditOpen = suiviGroupRefEdit === g.devisId;
+    const refEditRow = refEditOpen ? `
+      <tr class="suv-detail">
+        <td colspan="7">
+          <div class="suv-panel">
+            <div class="suv-compact-row">
+              <label class="lib"><span>Référence du devis</span><input value="${esc(g.ref)}" oninput="suiviDevisRefUpd('${g.devisId}', this.value)" placeholder="DEVIS-…" autofocus></label>
+            </div>
+            <div class="suv-actions">
+              <span style="flex:1"></span>
+              <button class="btn ghost" onclick="suiviGroupEditRef('${g.devisId}')">Fermer</button>
+            </div>
+          </div>
+        </td>
+      </tr>` : "";
 
     const subRows = g.lignes.map(e => {
       const ligneExpanded = suiviExpanded === e.id;
       const lib = esc(e.echeance || "Paiement");
       const sub = `
-        <tr class="suv-sub ${ligneExpanded ? "expanded" : ""}" onclick="suiviToggle('${e.id}')">
+        <tr class="suv-sub">
           <td></td>
           <td class="statut">${pastille(entryStatut(e))}</td>
           <td>${esc(dateFR(e.date))}</td>
           <td class="muted">↳</td>
           <td class="sub-lib">${lib}</td>
           <td class="amt">${fmt(e.montant)}</td>
-          <td class="actions" onclick="${stop}">
+          <td class="actions">
             <div class="suv-row-actions">
               ${suiviActionsHtml(e, { hidePhase1: true })}
-              <button title="Supprimer cette ligne" onclick="if(confirm('Supprimer cette ligne du devis ?'))suiviDel('${e.id}')">×</button>
+              <button class="ico-btn" title="Modifier les détails de la ligne" onclick="suiviToggle('${e.id}')">⋮</button>
+              <button class="ico-btn" title="Supprimer cette ligne" onclick="if(confirm('Supprimer cette ligne du devis ?'))suiviDel('${e.id}')">×</button>
             </div>
           </td>
         </tr>`;
       return ligneExpanded ? sub + suiviDetailPanelHtml(e) : sub;
     }).join("");
 
-    return summary + subRows;
+    return `<tbody class="${cls.join(" ")}">${summary}${refEditRow}${subRows}</tbody>`;
   }).join("");
 
   const yearOpts = [`<option value="all" ${suiviFilterYear==="all"?"selected":""}>Toutes les années</option>`]
@@ -1334,7 +1392,7 @@ function rSV() {
           <th style="width:240px;text-align:right">Actions</th>
         </tr>
       </thead>
-      <tbody>${rowsHtml}</tbody>
+      ${rowsHtml}
     </table>`}
   `;
 }
