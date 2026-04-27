@@ -508,30 +508,31 @@ function suiviMigrate() {
 function suiviAdd() {
   const m = S.mission;
   const cat = CATALOG.find(c => c.k === m.object);
-  const totalAmount = totals().total.toFixed(2);
+  const t = totals();
   const hoursTotal = num(m.prep.hours) + num(m.prod.hours) + num(m.postprod.hours);
-  const id = uid();
+  const date = m.objectDate || new Date().toISOString().slice(0, 10);
+  const client = m.client.name || "";
+  const prestation = cat ? cat.l : "";
   const devisId = uid();
   S.suivi.devis[devisId] = { ref: m.ref || "" };
-  S.suivi.entries.unshift({
-    id,
-    devisId,
-    date:        m.objectDate || new Date().toISOString().slice(0, 10),
-    client:      m.client.name || "",
-    prestation:  cat ? cat.l : "",
-    montant:     String(totalAmount),
-    heures:      String(hoursTotal),
-    echeance:    "",
-    paiement:    String(totalAmount),
-    ca:          String(totalAmount),
-    salaire:     "0",
-    ursaf:       "0",
-    tresorerie:  "0",
-    frais:       "0",
-    commentaires:"",
-    statut:      "envoye"
+
+  const mkLine = (echeance, montant, heures) => ({
+    id: uid(), devisId, date, client, prestation,
+    montant: montant.toFixed(2),
+    heures:  heures.toFixed(2),
+    echeance,
+    paiement: montant.toFixed(2),
+    ca: montant.toFixed(2),
+    salaire: "0", ursaf: "0", tresorerie: "0", frais: "0",
+    commentaires: "", statut: "envoye"
   });
-  suiviExpanded = id;
+
+  const acompte = mkLine("Acompte 30 %", t.acompte, hoursTotal * 0.30);
+  const reste   = mkLine("Reste à payer 70 %", t.reste, hoursTotal * 0.70);
+  S.suivi.entries.unshift(acompte, reste);
+
+  suiviGroupExpanded = devisId;
+  suiviExpanded = null;
   save();
   render();
 }
@@ -779,6 +780,36 @@ function suiviDel(id) {
   render();
 }
 window.suiviDel = suiviDel;
+
+function suiviAddLigne(devisId) {
+  if (!S.suivi.devis[devisId]) S.suivi.devis[devisId] = { ref: "" };
+  const lignes = suiviGroupLigne(devisId);
+  const lead = lignes[0] || {};
+  const refStatut = lignes.length ? entryStatut(lead) : "envoye";
+  const id = uid();
+  S.suivi.entries.push({
+    id, devisId,
+    date:        lead.date || new Date().toISOString().slice(0, 10),
+    client:      lead.client || "",
+    prestation:  lead.prestation || "",
+    montant:     "0",
+    heures:      "0",
+    echeance:    "Paiement complémentaire",
+    paiement:    "0",
+    ca:          "0",
+    salaire:     "0",
+    ursaf:       "0",
+    tresorerie:  "0",
+    frais:       "0",
+    commentaires:"",
+    statut:      refStatut
+  });
+  suiviGroupExpanded = devisId;
+  suiviExpanded = id;
+  save();
+  render();
+}
+window.suiviAddLigne = suiviAddLigne;
 
 function suiviDelDevis(devisId) {
   S.suivi.entries = S.suivi.entries.filter(e => e.devisId !== devisId);
@@ -1180,6 +1211,7 @@ function suiviDetailPanelHtml(e) {
 
             <div class="suv-actions">
               ${suiviActionsHtml(e)}
+              <button class="btn ghost" onclick="suiviAddLigne('${e.devisId}')">+ Ajouter une ligne de paiement</button>
               <span style="flex:1"></span>
               <button class="btn ghost" onclick="suiviToggle('${e.id}')">Fermer</button>
             </div>
