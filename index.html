@@ -467,7 +467,7 @@ const DEFAULT_S = {
   mission: {
     ref: "", dateEmission: "", dateValidite: "",
     object: "", objectDate: "", objectLieu: "",
-    client: { num: "", name: "", contact: "", contactSelected: "", address: "", phone: "", email: "" },
+    client: { num: "", name: "", contact: "", contactSelected: "", address: "", phone: "", phoneSelected: "", email: "", emailSelected: "" },
     prep:        { hours: "0", rate: "" },
     prod:        { hours: "0", rate: "" },
     postprod:    { hours: "0", rate: "" },
@@ -490,7 +490,7 @@ const DEFAULT_S = {
   compta:   {},
   abonnements: { entries: [] },
   investissements: { entries: [] },
-  tarifs: { catalog: JSON.parse(JSON.stringify(DEFAULT_CATALOG)) },
+  tarifs: { catalog: JSON.parse(JSON.stringify(DEFAULT_CATALOG)), heuresAnnuelles: "900" },
   bugs: { items: [] }
 };
 let S = JSON.parse(localStorage.getItem(SK) || "null") || JSON.parse(JSON.stringify(DEFAULT_S));
@@ -499,7 +499,8 @@ if (!S.suivi.devis || typeof S.suivi.devis !== "object") S.suivi.devis = {};
 if (!S.clients || !Array.isArray(S.clients.entries)) S.clients = { ...DEFAULT_S.clients };
 if (!S.abonnements || !Array.isArray(S.abonnements.entries)) S.abonnements = { ...DEFAULT_S.abonnements };
 if (!S.investissements || !Array.isArray(S.investissements.entries)) S.investissements = { ...DEFAULT_S.investissements };
-if (!S.tarifs || !Array.isArray(S.tarifs.catalog) || !S.tarifs.catalog.length) S.tarifs = { catalog: JSON.parse(JSON.stringify(DEFAULT_CATALOG)) };
+if (!S.tarifs || !Array.isArray(S.tarifs.catalog) || !S.tarifs.catalog.length) S.tarifs = { catalog: JSON.parse(JSON.stringify(DEFAULT_CATALOG)), heuresAnnuelles: "900" };
+if (!S.tarifs.heuresAnnuelles) S.tarifs.heuresAnnuelles = "900";
 if (!S.bugs || (!Array.isArray(S.bugs.items) && !Array.isArray(S.bugs.entries) && typeof S.bugs.html !== "string")) S.bugs = { items: [] };
 if (!Array.isArray(S.bugs.items)) S.bugs.items = [];
 // Migrate from old structured entries (title/desc/status)
@@ -540,11 +541,19 @@ if (S.mission) {
   if (S.mission.client && typeof S.mission.client.contactSelected === "undefined") {
     S.mission.client.contactSelected = S.mission.client.contact || "";
   }
+  if (S.mission.client && typeof S.mission.client.phoneSelected === "undefined") {
+    S.mission.client.phoneSelected = S.mission.client.phone || "";
+  }
+  if (S.mission.client && typeof S.mission.client.emailSelected === "undefined") {
+    S.mission.client.emailSelected = S.mission.client.email || "";
+  }
   // Migrate old `cgu` field to `cgv`
   if (S.mission.cgu && !S.mission.cgv) {
     S.mission.cgv = S.mission.cgu;
   }
   delete S.mission.cgu;
+  // Purge legacy `autres` field (UI removed; data could carry .99 garbage and corrupt totals)
+  S.mission.autres = { desc: "", montant: "0" };
   // Migrate old prep/prod/postprod into lignes if lignes is empty and old data has hours
   if (S.mission.lignes.length === 0) {
     const prep = S.mission.prep || {}, prod = S.mission.prod || {}, post = S.mission.postprod || {};
@@ -789,6 +798,20 @@ function clientContactSelect(val) {
 }
 window.clientContactSelect = clientContactSelect;
 
+function clientPhoneSelect(val) {
+  S.mission.client.phoneSelected = val;
+  save();
+  render();
+}
+window.clientPhoneSelect = clientPhoneSelect;
+
+function clientEmailSelect(val) {
+  S.mission.client.emailSelected = val;
+  save();
+  render();
+}
+window.clientEmailSelect = clientEmailSelect;
+
 // Close lock menus on outside click
 document.addEventListener("click", e => {
   document.querySelectorAll(".lock-corner-popup.open").forEach(p => {
@@ -798,13 +821,13 @@ document.addEventListener("click", e => {
   });
 });
 
-// Close URSSAF menu on outside click
+// Close any open .lock-popup (URSSAF, heures annuelles, etc.) on outside click
 document.addEventListener("click", e => {
-  const menu = document.getElementById("urssafMenu");
-  if (!menu || !menu.classList.contains("open")) return;
-  if (!menu.contains(e.target) && !e.target.closest(".lock-menu-btn")) {
-    menu.classList.remove("open");
-  }
+  document.querySelectorAll(".lock-popup.open").forEach(menu => {
+    if (!menu.contains(e.target) && !e.target.closest(".lock-menu-btn")) {
+      menu.classList.remove("open");
+    }
+  });
 });
 
 // ============ DEVIS PREVIEW (rendered at the bottom of Mission) ============
@@ -883,12 +906,18 @@ function rDevisPreview() {
           <span class="num">${esc(cli.num || "—")}</span>
           <span class="name">${esc(cli.name || "(Sélectionner un client)")}</span>
           ${(() => {
-            const contactToShow = (S.mission.client.contactSelected || "").trim() || (cli.contact || "").trim();
+            const contactToShow = (S.mission.client.contactSelected || "").trim() || (cli.contact || "").trim().split(/[\n,;\/]+/)[0].trim();
             return contactToShow ? `<div>${esc(contactToShow)}</div>` : "";
           })()}
           ${cli.address ? `<div>${esc(cli.address)}</div>` : ""}
-          ${cli.email ? `<div>${esc(cli.email)}</div>` : ""}
-          ${cli.phone ? `<div>${esc(cli.phone)}</div>` : ""}
+          ${(() => {
+            const emailToShow = (S.mission.client.emailSelected || "").trim() || (cli.email || "").trim().split(/[\n,;\/]+/)[0].trim();
+            return emailToShow ? `<div>${esc(emailToShow)}</div>` : "";
+          })()}
+          ${(() => {
+            const phoneToShow = (S.mission.client.phoneSelected || "").trim() || (cli.phone || "").trim().split(/[\n,;\/]+/)[0].trim();
+            return phoneToShow ? `<div>${esc(phoneToShow)}</div>` : "";
+          })()}
         </div>
       </div>
     </div>
@@ -1379,9 +1408,9 @@ function totals() {
   const depl = mode === "voiture"
     ? r2(r2(num(d.deplacement.km) * tauxKm) + r2(num(d.deplacement.peages)) + trajet)
     : r2(r2(num(d.deplacement.ticket)) + trajet);
-  // Autres
-  const autres = r2(num(d.autres.montant));
-  const subtotal = r2(lignesAmount + depl + autres);
+  // Autres : champ retiré de l'UI il y a plusieurs versions. On l'ignore désormais.
+  const autres = 0;
+  const subtotal = r2(lignesAmount + depl);
   const remise = r2(subtotal * num(d.remisePct) / 100);
   const total = r2(subtotal - remise);
   // Échéances breakdown (% of total)
@@ -1455,21 +1484,27 @@ function render() {
 
 function rContactPicker() {
   const c = S.mission.client || {};
-  if (!c.id) return ""; // no client selected → nothing to do
+  if (!c.id) return "";
   const sel = S.clients.entries.find(x => x.id === c.id);
   if (!sel) return "";
-  const raw = (sel.contact || "").trim();
-  if (!raw) return "";
   // Split on newlines, commas, slashes, semicolons
-  const parts = raw.split(/[\n,;\/]+/).map(s => s.trim()).filter(Boolean);
-  if (parts.length <= 1) return ""; // only one contact → nothing to ask
-  const selected = c.contactSelected || parts[0];
+  const splitParts = raw => (raw || "").split(/[\n,;\/]+/).map(s => s.trim()).filter(Boolean);
+  const fields = [
+    { key: "contact",     label: "contact",     selectedField: "contactSelected", parts: splitParts(sel.contact),     fn: "clientContactSelect" },
+    { key: "phone",       label: "téléphone",   selectedField: "phoneSelected",   parts: splitParts(sel.phone),       fn: "clientPhoneSelect" },
+    { key: "email",       label: "email",       selectedField: "emailSelected",   parts: splitParts(sel.email),       fn: "clientEmailSelect" }
+  ];
+  const multiFields = fields.filter(f => f.parts.length > 1);
+  if (multiFields.length === 0) return "";
   return `<div class="contact-picker">
-    <div class="ttl">⚠ Plusieurs contacts détectés — choisir celui à afficher dans le devis :</div>
-    ${parts.map((p, i) => `<label>
-      <input type="radio" name="contactSel" value="${esc(p)}" ${selected === p ? "checked" : ""} onchange="clientContactSelect(this.value)">
-      ${esc(p)}
-    </label>`).join("")}
+    ${multiFields.map(f => {
+      const selected = c[f.selectedField] || f.parts[0];
+      return `<div class="ttl">⚠ Plusieurs ${f.label}s détectés — choisir celui à afficher dans le devis :</div>
+        ${f.parts.map(p => `<label>
+          <input type="radio" name="${f.key}Sel" value="${esc(p)}" ${selected === p ? "checked" : ""} onchange="${f.fn}(this.value)">
+          ${esc(p)}
+        </label>`).join("")}`;
+    }).join('<hr style="border:0;border-top:1px solid var(--warning);opacity:.4;margin:10px 0">')}
   </div>`;
 }
 
@@ -2700,8 +2735,8 @@ function rCL() {
         <td><input value="${esc(e.num)}" oninput="clientsUpd('${e.id}','num',this.value)"></td>
         <td><input value="${esc(e.name)}" oninput="clientsUpd('${e.id}','name',this.value)"></td>
         <td><input value="${esc(e.contact)}" oninput="clientsUpd('${e.id}','contact',this.value)" placeholder="Contacts (multi-lignes ↓)"></td>
-        <td><input value="${esc(e.phone)}" oninput="clientsUpd('${e.id}','phone',this.value)"></td>
-        <td><input type="email" value="${esc(e.email)}" oninput="clientsUpd('${e.id}','email',this.value)"></td>
+        <td><input value="${esc(e.phone)}" oninput="clientsUpd('${e.id}','phone',this.value)" placeholder="Téléphones (multi ↓)"></td>
+        <td><input value="${esc(e.email)}" oninput="clientsUpd('${e.id}','email',this.value)" placeholder="Emails (multi ↓)"></td>
         <td class="actions"><button title="Supprimer" onclick="${stop}if(confirm('Supprimer ce client ?'))clientsDel('${e.id}')">×</button></td>
       </tr>` : `
       <tr class="cli-row clickable ${expanded ? "expanded" : ""}" data-search="${esc(search)}" onclick="clientsToggle('${e.id}')">
@@ -2722,6 +2757,16 @@ function rCL() {
           </div>
         </div>
         <div class="row">
+          <div class="field lg"><label>Téléphones (un par ligne, ou séparés par virgule)</label>
+            <textarea class="multi-text" placeholder="06 12 34 56 78&#10;01 23 45 67 89 (bureau)&#10;…" style="min-height:60px" oninput="clientsUpd('${e.id}','phone',this.value)">${esc(e.phone || "")}</textarea>
+          </div>
+        </div>
+        <div class="row">
+          <div class="field lg"><label>Emails (un par ligne, ou séparés par virgule)</label>
+            <textarea class="multi-text" placeholder="contact@exemple.fr&#10;facturation@exemple.fr&#10;…" style="min-height:60px" oninput="clientsUpd('${e.id}','email',this.value)">${esc(e.email || "")}</textarea>
+          </div>
+        </div>
+        <div class="row">
           <div class="field"><label>Adresse</label><input value="${esc(e.address)}" oninput="clientsUpd('${e.id}','address',this.value)"></div>
           <div class="field"><label>CP - Ville</label><input value="${esc(e.cityPostal)}" oninput="clientsUpd('${e.id}','cityPostal',this.value)"></div>
         </div>
@@ -2734,12 +2779,19 @@ function rCL() {
         </div>
       ` : `
         ${(() => {
-          const parts = (e.contact || "").split(/[\n,;\/]+/).map(s => s.trim()).filter(Boolean);
-          if (parts.length <= 1) return `<div class="cli-info"><span class="cli-label">Contact</span><span>${esc(parts[0]) || "—"}</span></div>`;
-          return `<div class="cli-info" style="align-items:flex-start">
-            <span class="cli-label">Contacts (${parts.length})</span>
-            <span><ul style="margin:0;padding-left:18px;list-style-type:'– '">${parts.map(p => `<li>${esc(p)}</li>`).join("")}</ul></span>
-          </div>`;
+          const splitParts = raw => (raw || "").split(/[\n,;\/]+/).map(s => s.trim()).filter(Boolean);
+          const contactParts = splitParts(e.contact);
+          const phoneParts = splitParts(e.phone);
+          const emailParts = splitParts(e.email);
+          const renderField = (label, parts) => {
+            if (parts.length === 0) return `<div class="cli-info"><span class="cli-label">${label}</span><span>—</span></div>`;
+            if (parts.length === 1) return `<div class="cli-info"><span class="cli-label">${label}</span><span>${esc(parts[0])}</span></div>`;
+            return `<div class="cli-info" style="align-items:flex-start">
+              <span class="cli-label">${label} (${parts.length})</span>
+              <span><ul style="margin:0;padding-left:18px;list-style-type:'– '">${parts.map(p => `<li>${esc(p)}</li>`).join("")}</ul></span>
+            </div>`;
+          };
+          return renderField("Contact", contactParts) + renderField("Téléphone", phoneParts) + renderField("Email", emailParts);
         })()}
         <div class="cli-info"><span class="cli-label">Adresse</span><span>${esc(e.address) || "—"}</span></div>
         <div class="cli-info"><span class="cli-label">CP - Ville</span><span>${esc(e.cityPostal) || "—"}</span></div>
@@ -2826,7 +2878,8 @@ function addInvestissement() {
     id:         uid(),
     date:       new Date().toISOString().slice(0, 10),
     descriptif: "",
-    prix:       "0"
+    prix:       "0",
+    dureeVie:   "5"
   });
   save();
   render();
@@ -2845,8 +2898,84 @@ function editInvestissement(id, field, val) {
   if (!e) return;
   e[field] = val;
   save();
+  // Refresh the cost summary inline if present
+  refreshTauxMatos();
 }
 window.editInvestissement = editInvestissement;
+
+function editAbonnementAndRefresh(id, field, val) {
+  editAbonnement(id, field, val);
+  refreshTauxMatos();
+}
+window.editAbonnementAndRefresh = editAbonnementAndRefresh;
+
+function tarifHeuresAnnuelles(val) {
+  S.tarifs.heuresAnnuelles = val;
+  save();
+  refreshTauxMatos();
+}
+window.tarifHeuresAnnuelles = tarifHeuresAnnuelles;
+
+let tarifHeuresLocked = true;
+function tarifHeuresLockToggle() {
+  const p = document.getElementById("heuresMenu");
+  if (p) p.classList.toggle("open");
+}
+window.tarifHeuresLockToggle = tarifHeuresLockToggle;
+function tarifHeuresUnlock() {
+  tarifHeuresLocked = false;
+  const p = document.getElementById("heuresMenu");
+  if (p) p.classList.remove("open");
+  render();
+  requestAnimationFrame(() => {
+    const inp = document.getElementById("heuresInput");
+    if (inp) { inp.focus(); inp.select(); }
+  });
+}
+window.tarifHeuresUnlock = tarifHeuresUnlock;
+function tarifHeuresRelock() {
+  tarifHeuresLocked = true;
+  render();
+}
+window.tarifHeuresRelock = tarifHeuresRelock;
+
+// Compute amortization rates (per hour)
+function tauxMatos() {
+  const heures = num(S.tarifs.heuresAnnuelles) || 900;
+  // Abonnements : actifs (non finis) → annuel courant ; terminés → on amortit aussi le CUMUL passé
+  // Logique : pour un abo terminé, ça reste un coût payé qu'il faut amortir.
+  // On comptabilise le coût annuel × nombre d'années de souscription (ou l'année en cours si actif).
+  let abonnementsAnnuels = 0;
+  for (const e of (S.abonnements.entries || [])) {
+    abonnementsAnnuels += num(e.annuel);
+    // Note : on inclut tous les abonnements, terminés ou actifs (cf. spec: même résiliés doivent avoir été amortis)
+  }
+  // Investissements : amortissement = prix / durée de vie (années)
+  let investissementsAnnuels = 0;
+  for (const inv of (S.investissements.entries || [])) {
+    const prix = num(inv.prix);
+    const duree = num(inv.dureeVie) || 5;
+    if (duree > 0) investissementsAnnuels += prix / duree;
+  }
+  abonnementsAnnuels = r2(abonnementsAnnuels);
+  investissementsAnnuels = r2(investissementsAnnuels);
+  const totalAnnuel = r2(abonnementsAnnuels + investissementsAnnuels);
+  const tauxAbo = r2(abonnementsAnnuels / heures);
+  const tauxInv = r2(investissementsAnnuels / heures);
+  const tauxTotal = r2(totalAnnuel / heures);
+  return { heures, abonnementsAnnuels, investissementsAnnuels, totalAnnuel, tauxAbo, tauxInv, tauxTotal };
+}
+
+function refreshTauxMatos() {
+  const t = tauxMatos();
+  const set = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
+  set("tm-abo-an", fmt(t.abonnementsAnnuels));
+  set("tm-inv-an", fmt(t.investissementsAnnuels));
+  set("tm-tot-an", fmt(t.totalAnnuel));
+  set("tm-abo-h", fmt(t.tauxAbo));
+  set("tm-inv-h", fmt(t.tauxInv));
+  set("tm-tot-h", fmt(t.tauxTotal));
+}
 
 const MOIS_FR = ["janv.","févr.","mars","avr.","mai","juin","juil.","août","sept.","oct.","nov.","déc."];
 
@@ -2997,13 +3126,13 @@ function rTR() {
     const isActif = !e.dateFin;
     return `
     <tr ${isActif ? "" : 'style="opacity:.6"'}>
-      <td><input value="${esc(e.libelle)}" oninput="editAbonnement('${e.id}','libelle',this.value)" placeholder="Libellé"></td>
-      <td><input type="date" value="${esc(e.dateDebut || "")}" oninput="editAbonnement('${e.id}','dateDebut',this.value)"></td>
+      <td><input value="${esc(e.libelle)}" oninput="editAbonnementAndRefresh('${e.id}','libelle',this.value)" placeholder="Libellé"></td>
+      <td><input type="date" value="${esc(e.dateDebut || "")}" oninput="editAbonnementAndRefresh('${e.id}','dateDebut',this.value)"></td>
       <td>
-        <input type="date" value="${esc(e.dateFin || "")}" oninput="editAbonnement('${e.id}','dateFin',this.value)" style="${isActif ? 'opacity:.4' : ''}" placeholder="actif">
+        <input type="date" value="${esc(e.dateFin || "")}" oninput="editAbonnementAndRefresh('${e.id}','dateFin',this.value)" style="${isActif ? 'opacity:.4' : ''}" placeholder="actif">
         ${isActif ? `<span style="display:block;font-size:10px;color:var(--success);text-align:center;margin-top:2px;font-weight:600;text-transform:uppercase;letter-spacing:.04em">● Actif</span>` : ""}
       </td>
-      <td class="amount"><input type="number" step="0.01" value="${esc(e.annuel)}" oninput="editAbonnement('${e.id}','annuel',this.value); refreshAbonnementMensuel('${e.id}')"></td>
+      <td class="amount"><input type="number" step="0.01" value="${esc(e.annuel)}" oninput="editAbonnementAndRefresh('${e.id}','annuel',this.value); refreshAbonnementMensuel('${e.id}')"></td>
       <td class="amount" id="ab-mens-${e.id}" style="text-align:right;color:var(--text-muted);font-variant-numeric:tabular-nums;padding-right:14px">${fmt(num(e.annuel) / 12)}</td>
       <td class="actions"><button title="Supprimer" onclick="if(confirm('Supprimer cet abonnement ?'))deleteAbonnement('${e.id}')">×</button></td>
     </tr>`;
@@ -3012,14 +3141,23 @@ function rTR() {
   // Investissements (amortissement)
   const invEntries = [...S.investissements.entries].sort((a, b) => (b.date || "").localeCompare(a.date || ""));
   const invTotal = invEntries.reduce((s, e) => s + num(e.prix), 0);
-  const invRows = invEntries.map(e => `
+  const invRows = invEntries.map(e => {
+    const prix = num(e.prix);
+    const duree = num(e.dureeVie) || 5;
+    const annuel = duree > 0 ? r2(prix / duree) : 0;
+    return `
     <tr>
       <td><input type="date" value="${esc(e.date)}" oninput="editInvestissement('${e.id}','date',this.value)"></td>
       <td><input value="${esc(e.descriptif)}" oninput="editInvestissement('${e.id}','descriptif',this.value)" placeholder="Descriptif"></td>
       <td class="amount"><input type="number" step="0.01" value="${esc(e.prix)}" oninput="editInvestissement('${e.id}','prix',this.value)"></td>
+      <td class="amount"><input type="number" step="0.5" min="0.5" value="${esc(e.dureeVie || "5")}" oninput="editInvestissement('${e.id}','dureeVie',this.value)" style="text-align:center"></td>
+      <td class="amount" style="text-align:right;color:var(--text-muted);font-variant-numeric:tabular-nums;padding-right:14px">${fmt(annuel)}</td>
       <td class="actions"><button title="Supprimer" onclick="if(confirm('Supprimer cet investissement ?'))deleteInvestissement('${e.id}')">×</button></td>
-    </tr>
-  `).join("");
+    </tr>`;
+  }).join("");
+
+  // Compute taux matos
+  const tm = tauxMatos();
 
   return `
     <h2>Frais &amp; Tarifs <span id="savedFlash" class="saved"></span></h2>
@@ -3054,7 +3192,8 @@ function rTR() {
     </table>
 
     <h3>Investissements et amortissement matériel</h3>
-    <div class="hint">Achats de matériel à amortir. Le détail d'amortissement viendra plus tard si besoin.</div>
+    <div class="hint">Achats de matériel à amortir. Chaque ligne se voit attribuer une <strong>durée d'amortissement</strong> (en années) qui détermine le coût annuel : <code>prix ÷ durée de vie</code>.</div>
+    <div class="hint">Durées indicatives : boîtier pro 4-5 ans · objectif 8-10 ans · ordinateur 3-4 ans · disque dur 4-5 ans · flash/accessoires 5-7 ans.</div>
     <div class="toolbar">
       <button class="btn" onclick="addInvestissement()">+ Ajouter un investissement</button>
     </div>
@@ -3063,13 +3202,63 @@ function rTR() {
         <tr>
           <th style="width:130px">Date</th>
           <th>Descriptif</th>
-          <th style="width:140px;text-align:right">Prix (€)</th>
+          <th style="width:120px;text-align:right">Prix (€)</th>
+          <th style="width:130px;text-align:center">Durée (années)</th>
+          <th style="width:130px;text-align:right">Coût annuel (€)</th>
           <th style="width:36px"></th>
         </tr>
       </thead>
       <tbody>${invRows}</tbody>
-      ${invEntries.length ? `<tfoot><tr><td>Total</td><td></td><td style="text-align:right">${fmt(invTotal)}</td><td></td></tr></tfoot>` : ""}
+      ${invEntries.length ? `<tfoot><tr><td colspan="2">Total parc</td><td style="text-align:right">${fmt(invTotal)}</td><td></td><td style="text-align:right">${fmt(tm.investissementsAnnuels)}</td><td></td></tr></tfoot>` : ""}
     </table>
+
+    <h3>Synthèse coûts horaires (matériel + abonnements)</h3>
+    <div class="hint">Calcul automatique : tes <strong>frais récurrents annuels</strong> (abonnements + amortissement matériel) divisés par tes <strong>heures facturables annuelles</strong>. Ce coût horaire indicatif peut être ajouté à ton tarif de main-d'œuvre.</div>
+
+    <div class="row" style="margin-bottom:14px">
+      <div class="field narrow"><label>Heures facturables annuelles</label>
+        <div class="lock-field">
+          <input id="heuresInput" type="number" step="10" min="1" value="${esc(S.tarifs.heuresAnnuelles || "900")}" ${tarifHeuresLocked ? "disabled" : `oninput="tarifHeuresAnnuelles(this.value)"`}>
+          <button class="lock-menu-btn" onclick="tarifHeuresLockToggle()" title="Options">⋮</button>
+          <div class="lock-popup" id="heuresMenu">
+            ${tarifHeuresLocked
+              ? `<button onclick="tarifHeuresUnlock()">🔓 Modifier</button>`
+              : `<button onclick="tarifHeuresRelock()">🔒 Verrouiller</button>`}
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="hint" style="margin-top:-10px">Estimation prudente : 45 sem × 40 h × 50 % facturable ≈ 900 h. À ajuster selon ta réalité (prospection, admin, formation déduits du temps total).</div>
+
+    <table class="hist" style="max-width:680px">
+      <thead>
+        <tr>
+          <th>Source</th>
+          <th style="width:170px;text-align:right">Coût annuel</th>
+          <th style="width:170px;text-align:right">Coût horaire</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Abonnements professionnels<div style="font-size:11px;color:var(--text-dim);margin-top:2px">Inclut tous les abonnements (actifs et résiliés ont été payés et amortis)</div></td>
+          <td class="amount" id="tm-abo-an" style="text-align:right;color:var(--text);font-variant-numeric:tabular-nums;padding-right:14px">${fmt(tm.abonnementsAnnuels)}</td>
+          <td class="amount" id="tm-abo-h" style="text-align:right;color:var(--text);font-variant-numeric:tabular-nums;padding-right:14px">${fmt(tm.tauxAbo)}</td>
+        </tr>
+        <tr>
+          <td>Amortissement matériel<div style="font-size:11px;color:var(--text-dim);margin-top:2px">Somme de (prix ÷ durée de vie) pour chaque équipement</div></td>
+          <td class="amount" id="tm-inv-an" style="text-align:right;color:var(--text);font-variant-numeric:tabular-nums;padding-right:14px">${fmt(tm.investissementsAnnuels)}</td>
+          <td class="amount" id="tm-inv-h" style="text-align:right;color:var(--text);font-variant-numeric:tabular-nums;padding-right:14px">${fmt(tm.tauxInv)}</td>
+        </tr>
+      </tbody>
+      <tfoot>
+        <tr style="background:var(--surface-hi)">
+          <td><strong>Coût horaire matériel total</strong></td>
+          <td class="amount" id="tm-tot-an" style="text-align:right;color:var(--primary);font-weight:700;font-variant-numeric:tabular-nums;padding-right:14px;font-size:14px">${fmt(tm.totalAnnuel)}</td>
+          <td class="amount" id="tm-tot-h" style="text-align:right;color:var(--primary);font-weight:700;font-variant-numeric:tabular-nums;padding-right:14px;font-size:14px">${fmt(tm.tauxTotal)}</td>
+        </tr>
+      </tfoot>
+    </table>
+    <div class="hint" style="margin-top:8px;max-width:680px">À intégrer dans ton tarif horaire facturé : <code>net souhaité + URSSAF + ${fmt(tm.tauxTotal)} (matériel) + marge de sécurité</code>. Les tarifs catalogue ci-dessus restent à ta main.</div>
   `;
 }
 
