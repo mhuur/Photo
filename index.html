@@ -25,7 +25,7 @@
   *{box-sizing:border-box}
   body{margin:0;font-family:'Inter',system-ui,-apple-system,sans-serif;background:linear-gradient(180deg,var(--bg) 0%,var(--bg-3) 100%);background-attachment:fixed;color:var(--text)}
   #app{display:flex;min-height:100vh}
-  .sb{width:220px;background:var(--bg-2);color:var(--text);border-right:1px solid var(--border);display:flex;flex-direction:column}
+  .sb{width:220px;background:var(--bg-2);color:var(--text);border-right:1px solid var(--border);display:flex;flex-direction:column;position:sticky;top:0;height:100vh;overflow-y:auto;flex-shrink:0;z-index:100}
   .sb h1{font-size:13px;padding:18px 16px 10px;margin:0;color:var(--accent);letter-spacing:.05em;text-transform:uppercase;font-weight:700}
   .sb button.tab{display:block;width:100%;background:none;border:0;color:inherit;padding:10px 16px;text-align:left;cursor:pointer;font:inherit;font-size:14px}
   .sb button.tab:hover{background:var(--surface)}
@@ -78,8 +78,12 @@
   .pst[data-s="attente"]{background:var(--warning);box-shadow:0 0 6px rgba(245,158,11,.5)}
   .pst[data-s="termine"]{background:var(--text-dim)}
   .pst[data-s="refuse"]{background:var(--danger);box-shadow:0 0 6px rgba(239,68,68,.5)}
-  .legend{display:flex;gap:16px;flex-wrap:wrap;align-items:center;margin:6px 0 10px;padding:10px 14px;background:var(--surface);border:1px solid var(--border);border-radius:8px;font-size:12px;color:var(--text-muted)}
+  .legend{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin:6px 0 10px;padding:6px;background:var(--surface);border:1px solid var(--border);border-radius:8px;font-size:12px;color:var(--text-muted)}
   .legend .item{display:flex;align-items:center;gap:6px}
+  .legend-btn{background:transparent;border:1px solid transparent;color:var(--text-muted);padding:6px 12px;border-radius:6px;cursor:pointer;font:inherit;font-size:12px;transition:all .15s;display:inline-flex;align-items:center;gap:6px}
+  .legend-btn:hover{background:var(--surface-2);color:var(--text)}
+  .legend-btn.on{background:var(--surface-hi);color:var(--text);border-color:var(--primary);box-shadow:0 0 0 2px var(--primary-soft)}
+  .legend-btn .all-icon{color:var(--primary);font-size:10px}
   table.hist th.sortable{cursor:pointer;user-select:none;white-space:nowrap}
   table.hist th.sortable:hover{background:var(--surface-hi)}
   table.hist th .arr{font-size:10px;opacity:.3;margin-left:4px}
@@ -397,6 +401,24 @@
   .contact-picker label{display:flex;align-items:center;gap:8px;padding:5px 8px;cursor:pointer;border-radius:4px;font-size:13px;color:var(--text)}
   .contact-picker label:hover{background:var(--surface-2)}
   .contact-picker input[type="radio"]{accent-color:var(--primary);cursor:pointer}
+  .contact-pick-row{display:flex;align-items:flex-start;gap:10px;padding:8px 10px;cursor:pointer;border-radius:5px;transition:background .12s}
+  .contact-pick-row:hover{background:var(--surface-2)}
+  .contact-pick-info{display:flex;flex-direction:column;gap:2px}
+  .contact-pick-name{font-weight:600;color:var(--text);font-size:13px}
+  .contact-pick-detail{font-size:11px;color:var(--text-muted)}
+
+  /* Client edit: structured contact rows */
+  .contacts-edit{display:flex;flex-direction:column;gap:6px;background:var(--surface-2);border:1px solid var(--border);border-radius:6px;padding:8px}
+  .contact-row{display:flex;align-items:flex-start;gap:8px;background:var(--surface);border:1px solid var(--border-soft);border-radius:5px;padding:7px 8px}
+  .contact-row-num{flex-shrink:0;width:22px;height:22px;display:flex;align-items:center;justify-content:center;background:var(--primary-soft);color:var(--primary);border-radius:50%;font-size:11px;font-weight:700;font-variant-numeric:tabular-nums;margin-top:4px}
+  .contact-row-fields{flex:1;display:grid;grid-template-columns:1.2fr 1fr 1.5fr;gap:6px;min-width:0}
+  .contact-row-fields input{padding:6px 9px;border:1px solid var(--border-light);border-radius:4px;background:var(--surface-2);color:var(--text);font:inherit;font-size:12.5px;min-width:0}
+  .contact-row-fields input:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 2px var(--primary-soft)}
+  .contact-row-del{background:transparent;border:0;color:var(--text-dim);cursor:pointer;font-size:18px;line-height:1;padding:6px 9px;border-radius:4px;align-self:flex-start;margin-top:2px}
+  .contact-row-del:hover{background:var(--danger-soft);color:var(--danger)}
+  @media (max-width:700px){
+    .contact-row-fields{grid-template-columns:1fr}
+  }
 
   /* Lignes section */
   .lg-add{display:flex;gap:8px;margin-bottom:10px}
@@ -467,7 +489,7 @@ const DEFAULT_S = {
   mission: {
     ref: "", dateEmission: "", dateValidite: "",
     object: "", objectDate: "", objectLieu: "",
-    client: { num: "", name: "", contact: "", contactSelected: "", address: "", phone: "", phoneSelected: "", email: "", emailSelected: "" },
+    client: { num: "", name: "", contact: "", contactSelected: "", contactId: "", address: "", phone: "", phoneSelected: "", email: "", emailSelected: "" },
     prep:        { hours: "0", rate: "" },
     prod:        { hours: "0", rate: "" },
     postprod:    { hours: "0", rate: "" },
@@ -497,6 +519,29 @@ let S = JSON.parse(localStorage.getItem(SK) || "null") || JSON.parse(JSON.string
 if (!S.suivi || !Array.isArray(S.suivi.entries)) S.suivi = { entries: [], devis: {} };
 if (!S.suivi.devis || typeof S.suivi.devis !== "object") S.suivi.devis = {};
 if (!S.clients || !Array.isArray(S.clients.entries)) S.clients = { ...DEFAULT_S.clients };
+// Migrate clients to structured contacts[] (zipping legacy contact/phone/email lines)
+S.clients.entries.forEach(c => {
+  if (!Array.isArray(c.contacts) || c.contacts.length === 0) {
+    const split = s => (s || "").split(/[\n,;\/]+/).map(x => x.trim()).filter(Boolean);
+    const names = split(c.contact);
+    const phones = split(c.phone);
+    const emails = split(c.email);
+    const max = Math.max(names.length, phones.length, emails.length);
+    if (max === 0) {
+      c.contacts = [{ id: Date.now().toString(36) + Math.random().toString(36).slice(2,7), name: "", phone: "", email: "" }];
+    } else {
+      c.contacts = [];
+      for (let i = 0; i < max; i++) {
+        c.contacts.push({
+          id: Date.now().toString(36) + Math.random().toString(36).slice(2,7) + i,
+          name: names[i] || "",
+          phone: phones[i] || "",
+          email: emails[i] || ""
+        });
+      }
+    }
+  }
+});
 if (!S.abonnements || !Array.isArray(S.abonnements.entries)) S.abonnements = { ...DEFAULT_S.abonnements };
 if (!S.investissements || !Array.isArray(S.investissements.entries)) S.investissements = { ...DEFAULT_S.investissements };
 if (!S.tarifs || !Array.isArray(S.tarifs.catalog) || !S.tarifs.catalog.length) S.tarifs = { catalog: JSON.parse(JSON.stringify(DEFAULT_CATALOG)), heuresAnnuelles: "900" };
@@ -906,17 +951,24 @@ function rDevisPreview() {
           <span class="num">${esc(cli.num || "—")}</span>
           <span class="name">${esc(cli.name || "(Sélectionner un client)")}</span>
           ${(() => {
-            const contactToShow = (S.mission.client.contactSelected || "").trim() || (cli.contact || "").trim().split(/[\n,;\/]+/)[0].trim();
-            return contactToShow ? `<div>${esc(contactToShow)}</div>` : "";
-          })()}
-          ${cli.address ? `<div>${esc(cli.address)}</div>` : ""}
-          ${(() => {
-            const emailToShow = (S.mission.client.emailSelected || "").trim() || (cli.email || "").trim().split(/[\n,;\/]+/)[0].trim();
-            return emailToShow ? `<div>${esc(emailToShow)}</div>` : "";
-          })()}
-          ${(() => {
-            const phoneToShow = (S.mission.client.phoneSelected || "").trim() || (cli.phone || "").trim().split(/[\n,;\/]+/)[0].trim();
-            return phoneToShow ? `<div>${esc(phoneToShow)}</div>` : "";
+            // Resolve current contact from contactId if any
+            let pickedContact = null;
+            if (S.mission.client.contactId && Array.isArray(cli.contacts)) {
+              pickedContact = cli.contacts.find(c => c.id === S.mission.client.contactId);
+            }
+            // If no pick yet but client has contacts, use first non-empty
+            if (!pickedContact && Array.isArray(cli.contacts)) {
+              pickedContact = cli.contacts.find(c => c.name || c.phone || c.email) || cli.contacts[0];
+            }
+            const contactName = pickedContact ? pickedContact.name : (S.mission.client.contactSelected || (cli.contact || "").split(/[\n,;\/]+/)[0].trim());
+            const contactPhone = pickedContact ? pickedContact.phone : (S.mission.client.phoneSelected || (cli.phone || "").split(/[\n,;\/]+/)[0].trim());
+            const contactEmail = pickedContact ? pickedContact.email : (S.mission.client.emailSelected || (cli.email || "").split(/[\n,;\/]+/)[0].trim());
+            return `
+              ${contactName ? `<div>${esc(contactName)}</div>` : ""}
+              ${cli.address ? `<div>${esc(cli.address)}</div>` : ""}
+              ${contactEmail ? `<div>${esc(contactEmail)}</div>` : ""}
+              ${contactPhone ? `<div>${esc(contactPhone)}</div>` : ""}
+            `;
           })()}
         </div>
       </div>
@@ -1077,10 +1129,17 @@ window.cliPickSearch = cliPickSearch;
 function cliPickSelect(id) {
   const e = S.clients.entries.find(x => x.id === id);
   if (!e) return;
+  // Auto-pick first non-empty contact (or first one)
+  const validContacts = (e.contacts || []).filter(c => c.name || c.phone || c.email);
+  const firstContact = validContacts[0] || (e.contacts && e.contacts[0]);
   S.mission.client = {
     id: e.id, num: e.num || "", name: e.name || "",
     contact: e.contact || "", address: e.address || "",
-    phone: e.phone || "", email: e.email || ""
+    phone: e.phone || "", email: e.email || "",
+    contactId: firstContact ? firstContact.id : "",
+    contactSelected: firstContact ? (firstContact.name || "") : "",
+    phoneSelected: firstContact ? (firstContact.phone || "") : "",
+    emailSelected: firstContact ? (firstContact.email || "") : ""
   };
   recomputeRef();
   cliPickQuery = "";
@@ -1121,12 +1180,18 @@ window.cliPickDraftSet = cliPickDraftSet;
 function cliPickSaveCreate() {
   if (!cliPickDraft.name.trim()) { alert("Le nom du client est obligatoire."); return; }
   const id = uid();
-  const entry = { id, ...cliPickDraft };
+  const cd = cliPickDraft;
+  const contacts = (cd.contact || cd.phone || cd.email)
+    ? [{ id: uid(), name: cd.contact || "", phone: cd.phone || "", email: cd.email || "" }]
+    : [{ id: uid(), name: "", phone: "", email: "" }];
+  const entry = { id, ...cd, contacts };
   S.clients.entries.unshift(entry);
   S.mission.client = {
     id, num: entry.num, name: entry.name,
-    contact: entry.contact, address: entry.address,
-    phone: entry.phone, email: entry.email
+    contact: entry.contact, contactSelected: entry.contact, contactId: contacts[0].id,
+    address: entry.address,
+    phone: entry.phone, phoneSelected: entry.phone,
+    email: entry.email, emailSelected: entry.email
   };
   recomputeRef();
   cliPickCreating = false;
@@ -1486,27 +1551,40 @@ function rContactPicker() {
   const c = S.mission.client || {};
   if (!c.id) return "";
   const sel = S.clients.entries.find(x => x.id === c.id);
-  if (!sel) return "";
-  // Split on newlines, commas, slashes, semicolons
-  const splitParts = raw => (raw || "").split(/[\n,;\/]+/).map(s => s.trim()).filter(Boolean);
-  const fields = [
-    { key: "contact",     label: "contact",     selectedField: "contactSelected", parts: splitParts(sel.contact),     fn: "clientContactSelect" },
-    { key: "phone",       label: "téléphone",   selectedField: "phoneSelected",   parts: splitParts(sel.phone),       fn: "clientPhoneSelect" },
-    { key: "email",       label: "email",       selectedField: "emailSelected",   parts: splitParts(sel.email),       fn: "clientEmailSelect" }
-  ];
-  const multiFields = fields.filter(f => f.parts.length > 1);
-  if (multiFields.length === 0) return "";
+  if (!sel || !Array.isArray(sel.contacts) || sel.contacts.length <= 1) return "";
+  // Filter empty contacts (skip if all 3 fields empty)
+  const valid = sel.contacts.filter(x => (x.name || x.phone || x.email));
+  if (valid.length <= 1) return "";
+  const selectedId = c.contactId || valid[0].id;
   return `<div class="contact-picker">
-    ${multiFields.map(f => {
-      const selected = c[f.selectedField] || f.parts[0];
-      return `<div class="ttl">⚠ Plusieurs ${f.label}s détectés — choisir celui à afficher dans le devis :</div>
-        ${f.parts.map(p => `<label>
-          <input type="radio" name="${f.key}Sel" value="${esc(p)}" ${selected === p ? "checked" : ""} onchange="${f.fn}(this.value)">
-          ${esc(p)}
-        </label>`).join("")}`;
-    }).join('<hr style="border:0;border-top:1px solid var(--warning);opacity:.4;margin:10px 0">')}
+    <div class="ttl">⚠ Plusieurs contacts détectés — choisir celui à afficher dans le devis :</div>
+    ${valid.map(x => `<label class="contact-pick-row">
+      <input type="radio" name="contactSel" value="${esc(x.id)}" ${selectedId === x.id ? "checked" : ""} onchange="clientContactPick('${esc(x.id)}')">
+      <span class="contact-pick-info">
+        <span class="contact-pick-name">${esc(x.name || "(sans nom)")}</span>
+        ${x.phone ? `<span class="contact-pick-detail">📞 ${esc(x.phone)}</span>` : ""}
+        ${x.email ? `<span class="contact-pick-detail">✉ ${esc(x.email)}</span>` : ""}
+      </span>
+    </label>`).join("")}
   </div>`;
 }
+
+function clientContactPick(contactId) {
+  S.mission.client.contactId = contactId;
+  // Also push values to legacy *Selected fields for any code still reading them
+  const sel = S.clients.entries.find(x => x.id === S.mission.client.id);
+  if (sel && Array.isArray(sel.contacts)) {
+    const c = sel.contacts.find(x => x.id === contactId);
+    if (c) {
+      S.mission.client.contactSelected = c.name || "";
+      S.mission.client.phoneSelected = c.phone || "";
+      S.mission.client.emailSelected = c.email || "";
+    }
+  }
+  save();
+  render();
+}
+window.clientContactPick = clientContactPick;
 
 function renderLockedTextarea(field, value, label, placeholder) {
   const locked = textLockState[field] !== false;
@@ -1656,7 +1734,11 @@ function pastille(statut) {
   return `<span class="pst" data-s="${esc(k)}" title="${esc(statutLabel(k))}"></span>`;
 }
 function suiviLegendHtml() {
-  return `<div class="legend">${STATUTS.map(([k,l]) => `<span class="item"><span class="pst" data-s="${k}"></span>${esc(l)}</span>`).join("")}</div>`;
+  const f = (typeof suiviFilterStatut !== "undefined") ? suiviFilterStatut : "all";
+  return `<div class="legend">
+    <button class="item legend-btn ${f === 'all' ? 'on' : ''}" onclick="suiviSetFilterStatut('all')"><span class="all-icon">●</span>Tous</button>
+    ${STATUTS.map(([k,l]) => `<button class="item legend-btn ${f === k ? 'on' : ''}" onclick="suiviSetFilterStatut('${k}')"><span class="pst" data-s="${k}"></span>${esc(l)}</button>`).join("")}
+  </div>`;
 }
 
 function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
@@ -2583,9 +2665,6 @@ function rSV() {
       <button class="btn ghost" onclick="suiviImport()">${missing > 0 ? `Importer ${missing} prestation${missing > 1 ? "s" : ""} manquante${missing > 1 ? "s" : ""} (Excel : ${SUIVI_SEED.length})` : `Importer depuis l'Excel (${SUIVI_SEED.length})`}</button>
       <span id="suiviSelInfo">${suiviSelInfoHtml()}</span>
       <span class="spacer"></span>
-      <div class="filter-group"><label>Statut</label>
-        <select onchange="suiviSetFilterStatut(this.value)">${statutOpts}</select>
-      </div>
       <div class="filter-group"><label>Année</label>
         <select onchange="suiviSetFilterYear(this.value)">${yearOpts}</select>
       </div>
@@ -2616,10 +2695,18 @@ let clientsEditing = null;
 function clientsAdd() {
   const c = S.mission.client;
   const id = uid();
+  // Build initial contact from mission's selected client
+  const initial = (c.name || c.contact || c.phone || c.email) ? [{
+    id: uid(),
+    name: c.contact || "",
+    phone: c.phone || "",
+    email: c.email || ""
+  }] : [{ id: uid(), name: "", phone: "", email: "" }];
   S.clients.entries.unshift({
     id,
     num:        c.num     || "",
     name:       c.name    || "",
+    contacts:   initial,
     contact:    c.contact || "",
     address:    c.address || "",
     cityPostal: "",
@@ -2720,6 +2807,51 @@ function clientsUpd(id, field, val) {
 }
 window.clientsUpd = clientsUpd;
 
+// Sync legacy fields from contacts array (for backward compat with display elsewhere)
+function syncClientLegacy(client) {
+  if (!Array.isArray(client.contacts)) return;
+  client.contact = client.contacts.map(c => c.name).filter(Boolean).join("\n");
+  client.phone   = client.contacts.map(c => c.phone).filter(Boolean).join("\n");
+  client.email   = client.contacts.map(c => c.email).filter(Boolean).join("\n");
+}
+
+function clientContactAdd(clientId) {
+  const e = S.clients.entries.find(x => x.id === clientId);
+  if (!e) return;
+  if (!Array.isArray(e.contacts)) e.contacts = [];
+  e.contacts.push({ id: uid(), name: "", phone: "", email: "" });
+  syncClientLegacy(e);
+  save();
+  render();
+}
+window.clientContactAdd = clientContactAdd;
+
+function clientContactDel(clientId, contactId) {
+  const e = S.clients.entries.find(x => x.id === clientId);
+  if (!e || !Array.isArray(e.contacts)) return;
+  if (e.contacts.length <= 1) {
+    if (!confirm("Vider le seul contact ?")) return;
+    e.contacts[0] = { id: e.contacts[0].id, name: "", phone: "", email: "" };
+  } else {
+    e.contacts = e.contacts.filter(c => c.id !== contactId);
+  }
+  syncClientLegacy(e);
+  save();
+  render();
+}
+window.clientContactDel = clientContactDel;
+
+function clientContactUpd(clientId, contactId, field, val) {
+  const e = S.clients.entries.find(x => x.id === clientId);
+  if (!e || !Array.isArray(e.contacts)) return;
+  const c = e.contacts.find(x => x.id === contactId);
+  if (!c) return;
+  c[field] = val;
+  syncClientLegacy(e);
+  save();
+}
+window.clientContactUpd = clientContactUpd;
+
 function rCL() {
   const entries = S.clients.entries;
   const stop = "event.stopPropagation();";
@@ -2750,20 +2882,25 @@ function rCL() {
 
     let detail = "";
     if (expanded) {
+      const contacts = Array.isArray(e.contacts) ? e.contacts : [];
       const body = editing ? `
         <div class="row">
-          <div class="field lg"><label>Contacts (un par ligne, ou séparés par virgule / point-virgule)</label>
-            <textarea class="multi-text" placeholder="Marie Dupont&#10;Jean Martin (assistant)&#10;…" oninput="clientsUpd('${e.id}','contact',this.value)">${esc(e.contact || "")}</textarea>
-          </div>
-        </div>
-        <div class="row">
-          <div class="field lg"><label>Téléphones (un par ligne, ou séparés par virgule)</label>
-            <textarea class="multi-text" placeholder="06 12 34 56 78&#10;01 23 45 67 89 (bureau)&#10;…" style="min-height:60px" oninput="clientsUpd('${e.id}','phone',this.value)">${esc(e.phone || "")}</textarea>
-          </div>
-        </div>
-        <div class="row">
-          <div class="field lg"><label>Emails (un par ligne, ou séparés par virgule)</label>
-            <textarea class="multi-text" placeholder="contact@exemple.fr&#10;facturation@exemple.fr&#10;…" style="min-height:60px" oninput="clientsUpd('${e.id}','email',this.value)">${esc(e.email || "")}</textarea>
+          <div class="field lg" style="max-width:none">
+            <label>Contacts <span style="font-weight:400;color:var(--text-dim)">(${contacts.length})</span></label>
+            <div class="contacts-edit">
+              ${contacts.map((c, i) => `
+                <div class="contact-row">
+                  <div class="contact-row-num">${i + 1}</div>
+                  <div class="contact-row-fields">
+                    <input placeholder="Nom du contact" value="${esc(c.name || "")}" oninput="clientContactUpd('${e.id}','${c.id}','name',this.value)">
+                    <input placeholder="📞 Téléphone" value="${esc(c.phone || "")}" oninput="clientContactUpd('${e.id}','${c.id}','phone',this.value)">
+                    <input type="email" placeholder="✉ Email" value="${esc(c.email || "")}" oninput="clientContactUpd('${e.id}','${c.id}','email',this.value)">
+                  </div>
+                  <button class="contact-row-del" onclick="clientContactDel('${e.id}','${c.id}')" title="Supprimer ce contact">×</button>
+                </div>
+              `).join("")}
+            </div>
+            <button class="btn ghost" onclick="clientContactAdd('${e.id}')" style="font-size:12px;margin-top:8px">+ Ajouter un contact</button>
           </div>
         </div>
         <div class="row">
@@ -2779,19 +2916,18 @@ function rCL() {
         </div>
       ` : `
         ${(() => {
-          const splitParts = raw => (raw || "").split(/[\n,;\/]+/).map(s => s.trim()).filter(Boolean);
-          const contactParts = splitParts(e.contact);
-          const phoneParts = splitParts(e.phone);
-          const emailParts = splitParts(e.email);
-          const renderField = (label, parts) => {
-            if (parts.length === 0) return `<div class="cli-info"><span class="cli-label">${label}</span><span>—</span></div>`;
-            if (parts.length === 1) return `<div class="cli-info"><span class="cli-label">${label}</span><span>${esc(parts[0])}</span></div>`;
-            return `<div class="cli-info" style="align-items:flex-start">
-              <span class="cli-label">${label} (${parts.length})</span>
-              <span><ul style="margin:0;padding-left:18px;list-style-type:'– '">${parts.map(p => `<li>${esc(p)}</li>`).join("")}</ul></span>
-            </div>`;
-          };
-          return renderField("Contact", contactParts) + renderField("Téléphone", phoneParts) + renderField("Email", emailParts);
+          const valid = contacts.filter(c => c.name || c.phone || c.email);
+          if (valid.length === 0) return `<div class="cli-info"><span class="cli-label">Contacts</span><span>—</span></div>`;
+          return `<div class="cli-info" style="align-items:flex-start">
+            <span class="cli-label">Contacts (${valid.length})</span>
+            <span style="display:flex;flex-direction:column;gap:6px">
+              ${valid.map(c => `<span style="display:flex;flex-direction:column;gap:2px;padding-bottom:6px;border-bottom:1px solid var(--border-soft)">
+                <strong style="color:var(--text)">${esc(c.name || "(sans nom)")}</strong>
+                ${c.phone ? `<span style="font-size:11px;color:var(--text-muted)">📞 ${esc(c.phone)}</span>` : ""}
+                ${c.email ? `<span style="font-size:11px;color:var(--text-muted)">✉ ${esc(c.email)}</span>` : ""}
+              </span>`).join("")}
+            </span>
+          </div>`;
         })()}
         <div class="cli-info"><span class="cli-label">Adresse</span><span>${esc(e.address) || "—"}</span></div>
         <div class="cli-info"><span class="cli-label">CP - Ville</span><span>${esc(e.cityPostal) || "—"}</span></div>
