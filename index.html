@@ -205,7 +205,7 @@
   .cli-search-wrap input{width:100%;padding:9px 12px 9px 32px;border:1px solid var(--border-light);border-radius:6px;background:var(--surface);color:var(--text);font:inherit;font-size:13px}
   .cli-search-wrap input:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 3px var(--primary-soft)}
   /* The dropdown is portaled to body and uses position:fixed - escapes ALL parent stacking contexts */
-  #cliPickPortal{display:none;position:fixed;background:var(--surface-2);border:1px solid var(--primary);border-radius:6px;max-height:280px;overflow-y:auto;z-index:9999;box-shadow:0 12px 32px rgba(0,0,0,.6)}
+  #cliPickPortal{display:none;position:fixed;background:var(--surface-2);border:1px solid var(--primary);border-radius:6px;max-height:420px;overflow-y:auto;z-index:9999;box-shadow:0 12px 32px rgba(0,0,0,.6)}
   #cliPickPortal.open{display:block}
   #cliPickPortal .item{padding:9px 12px;cursor:pointer;border-bottom:1px solid var(--border-soft);font-size:13px;color:var(--text)}
   #cliPickPortal .item:last-child{border-bottom:0}
@@ -279,6 +279,45 @@
   .presta-row select{flex:1;min-width:0}
   .presta-rate{display:flex;align-items:center;padding:0 14px;background:var(--surface-2);border:1px solid var(--border);border-radius:6px;color:var(--primary);font-size:14px;font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap;min-width:90px;justify-content:center}
   .presta-rate.empty{color:var(--text-dim);font-size:11px;font-weight:500}
+
+  /* Locked field with ⋮ menu (URSSAF) */
+  .lock-field{display:flex;align-items:stretch;gap:0;max-width:320px;position:relative}
+  .lock-field input{flex:1}
+  .lock-field input:disabled{opacity:.75;cursor:not-allowed;background:var(--surface-2);color:var(--text-muted)}
+  .lock-menu-btn{background:var(--surface);border:1px solid var(--border-light);border-left:0;border-radius:0 6px 6px 0;color:var(--text-muted);cursor:pointer;padding:0 11px;font-size:16px;line-height:1;font-weight:700;transition:all .15s}
+  .lock-menu-btn:hover{background:var(--surface-2);color:var(--primary)}
+  .lock-field input{border-radius:6px 0 0 6px;border-right:0}
+  .lock-popup{position:absolute;top:100%;right:0;margin-top:4px;background:var(--surface-2);border:1px solid var(--border-light);border-radius:6px;box-shadow:var(--shadow);z-index:30;min-width:180px;padding:4px;display:none}
+  .lock-popup.open{display:block}
+  .lock-popup button{width:100%;text-align:left;background:transparent;border:0;color:var(--text);padding:8px 12px;font:inherit;font-size:13px;cursor:pointer;border-radius:4px}
+  .lock-popup button:hover{background:var(--surface-hi)}
+
+  /* Devis preview (in-page, at the bottom of Mission) */
+  .devis-preview{margin-top:32px;background:linear-gradient(180deg,var(--surface) 0%,var(--surface-2) 100%);border:1px solid var(--primary);border-radius:10px;padding:24px 28px;max-width:880px;box-shadow:0 8px 24px rgba(0,0,0,.3)}
+  .devis-preview .dp-head{display:flex;justify-content:space-between;align-items:flex-start;gap:20px;padding-bottom:16px;border-bottom:1px solid var(--border-light);margin-bottom:18px;flex-wrap:wrap}
+  .devis-preview .dp-title{font-size:22px;font-weight:700;color:var(--primary);margin:0}
+  .devis-preview .dp-ref{color:var(--text-muted);font-size:12px;font-variant-numeric:tabular-nums;margin-top:4px}
+  .devis-preview .dp-meta{font-size:12px;color:var(--text-muted);text-align:right;line-height:1.6}
+  .devis-preview .dp-meta strong{color:var(--text);font-weight:600}
+  .devis-preview .dp-section{margin-bottom:18px}
+  .devis-preview h4{font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;margin:0 0 8px;padding-bottom:4px;border-bottom:1px solid var(--border-soft)}
+  .devis-preview .dp-client{font-size:13px;color:var(--text);line-height:1.6}
+  .devis-preview .dp-client .name{font-weight:600;font-size:14px}
+  .devis-preview .dp-client .num{color:var(--text-muted);font-variant-numeric:tabular-nums;margin-right:8px}
+  .devis-preview .dp-line{display:flex;justify-content:space-between;align-items:flex-start;gap:14px;padding:7px 0;font-size:13px;border-bottom:1px solid var(--border-soft)}
+  .devis-preview .dp-line:last-child{border-bottom:0}
+  .devis-preview .dp-line .lbl{color:var(--text);flex:1}
+  .devis-preview .dp-line .lbl .desc{color:var(--text-dim);font-size:11px;margin-top:2px}
+  .devis-preview .dp-line .qty{color:var(--text-muted);font-size:12px;font-variant-numeric:tabular-nums;white-space:nowrap}
+  .devis-preview .dp-line .amt{color:var(--text);font-weight:500;font-variant-numeric:tabular-nums;white-space:nowrap;min-width:90px;text-align:right}
+  .devis-preview .dp-totals{margin-top:14px;padding-top:14px;border-top:2px solid var(--border-light)}
+  .devis-preview .dp-totals .dp-line{padding:5px 0;border-bottom:0;color:var(--text-muted)}
+  .devis-preview .dp-totals .dp-line.grand{font-size:18px;font-weight:700;padding:10px 0;margin-top:6px;border-top:1px solid var(--border-light)}
+  .devis-preview .dp-totals .dp-line.grand .lbl,.devis-preview .dp-totals .dp-line.grand .amt{color:var(--primary)}
+  .devis-preview .dp-totals .dp-line.debours{color:var(--accent)}
+  .devis-preview .dp-footer{margin-top:18px;padding-top:14px;border-top:1px solid var(--border-soft);font-size:11px;color:var(--text-dim);text-align:center;line-height:1.6}
+  .devis-preview .dp-actions{display:flex;gap:10px;margin-top:18px;justify-content:flex-end}
+  .devis-preview .dp-empty{text-align:center;padding:30px;color:var(--text-dim);font-size:13px}
 
   /* Lignes section */
   .lg-add{display:flex;gap:8px;margin-bottom:10px}
@@ -426,7 +465,6 @@ let cloudT = null;
 
 const TABS = [
   ["mission", "📋 Mission"],
-  ["devis",   "📄 Devis"],
   ["suivi",   "📊 Suivi"],
   ["clients", "👥 Clients"],
   ["tarifs",  "💰 Frais & Tarifs"],
@@ -515,8 +553,8 @@ function upd(path, val) {
 window.upd = upd;
 
 function refreshRefDisplay() {
-  const el = document.getElementById("missionRefDisplay");
-  if (el) el.textContent = S.mission.ref || "—";
+  // The reference now appears in the devis preview; refresh it
+  refreshTotals();
 }
 
 function pickObject(k) {
@@ -550,6 +588,164 @@ function recomputeRef() {
   }
   const date = S.mission.dateEmission || "";
   S.mission.ref = (num && date) ? `DEVIS-${num}-${date}` : "";
+}
+
+let urssafUnlocked = false;
+function urssafToggleMenu() {
+  const p = document.getElementById("urssafMenu");
+  if (p) p.classList.toggle("open");
+}
+window.urssafToggleMenu = urssafToggleMenu;
+
+function urssafUnlock() {
+  urssafUnlocked = true;
+  const p = document.getElementById("urssafMenu");
+  if (p) p.classList.remove("open");
+  render();
+  requestAnimationFrame(() => {
+    const inp = document.getElementById("urssafInput");
+    if (inp) { inp.focus(); inp.select(); }
+  });
+}
+window.urssafUnlock = urssafUnlock;
+
+function urssafResetDefault() {
+  S.mission.urssafPct = "22";
+  urssafUnlocked = false;
+  const p = document.getElementById("urssafMenu");
+  if (p) p.classList.remove("open");
+  save();
+  render();
+}
+window.urssafResetDefault = urssafResetDefault;
+
+// Close URSSAF menu on outside click
+document.addEventListener("click", e => {
+  const menu = document.getElementById("urssafMenu");
+  if (!menu || !menu.classList.contains("open")) return;
+  if (!menu.contains(e.target) && !e.target.closest(".lock-menu-btn")) {
+    menu.classList.remove("open");
+  }
+});
+
+// ============ DEVIS PREVIEW (rendered at the bottom of Mission) ============
+function rDevisPreview() {
+  const d = S.mission;
+  const t = totals();
+  // Show preview only if there's enough info (client + at least one ligne)
+  const hasClient = !!(d.client && (d.client.id || d.client.name));
+  const hasContent = (d.lignes || []).length > 0 || num(d.deplacement.km) > 0 || num(d.deplacement.ticket) > 0 || num(d.deplacement.peages) > 0;
+  if (!hasClient && !hasContent) {
+    return `<div class="devis-preview"><div class="dp-empty">Le devis se générera ici automatiquement dès que tu auras sélectionné un client et ajouté au moins une ligne.</div></div>`;
+  }
+
+  const cat = (S.tarifs.catalog || DEFAULT_CATALOG).find(c => c.k === d.object);
+  const tarifH = cat ? num(cat.p) : 0;
+  const sel = d.client.id ? S.clients.entries.find(x => x.id === d.client.id) : null;
+  const cli = sel || d.client;
+
+  // Build line items HTML
+  let linesHtml = "";
+  for (const l of (d.lignes || [])) {
+    if (l.type === "heures") {
+      const h = num(l.duree) * (l.unit === "j" ? HOURS_PER_DAY : 1);
+      const amount = h * tarifH;
+      linesHtml += `<div class="dp-line">
+        <div class="lbl">${esc(l.intitule || "(Sans intitulé)")}${l.description ? `<div class="desc">${esc(l.description)}</div>` : ""}</div>
+        <div class="qty">${num(l.duree).toFixed(2).replace(".",",")} ${l.unit === "j" ? "jour(s) × 8h" : "h"} × ${tarifH.toFixed(2).replace(".",",")} €/h</div>
+        <div class="amt">${fmt(amount)}</div>
+      </div>`;
+    } else if (l.type === "materiel" && l.devis !== "debours") {
+      linesHtml += `<div class="dp-line">
+        <div class="lbl">${esc(l.intitule || "(Sans intitulé)")}<div class="desc">Matériel</div></div>
+        <div class="qty"></div>
+        <div class="amt">${fmt(num(l.prix))}</div>
+      </div>`;
+    }
+  }
+
+  // Déplacement line
+  const mode = d.deplacement.mode || "voiture";
+  const tauxKm = num(d.deplacement.tauxKm) || 0.40;
+  const trajet = num(d.deplacement.trajetH) * 40;
+  const deplDetail = mode === "voiture"
+    ? `${num(d.deplacement.km).toFixed(1).replace(".",",")} km × ${tauxKm.toFixed(2).replace(".",",")} €/km${num(d.deplacement.peages) > 0 ? ` + ${fmt(num(d.deplacement.peages))} péages` : ""}${trajet > 0 ? ` + ${num(d.deplacement.trajetH)} h trajet` : ""}`
+    : `Billets : ${fmt(num(d.deplacement.ticket))}${trajet > 0 ? ` + ${num(d.deplacement.trajetH)} h trajet` : ""}`;
+  if (t.depl > 0) {
+    linesHtml += `<div class="dp-line">
+      <div class="lbl">Déplacement<div class="desc">${esc(deplDetail)}</div></div>
+      <div class="qty"></div>
+      <div class="amt">${fmt(t.depl)}</div>
+    </div>`;
+  }
+
+  // Débours items (separately)
+  let deboursHtml = "";
+  for (const l of (d.lignes || [])) {
+    if (l.type === "materiel" && l.devis === "debours") {
+      deboursHtml += `<div class="dp-line">
+        <div class="lbl">${esc(l.intitule || "(Sans intitulé)")}</div>
+        <div class="qty"></div>
+        <div class="amt">${fmt(num(l.prix))}</div>
+      </div>`;
+    }
+  }
+
+  return `<div class="devis-preview" id="devisPreview">
+    <div class="dp-head">
+      <div>
+        <h3 class="dp-title">DEVIS</h3>
+        <div class="dp-ref">${esc(d.ref || "Référence en attente…")}</div>
+      </div>
+      <div class="dp-meta">
+        <div>Émission : <strong>${dateFR(d.dateEmission) || "—"}</strong></div>
+        <div>Validité : <strong>${dateFR(d.dateValidite) || "—"}</strong></div>
+        ${cat ? `<div>Tarif horaire : <strong style="color:var(--primary)">${tarifH > 0 ? `${tarifH.toFixed(2).replace(".",",")} €/h` : "à définir"}</strong></div>` : ""}
+      </div>
+    </div>
+
+    <div class="dp-section">
+      <h4>Client</h4>
+      <div class="dp-client">
+        <div><span class="num">${esc(cli.num || "—")}</span><span class="name">${esc(cli.name || "(Sélectionner un client)")}</span></div>
+        ${cli.contact ? `<div>${esc(cli.contact)}</div>` : ""}
+        ${cli.address ? `<div>${esc(cli.address)}</div>` : ""}
+        ${cli.email ? `<div>${esc(cli.email)}</div>` : ""}
+        ${cli.phone ? `<div>${esc(cli.phone)}</div>` : ""}
+      </div>
+    </div>
+
+    ${cat ? `<div class="dp-section">
+      <h4>Prestation</h4>
+      <div class="dp-client"><div class="name">${esc(cat.l)}</div></div>
+    </div>` : ""}
+
+    <div class="dp-section">
+      <h4>Détail</h4>
+      ${linesHtml || `<div class="dp-empty" style="padding:14px">Aucune ligne pour l'instant.</div>`}
+    </div>
+
+    <div class="dp-totals">
+      <div class="dp-line"><span class="lbl">Sous-total</span><span class="amt">${fmt(t.subtotal)}</span></div>
+      ${t.remise > 0 ? `<div class="dp-line"><span class="lbl">Remise (${esc(d.remisePct)} %)</span><span class="amt">−${fmt(t.remise)}</span></div>` : ""}
+      <div class="dp-line grand"><span class="lbl">Total HT</span><span class="amt">${fmt(t.total)}</span></div>
+      <div class="dp-line"><span class="lbl">Acompte 30 % à la commande</span><span class="amt">${fmt(t.acompte)}</span></div>
+      <div class="dp-line"><span class="lbl">Solde 70 % à la livraison</span><span class="amt">${fmt(t.reste)}</span></div>
+      ${t.debours > 0 ? `<div class="dp-line debours"><span class="lbl">+ Frais de débours (à rembourser sur justificatifs)</span><span class="amt">${fmt(t.debours)}</span></div>` : ""}
+    </div>
+
+    ${deboursHtml ? `<div class="dp-section" style="margin-top:14px">
+      <h4 style="color:var(--accent)">Frais de débours détaillés</h4>
+      ${deboursHtml}
+    </div>` : ""}
+
+    <div class="dp-footer">TVA non applicable, art. 293 B du CGI</div>
+
+    <div class="dp-actions">
+      <button class="btn ghost" onclick="window.print()">🖨️ Imprimer</button>
+      <button class="btn" onclick="suiviAdd()">+ Enregistrer dans Suivi</button>
+    </div>
+  </div>`;
 }
 
 // ============ CLIENT PICKER (Mission) ============
@@ -625,7 +821,7 @@ function cliPickRenderPortal() {
     (e.num||"").toLowerCase().includes(q) ||
     (e.contact||"").toLowerCase().includes(q) ||
     (e.email||"").toLowerCase().includes(q)
-  ).slice(0, 12) : S.clients.entries.slice(0, 12);
+  ).slice(0, 200) : S.clients.entries.slice(0, 200);
   const showCreate = q && !S.clients.entries.some(e => (e.name||"").toLowerCase() === q);
   const html =
     (matches.length === 0 && !showCreate ? `<div class="empty">${q ? "Aucun client trouvé. Tape un nom puis « Créer »…" : "Aucun client enregistré. Tape pour créer le premier."}</div>` : "") +
@@ -1003,9 +1199,14 @@ function totals() {
 }
 
 function refreshTotals() {
-  const t = totals();
-  const el = document.getElementById("totals");
-  if (el) el.innerHTML = totalsHtml(t);
+  // Re-render only the devis preview block; full re-render only if it doesn't exist
+  const el = document.getElementById("devisPreview");
+  if (el) {
+    const wrap = document.createElement("div");
+    wrap.innerHTML = rDevisPreview();
+    const fresh = wrap.firstElementChild;
+    if (fresh) el.parentNode.replaceChild(fresh, el);
+  }
 }
 
 function totalsHtml(t) {
@@ -1028,7 +1229,7 @@ function render() {
     app.innerHTML = `<div class="login"><h1>🌊 Devis Photo</h1><button class="btn" onclick="signIn()">Se connecter avec Google</button></div>`;
     return;
   }
-  const renderers = { mission: rMS, devis: rDV, suivi: rSV, clients: rCL, tarifs: rTR, compta: rCP, bugs: rBG };
+  const renderers = { mission: rMS, suivi: rSV, clients: rCL, tarifs: rTR, compta: rCP, bugs: rBG };
   const view = (renderers[tab] || (() => ""))();
   app.innerHTML = `
     <aside class="sb">
@@ -1050,10 +1251,6 @@ function rMS() {
     <h3>Devis</h3>
     <div class="row"><div class="field"><label>Date d'émission</label><input type="date" value="${esc(d.dateEmission)}" oninput="upd('mission.dateEmission', this.value)"></div></div>
     <div class="row"><div class="field"><label>Validité</label><input type="date" value="${esc(d.dateValidite)}" oninput="upd('mission.dateValidite', this.value)"></div></div>
-    <div class="row"><div class="field"><label>Référence (auto-générée)</label>
-      <div style="padding:9px 12px;background:var(--surface-2);border:1px solid var(--border);border-radius:6px;color:var(--primary);font:inherit;font-size:13px;font-variant-numeric:tabular-nums;font-weight:500" id="missionRefDisplay">${esc(d.ref || "—")}</div>
-    </div></div>
-    <div class="hint">Format : DEVIS-{n° client}-{date d'émission}. Calculée automatiquement à partir de la date d'émission et du client sélectionné.</div>
 
     <h3>Client</h3>
     ${rClientPicker()}
@@ -1065,23 +1262,27 @@ function rMS() {
         <button class="${!declare?"on warn":""}" onclick="updMissionDeclare(false)">● Au black</button>
       </div>
     </div></div>
-    <div class="row"><div class="field"><label>Taux URSSAF (%)</label><input type="number" step="0.1" value="${esc(d.urssafPct ?? "22")}" oninput="upd('mission.urssafPct', this.value)"></div></div>
+    <div class="row"><div class="field"><label>Taux URSSAF (%)</label>
+      <div class="lock-field">
+        <input id="urssafInput" type="number" step="0.1" value="${esc(d.urssafPct ?? "22")}" ${urssafUnlocked ? `oninput="upd('mission.urssafPct', this.value)"` : "disabled"}>
+        <button class="lock-menu-btn" onclick="urssafToggleMenu()" title="Options">⋮</button>
+        <div class="lock-popup" id="urssafMenu">
+          ${urssafUnlocked
+            ? `<button onclick="urssafResetDefault()">↺ Rétablir 22 % (par défaut)</button>`
+            : `<button onclick="urssafUnlock()">🔓 Modifier le taux</button>`}
+        </div>
+      </div>
+    </div></div>
+    <div class="hint">Taux verrouillé par défaut. Cliquer sur ⋮ pour modifier.</div>
 
     <h3>Prestation</h3>
-    ${(() => {
-      const cat = (S.tarifs.catalog || DEFAULT_CATALOG).find(c => c.k === d.object);
-      const tarifH = cat ? num(cat.p) : 0;
-      return `<div class="row"><div class="field"><label>Type de prestation</label>
-        <div class="presta-row">
-          <select onchange="pickObject(this.value)">
-            <option value="">— choisir —</option>
-            ${(S.tarifs.catalog || DEFAULT_CATALOG).map(c => `<option value="${c.k}" ${d.object===c.k?"selected":""}>${esc(c.l)}</option>`).join("")}
-          </select>
-          <div class="presta-rate ${cat && tarifH > 0 ? "" : "empty"}">${cat ? (tarifH > 0 ? `${num(tarifH).toFixed(2).replace(".",",")} €/h` : "Tarif à définir") : "—"}</div>
-        </div>
-      </div></div>`;
-    })()}
-    <div class="hint">Le tarif horaire de la prestation sélectionnée s'applique automatiquement aux lignes de type « heures ». Les tarifs sont gérés dans l'onglet « Frais & Tarifs ».</div>
+    <div class="row"><div class="field"><label>Type de prestation</label>
+      <select onchange="pickObject(this.value)">
+        <option value="">— choisir —</option>
+        ${(S.tarifs.catalog || DEFAULT_CATALOG).map(c => `<option value="${c.k}" ${d.object===c.k?"selected":""}>${esc(c.l)}</option>`).join("")}
+      </select>
+    </div></div>
+    <div class="hint">Le tarif horaire de la prestation s'applique aux lignes de type « heures » et apparaît dans le devis ci-dessous. Les tarifs sont gérés dans « Frais & Tarifs ».</div>
 
     <h3>Lignes</h3>
     <div class="lg-add">
@@ -1109,27 +1310,17 @@ function rMS() {
     <div class="row"><div class="field"><label>Temps de trajet (h)</label><input type="number" step="0.25" value="${esc(d.deplacement.trajetH)}" oninput="upd('mission.deplacement.trajetH', this.value)"></div></div>
     <div class="hint">Renseigner le temps de trajet uniquement si le trajet excède 1 h (hors trajet domicile / transport). Valorisation : 40 €/h.</div>
 
-    <h3>Autres &amp; remise</h3>
-    <div class="row"><div class="field"><label>Description « autres »</label><input value="${esc(d.autres.desc)}" oninput="upd('mission.autres.desc', this.value)"></div></div>
-    <div class="row"><div class="field"><label>Montant (€)</label><input type="number" step="0.01" value="${esc(d.autres.montant)}" oninput="upd('mission.autres.montant', this.value)"></div></div>
+    <h3>Remise</h3>
     <div class="row"><div class="field"><label>Remise (%)</label><input type="number" step="0.1" value="${esc(d.remisePct)}" oninput="upd('mission.remisePct', this.value)"></div></div>
 
     <h3>Notes</h3>
     <div class="row"><div class="field"><textarea oninput="upd('mission.notes', this.value)">${esc(d.notes)}</textarea></div></div>
 
-    <div class="totals" id="totals">${totalsHtml(t)}</div>
-
-    <div style="margin-top:16px">
-      <button class="btn" onclick="suiviAdd()">+ Créer le devis dans Suivi (acompte 30 % + reste 70 %)</button>
-    </div>
+    ${rDevisPreview()}
   `;
 }
 
-function rDV() {
-  return `
-    <h2>Devis <span id="savedFlash" class="saved"></span></h2>
-    <div class="empty">Onglet Devis — à remplir au prochain tour.</div>`;
-}
+function rDV() { return ""; }
 
 const STATUTS = [
   ["envoye",  "Envoyé"],
