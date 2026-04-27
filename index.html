@@ -180,6 +180,72 @@
   .seg button:hover{color:var(--text)}
   .seg button.on{background:var(--primary);color:#fff;box-shadow:0 1px 3px rgba(74,158,255,.3)}
   .seg button.on.warn{background:var(--warning);box-shadow:0 1px 3px rgba(245,158,11,.3)}
+
+  /* Smaller, capped fields */
+  .field input,.field textarea,.field select{font-size:13px;padding:7px 10px}
+  .field label{font-size:11px;letter-spacing:.02em}
+  main h2{font-size:18px;font-weight:600;margin:0 0 4px;color:var(--text)}
+  main h3{font-size:11px;font-weight:600;margin-top:18px;margin-bottom:6px;color:var(--text-muted)}
+  .hint{font-size:11px;color:var(--text-dim);margin:-2px 0 6px}
+
+  /* Cap field width so single-field rows don't span full main */
+  .row .field{max-width:320px}
+  .row .field.lg{max-width:520px}
+  .row .field.xl{max-width:none}
+
+  /* Client picker */
+  .cli-pick{position:relative;max-width:320px}
+  .cli-pick .selected{display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--surface);border:1px solid var(--border-light);border-radius:6px;font-size:13px}
+  .cli-pick .selected .name{flex:1;color:var(--text);font-weight:500}
+  .cli-pick .selected .num{color:var(--text-muted);font-size:11px;font-variant-numeric:tabular-nums}
+  .cli-pick .selected .change{background:transparent;border:0;color:var(--primary);font-size:12px;cursor:pointer;padding:2px 6px;border-radius:4px}
+  .cli-pick .selected .change:hover{background:var(--primary-soft)}
+  .cli-pick .results{position:absolute;left:0;right:0;top:100%;margin-top:4px;background:var(--surface-2);border:1px solid var(--border-light);border-radius:6px;max-height:280px;overflow-y:auto;z-index:20;box-shadow:var(--shadow)}
+  .cli-pick .results .item{padding:9px 12px;cursor:pointer;border-bottom:1px solid var(--border-soft);font-size:13px;color:var(--text)}
+  .cli-pick .results .item:last-child{border-bottom:0}
+  .cli-pick .results .item:hover{background:var(--surface-hi)}
+  .cli-pick .results .item .num{color:var(--text-muted);font-size:11px;margin-right:8px;font-variant-numeric:tabular-nums}
+  .cli-pick .results .create{padding:9px 12px;cursor:pointer;color:var(--accent);background:var(--surface);font-size:13px;font-weight:500;border-top:1px solid var(--border)}
+  .cli-pick .results .create:hover{background:var(--surface-hi)}
+  .cli-pick .results .empty{padding:14px 12px;color:var(--text-dim);font-size:12px;font-style:italic}
+  .cli-create-panel{margin-top:8px;padding:14px;background:var(--surface);border:1px solid var(--primary);border-radius:8px;max-width:520px}
+  .cli-create-panel h4{margin:0 0 10px;font-size:12px;color:var(--accent);text-transform:uppercase;letter-spacing:.05em;font-weight:600}
+  .cli-create-panel .grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .cli-create-panel .grid .full{grid-column:1/-1}
+  .cli-create-panel .grid label{display:flex;flex-direction:column;font-size:11px;color:var(--text-muted);gap:3px}
+  .cli-create-panel .grid label input{padding:7px 10px;border:1px solid var(--border-light);border-radius:5px;background:var(--surface-2);color:var(--text);font:inherit;font-size:13px}
+  .cli-create-panel .grid label input:focus{outline:none;border-color:var(--primary)}
+  .cli-create-panel .actions{display:flex;gap:8px;margin-top:12px;justify-content:flex-end}
+
+  /* Tarifs grid */
+  .tarif-row{display:grid;grid-template-columns:1fr 110px 36px;gap:8px;align-items:center;padding:6px 0;border-bottom:1px solid var(--border-soft)}
+  .tarif-row:last-child{border-bottom:0}
+  .tarif-row .lbl{color:var(--text);font-size:13px;font-weight:500}
+  .tarif-row input[type="text"]{background:transparent;border:1px solid transparent;border-radius:4px;padding:5px 7px;color:var(--text);font:inherit;font-size:13px;font-weight:500;width:100%}
+  .tarif-row input[type="text"]:hover{border-color:var(--border)}
+  .tarif-row input[type="text"]:focus{outline:none;border-color:var(--primary);background:var(--surface-2)}
+  .tarif-row .rate{display:flex;align-items:center;gap:4px;background:var(--surface-2);border:1px solid var(--border-light);border-radius:5px;padding:0 8px}
+  .tarif-row .rate input{flex:1;border:0;background:transparent;text-align:right;color:var(--text);font:inherit;font-size:13px;font-variant-numeric:tabular-nums;padding:6px 0;width:100%;min-width:0}
+  .tarif-row .rate input:focus{outline:none}
+  .tarif-row .rate .unit{color:var(--text-dim);font-size:11px}
+  .tarif-row .rate.empty{border-color:var(--warning);background:var(--warning-soft)}
+
+  /* Bug tab */
+  .bug-form{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:14px;max-width:620px;margin-bottom:16px}
+  .bug-form input,.bug-form textarea{width:100%;padding:8px 10px;border:1px solid var(--border-light);border-radius:5px;background:var(--surface-2);color:var(--text);font:inherit;font-size:13px;margin-bottom:8px}
+  .bug-form input:focus,.bug-form textarea:focus{outline:none;border-color:var(--primary)}
+  .bug-form textarea{min-height:70px;resize:vertical}
+  .bug-card{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:12px 14px;margin-bottom:8px;max-width:720px}
+  .bug-card.fixed{opacity:.6}
+  .bug-card .head{display:flex;align-items:center;gap:10px;margin-bottom:6px}
+  .bug-card .head .title{flex:1;color:var(--text);font-weight:600;font-size:14px}
+  .bug-card.fixed .head .title{text-decoration:line-through}
+  .bug-card .head .date{color:var(--text-dim);font-size:11px;font-variant-numeric:tabular-nums}
+  .bug-card .desc{color:var(--text-muted);font-size:13px;white-space:pre-wrap;margin:6px 0 8px}
+  .bug-card .actions{display:flex;gap:6px;justify-content:flex-end}
+  .bug-pill{display:inline-block;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.04em}
+  .bug-pill.open{background:var(--warning-soft);color:var(--warning)}
+  .bug-pill.fixed{background:var(--success-soft);color:var(--success)}
 </style>
 </head>
 <body>
@@ -201,22 +267,22 @@ firebase.initializeApp({
 const auth = firebase.auth();
 const db = firebase.firestore();
 
-const CATALOG = [
-  { k:"shoot_solo_dehors",   l:"Shoot solo - Dehors",                       p:124 },
-  { k:"shoot_solo_prive",    l:"Shoot solo - Lieu privé",                   p:136 },
-  { k:"shoot_solo_studio",   l:"Shoot solo - Studio",                       p:162 },
-  { k:"corporate",           l:"Corporate / Commerce local",                p:92  },
-  { k:"shoot_duo_dehors",    l:"Shoot duo - Dehors",                        p:125 },
-  { k:"shoot_duo_prive",     l:"Shoot duo - Lieu privé",                    p:181 },
-  { k:"shoot_duo_studio",    l:"Shoot duo - Studio",                        p:143 },
-  { k:"shoot_groupe_dehors", l:"Shoot groupe - Dehors",                     p:181 },
-  { k:"shoot_groupe_prive",  l:"Shoot groupe - Lieu privé",                 p:207 },
-  { k:"shoot_groupe_studio", l:"Shoot groupe - Studio",                     p:258 },
-  { k:"concert",             l:"Shoot concert",                             p:222 },
-  { k:"mariage",             l:"Mariage photo",                             p:181 },
-  { k:"tournage_short",      l:"Tournage vidéo - Short réseaux sociaux",     p:156 },
-  { k:"clip",                l:"Tournage - Clip musical",                   p:284 },
-  { k:"captation",           l:"Captations vidéo + photo + ITW",             p:181 }
+const DEFAULT_CATALOG = [
+  { k:"shoot_solo_dehors",   l:"SHOOT SOLO - DEHORS",                       p:60  },
+  { k:"shoot_solo_prive",    l:"SHOOT SOLO - LIEU PRIVÉ",                   p:65  },
+  { k:"shoot_solo_studio",   l:"SHOOT SOLO - STUDIO",                       p:75  },
+  { k:"corporate",           l:"CORPORATE / COMMERCE LOCAL",                p:50  },
+  { k:"shoot_duo_dehors",    l:"SHOOT DUO - DEHORS",                        p:45  },
+  { k:"shoot_duo_prive",     l:"SHOOT DUO - LIEU PRIVÉ",                    p:120 },
+  { k:"shoot_duo_studio",    l:"SHOOT DUO - STUDIO",                        p:100 },
+  { k:"shoot_groupe_dehors", l:"SHOOT GROUPE - DEHORS",                     p:100 },
+  { k:"shoot_groupe_prive",  l:"SHOOT GROUPE - LIEU PRIVÉ",                 p:120 },
+  { k:"shoot_groupe_studio", l:"SHOOT GROUPE - STUDIO",                     p:150 },
+  { k:"concert",             l:"SHOOT CONCERT",                             p:78  },
+  { k:"mariage",             l:"MARIAGE PHOTO",                             p:160 },
+  { k:"tournage_short",      l:"TOURNAGE VIDÉO - SHORT RÉSEAUX SOCIAUX",    p:90  },
+  { k:"clip",                l:"TOURNAGE - CLIP MUSICAL",                   p:0   },
+  { k:"captation",           l:"CAPTATIONS VIDÉO + PHOTO + ITW",            p:0   }
 ];
 
 const SK = "devis-photo-data-v2";
@@ -241,7 +307,8 @@ const DEFAULT_S = {
   compta:   {},
   abonnements: { entries: [] },
   investissements: { entries: [] },
-  bugs:     {}
+  tarifs: { catalog: JSON.parse(JSON.stringify(DEFAULT_CATALOG)) },
+  bugs: { entries: [] }
 };
 let S = JSON.parse(localStorage.getItem(SK) || "null") || JSON.parse(JSON.stringify(DEFAULT_S));
 if (!S.suivi || !Array.isArray(S.suivi.entries)) S.suivi = { entries: [], devis: {} };
@@ -249,6 +316,8 @@ if (!S.suivi.devis || typeof S.suivi.devis !== "object") S.suivi.devis = {};
 if (!S.clients || !Array.isArray(S.clients.entries)) S.clients = { ...DEFAULT_S.clients };
 if (!S.abonnements || !Array.isArray(S.abonnements.entries)) S.abonnements = { ...DEFAULT_S.abonnements };
 if (!S.investissements || !Array.isArray(S.investissements.entries)) S.investissements = { ...DEFAULT_S.investissements };
+if (!S.tarifs || !Array.isArray(S.tarifs.catalog) || !S.tarifs.catalog.length) S.tarifs = { catalog: JSON.parse(JSON.stringify(DEFAULT_CATALOG)) };
+if (!S.bugs || !Array.isArray(S.bugs.entries)) S.bugs = { entries: [] };
 if (S.mission) {
   S.mission = { ...DEFAULT_S.mission, ...S.mission,
     deplacement: { ...DEFAULT_S.mission.deplacement, ...(S.mission.deplacement || {}) }
@@ -259,12 +328,13 @@ let tab = "mission";
 let cloudT = null;
 
 const TABS = [
-  ["mission", "Mission"],
-  ["devis",   "Devis"],
-  ["suivi",   "Suivi"],
-  ["clients", "Clients"],
-  ["compta",  "Compta"],
-  ["bugs",    "Correction & Bugs"]
+  ["mission", "📋 Mission"],
+  ["devis",   "📄 Devis"],
+  ["suivi",   "📊 Suivi"],
+  ["clients", "👥 Clients"],
+  ["tarifs",  "💰 Frais & Tarifs"],
+  ["compta",  "📈 Compta"],
+  ["bugs",    "🐛 Correction & Bugs"]
 ];
 
 const app = document.getElementById("app");
@@ -289,6 +359,7 @@ async function saveToCloud() {
       compta:  S.compta,
       abonnements: S.abonnements,
       investissements: S.investissements,
+      tarifs:  S.tarifs,
       bugs:    S.bugs
     }, { merge: true });
     const e = document.getElementById("savedFlash");
@@ -320,7 +391,8 @@ async function loadFromCloud() {
       if (d.compta)  S.compta  = Object.assign({}, DEFAULT_S.compta,  d.compta);
       if (d.abonnements) S.abonnements = { ...DEFAULT_S.abonnements, ...d.abonnements, entries: Array.isArray(d.abonnements.entries) ? d.abonnements.entries : [] };
       if (d.investissements) S.investissements = { ...DEFAULT_S.investissements, ...d.investissements, entries: Array.isArray(d.investissements.entries) ? d.investissements.entries : [] };
-      if (d.bugs)    S.bugs    = Object.assign({}, DEFAULT_S.bugs,    d.bugs);
+      if (d.tarifs && Array.isArray(d.tarifs.catalog) && d.tarifs.catalog.length) S.tarifs = { catalog: d.tarifs.catalog };
+      if (d.bugs)    S.bugs    = { entries: Array.isArray(d.bugs && d.bugs.entries) ? d.bugs.entries : [] };
       suiviMigrate();
       localStorage.setItem(SK, JSON.stringify(S));
     }
@@ -342,8 +414,8 @@ window.upd = upd;
 
 function pickObject(k) {
   S.mission.object = k;
-  const item = CATALOG.find(c => c.k === k);
-  if (item) S.mission.prod.rate = String(item.p);
+  const item = (S.tarifs.catalog || DEFAULT_CATALOG).find(c => c.k === k);
+  if (item && item.p) S.mission.prod.rate = String(item.p);
   save();
   render();
 }
@@ -362,6 +434,205 @@ function updMissionMode(mode) {
   render();
 }
 window.updMissionMode = updMissionMode;
+
+// ============ CLIENT PICKER (Mission) ============
+let cliPickQuery = "";
+let cliPickCreating = false;
+let cliPickDraft = { num:"", name:"", contact:"", address:"", cityPostal:"", phone:"", email:"", rencontre:"" };
+
+function rClientPicker() {
+  const c = S.mission.client || {};
+  const sel = c.id ? S.clients.entries.find(x => x.id === c.id) : null;
+  if (sel && !cliPickCreating) {
+    return `<div class="row"><div class="cli-pick">
+      <div class="selected">
+        <span class="num">${esc(sel.num || "—")}</span>
+        <span class="name">${esc(sel.name || "(sans nom)")}</span>
+        <button class="change" onclick="cliPickReset()">Changer</button>
+      </div>
+    </div></div>`;
+  }
+  const q = cliPickQuery.trim().toLowerCase();
+  const matches = q ? S.clients.entries.filter(e =>
+    (e.name||"").toLowerCase().includes(q) ||
+    (e.num||"").toLowerCase().includes(q) ||
+    (e.contact||"").toLowerCase().includes(q) ||
+    (e.email||"").toLowerCase().includes(q)
+  ).slice(0, 12) : S.clients.entries.slice(0, 12);
+  const showCreate = q && !S.clients.entries.some(e => (e.name||"").toLowerCase() === q);
+  const draft = cliPickDraft;
+  return `<div class="row"><div class="cli-pick">
+    <input type="text" placeholder="Rechercher un client par nom, n°, contact, email…" value="${esc(cliPickQuery)}" oninput="cliPickSearch(this.value)" autocomplete="off" style="width:100%;padding:9px 12px;border:1px solid var(--border-light);border-radius:6px;background:var(--surface);color:var(--text);font:inherit;font-size:13px">
+    ${cliPickCreating ? "" : `<div class="results">
+      ${matches.length === 0 && !showCreate ? `<div class="empty">Aucun client. Tape un nom puis « Créer »…</div>` : ""}
+      ${matches.map(e => `<div class="item" onclick="cliPickSelect('${e.id}')"><span class="num">${esc(e.num || "—")}</span>${esc(e.name || "(sans nom)")}</div>`).join("")}
+      ${showCreate ? `<div class="create" onclick="cliPickStartCreate()">+ Créer le client « ${esc(cliPickQuery)} »</div>` : (S.clients.entries.length > 0 ? "" : `<div class="create" onclick="cliPickStartCreate()">+ Créer un nouveau client</div>`)}
+    </div>`}
+  </div></div>
+  ${cliPickCreating ? `
+    <div class="cli-create-panel">
+      <h4>Nouveau client</h4>
+      <div class="grid">
+        <label>N° Client<input value="${esc(draft.num)}" oninput="cliPickDraftSet('num',this.value)" placeholder="ex: 117"></label>
+        <label>Nom / Société<input value="${esc(draft.name)}" oninput="cliPickDraftSet('name',this.value)"></label>
+        <label class="full">Contact<input value="${esc(draft.contact)}" oninput="cliPickDraftSet('contact',this.value)" placeholder="Nom de la personne référente"></label>
+        <label class="full">Adresse<input value="${esc(draft.address)}" oninput="cliPickDraftSet('address',this.value)"></label>
+        <label>Code postal / Ville<input value="${esc(draft.cityPostal)}" oninput="cliPickDraftSet('cityPostal',this.value)"></label>
+        <label>Téléphone<input value="${esc(draft.phone)}" oninput="cliPickDraftSet('phone',this.value)"></label>
+        <label class="full">Email<input type="email" value="${esc(draft.email)}" oninput="cliPickDraftSet('email',this.value)"></label>
+        <label class="full">Rencontre / origine<input value="${esc(draft.rencontre)}" oninput="cliPickDraftSet('rencontre',this.value)" placeholder="Comment avez-vous connu le client ?"></label>
+      </div>
+      <div class="actions">
+        <button class="btn ghost" onclick="cliPickCancelCreate()">Annuler</button>
+        <button class="btn" onclick="cliPickSaveCreate()">Enregistrer</button>
+      </div>
+    </div>
+  ` : ""}`;
+}
+
+function cliPickSearch(v) {
+  cliPickQuery = v;
+  // Targeted DOM update to avoid losing input focus
+  const wrap = document.querySelector(".cli-pick .results");
+  if (wrap) {
+    const q = v.trim().toLowerCase();
+    const matches = q ? S.clients.entries.filter(e =>
+      (e.name||"").toLowerCase().includes(q) ||
+      (e.num||"").toLowerCase().includes(q) ||
+      (e.contact||"").toLowerCase().includes(q) ||
+      (e.email||"").toLowerCase().includes(q)
+    ).slice(0, 12) : S.clients.entries.slice(0, 12);
+    const showCreate = q && !S.clients.entries.some(e => (e.name||"").toLowerCase() === q);
+    wrap.innerHTML =
+      (matches.length === 0 && !showCreate ? `<div class="empty">Aucun client. Tape un nom puis « Créer »…</div>` : "") +
+      matches.map(e => `<div class="item" onclick="cliPickSelect('${e.id}')"><span class="num">${esc(e.num || "—")}</span>${esc(e.name || "(sans nom)")}</div>`).join("") +
+      (showCreate ? `<div class="create" onclick="cliPickStartCreate()">+ Créer le client « ${esc(v)} »</div>` : (S.clients.entries.length > 0 ? "" : `<div class="create" onclick="cliPickStartCreate()">+ Créer un nouveau client</div>`));
+  }
+}
+window.cliPickSearch = cliPickSearch;
+
+function cliPickSelect(id) {
+  const e = S.clients.entries.find(x => x.id === id);
+  if (!e) return;
+  S.mission.client = {
+    id: e.id, num: e.num || "", name: e.name || "",
+    contact: e.contact || "", address: e.address || "",
+    phone: e.phone || "", email: e.email || ""
+  };
+  cliPickQuery = "";
+  cliPickCreating = false;
+  save();
+  render();
+}
+window.cliPickSelect = cliPickSelect;
+
+function cliPickReset() {
+  S.mission.client = { id:"", num:"", name:"", contact:"", address:"", phone:"", email:"" };
+  cliPickQuery = "";
+  cliPickCreating = false;
+  save();
+  render();
+}
+window.cliPickReset = cliPickReset;
+
+function cliPickStartCreate() {
+  cliPickCreating = true;
+  cliPickDraft = { num:"", name: cliPickQuery || "", contact:"", address:"", cityPostal:"", phone:"", email:"", rencontre:"" };
+  render();
+}
+window.cliPickStartCreate = cliPickStartCreate;
+
+function cliPickCancelCreate() {
+  cliPickCreating = false;
+  render();
+}
+window.cliPickCancelCreate = cliPickCancelCreate;
+
+function cliPickDraftSet(field, val) {
+  cliPickDraft[field] = val;
+}
+window.cliPickDraftSet = cliPickDraftSet;
+
+function cliPickSaveCreate() {
+  if (!cliPickDraft.name.trim()) { alert("Le nom du client est obligatoire."); return; }
+  const id = uid();
+  const entry = { id, ...cliPickDraft };
+  S.clients.entries.unshift(entry);
+  S.mission.client = {
+    id, num: entry.num, name: entry.name,
+    contact: entry.contact, address: entry.address,
+    phone: entry.phone, email: entry.email
+  };
+  cliPickCreating = false;
+  cliPickQuery = "";
+  cliPickDraft = { num:"", name:"", contact:"", address:"", cityPostal:"", phone:"", email:"", rencontre:"" };
+  save();
+  render();
+}
+window.cliPickSaveCreate = cliPickSaveCreate;
+
+// ============ TARIFS (catalog editing) ============
+function tarifEdit(idx, field, val) {
+  if (!S.tarifs.catalog[idx]) return;
+  if (field === "p") S.tarifs.catalog[idx][field] = num(val);
+  else S.tarifs.catalog[idx][field] = val;
+  save();
+}
+window.tarifEdit = tarifEdit;
+
+function tarifReset() {
+  if (!confirm("Réinitialiser le catalogue aux tarifs par défaut ? Les modifications seront perdues.")) return;
+  S.tarifs.catalog = JSON.parse(JSON.stringify(DEFAULT_CATALOG));
+  save();
+  render();
+}
+window.tarifReset = tarifReset;
+
+// ============ BUGS ============
+let bugDraft = { title: "", desc: "" };
+
+function bugDraftSet(field, val) {
+  bugDraft[field] = val;
+}
+window.bugDraftSet = bugDraftSet;
+
+function bugAdd() {
+  const t = bugDraft.title.trim();
+  if (!t) { alert("Donne un titre au bug."); return; }
+  const today = new Date().toISOString().slice(0, 10);
+  S.bugs.entries.unshift({
+    id: uid(),
+    date: today,
+    title: t,
+    desc: bugDraft.desc.trim(),
+    status: "open"
+  });
+  bugDraft = { title: "", desc: "" };
+  save();
+  render();
+}
+window.bugAdd = bugAdd;
+
+function bugStatus(id, st) {
+  const e = S.bugs.entries.find(x => x.id === id);
+  if (!e) return;
+  e.status = st;
+  save();
+  render();
+}
+window.bugStatus = bugStatus;
+
+function bugDel(id) {
+  if (!confirm("Supprimer ce bug ?")) return;
+  S.bugs.entries = S.bugs.entries.filter(x => x.id !== id);
+  save();
+  render();
+}
+window.bugDel = bugDel;
+
+let bugFilter = "all";
+function bugSetFilter(v) { bugFilter = v; render(); }
+window.bugSetFilter = bugSetFilter;
 
 function totals() {
   const d = S.mission;
@@ -408,7 +679,7 @@ function render() {
     app.innerHTML = `<div class="login"><h1>🌊 Devis Photo</h1><button class="btn" onclick="signIn()">Se connecter avec Google</button></div>`;
     return;
   }
-  const renderers = { mission: rMS, devis: rDV, suivi: rSV, clients: rCL, compta: rCP, bugs: rBG };
+  const renderers = { mission: rMS, devis: rDV, suivi: rSV, clients: rCL, tarifs: rTR, compta: rCP, bugs: rBG };
   const view = (renderers[tab] || (() => ""))();
   app.innerHTML = `
     <aside class="sb">
@@ -442,18 +713,13 @@ function rMS() {
     <div class="row"><div class="field"><label>Taux URSSAF (%)</label><input type="number" step="0.1" value="${esc(d.urssafPct ?? "22")}" oninput="upd('mission.urssafPct', this.value)"></div></div>
 
     <h3>Client</h3>
-    <div class="row"><div class="field"><label>N° Client</label><input value="${esc(d.client.num)}" oninput="upd('mission.client.num', this.value)"></div></div>
-    <div class="row"><div class="field"><label>Nom / Société</label><input value="${esc(d.client.name)}" oninput="upd('mission.client.name', this.value)"></div></div>
-    <div class="row"><div class="field"><label>Contact</label><input value="${esc(d.client.contact)}" oninput="upd('mission.client.contact', this.value)"></div></div>
-    <div class="row"><div class="field"><label>Adresse</label><input value="${esc(d.client.address)}" oninput="upd('mission.client.address', this.value)"></div></div>
-    <div class="row"><div class="field"><label>Téléphone</label><input value="${esc(d.client.phone)}" oninput="upd('mission.client.phone', this.value)"></div></div>
-    <div class="row"><div class="field"><label>Email</label><input type="email" value="${esc(d.client.email)}" oninput="upd('mission.client.email', this.value)"></div></div>
+    ${rClientPicker()}
 
     <h3>Prestation</h3>
     <div class="row"><div class="field"><label>Type de prestation</label>
       <select onchange="pickObject(this.value)">
         <option value="">— choisir —</option>
-        ${CATALOG.map(c => `<option value="${c.k}" ${d.object===c.k?"selected":""}>${esc(c.l)} (${c.p} €)</option>`).join("")}
+        ${(S.tarifs.catalog || DEFAULT_CATALOG).map(c => `<option value="${c.k}" ${d.object===c.k?"selected":""}>${esc(c.l)} (${c.p} €)</option>`).join("")}
       </select>
     </div></div>
     <div class="row"><div class="field"><label>Date prestation</label><input type="date" value="${esc(d.objectDate)}" oninput="upd('mission.objectDate', this.value)"></div></div>
@@ -612,7 +878,7 @@ function suiviMigrate() {
 
 function suiviAdd() {
   const m = S.mission;
-  const cat = CATALOG.find(c => c.k === m.object);
+  const cat = (S.tarifs.catalog || DEFAULT_CATALOG).find(c => c.k === m.object);
   const t = totals();
   const hoursTotal = num(m.prep.hours) + num(m.prod.hours) + num(m.postprod.hours);
   const date = m.objectDate || new Date().toISOString().slice(0, 10);
@@ -1834,64 +2100,12 @@ function bilanRender() {
 }
 
 function rCP() {
-  const abEntries = S.abonnements.entries;
-  const abRows = abEntries.map(e => `
-    <tr>
-      <td><input value="${esc(e.libelle)}" oninput="editAbonnement('${e.id}','libelle',this.value)" placeholder="Libellé"></td>
-      <td class="amount"><input type="number" step="0.01" value="${esc(e.annuel)}" oninput="editAbonnement('${e.id}','annuel',this.value); refreshAbonnementMensuel('${e.id}')"></td>
-      <td class="amount" id="ab-mens-${e.id}" style="text-align:right;color:#6b7280;font-variant-numeric:tabular-nums;padding-right:14px">${fmt(num(e.annuel) / 12)}</td>
-      <td class="actions"><button title="Supprimer" onclick="if(confirm('Supprimer cet abonnement ?'))deleteAbonnement('${e.id}')">×</button></td>
-    </tr>
-  `).join("");
-
-  const invEntries = [...S.investissements.entries].sort((a, b) => (b.date || "").localeCompare(a.date || ""));
-  const invRows = invEntries.map(e => `
-    <tr>
-      <td><input type="date" value="${esc(e.date)}" oninput="editInvestissement('${e.id}','date',this.value)"></td>
-      <td><input value="${esc(e.descriptif)}" oninput="editInvestissement('${e.id}','descriptif',this.value)" placeholder="Descriptif"></td>
-      <td class="amount"><input type="number" step="0.01" value="${esc(e.prix)}" oninput="editInvestissement('${e.id}','prix',this.value)"></td>
-      <td class="actions"><button title="Supprimer" onclick="if(confirm('Supprimer cet investissement ?'))deleteInvestissement('${e.id}')">×</button></td>
-    </tr>
-  `).join("");
-
   const bilan = bilanRender();
-
   return `
     <h2>Compta <span id="savedFlash" class="saved"></span></h2>
 
-    <h3>Abonnements professionnels</h3>
-    <div class="toolbar">
-      <button class="btn" onclick="addAbonnement()">+ Ajouter un abonnement</button>
-    </div>
-    <table class="hist">
-      <thead>
-        <tr>
-          <th>Libellé</th>
-          <th style="width:170px;text-align:right">Coût annuel (€)</th>
-          <th style="width:170px;text-align:right">Coût mensuel (€)</th>
-          <th style="width:36px"></th>
-        </tr>
-      </thead>
-      <tbody>${abRows}</tbody>
-    </table>
-
-    <h3>Investissements et achats ponctuels</h3>
-    <div class="toolbar">
-      <button class="btn" onclick="addInvestissement()">+ Ajouter un investissement</button>
-    </div>
-    <table class="hist">
-      <thead>
-        <tr>
-          <th style="width:130px">Date</th>
-          <th>Descriptif</th>
-          <th style="width:140px;text-align:right">Prix (€)</th>
-          <th style="width:36px"></th>
-        </tr>
-      </thead>
-      <tbody>${invRows}</tbody>
-    </table>
-
     <h3>Bilan mensuel (calculé automatiquement depuis Suivi)</h3>
+    <div class="hint">Pour gérer abonnements et investissements, voir l'onglet « Frais & Tarifs ».</div>
     <table class="hist">
       <thead>
         <tr>
@@ -1912,10 +2126,145 @@ function rCP() {
   `;
 }
 
+function rTR() {
+  // Prestations editing
+  const cat = S.tarifs.catalog || DEFAULT_CATALOG;
+  const tarifRows = cat.map((c, idx) => `
+    <div class="tarif-row">
+      <input type="text" value="${esc(c.l)}" oninput="tarifEdit(${idx},'l',this.value)" placeholder="Libellé prestation">
+      <div class="rate ${num(c.p) === 0 ? "empty" : ""}">
+        <input type="number" step="0.5" value="${esc(c.p || "")}" oninput="tarifEdit(${idx},'p',this.value)" placeholder="—">
+        <span class="unit">€/h</span>
+      </div>
+      <div></div>
+    </div>
+  `).join("");
+
+  // Abonnements
+  const abEntries = S.abonnements.entries;
+  const abTotalAnnuel = abEntries.reduce((s, e) => s + num(e.annuel), 0);
+  const abRows = abEntries.map(e => `
+    <tr>
+      <td><input value="${esc(e.libelle)}" oninput="editAbonnement('${e.id}','libelle',this.value)" placeholder="Libellé"></td>
+      <td class="amount"><input type="number" step="0.01" value="${esc(e.annuel)}" oninput="editAbonnement('${e.id}','annuel',this.value); refreshAbonnementMensuel('${e.id}')"></td>
+      <td class="amount" id="ab-mens-${e.id}" style="text-align:right;color:var(--text-muted);font-variant-numeric:tabular-nums;padding-right:14px">${fmt(num(e.annuel) / 12)}</td>
+      <td class="actions"><button title="Supprimer" onclick="if(confirm('Supprimer cet abonnement ?'))deleteAbonnement('${e.id}')">×</button></td>
+    </tr>
+  `).join("");
+
+  // Investissements (amortissement)
+  const invEntries = [...S.investissements.entries].sort((a, b) => (b.date || "").localeCompare(a.date || ""));
+  const invTotal = invEntries.reduce((s, e) => s + num(e.prix), 0);
+  const invRows = invEntries.map(e => `
+    <tr>
+      <td><input type="date" value="${esc(e.date)}" oninput="editInvestissement('${e.id}','date',this.value)"></td>
+      <td><input value="${esc(e.descriptif)}" oninput="editInvestissement('${e.id}','descriptif',this.value)" placeholder="Descriptif"></td>
+      <td class="amount"><input type="number" step="0.01" value="${esc(e.prix)}" oninput="editInvestissement('${e.id}','prix',this.value)"></td>
+      <td class="actions"><button title="Supprimer" onclick="if(confirm('Supprimer cet investissement ?'))deleteInvestissement('${e.id}')">×</button></td>
+    </tr>
+  `).join("");
+
+  return `
+    <h2>Frais &amp; Tarifs <span id="savedFlash" class="saved"></span></h2>
+
+    <h3>Prestations &amp; tarifs (€/h)</h3>
+    <div class="hint">Le tarif sélectionné dans Mission est multiplié par les heures de shooting. Les lignes en orange n'ont pas de tarif défini.</div>
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:14px 16px;max-width:720px">
+      ${tarifRows}
+      <div style="margin-top:10px;display:flex;justify-content:flex-end">
+        <button class="btn ghost" onclick="tarifReset()" style="font-size:12px">↺ Réinitialiser aux tarifs par défaut</button>
+      </div>
+    </div>
+
+    <h3>Abonnements professionnels</h3>
+    <div class="hint">Coût mensuel calculé automatiquement à partir du coût annuel.</div>
+    <div class="toolbar">
+      <button class="btn" onclick="addAbonnement()">+ Ajouter un abonnement</button>
+    </div>
+    <table class="hist">
+      <thead>
+        <tr>
+          <th>Libellé</th>
+          <th style="width:170px;text-align:right">Coût annuel (€)</th>
+          <th style="width:170px;text-align:right">Coût mensuel (€)</th>
+          <th style="width:36px"></th>
+        </tr>
+      </thead>
+      <tbody>${abRows}</tbody>
+      ${abEntries.length ? `<tfoot><tr><td>Total</td><td style="text-align:right">${fmt(abTotalAnnuel)}</td><td style="text-align:right">${fmt(abTotalAnnuel/12)}</td><td></td></tr></tfoot>` : ""}
+    </table>
+
+    <h3>Investissements et amortissement matériel</h3>
+    <div class="hint">Achats de matériel à amortir. Le détail d'amortissement viendra plus tard si besoin.</div>
+    <div class="toolbar">
+      <button class="btn" onclick="addInvestissement()">+ Ajouter un investissement</button>
+    </div>
+    <table class="hist">
+      <thead>
+        <tr>
+          <th style="width:130px">Date</th>
+          <th>Descriptif</th>
+          <th style="width:140px;text-align:right">Prix (€)</th>
+          <th style="width:36px"></th>
+        </tr>
+      </thead>
+      <tbody>${invRows}</tbody>
+      ${invEntries.length ? `<tfoot><tr><td>Total</td><td></td><td style="text-align:right">${fmt(invTotal)}</td><td></td></tr></tfoot>` : ""}
+    </table>
+  `;
+}
+
 function rBG() {
+  const entries = S.bugs.entries || [];
+  const filtered = bugFilter === "all" ? entries
+    : bugFilter === "open"  ? entries.filter(e => e.status === "open")
+    : entries.filter(e => e.status === "fixed");
+  const counts = {
+    all: entries.length,
+    open: entries.filter(e => e.status === "open").length,
+    fixed: entries.filter(e => e.status === "fixed").length
+  };
+  const rows = filtered.length === 0
+    ? `<div class="empty">${bugFilter === "all" ? "Aucun bug signalé pour l'instant." : `Aucun bug ${bugFilter === "open" ? "ouvert" : "résolu"}.`}</div>`
+    : filtered.map(e => `
+      <div class="bug-card ${e.status === "fixed" ? "fixed" : ""}">
+        <div class="head">
+          <span class="bug-pill ${e.status}">${e.status === "fixed" ? "Résolu" : "Ouvert"}</span>
+          <span class="title">${esc(e.title)}</span>
+          <span class="date">${dateFR(e.date) || ""}</span>
+        </div>
+        ${e.desc ? `<div class="desc">${esc(e.desc)}</div>` : ""}
+        <div class="actions">
+          ${e.status === "open"
+            ? `<button class="btn-act act-vert" onclick="bugStatus('${e.id}','fixed')"><span class="ico">✓</span>Marquer résolu</button>`
+            : `<button class="btn ghost" onclick="bugStatus('${e.id}','open')">Rouvrir</button>`}
+          <button class="btn-act act-rouge" onclick="bugDel('${e.id}')"><span class="ico">×</span>Supprimer</button>
+        </div>
+      </div>
+    `).join("");
+
   return `
     <h2>Correction &amp; Bugs <span id="savedFlash" class="saved"></span></h2>
-    <div class="empty">Onglet Correction &amp; Bugs — à remplir au prochain tour.</div>`;
+
+    <h3>Signaler un bug</h3>
+    <div class="bug-form">
+      <input type="text" placeholder="Titre du bug (ex: La date d'émission ne s'enregistre pas)" value="${esc(bugDraft.title)}" oninput="bugDraftSet('title', this.value)">
+      <textarea placeholder="Description : étapes pour reproduire, comportement attendu vs observé, navigateur, appareil…" oninput="bugDraftSet('desc', this.value)">${esc(bugDraft.desc)}</textarea>
+      <div style="display:flex;justify-content:flex-end">
+        <button class="btn" onclick="bugAdd()">+ Signaler le bug</button>
+      </div>
+    </div>
+
+    <h3>Bugs signalés</h3>
+    <div class="toolbar">
+      <div class="seg">
+        <button class="${bugFilter==='all'?'on':''}" onclick="bugSetFilter('all')">Tous (${counts.all})</button>
+        <button class="${bugFilter==='open'?'on warn':''}" onclick="bugSetFilter('open')">Ouverts (${counts.open})</button>
+        <button class="${bugFilter==='fixed'?'on':''}" onclick="bugSetFilter('fixed')">Résolus (${counts.fixed})</button>
+      </div>
+    </div>
+    ${rows}
+  `;
 }
 
 window.setTab = k => { tab = k; render(); };
