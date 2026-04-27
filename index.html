@@ -192,8 +192,8 @@
   .row .field{max-width:320px}
   .row .field.lg{max-width:520px}
   .row .field.xl{max-width:none}
-  .row .field.narrow{max-width:130px}
-  .row .field.tiny{max-width:100px}
+  .row .field.narrow{max-width:160px}
+  .row .field.tiny{max-width:90px}
 
   /* Client picker */
   .cli-pick{position:relative;max-width:320px}
@@ -285,7 +285,9 @@
   /* Locked field with ⋮ menu (URSSAF) */
   .lock-field{display:flex;align-items:stretch;gap:0;max-width:120px;position:relative}
   .lock-field input{flex:1;width:50px;text-align:center;font-variant-numeric:tabular-nums}
-  .lock-field input:disabled{opacity:.85;cursor:not-allowed;background:var(--surface-2);color:var(--text)}
+  .lock-field input:disabled{opacity:0.85;cursor:not-allowed;background:var(--surface-2);color:var(--text);position:relative}
+  .lock-field:has(input:disabled){position:relative}
+  .lock-field:has(input:disabled)::after{content:"";position:absolute;inset:0;background:rgba(255,255,255,.18);border-radius:6px;pointer-events:none}
   .lock-menu-btn{background:var(--surface);border:1px solid var(--border-light);border-left:0;border-radius:0 6px 6px 0;color:var(--text-muted);cursor:pointer;padding:0 11px;font-size:16px;line-height:1;font-weight:700;transition:all .15s}
   .lock-menu-btn:hover{background:var(--surface-2);color:var(--primary)}
   .lock-field input{border-radius:6px 0 0 6px;border-right:0}
@@ -295,7 +297,7 @@
   .lock-popup button:hover{background:var(--surface-hi)}
 
   /* Devis preview (in-page, at the bottom of Mission) */
-  .devis-preview{margin-top:32px;background:linear-gradient(180deg,var(--surface) 0%,var(--surface-2) 100%);border:1px solid var(--primary);border-radius:10px;padding:24px 28px;max-width:880px;box-shadow:0 8px 24px rgba(0,0,0,.3)}
+  .devis-preview{margin-top:32px;background:var(--surface);border:1px solid var(--primary);border-radius:10px;padding:24px 28px;max-width:880px;box-shadow:0 8px 24px rgba(0,0,0,.3)}
   .devis-preview .dp-head{display:flex;justify-content:space-between;align-items:flex-start;gap:20px;padding-bottom:16px;border-bottom:1px solid var(--border-light);margin-bottom:18px;flex-wrap:wrap}
   .devis-preview .dp-title{font-size:22px;font-weight:700;color:var(--primary);margin:0}
   .devis-preview .dp-ref{color:var(--text-muted);font-size:12px;font-variant-numeric:tabular-nums;margin-top:4px}
@@ -329,7 +331,8 @@
   .devis-preview .dp-meta-block{text-align:right;font-size:12px;color:var(--text-muted);line-height:1.6}
   .devis-preview .dp-meta-block .ref{color:var(--primary);font-weight:600;font-size:14px;font-variant-numeric:tabular-nums;margin-bottom:6px}
   .devis-preview .dp-meta-block strong{color:var(--text);font-weight:600}
-  .devis-preview .dp-client-block{text-align:right;font-size:13px;color:var(--text);line-height:1.6;background:var(--surface-2);border-radius:6px;padding:10px 14px;border:1px solid var(--border-soft);min-width:220px}
+  /* Uniform: no distinct background on client block, just a subtle bordered area */
+  .devis-preview .dp-client-block{text-align:right;font-size:13px;color:var(--text);line-height:1.6;padding:0;min-width:220px}
   .devis-preview .dp-client-block .num{color:var(--text-muted);font-size:11px;font-variant-numeric:tabular-nums;display:block;margin-bottom:2px}
   .devis-preview .dp-client-block .name{font-weight:600;font-size:14px;color:var(--text);display:block}
   @media (max-width:680px){
@@ -339,9 +342,20 @@
     .devis-preview .dp-meta-block,.devis-preview .dp-client-block{text-align:left}
   }
 
-  /* Conditions de paiement block (in devis) */
-  .devis-preview .dp-conditions{margin-top:18px;padding:14px 16px;background:var(--surface-2);border-left:3px solid var(--accent);border-radius:0 6px 6px 0;font-size:12px;color:var(--text);line-height:1.7;white-space:pre-wrap}
-  .devis-preview .dp-conditions h4{margin:0 0 8px;border:0;padding:0}
+  /* Conditions/CGV/Signature blocks (in devis) — uniform with rest, no contrast bg */
+  .devis-preview .dp-conditions{margin-top:18px;padding:14px 0 0;border-top:1px solid var(--border-soft);font-size:12px;color:var(--text);line-height:1.7;white-space:pre-wrap}
+  .devis-preview .dp-conditions h4{margin:0 0 8px;border:0;padding:0;font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em}
+  .devis-preview .dp-conditions.signature{padding:14px 16px;border:1px dashed var(--border-light);border-radius:6px;margin-top:14px;border-top:1px dashed var(--border-light)}
+  .devis-preview .dp-conditions.signature h4{color:var(--accent)}
+  .devis-preview .dp-conditions.cgv h4{color:var(--primary)}
+
+  /* Page break before CGV (page 2 when printed) */
+  .devis-page-break{display:block;height:1px;margin:30px 0;border-top:2px dashed var(--border-light);position:relative}
+  .devis-page-break::before{content:"— Page 2 —";position:absolute;top:-9px;left:50%;transform:translateX(-50%);background:var(--surface-2);padding:0 12px;font-size:10px;color:var(--text-dim);text-transform:uppercase;letter-spacing:.08em}
+  @media print {
+    .devis-page-break{page-break-before:always;border:0;height:0;margin:0}
+    .devis-page-break::before{display:none}
+  }
 
   /* Photographe textarea + conditions textarea in Mission */
   .multi-text{width:100%;max-width:520px;min-height:80px;padding:9px 12px;border:1px solid var(--border-light);border-radius:6px;background:var(--surface);color:var(--text);font:inherit;font-size:13px;line-height:1.5;resize:vertical}
@@ -351,7 +365,8 @@
   .locked-wrap{position:relative;max-width:520px}
   .locked-wrap textarea{padding-right:42px}
   .locked-wrap textarea:disabled{opacity:1;cursor:not-allowed;color:var(--text);background:var(--surface)}
-  .locked-wrap.is-locked::after{content:"";position:absolute;inset:0;background:rgba(255,255,255,.06);border-radius:6px;pointer-events:none}
+  .locked-wrap.is-locked::after{content:"";position:absolute;inset:0;background:rgba(255,255,255,.18);border-radius:6px;pointer-events:none}
+  .locked-wrap.is-locked textarea{filter:brightness(0.92)}
   .locked-wrap .lock-corner{position:absolute;top:6px;right:6px;background:var(--surface-2);border:1px solid var(--border-light);color:var(--text-muted);cursor:pointer;border-radius:4px;width:28px;height:28px;font-size:14px;line-height:1;display:flex;align-items:center;justify-content:center;font-weight:700;z-index:2}
   .locked-wrap .lock-corner:hover{color:var(--primary);border-color:var(--primary)}
   .locked-wrap .lock-corner-popup{position:absolute;top:38px;right:6px;background:var(--surface-2);border:1px solid var(--border-light);border-radius:6px;box-shadow:var(--shadow);z-index:30;min-width:200px;padding:4px;display:none}
@@ -466,7 +481,8 @@ const DEFAULT_S = {
     echeances: [{ id: "ech1", label: "À la livraison", pct: "100" }],
     photographe: "",
     conditionsPaiement: "Acompte de 30 % à la commande, solde de 70 % à la livraison.\nRèglement par virement bancaire.\nEn cas de retard de paiement, des pénalités de 3 fois le taux d'intérêt légal seront appliquées.",
-    cgu: "Le présent devis est établi sous réserve d'acceptation par le client.\nLa signature du devis vaut acceptation des conditions générales de prestation.\nLes droits d'auteur sur les images restent la propriété du photographe ; toute utilisation commerciale au-delà de l'usage privé du client doit faire l'objet d'un accord préalable.\nLes images livrées ne peuvent être recadrées, retouchées ou modifiées sans l'accord du photographe.\nLe client autorise le photographe à utiliser les images réalisées pour son portfolio et sa communication, sauf mention contraire écrite."
+    cgv: "Le présent devis est établi sous réserve d'acceptation par le client.\nLa signature du devis vaut acceptation des conditions générales de vente.\nLes droits d'auteur sur les images restent la propriété du photographe ; toute utilisation commerciale au-delà de l'usage privé du client doit faire l'objet d'un accord préalable.\nLes images livrées ne peuvent être recadrées, retouchées ou modifiées sans l'accord du photographe.\nLe client autorise le photographe à utiliser les images réalisées pour son portfolio et sa communication, sauf mention contraire écrite.",
+    signatureBlock: "Fait à __________________________, le ____ / ____ / ________\n\nSignature du client précédée de la mention « Bon pour accord » :"
   },
   devis:    {},
   suivi:    { entries: [], devis: {} },
@@ -524,6 +540,11 @@ if (S.mission) {
   if (S.mission.client && typeof S.mission.client.contactSelected === "undefined") {
     S.mission.client.contactSelected = S.mission.client.contact || "";
   }
+  // Migrate old `cgu` field to `cgv`
+  if (S.mission.cgu && !S.mission.cgv) {
+    S.mission.cgv = S.mission.cgu;
+  }
+  delete S.mission.cgu;
   // Migrate old prep/prod/postprod into lignes if lignes is empty and old data has hours
   if (S.mission.lignes.length === 0) {
     const prep = S.mission.prep || {}, prod = S.mission.prod || {}, post = S.mission.postprod || {};
@@ -693,8 +714,8 @@ function urssafResetDefault() {
 }
 window.urssafResetDefault = urssafResetDefault;
 
-// ============ Locked textareas (photographe / conditions / cgu) ============
-let textLockState = { photographe: true, conditionsPaiement: true, cgu: true };
+// ============ Locked textareas (photographe / conditions / cgv / signature) ============
+let textLockState = { photographe: true, conditionsPaiement: true, cgv: true, signatureBlock: true };
 
 function textLockToggleMenu(field) {
   const p = document.getElementById("lockMenu-" + field);
@@ -899,11 +920,18 @@ function rDevisPreview() {
       <h4>Conditions de paiement</h4>${esc(d.conditionsPaiement)}
     </div>` : ""}
 
-    ${(d.cgu || "").trim() ? `<div class="dp-conditions" style="border-left-color:var(--primary);margin-top:10px">
-      <h4 style="color:var(--primary)">Conditions générales d'utilisation</h4>${esc(d.cgu)}
+    ${(d.signatureBlock || "").trim() ? `<div class="dp-conditions signature">
+      <h4>Bon pour accord</h4>${esc(d.signatureBlock)}
     </div>` : ""}
 
     <div class="dp-footer">TVA non applicable, art. 293 B du CGI</div>
+
+    ${(d.cgv || "").trim() ? `
+      <div class="devis-page-break"></div>
+      <div class="dp-conditions cgv">
+        <h4>Conditions générales de vente</h4>${esc(d.cgv)}
+      </div>
+    ` : ""}
 
     <div class="dp-actions">
       <button class="btn ghost" onclick="window.print()">🖨️ Imprimer</button>
@@ -1331,29 +1359,27 @@ function totals() {
   const cat = (S.tarifs.catalog || DEFAULT_CATALOG).find(c => c.k === d.object);
   const tarifH = cat ? num(cat.p) : 0;
   const HOURS_PER_DAY = 8;
-  // Walk lignes
+  // Walk lignes — round each line individually before summing
   let lignesAmount = 0, debours = 0, totalHeures = 0;
   for (const l of d.lignes || []) {
     if (l.type === "heures") {
       const h = num(l.duree) * (l.unit === "j" ? HOURS_PER_DAY : 1);
-      totalHeures += h;
-      lignesAmount += h * tarifH;
+      totalHeures = r2(totalHeures + h);
+      lignesAmount = r2(lignesAmount + r2(h * tarifH));
     } else if (l.type === "materiel") {
-      const p = num(l.prix);
-      if (l.devis === "debours") debours += p;
-      else lignesAmount += p;
+      const p = r2(num(l.prix));
+      if (l.devis === "debours") debours = r2(debours + p);
+      else lignesAmount = r2(lignesAmount + p);
     }
   }
-  lignesAmount = r2(lignesAmount);
-  debours = r2(debours);
-  // Déplacement
+  // Déplacement — round each component
   const mode = d.deplacement.mode || "voiture";
   const tauxKm = num(d.deplacement.tauxKm) || 0.40;
-  const trajet = num(d.deplacement.trajetH) * 40;
-  const depl = r2(mode === "voiture"
-    ? num(d.deplacement.km) * tauxKm + num(d.deplacement.peages) + trajet
-    : num(d.deplacement.ticket) + trajet);
-  // Autres (kept as-is for misc charges)
+  const trajet = r2(num(d.deplacement.trajetH) * 40);
+  const depl = mode === "voiture"
+    ? r2(r2(num(d.deplacement.km) * tauxKm) + r2(num(d.deplacement.peages)) + trajet)
+    : r2(r2(num(d.deplacement.ticket)) + trajet);
+  // Autres
   const autres = r2(num(d.autres.montant));
   const subtotal = r2(lignesAmount + depl + autres);
   const remise = r2(subtotal * num(d.remisePct) / 100);
@@ -1368,19 +1394,31 @@ function totals() {
     subtotal, remise, total, totalHeures, tarifH,
     acompte: r2(total * 0.30), reste: r2(total * 0.70),
     echeances, echeancesTotal,
-    // legacy keys (kept for backward compat with totalsHtml)
     prep: 0, prod: lignesAmount, post: 0
   };
 }
 
 function refreshTotals() {
-  // Re-render only the devis preview block; full re-render only if it doesn't exist
+  // Re-render the devis preview block
   const el = document.getElementById("devisPreview");
   if (el) {
     const wrap = document.createElement("div");
     wrap.innerHTML = rDevisPreview();
     const fresh = wrap.firstElementChild;
     if (fresh) el.parentNode.replaceChild(fresh, el);
+  }
+  // Re-render the échéances inline amounts (not the inputs themselves to avoid focus loss)
+  const t = totals();
+  (S.mission.echeances || []).forEach(e => {
+    const cell = document.querySelector(`[data-ech-amt="${e.id}"]`);
+    if (cell) cell.textContent = fmt(r2(t.total * num(e.pct) / 100));
+  });
+  // Update the % sum indicator
+  const sumEl = document.getElementById("echSum");
+  if (sumEl) {
+    const pctSum = t.echeancesTotal;
+    sumEl.className = `ech-sum ${pctSum === 100 ? "ok" : "warn"}`;
+    sumEl.innerHTML = `Total : ${pctSum.toString().replace(".",",")} %${pctSum !== 100 ? ` <strong>(devrait faire 100 %)</strong>` : " ✓"}`;
   }
 }
 
@@ -1462,8 +1500,8 @@ function rMS() {
     ${renderLockedTextarea("photographe", d.photographe || "", "Vos coordonnées telles qu'elles apparaîtront en haut à gauche du devis", "Nom Prénom&#10;Statut (auto-entrepreneur, micro-entreprise…)&#10;Adresse&#10;Code postal Ville&#10;SIRET / numéro&#10;Téléphone · Email")}
 
     <h3>Devis</h3>
-    <div class="row"><div class="field"><label>Date d'émission</label><input type="date" value="${esc(d.dateEmission)}" oninput="upd('mission.dateEmission', this.value)"></div></div>
-    <div class="row"><div class="field"><label>Validité</label><input type="date" value="${esc(d.dateValidite)}" oninput="upd('mission.dateValidite', this.value)"></div></div>
+    <div class="row"><div class="field narrow"><label>Date d'émission</label><input type="date" value="${esc(d.dateEmission)}" oninput="upd('mission.dateEmission', this.value)"></div></div>
+    <div class="row"><div class="field narrow"><label>Validité</label><input type="date" value="${esc(d.dateValidite)}" oninput="upd('mission.dateValidite', this.value)"></div></div>
 
     <h3>Client</h3>
     ${rClientPicker()}
@@ -1515,13 +1553,13 @@ function rMS() {
       </div>
     </div></div>
     ${mode === "voiture" ? `
-    <div class="row"><div class="field"><label>Distance (km)</label><input type="number" step="0.1" value="${esc(d.deplacement.km)}" oninput="upd('mission.deplacement.km', this.value)"></div></div>
-    <div class="row"><div class="field"><label>Péages (€)</label><input type="number" step="0.01" value="${esc(d.deplacement.peages)}" oninput="upd('mission.deplacement.peages', this.value)"></div></div>
-    <div class="row"><div class="field"><label>Indemnité kilométrique (€/km)</label><input type="number" step="0.01" value="${esc(d.deplacement.tauxKm ?? "0.40")}" oninput="upd('mission.deplacement.tauxKm', this.value)"></div></div>
+    <div class="row"><div class="field narrow"><label>Distance (km)</label><input type="number" step="0.1" value="${esc(d.deplacement.km)}" oninput="upd('mission.deplacement.km', this.value)"></div></div>
+    <div class="row"><div class="field narrow"><label>Péages (€)</label><input type="number" step="0.01" value="${esc(d.deplacement.peages)}" oninput="upd('mission.deplacement.peages', this.value)"></div></div>
+    <div class="row"><div class="field narrow"><label>Indemnité kilométrique (€/km)</label><input type="number" step="0.01" value="${esc(d.deplacement.tauxKm ?? "0.40")}" oninput="upd('mission.deplacement.tauxKm', this.value)"></div></div>
     ` : `
-    <div class="row"><div class="field"><label>Prix des billets (€)</label><input type="number" step="0.01" value="${esc(d.deplacement.ticket)}" oninput="upd('mission.deplacement.ticket', this.value)"></div></div>
+    <div class="row"><div class="field narrow"><label>Prix des billets (€)</label><input type="number" step="0.01" value="${esc(d.deplacement.ticket)}" oninput="upd('mission.deplacement.ticket', this.value)"></div></div>
     `}
-    <div class="row"><div class="field"><label>Temps de trajet (h)</label><input type="number" step="0.25" value="${esc(d.deplacement.trajetH)}" oninput="upd('mission.deplacement.trajetH', this.value)"></div></div>
+    <div class="row"><div class="field narrow"><label>Temps de trajet (h)</label><input type="number" step="0.25" value="${esc(d.deplacement.trajetH)}" oninput="upd('mission.deplacement.trajetH', this.value)"></div></div>
     <div class="hint">Renseigner le temps de trajet uniquement si le trajet excède 1 h (hors trajet domicile / transport). Valorisation : 40 €/h.</div>
 
     <h3>Remise</h3>
@@ -1540,12 +1578,12 @@ function rMS() {
           return `<div class="ech-row">
             <input class="lbl" value="${esc(e.label)}" placeholder="Libellé (ex: Acompte, Shooting, Livraison…)" oninput="echeanceUpd('${e.id}','label',this.value)">
             <div class="pct-wrap"><input type="number" step="1" min="0" max="100" value="${esc(e.pct)}" oninput="echeanceUpd('${e.id}','pct',this.value)"><span class="unit">%</span></div>
-            <div class="amt">${fmt(amount)}</div>
+            <div class="amt" data-ech-amt="${e.id}">${fmt(amount)}</div>
             <button class="del" onclick="echeanceDel('${e.id}')" title="Supprimer">×</button>
           </div>`;
         }).join("")}
       </div>
-      <div class="ech-sum ${pctSum === 100 ? "ok" : "warn"}">
+      <div class="ech-sum ${pctSum === 100 ? "ok" : "warn"}" id="echSum">
         Total : ${pctSum.toString().replace(".",",")} %${pctSum !== 100 ? ` <strong>(devrait faire 100 %)</strong>` : " ✓"}
       </div>
       <div style="display:flex;gap:8px;margin-top:8px;max-width:520px">
@@ -1557,8 +1595,11 @@ function rMS() {
     <h3>Conditions de paiement</h3>
     ${renderLockedTextarea("conditionsPaiement", d.conditionsPaiement || "", "Texte affiché en bas du devis, sous le total", "Acompte de 30 % à la commande, solde de 70 % à la livraison.&#10;Règlement par virement bancaire.&#10;…")}
 
-    <h3>Conditions générales d'utilisation (CGU)</h3>
-    ${renderLockedTextarea("cgu", d.cgu || "", "Mentions légales et conditions générales affichées en bas du devis", "Droits d'auteur, modalités d'utilisation des images, propriété intellectuelle…")}
+    <h3>Bon pour accord</h3>
+    ${renderLockedTextarea("signatureBlock", d.signatureBlock || "", "Bloc affiché sous les conditions de paiement, pour la signature du client", "Fait à _______________, le ___ / ___ / _____&#10;&#10;Signature du client précédée de la mention « Bon pour accord » :")}
+
+    <h3>Conditions générales de vente (CGV)</h3>
+    ${renderLockedTextarea("cgv", d.cgv || "", "Mentions légales et conditions générales de vente affichées en page 2 du devis", "Droits d'auteur, modalités d'utilisation des images, propriété intellectuelle…")}
 
     ${rDevisPreview()}
   `;
@@ -2658,7 +2699,7 @@ function rCL() {
       <tr class="cli-row cli-editing" data-search="${esc(search)}">
         <td><input value="${esc(e.num)}" oninput="clientsUpd('${e.id}','num',this.value)"></td>
         <td><input value="${esc(e.name)}" oninput="clientsUpd('${e.id}','name',this.value)"></td>
-        <td><input value="${esc(e.contact)}" oninput="clientsUpd('${e.id}','contact',this.value)"></td>
+        <td><input value="${esc(e.contact)}" oninput="clientsUpd('${e.id}','contact',this.value)" placeholder="Contacts (multi-lignes ↓)"></td>
         <td><input value="${esc(e.phone)}" oninput="clientsUpd('${e.id}','phone',this.value)"></td>
         <td><input type="email" value="${esc(e.email)}" oninput="clientsUpd('${e.id}','email',this.value)"></td>
         <td class="actions"><button title="Supprimer" onclick="${stop}if(confirm('Supprimer ce client ?'))clientsDel('${e.id}')">×</button></td>
@@ -2676,6 +2717,11 @@ function rCL() {
     if (expanded) {
       const body = editing ? `
         <div class="row">
+          <div class="field lg"><label>Contacts (un par ligne, ou séparés par virgule / point-virgule)</label>
+            <textarea class="multi-text" placeholder="Marie Dupont&#10;Jean Martin (assistant)&#10;…" oninput="clientsUpd('${e.id}','contact',this.value)">${esc(e.contact || "")}</textarea>
+          </div>
+        </div>
+        <div class="row">
           <div class="field"><label>Adresse</label><input value="${esc(e.address)}" oninput="clientsUpd('${e.id}','address',this.value)"></div>
           <div class="field"><label>CP - Ville</label><input value="${esc(e.cityPostal)}" oninput="clientsUpd('${e.id}','cityPostal',this.value)"></div>
         </div>
@@ -2687,6 +2733,14 @@ function rCL() {
           <button class="btn ghost" onclick="clientsToggle('${e.id}')">Fermer</button>
         </div>
       ` : `
+        ${(() => {
+          const parts = (e.contact || "").split(/[\n,;\/]+/).map(s => s.trim()).filter(Boolean);
+          if (parts.length <= 1) return `<div class="cli-info"><span class="cli-label">Contact</span><span>${esc(parts[0]) || "—"}</span></div>`;
+          return `<div class="cli-info" style="align-items:flex-start">
+            <span class="cli-label">Contacts (${parts.length})</span>
+            <span><ul style="margin:0;padding-left:18px;list-style-type:'– '">${parts.map(p => `<li>${esc(p)}</li>`).join("")}</ul></span>
+          </div>`;
+        })()}
         <div class="cli-info"><span class="cli-label">Adresse</span><span>${esc(e.address) || "—"}</span></div>
         <div class="cli-info"><span class="cli-label">CP - Ville</span><span>${esc(e.cityPostal) || "—"}</span></div>
         <div class="cli-info"><span class="cli-label">Rencontré via</span><span>${esc(e.rencontre) || "—"}</span></div>
