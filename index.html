@@ -3076,20 +3076,46 @@ window.tarifHeuresRelock = tarifHeuresRelock;
 // Compute amortization rates (per hour)
 function tauxMatos() {
   const heures = num(S.tarifs.heuresAnnuelles) || 900;
-  // Abonnements : actifs (non finis) → annuel courant ; terminés → on amortit aussi le CUMUL passé
-  // Logique : pour un abo terminé, ça reste un coût payé qu'il faut amortir.
-  // On comptabilise le coût annuel × nombre d'années de souscription (ou l'année en cours si actif).
+  const CURRENT_YEAR = new Date().getFullYear();
+  // Abonnements : seulement ceux actifs en année courante
+  // Actif si dateDebut ≤ année courante (ou vide) ET dateFin ≥ année courante (ou vide)
   let abonnementsAnnuels = 0;
   for (const e of (S.abonnements.entries || [])) {
-    abonnementsAnnuels += num(e.annuel);
-    // Note : on inclut tous les abonnements, terminés ou actifs (cf. spec: même résiliés doivent avoir été amortis)
+    const annual = num(e.annuel);
+    if (annual <= 0) continue;
+    const startYear = e.dateDebut ? parseInt(e.dateDebut.slice(0, 4), 10) : null;
+    const endYear   = e.dateFin   ? parseInt(e.dateFin.slice(0, 4), 10)   : null;
+    const isActiveCurrent = (startYear === null || startYear <= CURRENT_YEAR) &&
+                             (endYear === null || endYear >= CURRENT_YEAR);
+    if (isActiveCurrent) abonnementsAnnuels += annual;
   }
-  // Investissements : amortissement = prix / durée de vie (années)
+  // Investissements : amortissement de l'année courante uniquement
+  // Pour chaque équipement encore en cours d'amortissement cette année (ni complètement amorti, ni acheté après l'année courante)
   let investissementsAnnuels = 0;
   for (const inv of (S.investissements.entries || [])) {
     const prix = num(inv.prix);
     const duree = num(inv.dureeVie) || 5;
-    if (duree > 0) investissementsAnnuels += prix / duree;
+    if (duree <= 0 || prix <= 0) continue;
+    if (!inv.date || !/^\d{4}-\d{2}/.test(inv.date)) continue;
+    const purchaseYear  = parseInt(inv.date.slice(0, 4), 10);
+    const purchaseMonth = parseInt(inv.date.slice(5, 7), 10) || 1;
+    if (purchaseYear > CURRENT_YEAR) continue; // pas encore acheté
+    const monthlyAmort = prix / (duree * 12);
+    // Combien de mois de cette année courante sont couverts ?
+    let monthsThisYear;
+    if (purchaseYear === CURRENT_YEAR) {
+      // Année d'achat : prorata depuis purchaseMonth
+      monthsThisYear = 13 - purchaseMonth;
+    } else {
+      // Année postérieure à l'achat
+      // Vérifier si l'amortissement n'est pas déjà fini
+      const monthsElapsedBeforeCurrentYear = (CURRENT_YEAR - purchaseYear) * 12 - (purchaseMonth - 1);
+      const totalMonths = duree * 12;
+      const monthsLeftAtStart = totalMonths - monthsElapsedBeforeCurrentYear;
+      if (monthsLeftAtStart <= 0) continue; // déjà entièrement amorti
+      monthsThisYear = Math.min(12, monthsLeftAtStart);
+    }
+    investissementsAnnuels += monthlyAmort * monthsThisYear;
   }
   abonnementsAnnuels = r2(abonnementsAnnuels);
   investissementsAnnuels = r2(investissementsAnnuels);
@@ -3097,7 +3123,7 @@ function tauxMatos() {
   const tauxAbo = r2(abonnementsAnnuels / heures);
   const tauxInv = r2(investissementsAnnuels / heures);
   const tauxTotal = r2(totalAnnuel / heures);
-  return { heures, abonnementsAnnuels, investissementsAnnuels, totalAnnuel, tauxAbo, tauxInv, tauxTotal };
+  return { heures, abonnementsAnnuels, investissementsAnnuels, totalAnnuel, tauxAbo, tauxInv, tauxTotal, currentYear: CURRENT_YEAR };
 }
 
 function refreshTauxMatos() {
@@ -3495,8 +3521,8 @@ function rTR() {
       </tr></tfoot>` : ""}
     </table>
 
-    <h3>Synthèse coûts horaires (matériel + abonnements)</h3>
-    <div class="hint">Calcul automatique : tes <strong>frais récurrents annuels</strong> (abonnements + amortissement matériel) divisés par tes <strong>heures facturables annuelles</strong>. Ce coût horaire indicatif peut être ajouté à ton tarif de main-d'œuvre.</div>
+    <h3>Synthèse coûts horaires (année en cours : ${tm.currentYear})</h3>
+    <div class="hint">Calcul automatique : tes <strong>frais récurrents de l'année en cours</strong> (abonnements actifs cette année + amortissement matériel de l'année avec prorata) divisés par tes <strong>heures facturables annuelles</strong>. Ce coût horaire indicatif peut être ajouté à ton tarif de main-d'œuvre.</div>
 
     <div class="row" style="margin-bottom:14px">
       <div class="field narrow"><label>Heures facturables annuelles</label>
@@ -3523,12 +3549,12 @@ function rTR() {
       </thead>
       <tbody>
         <tr>
-          <td>Abonnements professionnels<div style="font-size:11px;color:var(--text-dim);margin-top:2px">Inclut tous les abonnements (actifs et résiliés ont été payés et amortis)</div></td>
+          <td>Abonnements professionnels<div style="font-size:11px;color:var(--text-dim);margin-top:2px">Abonnements actifs en ${tm.currentYear} (selon dates de début / fin)</div></td>
           <td class="amount" id="tm-abo-an" style="text-align:right;color:var(--text);font-variant-numeric:tabular-nums;padding-right:14px">${fmt(tm.abonnementsAnnuels)}</td>
           <td class="amount" id="tm-abo-h" style="text-align:right;color:var(--text);font-variant-numeric:tabular-nums;padding-right:14px">${fmt(tm.tauxAbo)}</td>
         </tr>
         <tr>
-          <td>Amortissement matériel<div style="font-size:11px;color:var(--text-dim);margin-top:2px">Somme de (prix ÷ durée de vie) pour chaque équipement</div></td>
+          <td>Amortissement matériel<div style="font-size:11px;color:var(--text-dim);margin-top:2px">Prorata de l'amortissement de chaque équipement sur l'année ${tm.currentYear}</div></td>
           <td class="amount" id="tm-inv-an" style="text-align:right;color:var(--text);font-variant-numeric:tabular-nums;padding-right:14px">${fmt(tm.investissementsAnnuels)}</td>
           <td class="amount" id="tm-inv-h" style="text-align:right;color:var(--text);font-variant-numeric:tabular-nums;padding-right:14px">${fmt(tm.tauxInv)}</td>
         </tr>
