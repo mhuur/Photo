@@ -152,7 +152,7 @@ const DEFAULT_S = {
     notes: ""
   },
   devis:    {},
-  suivi:    { entries: [] },
+  suivi:    { entries: [], devis: {} },
   clients:  { entries: [] },
   compta:   {},
   abonnements: { entries: [] },
@@ -160,7 +160,8 @@ const DEFAULT_S = {
   bugs:     {}
 };
 let S = JSON.parse(localStorage.getItem(SK) || "null") || JSON.parse(JSON.stringify(DEFAULT_S));
-if (!S.suivi || !Array.isArray(S.suivi.entries)) S.suivi = { ...DEFAULT_S.suivi };
+if (!S.suivi || !Array.isArray(S.suivi.entries)) S.suivi = { entries: [], devis: {} };
+if (!S.suivi.devis || typeof S.suivi.devis !== "object") S.suivi.devis = {};
 if (!S.clients || !Array.isArray(S.clients.entries)) S.clients = { ...DEFAULT_S.clients };
 if (!S.abonnements || !Array.isArray(S.abonnements.entries)) S.abonnements = { ...DEFAULT_S.abonnements };
 if (!S.investissements || !Array.isArray(S.investissements.entries)) S.investissements = { ...DEFAULT_S.investissements };
@@ -225,12 +226,13 @@ async function loadFromCloud() {
         };
       }
       if (d.devis)   S.devis   = Object.assign({}, DEFAULT_S.devis,   d.devis);
-      if (d.suivi)   S.suivi   = { ...DEFAULT_S.suivi, ...d.suivi, entries: Array.isArray(d.suivi.entries) ? d.suivi.entries : [] };
+      if (d.suivi)   S.suivi   = { ...DEFAULT_S.suivi, ...d.suivi, entries: Array.isArray(d.suivi.entries) ? d.suivi.entries : [], devis: (d.suivi.devis && typeof d.suivi.devis === "object") ? d.suivi.devis : {} };
       if (d.clients) S.clients = { ...DEFAULT_S.clients, ...d.clients, entries: Array.isArray(d.clients.entries) ? d.clients.entries : [] };
       if (d.compta)  S.compta  = Object.assign({}, DEFAULT_S.compta,  d.compta);
       if (d.abonnements) S.abonnements = { ...DEFAULT_S.abonnements, ...d.abonnements, entries: Array.isArray(d.abonnements.entries) ? d.abonnements.entries : [] };
       if (d.investissements) S.investissements = { ...DEFAULT_S.investissements, ...d.investissements, entries: Array.isArray(d.investissements.entries) ? d.investissements.entries : [] };
       if (d.bugs)    S.bugs    = Object.assign({}, DEFAULT_S.bugs,    d.bugs);
+      suiviMigrate();
       localStorage.setItem(SK, JSON.stringify(S));
     }
   } catch (err) { console.error("loadFromCloud", err); }
@@ -405,16 +407,102 @@ function suiviLegendHtml() {
 
 function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
 
+function entryRef(e) {
+  const d = S.suivi.devis && S.suivi.devis[e.devisId];
+  return (d && d.ref) || e.ref || "";
+}
+function entryRefSet(e, val) {
+  if (!S.suivi.devis) S.suivi.devis = {};
+  if (!e.devisId) e.devisId = uid();
+  if (!S.suivi.devis[e.devisId]) S.suivi.devis[e.devisId] = { ref: "" };
+  S.suivi.devis[e.devisId].ref = val;
+}
+
+function suiviClassifyEcheance(s) {
+  const t = (s || "").toLowerCase();
+  if (/acompte|accompte|1er|premier/.test(t)) return "acompte";
+  if (/reste/.test(t)) return "reste";
+  if (/frais|d[ée]bours/.test(t)) return "frais";
+  return "other";
+}
+
+function suiviMigrate() {
+  if (!S.suivi.devis) S.suivi.devis = {};
+
+  for (const e of S.suivi.entries) {
+    if (STATUT_LEGACY[e.statut]) e.statut = STATUT_LEGACY[e.statut];
+  }
+
+  const ungrouped = S.suivi.entries.filter(e => !e.devisId);
+  if (ungrouped.length === 0) return;
+
+  const byKey = new Map();
+  for (const e of ungrouped) {
+    const k = `${e.client || ""}|${e.date || ""}`;
+    if (!byKey.has(k)) byKey.set(k, []);
+    byKey.get(k).push(e);
+  }
+
+  const assign = (entry, ref) => {
+    const id = uid();
+    entry.devisId = id;
+    S.suivi.devis[id] = { ref: ref || "" };
+    delete entry.ref;
+    return id;
+  };
+
+  for (const entries of byKey.values()) {
+    const acomptes = [], restes = [], frais = [], others = [];
+    for (const e of entries) {
+      const c = suiviClassifyEcheance(e.echeance);
+      if (c === "acompte") acomptes.push(e);
+      else if (c === "reste") restes.push(e);
+      else if (c === "frais") frais.push(e);
+      else others.push(e);
+    }
+    acomptes.sort((a, b) => num(a.montant) - num(b.montant));
+    restes.sort((a, b) => num(a.montant) - num(b.montant));
+
+    const created = [];
+    const pairCount = Math.min(acomptes.length, restes.length);
+    for (let i = 0; i < pairCount; i++) {
+      const id = uid();
+      const ref = acomptes[i].ref || restes[i].ref || "";
+      acomptes[i].devisId = id;
+      restes[i].devisId = id;
+      delete acomptes[i].ref;
+      delete restes[i].ref;
+      S.suivi.devis[id] = { ref };
+      created.push(id);
+    }
+    for (let i = pairCount; i < acomptes.length; i++) created.push(assign(acomptes[i], acomptes[i].ref));
+    for (let i = pairCount; i < restes.length;   i++) created.push(assign(restes[i],   restes[i].ref));
+    for (const e of others) created.push(assign(e, e.ref));
+    if (frais.length) {
+      if (created.length) {
+        for (const e of frais) {
+          e.devisId = created[0];
+          delete e.ref;
+        }
+      } else {
+        for (const e of frais) assign(e, e.ref);
+      }
+    }
+  }
+}
+
 function suiviAdd() {
   const m = S.mission;
   const cat = CATALOG.find(c => c.k === m.object);
   const totalAmount = totals().total.toFixed(2);
   const hoursTotal = num(m.prep.hours) + num(m.prod.hours) + num(m.postprod.hours);
   const id = uid();
+  const devisId = uid();
+  S.suivi.devis[devisId] = { ref: m.ref || "" };
   S.suivi.entries.unshift({
     id,
+    devisId,
     date:        m.objectDate || new Date().toISOString().slice(0, 10),
-    ref:         m.ref || "",
     client:      m.client.name || "",
     prestation:  cat ? cat.l : "",
     montant:     String(totalAmount),
@@ -427,7 +515,7 @@ function suiviAdd() {
     tresorerie:  "0",
     frais:       "0",
     commentaires:"",
-    statut:      "attente"
+    statut:      "envoye"
   });
   suiviExpanded = id;
   save();
@@ -654,6 +742,7 @@ function suiviImport() {
   }
   if (!confirm(`Importer ${toImport.length} prestation(s) manquante(s) depuis l'Excel ?\n\n(${S.suivi.entries.length} déjà présente(s) sur ${SUIVI_SEED.length} dans l'Excel)`)) return;
   for (const s of toImport) S.suivi.entries.push({ id: uid(), ...s });
+  suiviMigrate();
   save();
   render();
 }
@@ -679,6 +768,14 @@ function suiviUpd(id, field, val) {
   save();
 }
 window.suiviUpd = suiviUpd;
+
+function suiviRefUpd(id, val) {
+  const e = S.suivi.entries.find(x => x.id === id);
+  if (!e) return;
+  entryRefSet(e, val);
+  save();
+}
+window.suiviRefUpd = suiviRefUpd;
 
 function suiviStatut(id, val) {
   suiviUpd(id, "statut", val);
@@ -792,6 +889,7 @@ function suiviFilteredSorted() {
   const f = suiviSort.field;
   list.sort((a, b) => {
     if (SUIVI_NUMERIC.has(f)) return (num(a[f]) - num(b[f])) * dir;
+    if (f === "ref") return entryRef(a).localeCompare(entryRef(b), "fr", { numeric: true }) * dir;
     return String(a[f] || "").localeCompare(String(b[f] || ""), "fr", { numeric: true }) * dir;
   });
   return list;
@@ -840,7 +938,7 @@ function rSV() {
         <td class="cb" onclick="${stop}"><input type="checkbox" ${suiviSelected.has(e.id) ? "checked" : ""} onclick="suiviToggleOne('${e.id}', this.checked, event)"></td>
         <td class="statut">${pastille(entryStatut(e))}</td>
         <td>${esc(dateFR(e.date))}</td>
-        <td>${esc(e.ref) || "—"}</td>
+        <td>${esc(entryRef(e)) || "—"}</td>
         <td><strong>${esc(e.client) || "—"}</strong></td>
         <td>${esc(e.prestation) || "—"}</td>
         <td class="amt">${fmt(e.montant)}</td>
@@ -865,7 +963,7 @@ function rSV() {
             <h4>Identification</h4>
             <div class="row">
               <div class="field sm"><label>Date</label><input type="date" value="${esc(e.date)}" oninput="suiviUpd('${e.id}','date',this.value)"></div>
-              <div class="field"><label>Référence</label><input value="${esc(e.ref)}" oninput="suiviUpd('${e.id}','ref',this.value)" placeholder="DEVIS-…"></div>
+              <div class="field"><label>Référence (devis)</label><input value="${esc(entryRef(e))}" oninput="suiviRefUpd('${e.id}', this.value)" placeholder="DEVIS-…"></div>
               <div class="field"><label>Client</label><input value="${esc(e.client)}" oninput="suiviUpd('${e.id}','client',this.value)" placeholder="Client"></div>
               <div class="field"><label>Prestation</label><input value="${esc(e.prestation)}" oninput="suiviUpd('${e.id}','prestation',this.value)" placeholder="Prestation"></div>
             </div>
@@ -1218,7 +1316,7 @@ function bilanCompute() {
     const ym = date.slice(0, 7);
     if (!byMonth[ym]) byMonth[ym] = { heures:0, paiement:0, ca:0, salaire:0, ursaf:0, tresorerie:0, frais:0 };
     const b = byMonth[ym];
-    const paid = e.statut === "paye";
+    const paid = entryStatut(e) === "termine";
     if (paid) {
       b.heures     += num(e.heures);
       b.paiement   += num(e.paiement != null && e.paiement !== "" ? e.paiement : e.montant);
@@ -1402,6 +1500,7 @@ auth.onAuthStateChanged(async u => {
   if (u) await loadFromCloud(); else render();
 });
 
+suiviMigrate();
 render();
 </script>
 </body>
