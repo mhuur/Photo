@@ -73,7 +73,7 @@
   table.hist td.cb,table.hist th:first-child{text-align:center;width:34px;padding:6px 4px}
   table.hist td.cb input,table.hist th input[type="checkbox"]{cursor:pointer;width:16px;height:16px}
   table.hist tr.suv-detail td{background:transparent;padding:0;border-bottom:0}
-  table.hist tr.suv-multi.clickable{cursor:pointer}
+  table.hist tr.suv-row.clickable{cursor:pointer}
   table.hist tr.suv-multi td{font-weight:500}
   .suv-caret{display:inline-block;color:#9ca3af;font-size:11px;margin-right:2px}
   table.hist tbody.devis-grp{border-bottom:1px solid #e5e7eb;transition:background .12s ease, box-shadow .12s ease}
@@ -96,11 +96,10 @@
   table.hist tr.suv-sub td.amt{color:#374151;padding-right:12px}
   table.hist tr.suv-row td.amt,table.hist tr.suv-sub td.amt{font-variant-numeric:tabular-nums;text-align:right;padding-right:12px}
   table.hist td.actions:has(.suv-row-actions){text-align:right;width:auto;min-width:200px;padding:4px 8px}
-  .suv-row-actions{display:inline-flex;gap:8px;align-items:center;justify-content:flex-end;opacity:0;transition:opacity .12s ease}
-  table.hist tbody.devis-grp:hover .suv-row-actions,
+  .suv-row-actions{display:inline-flex;gap:8px;align-items:center;justify-content:flex-end;opacity:0;transition:opacity .12s ease;pointer-events:none}
   table.hist tbody.devis-grp.expanded .suv-row-actions,
-  table.hist tbody.devis-grp.editing .suv-row-actions{opacity:1}
-  table.hist tr.suv-detail .suv-row-actions{opacity:1}
+  table.hist tbody.devis-grp.editing .suv-row-actions{opacity:1;pointer-events:auto}
+  table.hist tr.suv-detail .suv-row-actions{opacity:1;pointer-events:auto}
   .btn.btn-vert{background:#10b981;color:#fff}.btn.btn-vert:hover{background:#059669}
   .btn.btn-rouge{background:#dc2626;color:#fff}.btn.btn-rouge:hover{background:#b91c1c}
   .btn.btn-gris{background:#6b7280;color:#fff}.btn.btn-gris:hover{background:#4b5563}
@@ -1108,7 +1107,13 @@ function suiviSelInfoHtml() {
 const SUIVI_NUMERIC = new Set(["montant","heures","paiement","ca","salaire","ursaf","tresorerie","frais"]);
 
 function suiviToggle(id) {
-  suiviExpanded = (suiviExpanded === id ? null : id);
+  if (suiviExpanded === id) {
+    suiviExpanded = null;
+  } else {
+    suiviExpanded = id;
+    const e = S.suivi.entries.find(x => x.id === id);
+    if (e) suiviGroupExpanded = e.devisId;
+  }
   render();
 }
 window.suiviToggle = suiviToggle;
@@ -1276,21 +1281,23 @@ function rSV() {
 
   const rowsHtml = list.map(g => {
     const selected = suiviSelected.has(g.devisId);
+    const cardOpen = suiviGroupExpanded === g.devisId;
     if (g.lignes.length === 1) {
       const e = g.lignes[0];
       const editing = suiviExpanded === e.id;
       const cls = ["devis-grp"];
       if (selected) cls.push("sel");
+      if (cardOpen) cls.push("expanded");
       if (editing) cls.push("editing");
       const summary = `
-        <tr class="suv-row">
-          <td class="cb"><input type="checkbox" ${selected ? "checked" : ""} onclick="suiviToggleOne('${g.devisId}', this.checked, event)"></td>
+        <tr class="suv-row clickable" onclick="suiviGroupToggle('${g.devisId}')">
+          <td class="cb" onclick="${stop}"><input type="checkbox" ${selected ? "checked" : ""} onclick="suiviToggleOne('${g.devisId}', this.checked, event)"></td>
           <td class="statut">${pastille(g.statutGlobal)}</td>
           <td>${esc(dateFR(e.date))}</td>
           <td class="ref-cell">${esc(g.ref) || `<span class="muted">—</span>`}</td>
           <td><strong>${esc(e.client) || "—"}</strong></td>
           <td class="amt">${fmt(e.montant)}</td>
-          <td class="actions">
+          <td class="actions" onclick="${stop}">
             <div class="suv-row-actions">
               ${suiviActionsHtml(e)}
               <button class="ico-btn" title="Modifier les détails de la ligne" onclick="suiviToggle('${e.id}')">⋮</button>
@@ -1302,24 +1309,20 @@ function rSV() {
       return `<tbody class="${cls.join(" ")}">${inner}</tbody>`;
     }
 
-    const canExpand = g.statutGlobal !== "envoye";
-    const groupExpanded = canExpand && suiviGroupExpanded === g.devisId;
+    const showSubRows = cardOpen && g.statutGlobal !== "envoye";
     const dateLabel = g.dateMin === g.dateMax
       ? esc(dateFR(g.dateMin))
       : `${esc(dateFR(g.dateMin))} → ${esc(dateFR(g.dateMax))}`;
     const cls = ["devis-grp", "is-multi"];
     if (selected) cls.push("sel");
-    if (groupExpanded) cls.push("expanded");
-    const trClick = canExpand ? `onclick="suiviGroupToggle('${g.devisId}')"` : "";
-    const trCls = "suv-row suv-multi" + (canExpand ? " clickable" : "");
-    const caret = canExpand ? `<span class="suv-caret">${groupExpanded ? "▾" : "▸"}</span> ` : "";
+    if (cardOpen) cls.push("expanded");
     const summary = `
-      <tr class="${trCls}" ${trClick}>
+      <tr class="suv-row suv-multi clickable" onclick="suiviGroupToggle('${g.devisId}')">
         <td class="cb" onclick="${stop}"><input type="checkbox" ${selected ? "checked" : ""} onclick="suiviToggleOne('${g.devisId}', this.checked, event)"></td>
         <td class="statut">${pastille(g.statutGlobal)}</td>
         <td>${dateLabel}</td>
         <td class="ref-cell">${esc(g.ref) || `<span class="muted">—</span>`}</td>
-        <td>${caret}<strong>${esc(g.client) || "—"}</strong></td>
+        <td><span class="suv-caret">${cardOpen ? "▾" : "▸"}</span> <strong>${esc(g.client) || "—"}</strong></td>
         <td class="amt">${fmt(g.total)}</td>
         <td class="actions" onclick="${stop}">
           <div class="suv-row-actions">
@@ -1329,7 +1332,7 @@ function rSV() {
           </div>
         </td>
       </tr>`;
-    if (!groupExpanded) return `<tbody class="${cls.join(" ")}">${summary}</tbody>`;
+    if (!cardOpen) return `<tbody class="${cls.join(" ")}">${summary}</tbody>`;
 
     const refEditOpen = suiviGroupRefEdit === g.devisId;
     const refEditRow = refEditOpen ? `
@@ -1347,7 +1350,7 @@ function rSV() {
         </td>
       </tr>` : "";
 
-    const subRows = g.lignes.map(e => {
+    const subRows = !showSubRows ? "" : g.lignes.map(e => {
       const ligneExpanded = suiviExpanded === e.id;
       const lib = esc(e.echeance || "Paiement");
       const sub = `
