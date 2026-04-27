@@ -90,24 +90,30 @@
   table.hist tbody.devis-grp.sel:not(.editing):not(.expanded){box-shadow:inset 4px 0 0 #f59e0b}
   table.hist tbody.devis-grp.sel tr.suv-row td{background:#fef9c3}
   table.hist tbody.devis-grp.sel.expanded tr.suv-row td{background:#fef3c7}
-  table.hist tr.suv-sub td{padding:6px 10px;font-size:12.5px;color:#4b5563;border-bottom:0}
+  table.hist tr.suv-sub td{padding:6px 12px;font-size:12.5px;color:#4b5563;border-bottom:0}
   table.hist tr.suv-sub td.statut{padding-left:30px}
-  table.hist tr.suv-sub td.muted{color:#bcc1cb;font-size:13px;text-align:center;padding:0;width:18px}
   table.hist tr.suv-sub td.sub-lib{color:#374151;font-style:italic}
-  table.hist tr.suv-sub td.amt{color:#374151}
-  table.hist td.actions:has(.suv-row-actions){text-align:right;width:auto;min-width:240px}
-  .suv-row-actions{display:flex;gap:6px;align-items:center;justify-content:flex-end;flex-wrap:wrap}
-  .suv-row-actions .btn{padding:5px 10px;font-size:12px;border-radius:4px;line-height:1.3;font-weight:500}
-  .suv-row-actions .btn.ghost{background:#f3f4f6;color:#374151;border:1px solid #d1d5db}
-  .suv-row-actions .btn.ghost:hover{background:#e5e7eb;color:#111827}
+  table.hist tr.suv-sub td.amt{color:#374151;padding-right:12px}
+  table.hist tr.suv-row td.amt,table.hist tr.suv-sub td.amt{font-variant-numeric:tabular-nums;text-align:right;padding-right:12px}
+  table.hist td.actions:has(.suv-row-actions){text-align:right;width:auto;min-width:160px;padding:4px 8px}
+  .suv-row-actions{display:inline-flex;gap:10px;align-items:center;justify-content:flex-end}
   .btn.btn-vert{background:#10b981;color:#fff}.btn.btn-vert:hover{background:#059669}
   .btn.btn-rouge{background:#dc2626;color:#fff}.btn.btn-rouge:hover{background:#b91c1c}
   .btn.btn-gris{background:#6b7280;color:#fff}.btn.btn-gris:hover{background:#4b5563}
   .btn.btn-bleu{background:#3b82f6;color:#fff}.btn.btn-bleu:hover{background:#2563eb}
-  .btn.btn-icon{min-width:32px;padding:5px 8px;font-size:14px;font-weight:700;text-align:center;line-height:1}
-  .ico-btn{background:#f3f4f6;color:#4b5563;border:1px solid #d1d5db;border-radius:4px;padding:4px 8px;cursor:pointer;font-size:13px;line-height:1;font-weight:600;min-width:28px}
-  .ico-btn:hover{background:#e5e7eb;color:#111827}
-  .ico-btn[title*="Supprimer"]:hover{background:#fee2e2;color:#dc2626;border-color:#fca5a5}
+  .btn.btn-icon{background:transparent;border:0;min-width:0;padding:3px 5px;font-size:15px;font-weight:600;line-height:1;border-radius:3px;color:#374151}
+  .btn.btn-icon:hover{background:rgba(0,0,0,.06)}
+  .btn.btn-icon.btn-vert{background:transparent;color:#10b981}
+  .btn.btn-icon.btn-vert:hover{background:rgba(16,185,129,.14);color:#059669}
+  .btn.btn-icon.btn-rouge{background:transparent;color:#dc2626}
+  .btn.btn-icon.btn-rouge:hover{background:rgba(220,38,38,.14);color:#b91c1c}
+  .btn.btn-icon.btn-bleu{background:transparent;color:#3b82f6}
+  .btn.btn-icon.btn-bleu:hover{background:rgba(59,130,246,.14);color:#2563eb}
+  .btn.btn-icon.ghost{background:transparent;border:0;color:#9ca3af}
+  .btn.btn-icon.ghost:hover{background:rgba(0,0,0,.06);color:#374151}
+  .ico-btn{background:transparent;color:#9ca3af;border:0;border-radius:3px;padding:3px 5px;cursor:pointer;font-size:15px;line-height:1;font-weight:600;min-width:0}
+  .ico-btn:hover{background:rgba(0,0,0,.06);color:#374151}
+  .ico-btn[title*="Supprimer"]:hover{background:#fee2e2;color:#dc2626}
   td.ref-cell{color:#374151;font-variant-numeric:tabular-nums}
   td.ref-cell .muted{color:#9ca3af}
   .suv-panel{padding:12px 16px}
@@ -1334,9 +1340,7 @@ function rSV() {
         <tr class="suv-sub">
           <td></td>
           <td class="statut">${pastille(entryStatut(e))}</td>
-          <td>${esc(dateFR(e.date))}</td>
-          <td class="muted">↳</td>
-          <td class="sub-lib">${lib}</td>
+          <td colspan="3" class="sub-lib">${lib}</td>
           <td class="amt">${fmt(e.montant)}</td>
           <td class="actions">
             <div class="suv-row-actions">
@@ -1389,7 +1393,7 @@ function rSV() {
           <th class="sortable" style="width:160px" onclick="suiviSortKey('ref')">Référence${arr('ref')}</th>
           <th class="sortable" onclick="suiviSortKey('client')">Client${arr('client')}</th>
           <th class="sortable" style="width:120px;text-align:right" onclick="suiviSortKey('montant')">Montant${arr('montant')}</th>
-          <th style="width:240px;text-align:right">Actions</th>
+          <th style="width:170px;text-align:right">Actions</th>
         </tr>
       </thead>
       ${rowsHtml}
