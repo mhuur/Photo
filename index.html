@@ -175,6 +175,14 @@
   .stats{display:flex;gap:8px;flex-wrap:wrap;margin:14px 0 4px}
   .stat{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:10px 14px;font-size:12px;color:var(--text-muted);min-width:120px;box-shadow:var(--shadow-sm)}
   .stat strong{display:block;font-size:18px;color:var(--text);font-weight:600;margin-top:2px;font-variant-numeric:tabular-nums}
+  .mss-card{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:14px 18px 12px;margin-bottom:14px;box-shadow:var(--shadow-sm)}
+  .mss-card > h3{margin:0 0 10px;border-bottom:0;padding-bottom:0}
+  .mss-card .hint{margin:6px 0 0}
+  .seg{display:inline-flex;border:1px solid var(--border-light);border-radius:6px;overflow:hidden;background:var(--surface-2)}
+  .seg-btn{background:transparent;border:0;padding:8px 14px;cursor:pointer;font:inherit;font-size:13px;color:var(--text-muted);border-right:1px solid var(--border);line-height:1.2}
+  .seg-btn:last-child{border-right:0}
+  .seg-btn.active{background:var(--primary);color:#fff;font-weight:600}
+  .seg-btn:not(.active):hover{background:var(--surface-hi);color:var(--text)}
 </style>
 </head>
 <body>
@@ -220,10 +228,11 @@ const DEFAULT_S = {
     ref: "", dateEmission: "", dateValidite: "",
     object: "", objectDate: "", objectLieu: "",
     client: { num: "", name: "", contact: "", address: "", phone: "", email: "" },
+    fiscal:      { mode: "declare", ursaffPct: "22" },
     prep:        { hours: "0", rate: "" },
     prod:        { hours: "0", rate: "" },
     postprod:    { hours: "0", rate: "" },
-    deplacement: { km: "0", peages: "0", trajetH: "0", ticket: "0" },
+    deplacement: { mode: "none", km: "0", peages: "0", indemnityKm: "0.40", trajetH: "0", ticket: "0" },
     autres:      { desc: "", montant: "0" },
     remisePct: "0",
     notes: ""
@@ -295,6 +304,7 @@ async function loadFromCloud() {
         S.mission = {
           ...dm, ...m,
           client:      { ...dm.client,      ...(m.client      || {}) },
+          fiscal:      { ...dm.fiscal,      ...(m.fiscal      || {}) },
           prep:        { ...dm.prep,        ...(m.prep        || {}) },
           prod:        { ...dm.prod,        ...(m.prod        || {}) },
           postprod:    { ...dm.postprod,    ...(m.postprod    || {}) },
@@ -322,7 +332,7 @@ function upd(path, val) {
   for (let i = 0; i < keys.length - 1; i++) o = o[keys[i]];
   o[keys[keys.length - 1]] = val;
   save();
-  if (path.startsWith("mission.prep") || path.startsWith("mission.prod") || path.startsWith("mission.postprod") || path.startsWith("mission.deplacement") || path.startsWith("mission.autres") || path === "mission.remisePct") {
+  if (path.startsWith("mission.prep") || path.startsWith("mission.prod") || path.startsWith("mission.postprod") || path.startsWith("mission.deplacement") || path.startsWith("mission.autres") || path.startsWith("mission.fiscal") || path === "mission.remisePct") {
     refreshTotals();
   }
 }
@@ -337,17 +347,40 @@ function pickObject(k) {
 }
 window.pickObject = pickObject;
 
+function pickFiscalMode(m) {
+  if (!S.mission.fiscal) S.mission.fiscal = { ...DEFAULT_S.mission.fiscal };
+  S.mission.fiscal.mode = m;
+  save();
+  render();
+}
+window.pickFiscalMode = pickFiscalMode;
+
+function pickDeplacementMode(m) {
+  if (!S.mission.deplacement) S.mission.deplacement = { ...DEFAULT_S.mission.deplacement };
+  S.mission.deplacement.mode = m;
+  save();
+  render();
+}
+window.pickDeplacementMode = pickDeplacementMode;
+
 function totals() {
   const d = S.mission;
   const prep = num(d.prep.hours) * num(d.prep.rate);
   const prod = num(d.prod.hours) * num(d.prod.rate);
   const post = num(d.postprod.hours) * num(d.postprod.rate);
-  const depl = num(d.deplacement.km) * 0.40 + num(d.deplacement.peages) + num(d.deplacement.trajetH) * 40 + num(d.deplacement.ticket);
+  const dep = d.deplacement;
+  let depl = 0;
+  if (dep.mode === "voiture") {
+    depl = num(dep.km) * num(dep.indemnityKm || 0.40) + num(dep.peages) + num(dep.trajetH) * 40;
+  } else if (dep.mode === "transports") {
+    depl = num(dep.ticket) + num(dep.trajetH) * 40;
+  }
   const autres = num(d.autres.montant);
   const subtotal = prep + prod + post + depl + autres;
   const remise = subtotal * num(d.remisePct) / 100;
   const total = subtotal - remise;
-  return { prep, prod, post, depl, autres, subtotal, remise, total, acompte: total * 0.30, reste: total * 0.70 };
+  const ursaff = (d.fiscal && d.fiscal.mode === "declare") ? total * num(d.fiscal.ursaffPct || 22) / 100 : 0;
+  return { prep, prod, post, depl, autres, subtotal, remise, total, ursaff, acompte: total * 0.30, reste: total * 0.70 };
 }
 
 function refreshTotals() {
@@ -357,6 +390,10 @@ function refreshTotals() {
 }
 
 function totalsHtml(t) {
+  const f = S.mission.fiscal || {};
+  const ursaffLine = f.mode === "declare"
+    ? `<div class="line muted"><span>URSAFF estimée (${esc(f.ursaffPct || "22")} %)</span><span>${fmt(t.ursaff)}</span></div>`
+    : `<div class="line muted" style="color:#9ca3af"><span>Au black — pas d'URSAFF</span><span>—</span></div>`;
   return `
     <div class="line muted"><span>Préparation</span><span>${fmt(t.prep)}</span></div>
     <div class="line muted"><span>Shooting / production</span><span>${fmt(t.prod)}</span></div>
@@ -366,6 +403,7 @@ function totalsHtml(t) {
     <div class="line"><span>Sous-total</span><span>${fmt(t.subtotal)}</span></div>
     <div class="line muted"><span>Remise (${esc(S.mission.remisePct)} %)</span><span>−${fmt(t.remise)}</span></div>
     <div class="line total"><span>Total HT</span><span>${fmt(t.total)}</span></div>
+    ${ursaffLine}
     <div class="line muted"><span>Acompte 30 %</span><span>${fmt(t.acompte)}</span></div>
     <div class="line muted"><span>Reste 70 %</span><span>${fmt(t.reste)}</span></div>
     <div class="line muted" style="font-size:11px;color:#9ca3af;margin-top:6px">TVA non applicable, art. 293 B du CGI</div>
@@ -391,69 +429,129 @@ function render() {
 function rMS() {
   const d = S.mission;
   const t = totals();
+  const f = d.fiscal || DEFAULT_S.mission.fiscal;
+  const dep = d.deplacement || DEFAULT_S.mission.deplacement;
+
+  const segFiscal = `
+    <div class="seg">
+      <button type="button" class="seg-btn ${f.mode==="declare"?"active":""}" onclick="pickFiscalMode('declare')">Déclaré</button>
+      <button type="button" class="seg-btn ${f.mode==="black"?"active":""}" onclick="pickFiscalMode('black')">Au black</button>
+    </div>`;
+  const segDepl = `
+    <div class="seg">
+      <button type="button" class="seg-btn ${dep.mode==="none"?"active":""}" onclick="pickDeplacementMode('none')">Aucun</button>
+      <button type="button" class="seg-btn ${dep.mode==="voiture"?"active":""}" onclick="pickDeplacementMode('voiture')">Voiture</button>
+      <button type="button" class="seg-btn ${dep.mode==="transports"?"active":""}" onclick="pickDeplacementMode('transports')">Transports en commun</button>
+    </div>`;
+
+  let deplFields = "";
+  if (dep.mode === "voiture") {
+    deplFields = `
+      <div class="row">
+        <div class="field sm"><label>Distance (km)</label><input type="number" step="0.1" value="${esc(dep.km)}" oninput="upd('mission.deplacement.km', this.value)"></div>
+        <div class="field sm"><label>Péages (€)</label><input type="number" step="0.01" value="${esc(dep.peages)}" oninput="upd('mission.deplacement.peages', this.value)"></div>
+        <div class="field sm"><label>Indemnité km (€)</label><input type="number" step="0.01" value="${esc(dep.indemnityKm)}" oninput="upd('mission.deplacement.indemnityKm', this.value)"></div>
+      </div>
+      <div class="row">
+        <div class="field sm"><label>Temps trajet (h, si > 1h)</label><input type="number" step="0.25" value="${esc(dep.trajetH)}" oninput="upd('mission.deplacement.trajetH', this.value)"></div>
+      </div>
+      <div class="hint">Indemnité par défaut 0,40 €/km · Temps trajet hors trajet domicile, valorisé 40 €/h</div>`;
+  } else if (dep.mode === "transports") {
+    deplFields = `
+      <div class="row">
+        <div class="field sm"><label>Prix billet(s) (€)</label><input type="number" step="0.01" value="${esc(dep.ticket)}" oninput="upd('mission.deplacement.ticket', this.value)"></div>
+        <div class="field sm"><label>Temps trajet (h, si > 1h)</label><input type="number" step="0.25" value="${esc(dep.trajetH)}" oninput="upd('mission.deplacement.trajetH', this.value)"></div>
+      </div>
+      <div class="hint">Temps trajet hors trajet domicile, valorisé 40 €/h</div>`;
+  } else {
+    deplFields = `<div class="hint">Aucun déplacement à facturer.</div>`;
+  }
+
   return `
     <h2>Mission <span id="savedFlash" class="saved"></span></h2>
 
-    <h3>Devis</h3>
-    <div class="row">
-      <div class="field"><label>Référence</label><input value="${esc(d.ref)}" oninput="upd('mission.ref', this.value)" placeholder="DEVIS-116-2026-04-25"></div>
-      <div class="field sm"><label>Date d'émission</label><input type="date" value="${esc(d.dateEmission)}" oninput="upd('mission.dateEmission', this.value)"></div>
-      <div class="field sm"><label>Validité</label><input type="date" value="${esc(d.dateValidite)}" oninput="upd('mission.dateValidite', this.value)"></div>
-    </div>
-
-    <h3>Client</h3>
-    <div class="row">
-      <div class="field sm"><label>N° Client</label><input value="${esc(d.client.num)}" oninput="upd('mission.client.num', this.value)"></div>
-      <div class="field"><label>Nom / Société</label><input value="${esc(d.client.name)}" oninput="upd('mission.client.name', this.value)"></div>
-      <div class="field"><label>Contact</label><input value="${esc(d.client.contact)}" oninput="upd('mission.client.contact', this.value)"></div>
-    </div>
-    <div class="row">
-      <div class="field"><label>Adresse</label><input value="${esc(d.client.address)}" oninput="upd('mission.client.address', this.value)"></div>
-      <div class="field"><label>Téléphone</label><input value="${esc(d.client.phone)}" oninput="upd('mission.client.phone', this.value)"></div>
-      <div class="field"><label>Email</label><input type="email" value="${esc(d.client.email)}" oninput="upd('mission.client.email', this.value)"></div>
-    </div>
-
-    <h3>Prestation</h3>
-    <div class="row">
-      <div class="field"><label>Type de prestation</label>
-        <select onchange="pickObject(this.value)">
-          <option value="">— choisir —</option>
-          ${CATALOG.map(c => `<option value="${c.k}" ${d.object===c.k?"selected":""}>${esc(c.l)} (${c.p} €)</option>`).join("")}
-        </select>
+    <section class="mss-card">
+      <h3>Devis</h3>
+      <div class="row">
+        <div class="field"><label>Référence</label><input value="${esc(d.ref)}" oninput="upd('mission.ref', this.value)" placeholder="DEVIS-116-2026-04-25"></div>
+        <div class="field sm"><label>Date d'émission</label><input type="date" value="${esc(d.dateEmission)}" oninput="upd('mission.dateEmission', this.value)"></div>
+        <div class="field sm"><label>Validité</label><input type="date" value="${esc(d.dateValidite)}" oninput="upd('mission.dateValidite', this.value)"></div>
       </div>
-      <div class="field sm"><label>Date prestation</label><input type="date" value="${esc(d.objectDate)}" oninput="upd('mission.objectDate', this.value)"></div>
-      <div class="field"><label>Lieu</label><input value="${esc(d.objectLieu)}" oninput="upd('mission.objectLieu', this.value)"></div>
-    </div>
-    <div class="hint">Choisir une prestation pré-remplit automatiquement le P.U. shooting avec le tarif arrondi du catalogue.</div>
+    </section>
 
-    <h3>Lignes</h3>
-    <div class="row">
-      <div class="field sm"><label>Préparation (h)</label><input type="number" step="0.25" value="${esc(d.prep.hours)}" oninput="upd('mission.prep.hours', this.value)"></div>
-      <div class="field sm"><label>P.U. préparation</label><input type="number" step="0.01" value="${esc(d.prep.rate)}" oninput="upd('mission.prep.rate', this.value)"></div>
-      <div class="field sm"><label>Shooting (h)</label><input type="number" step="0.25" value="${esc(d.prod.hours)}" oninput="upd('mission.prod.hours', this.value)"></div>
-      <div class="field sm"><label>P.U. shooting</label><input type="number" step="0.01" value="${esc(d.prod.rate)}" oninput="upd('mission.prod.rate', this.value)"></div>
-      <div class="field sm"><label>Post-prod (h)</label><input type="number" step="0.25" value="${esc(d.postprod.hours)}" oninput="upd('mission.postprod.hours', this.value)"></div>
-      <div class="field sm"><label>P.U. post-prod</label><input type="number" step="0.01" value="${esc(d.postprod.rate)}" oninput="upd('mission.postprod.rate', this.value)"></div>
-    </div>
+    <section class="mss-card">
+      <h3>Client</h3>
+      <div class="row">
+        <div class="field sm"><label>N° Client</label><input value="${esc(d.client.num)}" oninput="upd('mission.client.num', this.value)"></div>
+        <div class="field"><label>Nom / Société</label><input value="${esc(d.client.name)}" oninput="upd('mission.client.name', this.value)"></div>
+        <div class="field"><label>Contact</label><input value="${esc(d.client.contact)}" oninput="upd('mission.client.contact', this.value)"></div>
+      </div>
+      <div class="row">
+        <div class="field"><label>Adresse</label><input value="${esc(d.client.address)}" oninput="upd('mission.client.address', this.value)"></div>
+        <div class="field"><label>Téléphone</label><input value="${esc(d.client.phone)}" oninput="upd('mission.client.phone', this.value)"></div>
+        <div class="field"><label>Email</label><input type="email" value="${esc(d.client.email)}" oninput="upd('mission.client.email', this.value)"></div>
+      </div>
+    </section>
 
-    <h3>Déplacement</h3>
-    <div class="row">
-      <div class="field sm"><label>Distance (km)</label><input type="number" step="0.1" value="${esc(d.deplacement.km)}" oninput="upd('mission.deplacement.km', this.value)"></div>
-      <div class="field sm"><label>Péages (€)</label><input type="number" step="0.01" value="${esc(d.deplacement.peages)}" oninput="upd('mission.deplacement.peages', this.value)"></div>
-      <div class="field sm"><label>Temps trajet (h)</label><input type="number" step="0.25" value="${esc(d.deplacement.trajetH)}" oninput="upd('mission.deplacement.trajetH', this.value)"></div>
-      <div class="field sm"><label>Ticket TC (€)</label><input type="number" step="0.01" value="${esc(d.deplacement.ticket)}" oninput="upd('mission.deplacement.ticket', this.value)"></div>
-    </div>
-    <div class="hint">Indemnité km : 0,40 € · Valorisation temps trajet : 40 €/h</div>
+    <section class="mss-card">
+      <h3>Prestation</h3>
+      <div class="row">
+        <div class="field"><label>Type de prestation</label>
+          <select onchange="pickObject(this.value)">
+            <option value="">— choisir —</option>
+            ${CATALOG.map(c => `<option value="${c.k}" ${d.object===c.k?"selected":""}>${esc(c.l)} (${c.p} €)</option>`).join("")}
+          </select>
+        </div>
+        <div class="field sm"><label>Date prestation</label><input type="date" value="${esc(d.objectDate)}" oninput="upd('mission.objectDate', this.value)"></div>
+        <div class="field"><label>Lieu</label><input value="${esc(d.objectLieu)}" oninput="upd('mission.objectLieu', this.value)"></div>
+      </div>
+      <div class="hint">Choisir une prestation pré-remplit automatiquement le P.U. shooting avec le tarif arrondi du catalogue.</div>
+    </section>
 
-    <h3>Autres &amp; remise</h3>
-    <div class="row">
-      <div class="field"><label>Description « autres »</label><input value="${esc(d.autres.desc)}" oninput="upd('mission.autres.desc', this.value)"></div>
-      <div class="field sm"><label>Montant (€)</label><input type="number" step="0.01" value="${esc(d.autres.montant)}" oninput="upd('mission.autres.montant', this.value)"></div>
-      <div class="field sm"><label>Remise (%)</label><input type="number" step="0.1" value="${esc(d.remisePct)}" oninput="upd('mission.remisePct', this.value)"></div>
-    </div>
+    <section class="mss-card">
+      <h3>Régime fiscal</h3>
+      <div class="row">
+        <div class="field"><label>Mode de facturation</label>${segFiscal}</div>
+        <div class="field sm"><label>Taux URSAFF (%)</label><input type="number" step="0.1" value="${esc(f.ursaffPct)}" oninput="upd('mission.fiscal.ursaffPct', this.value)" ${f.mode==="black"?"disabled":""}></div>
+      </div>
+      <div class="hint">${f.mode==="declare" ? "URSAFF appliquée sur le total HT — taux par défaut 22 % (modifiable au cas par cas)." : "Aucune déclaration : URSAFF non appliquée."}</div>
+    </section>
 
-    <h3>Notes</h3>
-    <div class="row"><div class="field"><textarea oninput="upd('mission.notes', this.value)">${esc(d.notes)}</textarea></div></div>
+    <section class="mss-card">
+      <h3>Lignes</h3>
+      <div class="row">
+        <div class="field sm"><label>Préparation (h)</label><input type="number" step="0.25" value="${esc(d.prep.hours)}" oninput="upd('mission.prep.hours', this.value)"></div>
+        <div class="field sm"><label>P.U. préparation</label><input type="number" step="0.01" value="${esc(d.prep.rate)}" oninput="upd('mission.prep.rate', this.value)"></div>
+      </div>
+      <div class="row">
+        <div class="field sm"><label>Shooting (h)</label><input type="number" step="0.25" value="${esc(d.prod.hours)}" oninput="upd('mission.prod.hours', this.value)"></div>
+        <div class="field sm"><label>P.U. shooting</label><input type="number" step="0.01" value="${esc(d.prod.rate)}" oninput="upd('mission.prod.rate', this.value)"></div>
+      </div>
+      <div class="row">
+        <div class="field sm"><label>Post-prod (h)</label><input type="number" step="0.25" value="${esc(d.postprod.hours)}" oninput="upd('mission.postprod.hours', this.value)"></div>
+        <div class="field sm"><label>P.U. post-prod</label><input type="number" step="0.01" value="${esc(d.postprod.rate)}" oninput="upd('mission.postprod.rate', this.value)"></div>
+      </div>
+    </section>
+
+    <section class="mss-card">
+      <h3>Déplacement</h3>
+      <div class="row"><div class="field"><label>Mode</label>${segDepl}</div></div>
+      ${deplFields}
+    </section>
+
+    <section class="mss-card">
+      <h3>Autres &amp; remise</h3>
+      <div class="row">
+        <div class="field"><label>Description « autres »</label><input value="${esc(d.autres.desc)}" oninput="upd('mission.autres.desc', this.value)"></div>
+        <div class="field sm"><label>Montant (€)</label><input type="number" step="0.01" value="${esc(d.autres.montant)}" oninput="upd('mission.autres.montant', this.value)"></div>
+        <div class="field sm"><label>Remise (%)</label><input type="number" step="0.1" value="${esc(d.remisePct)}" oninput="upd('mission.remisePct', this.value)"></div>
+      </div>
+    </section>
+
+    <section class="mss-card">
+      <h3>Notes</h3>
+      <div class="row"><div class="field"><textarea oninput="upd('mission.notes', this.value)">${esc(d.notes)}</textarea></div></div>
+    </section>
 
     <div class="totals" id="totals">${totalsHtml(t)}</div>
 
