@@ -194,13 +194,19 @@
   .row .field.xl{max-width:none}
 
   /* Client picker */
-  .cli-pick{position:relative;max-width:320px}
+  .cli-pick{position:relative;max-width:320px;z-index:50}
+  .cli-pick.open{z-index:200}
   .cli-pick .selected{display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--surface);border:1px solid var(--border-light);border-radius:6px;font-size:13px}
   .cli-pick .selected .name{flex:1;color:var(--text);font-weight:500}
   .cli-pick .selected .num{color:var(--text-muted);font-size:11px;font-variant-numeric:tabular-nums}
   .cli-pick .selected .change{background:transparent;border:0;color:var(--primary);font-size:12px;cursor:pointer;padding:2px 6px;border-radius:4px}
   .cli-pick .selected .change:hover{background:var(--primary-soft)}
-  .cli-pick .results{position:absolute;left:0;right:0;top:100%;margin-top:4px;background:var(--surface-2);border:1px solid var(--border-light);border-radius:6px;max-height:280px;overflow-y:auto;z-index:20;box-shadow:var(--shadow)}
+  .cli-search-wrap{position:relative}
+  .cli-search-wrap .ico{position:absolute;left:11px;top:50%;transform:translateY(-50%);color:var(--text-dim);font-size:13px;pointer-events:none}
+  .cli-search-wrap input{width:100%;padding:9px 12px 9px 32px;border:1px solid var(--border-light);border-radius:6px;background:var(--surface);color:var(--text);font:inherit;font-size:13px}
+  .cli-search-wrap input:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 3px var(--primary-soft)}
+  .cli-pick .results{display:none;position:absolute;left:0;right:0;top:100%;margin-top:4px;background:var(--surface-2);border:1px solid var(--primary);border-radius:6px;max-height:280px;overflow-y:auto;z-index:200;box-shadow:0 8px 24px rgba(0,0,0,.5)}
+  .cli-pick.open .results{display:block}
   .cli-pick .results .item{padding:9px 12px;cursor:pointer;border-bottom:1px solid var(--border-soft);font-size:13px;color:var(--text)}
   .cli-pick .results .item:last-child{border-bottom:0}
   .cli-pick .results .item:hover{background:var(--surface-hi)}
@@ -322,6 +328,7 @@ if (S.mission) {
   S.mission = { ...DEFAULT_S.mission, ...S.mission,
     deplacement: { ...DEFAULT_S.mission.deplacement, ...(S.mission.deplacement || {}) }
   };
+  recomputeRef();
 }
 let user = null;
 let tab = "mission";
@@ -334,7 +341,7 @@ const TABS = [
   ["clients", "👥 Clients"],
   ["tarifs",  "💰 Frais & Tarifs"],
   ["compta",  "📈 Compta"],
-  ["bugs",    "🐛 Correction & Bugs"]
+  ["bugs",    "📝 Notes"]
 ];
 
 const app = document.getElementById("app");
@@ -394,6 +401,7 @@ async function loadFromCloud() {
       if (d.tarifs && Array.isArray(d.tarifs.catalog) && d.tarifs.catalog.length) S.tarifs = { catalog: d.tarifs.catalog };
       if (d.bugs)    S.bugs    = { entries: Array.isArray(d.bugs && d.bugs.entries) ? d.bugs.entries : [] };
       suiviMigrate();
+      recomputeRef();
       localStorage.setItem(SK, JSON.stringify(S));
     }
   } catch (err) { console.error("loadFromCloud", err); }
@@ -405,12 +413,21 @@ function upd(path, val) {
   let o = S;
   for (let i = 0; i < keys.length - 1; i++) o = o[keys[i]];
   o[keys[keys.length - 1]] = val;
+  if (path === "mission.dateEmission") {
+    recomputeRef();
+    refreshRefDisplay();
+  }
   save();
   if (path.startsWith("mission.prep") || path.startsWith("mission.prod") || path.startsWith("mission.postprod") || path.startsWith("mission.deplacement") || path.startsWith("mission.autres") || path === "mission.remisePct") {
     refreshTotals();
   }
 }
 window.upd = upd;
+
+function refreshRefDisplay() {
+  const el = document.getElementById("missionRefDisplay");
+  if (el) el.textContent = S.mission.ref || "—";
+}
 
 function pickObject(k) {
   S.mission.object = k;
@@ -434,6 +451,16 @@ function updMissionMode(mode) {
   render();
 }
 window.updMissionMode = updMissionMode;
+
+function recomputeRef() {
+  let num = S.mission.client.num || "";
+  if (S.mission.client.id) {
+    const c = S.clients.entries.find(x => x.id === S.mission.client.id);
+    if (c) num = c.num || num;
+  }
+  const date = S.mission.dateEmission || "";
+  S.mission.ref = (num && date) ? `DEVIS-${num}-${date}` : "";
+}
 
 // ============ CLIENT PICKER (Mission) ============
 let cliPickQuery = "";
@@ -461,12 +488,15 @@ function rClientPicker() {
   ).slice(0, 12) : S.clients.entries.slice(0, 12);
   const showCreate = q && !S.clients.entries.some(e => (e.name||"").toLowerCase() === q);
   const draft = cliPickDraft;
-  return `<div class="row"><div class="cli-pick">
-    <input type="text" placeholder="Rechercher un client par nom, n°, contact, email…" value="${esc(cliPickQuery)}" oninput="cliPickSearch(this.value)" autocomplete="off" style="width:100%;padding:9px 12px;border:1px solid var(--border-light);border-radius:6px;background:var(--surface);color:var(--text);font:inherit;font-size:13px">
+  return `<div class="row"><div class="cli-pick" id="cliPickRoot">
+    <div class="cli-search-wrap">
+      <span class="ico">🔍</span>
+      <input type="text" placeholder="Rechercher un client par nom, n°, contact, email…" value="${esc(cliPickQuery)}" oninput="cliPickSearch(this.value)" onfocus="cliPickShowDropdown()" onblur="cliPickHideDropdown()" autocomplete="off">
+    </div>
     ${cliPickCreating ? "" : `<div class="results">
-      ${matches.length === 0 && !showCreate ? `<div class="empty">Aucun client. Tape un nom puis « Créer »…</div>` : ""}
-      ${matches.map(e => `<div class="item" onclick="cliPickSelect('${e.id}')"><span class="num">${esc(e.num || "—")}</span>${esc(e.name || "(sans nom)")}</div>`).join("")}
-      ${showCreate ? `<div class="create" onclick="cliPickStartCreate()">+ Créer le client « ${esc(cliPickQuery)} »</div>` : (S.clients.entries.length > 0 ? "" : `<div class="create" onclick="cliPickStartCreate()">+ Créer un nouveau client</div>`)}
+      ${matches.length === 0 && !showCreate ? `<div class="empty">${q ? "Aucun client trouvé. Tape un nom puis « Créer »…" : "Tape pour rechercher un client…"}</div>` : ""}
+      ${matches.map(e => `<div class="item" onmousedown="cliPickSelect('${e.id}')"><span class="num">${esc(e.num || "—")}</span>${esc(e.name || "(sans nom)")}</div>`).join("")}
+      ${showCreate ? `<div class="create" onmousedown="cliPickStartCreate()">+ Créer le client « ${esc(cliPickQuery)} »</div>` : (S.clients.entries.length === 0 ? `<div class="create" onmousedown="cliPickStartCreate()">+ Créer un nouveau client</div>` : "")}
     </div>`}
   </div></div>
   ${cliPickCreating ? `
@@ -489,6 +519,20 @@ function rClientPicker() {
     </div>
   ` : ""}`;
 }
+
+function cliPickShowDropdown() {
+  const r = document.getElementById("cliPickRoot");
+  if (r) r.classList.add("open");
+}
+window.cliPickShowDropdown = cliPickShowDropdown;
+
+function cliPickHideDropdown() {
+  setTimeout(() => {
+    const r = document.getElementById("cliPickRoot");
+    if (r) r.classList.remove("open");
+  }, 150);
+}
+window.cliPickHideDropdown = cliPickHideDropdown;
 
 function cliPickSearch(v) {
   cliPickQuery = v;
@@ -519,6 +563,7 @@ function cliPickSelect(id) {
     contact: e.contact || "", address: e.address || "",
     phone: e.phone || "", email: e.email || ""
   };
+  recomputeRef();
   cliPickQuery = "";
   cliPickCreating = false;
   save();
@@ -528,6 +573,7 @@ window.cliPickSelect = cliPickSelect;
 
 function cliPickReset() {
   S.mission.client = { id:"", num:"", name:"", contact:"", address:"", phone:"", email:"" };
+  recomputeRef();
   cliPickQuery = "";
   cliPickCreating = false;
   save();
@@ -563,6 +609,7 @@ function cliPickSaveCreate() {
     contact: entry.contact, address: entry.address,
     phone: entry.phone, email: entry.email
   };
+  recomputeRef();
   cliPickCreating = false;
   cliPickQuery = "";
   cliPickDraft = { num:"", name:"", contact:"", address:"", cityPostal:"", phone:"", email:"", rencontre:"" };
@@ -699,9 +746,15 @@ function rMS() {
     <h2>Mission <span id="savedFlash" class="saved"></span></h2>
 
     <h3>Devis</h3>
-    <div class="row"><div class="field"><label>Référence</label><input value="${esc(d.ref)}" oninput="upd('mission.ref', this.value)" placeholder="DEVIS-116-2026-04-25"></div></div>
     <div class="row"><div class="field"><label>Date d'émission</label><input type="date" value="${esc(d.dateEmission)}" oninput="upd('mission.dateEmission', this.value)"></div></div>
     <div class="row"><div class="field"><label>Validité</label><input type="date" value="${esc(d.dateValidite)}" oninput="upd('mission.dateValidite', this.value)"></div></div>
+    <div class="row"><div class="field"><label>Référence (auto-générée)</label>
+      <div style="padding:9px 12px;background:var(--surface-2);border:1px solid var(--border);border-radius:6px;color:var(--primary);font:inherit;font-size:13px;font-variant-numeric:tabular-nums;font-weight:500" id="missionRefDisplay">${esc(d.ref || "—")}</div>
+    </div></div>
+    <div class="hint">Format : DEVIS-{n° client}-{date d'émission}. Calculée automatiquement à partir de la date d'émission et du client sélectionné.</div>
+
+    <h3>Client</h3>
+    ${rClientPicker()}
 
     <h3>Régime</h3>
     <div class="row"><div class="field"><label>Statut</label>
@@ -711,9 +764,6 @@ function rMS() {
       </div>
     </div></div>
     <div class="row"><div class="field"><label>Taux URSSAF (%)</label><input type="number" step="0.1" value="${esc(d.urssafPct ?? "22")}" oninput="upd('mission.urssafPct', this.value)"></div></div>
-
-    <h3>Client</h3>
-    ${rClientPicker()}
 
     <h3>Prestation</h3>
     <div class="row"><div class="field"><label>Type de prestation</label>
@@ -2225,42 +2275,42 @@ function rBG() {
     fixed: entries.filter(e => e.status === "fixed").length
   };
   const rows = filtered.length === 0
-    ? `<div class="empty">${bugFilter === "all" ? "Aucun bug signalé pour l'instant." : `Aucun bug ${bugFilter === "open" ? "ouvert" : "résolu"}.`}</div>`
+    ? `<div class="empty">${bugFilter === "all" ? "Aucune note pour l'instant." : `Aucune note ${bugFilter === "open" ? "à faire" : "faite"}.`}</div>`
     : filtered.map(e => `
       <div class="bug-card ${e.status === "fixed" ? "fixed" : ""}">
         <div class="head">
-          <span class="bug-pill ${e.status}">${e.status === "fixed" ? "Résolu" : "Ouvert"}</span>
+          <span class="bug-pill ${e.status}">${e.status === "fixed" ? "Faite" : "À faire"}</span>
           <span class="title">${esc(e.title)}</span>
           <span class="date">${dateFR(e.date) || ""}</span>
         </div>
         ${e.desc ? `<div class="desc">${esc(e.desc)}</div>` : ""}
         <div class="actions">
           ${e.status === "open"
-            ? `<button class="btn-act act-vert" onclick="bugStatus('${e.id}','fixed')"><span class="ico">✓</span>Marquer résolu</button>`
-            : `<button class="btn ghost" onclick="bugStatus('${e.id}','open')">Rouvrir</button>`}
+            ? `<button class="btn-act act-vert" onclick="bugStatus('${e.id}','fixed')"><span class="ico">✓</span>Marquer comme faite</button>`
+            : `<button class="btn ghost" onclick="bugStatus('${e.id}','open')">Réactiver</button>`}
           <button class="btn-act act-rouge" onclick="bugDel('${e.id}')"><span class="ico">×</span>Supprimer</button>
         </div>
       </div>
     `).join("");
 
   return `
-    <h2>Correction &amp; Bugs <span id="savedFlash" class="saved"></span></h2>
+    <h2>Notes <span id="savedFlash" class="saved"></span></h2>
 
-    <h3>Signaler un bug</h3>
+    <h3>Ajouter une note</h3>
     <div class="bug-form">
-      <input type="text" placeholder="Titre du bug (ex: La date d'émission ne s'enregistre pas)" value="${esc(bugDraft.title)}" oninput="bugDraftSet('title', this.value)">
-      <textarea placeholder="Description : étapes pour reproduire, comportement attendu vs observé, navigateur, appareil…" oninput="bugDraftSet('desc', this.value)">${esc(bugDraft.desc)}</textarea>
+      <input type="text" placeholder="Titre de la note (ex : corriger la date d'émission, idée nouvelle prestation…)" value="${esc(bugDraft.title)}" oninput="bugDraftSet('title', this.value)">
+      <textarea placeholder="Description : détails, contexte, étapes à suivre…" oninput="bugDraftSet('desc', this.value)">${esc(bugDraft.desc)}</textarea>
       <div style="display:flex;justify-content:flex-end">
-        <button class="btn" onclick="bugAdd()">+ Signaler le bug</button>
+        <button class="btn" onclick="bugAdd()">+ Ajouter la note</button>
       </div>
     </div>
 
-    <h3>Bugs signalés</h3>
+    <h3>Notes enregistrées</h3>
     <div class="toolbar">
       <div class="seg">
-        <button class="${bugFilter==='all'?'on':''}" onclick="bugSetFilter('all')">Tous (${counts.all})</button>
-        <button class="${bugFilter==='open'?'on warn':''}" onclick="bugSetFilter('open')">Ouverts (${counts.open})</button>
-        <button class="${bugFilter==='fixed'?'on':''}" onclick="bugSetFilter('fixed')">Résolus (${counts.fixed})</button>
+        <button class="${bugFilter==='all'?'on':''}" onclick="bugSetFilter('all')">Toutes (${counts.all})</button>
+        <button class="${bugFilter==='open'?'on warn':''}" onclick="bugSetFilter('open')">À faire (${counts.open})</button>
+        <button class="${bugFilter==='fixed'?'on':''}" onclick="bugSetFilter('fixed')">Faites (${counts.fixed})</button>
       </div>
     </div>
     ${rows}
