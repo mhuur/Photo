@@ -36,7 +36,8 @@
   main{flex:1;padding:24px 32px;max-width:1100px;position:relative}
   h2{margin-top:0}
   h3{margin-top:24px;margin-bottom:8px;font-size:13px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid var(--border);padding-bottom:4px}
-  .row{display:flex;gap:12px;margin-bottom:8px;flex-wrap:wrap}
+  .row{display:flex;gap:14px;margin-bottom:14px;flex-wrap:wrap}
+  .row-section-break{margin-top:8px}
   .field{display:flex;flex-direction:column;flex:1;min-width:160px}
   .field.sm{max-width:140px}
   .field label{font-size:13px;color:var(--text-muted);margin-bottom:4px}
@@ -194,9 +195,9 @@
   .field input,.field textarea,.field select{font-size:13px;padding:7px 10px}
   .field label{font-size:13px;letter-spacing:.02em}
   main h2{font-size:15px;font-weight:600;margin:0 0 4px;color:var(--text)}
-  main h3{font-size:15px;font-weight:700;margin:28px 0 12px 0;color:var(--text);padding-bottom:4px;border-bottom:1px solid var(--border)}
-  main h3:first-of-type{margin-top:4px}
-  main h4{font-size:13px;font-weight:normal;margin-top:18px;margin-bottom:4px;color:var(--text-muted);text-transform:none;letter-spacing:.02em}
+  main h3{font-size:15px;font-weight:700;margin:32px 0 14px 0;color:var(--text);padding-bottom:4px;border-bottom:1px solid var(--border)}
+  main h3:first-of-type{margin-top:6px}
+  main h4{font-size:13px;font-weight:normal;margin-top:22px;margin-bottom:6px;color:var(--text-muted);text-transform:none;letter-spacing:.02em}
   .encadres-grp{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:14px 16px;margin-bottom:14px}
   .encadres-grp > h4:first-of-type{margin-top:0}
 
@@ -662,7 +663,7 @@
 
   /* Échéances UI */
   .ech-list{display:flex;flex-direction:column;gap:6px;max-width:380px}
-  .ech-row{display:flex;align-items:center;gap:8px;background:transparent;border:0;border-radius:0;padding:2px 0}
+  .ech-row{display:flex;align-items:center;gap:10px;background:transparent;border:0;border-radius:0;padding:2px 0}
   .ech-row input.lbl{flex:1;height:var(--input-h);border:1px solid transparent;background:var(--surface-2);color:var(--text);font:inherit;font-size:13px;padding:0 10px;border-radius:6px;min-width:0;transition:border-color .12s,box-shadow .12s}
   .ech-row input.lbl:hover{border-color:var(--border-light)}
   .ech-row input.lbl:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 3px var(--primary-soft)}
@@ -824,32 +825,34 @@
   }
 
   /* Lignes section */
-  .lg-add{display:flex;gap:8px;margin-bottom:10px}
-  .lg-add .btn{display:inline-flex;align-items:center;gap:6px;font-size:13px;padding:8px 14px}
-  .lg-list{display:flex;flex-direction:column;gap:8px}
-  .lg-card{background:transparent;border:0;border-left:3px solid var(--primary);border-radius:0;padding:8px 0 8px 12px;max-width:720px}
-  .lg-card.lg-heures{border-left:3px solid var(--primary)}
-  .lg-card.lg-materiel{border-left:3px solid var(--accent)}
-  .lg-head{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
-  .lg-ico{font-size:16px;width:24px;line-height:1;text-align:center;flex-shrink:0;color:var(--text-muted)}
+  .lg-add{display:flex;gap:8px;margin-top:8px}
+  .lg-add .btn{display:inline-flex;align-items:center;gap:6px;font-size:13px;padding:7px 14px}
+  .lg-list{display:flex;flex-direction:column;gap:8px;max-width:780px;margin-bottom:0}
+  .lg-list:empty{margin-bottom:0}
+  .lg-section-mat{margin-top:30px}
+  .lg-row-wrap{display:flex;flex-direction:column;gap:6px}
+  .lg-row{display:flex;align-items:center;gap:10px}
   .lg-title{flex:1;min-width:160px;height:var(--input-h);padding:0 10px;border:1px solid transparent;border-radius:6px;background:var(--surface-2);color:var(--text);font:inherit;font-size:13px;font-weight:500;transition:border-color .12s,box-shadow .12s}
   .lg-title:hover{border-color:var(--border-light)}
   .lg-title:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 3px var(--primary-soft)}
-  .lg-dur{display:flex;align-items:center;gap:6px}
-  .lg-dur input{width:70px;height:var(--input-h);padding:0 10px;border:1px solid transparent;border-radius:6px;background:var(--surface-2);color:var(--text);font:inherit;font-size:13px;text-align:right;font-variant-numeric:tabular-nums;transition:border-color .12s,box-shadow .12s}
-  .lg-dur input:hover{border-color:var(--border-light)}
-  .lg-dur input:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 3px var(--primary-soft)}
-  .lg-prix{display:flex;align-items:center;gap:4px;height:var(--input-h);background:var(--surface-2);border:1px solid transparent;border-radius:6px;padding:0 10px;transition:border-color .12s,box-shadow .12s}
+  .lg-num{width:80px;height:var(--input-h);padding:0 10px;border:1px solid transparent;border-radius:6px;background:var(--surface-2);color:var(--text);font:inherit;font-size:13px;text-align:right;font-variant-numeric:tabular-nums;transition:border-color .12s,box-shadow .12s;flex-shrink:0}
+  .lg-num:hover{border-color:var(--border-light)}
+  .lg-num:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 3px var(--primary-soft)}
+  .lg-prix{display:flex;align-items:center;gap:4px;width:90px;height:var(--input-h);background:var(--surface-2);border:1px solid transparent;border-radius:6px;padding:0 10px;transition:border-color .12s,box-shadow .12s;flex-shrink:0;box-sizing:border-box}
   .lg-prix:hover{border-color:var(--border-light)}
   .lg-prix:focus-within{border-color:var(--primary);box-shadow:0 0 0 3px var(--primary-soft)}
-  .lg-prix input{width:80px;height:100%;border:0;background:transparent;color:var(--text);font:inherit;font-size:13px;font-variant-numeric:tabular-nums;text-align:right;padding:0}
+  .lg-prix input{flex:1;width:100%;height:100%;border:0;background:transparent;color:var(--text);font:inherit;font-size:13px;font-variant-numeric:tabular-nums;text-align:right;padding:0;min-width:0}
   .lg-prix input:focus{outline:none}
-  .lg-prix .unit{color:var(--text-dim);font-size:13px}
-  .lg-seg button{padding:0 12px;font-size:13px}
-  .lg-seg-devis button{padding:0 12px;font-size:13px}
+  .lg-prix .unit{color:var(--text-dim);font-size:13px;flex-shrink:0}
+  .lg-toggle{min-width:170px;flex-shrink:0}
+  .lg-toggle button{flex:1;padding:0 10px;font-size:13px;justify-content:center}
+  .lg-expand{background:transparent;border:0;color:var(--text-dim);font-size:14px;line-height:1;cursor:pointer;height:var(--input-h);width:30px;display:flex;align-items:center;justify-content:center;padding:0;border-radius:4px;flex-shrink:0;transition:transform .15s,color .12s,background .12s}
+  .lg-expand:hover{background:rgba(255,255,255,.06);color:var(--text)}
+  .lg-expand.open{transform:rotate(90deg);color:var(--primary)}
+  .lg-expand.has{color:var(--primary)}
   .lg-del{background:transparent;border:0;color:var(--text-dim);font-size:18px;line-height:1;cursor:pointer;height:var(--input-h);width:30px;display:flex;align-items:center;justify-content:center;padding:0;border-radius:4px;flex-shrink:0}
   .lg-del:hover{background:var(--danger-soft);color:var(--danger)}
-  .lg-desc{width:100%;margin-top:8px;padding:7px 10px;border:1px solid transparent;border-radius:6px;background:var(--surface-2);color:var(--text-muted);font:inherit;font-size:13px;resize:vertical;min-height:36px;transition:border-color .12s,box-shadow .12s}
+  .lg-desc{width:100%;padding:8px 10px;border:1px solid transparent;border-radius:6px;background:var(--surface-2);color:var(--text-muted);font:inherit;font-size:13px;resize:vertical;min-height:60px;transition:border-color .12s,box-shadow .12s;box-sizing:border-box}
   .lg-desc:hover{border-color:var(--border-light)}
   .lg-desc:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 3px var(--primary-soft);color:var(--text)}
 </style>
@@ -1343,7 +1346,7 @@ function rDevisPreview() {
       </div>`;
     } else if (l.type === "materiel" && l.devis !== "debours") {
       linesHtml += `<div class="dp-line">
-        <div class="lbl">${esc(l.intitule || "(Sans intitulé)")}<div class="desc">Matériel</div></div>
+        <div class="lbl">${esc(l.intitule || "(Sans intitulé)")}<div class="desc">${l.description ? esc(l.description) : "Matériel"}</div></div>
         <div class="qty"></div>
         <div class="amt">${fmt(num(l.prix))}</div>
       </div>`;
@@ -1375,7 +1378,7 @@ function rDevisPreview() {
   for (const l of (d.lignes || [])) {
     if (l.type === "materiel" && l.devis === "debours") {
       deboursHtml += `<div class="dp-line">
-        <div class="lbl">${esc(l.intitule || "(Sans intitulé)")}</div>
+        <div class="lbl">${esc(l.intitule || "(Sans intitulé)")}${l.description ? `<div class="desc">${esc(l.description)}</div>` : ""}</div>
         <div class="qty"></div>
         <div class="amt">${fmt(num(l.prix))}</div>
       </div>`;
@@ -1811,12 +1814,21 @@ function ligneAdd(type) {
   if (type === "heures") {
     S.mission.lignes.push({ id, type: "heures", intitule: "", duree: "", unit: "h", description: "" });
   } else if (type === "materiel") {
-    S.mission.lignes.push({ id, type: "materiel", intitule: "", prix: "", devis: "principal" });
+    S.mission.lignes.push({ id, type: "materiel", intitule: "", prix: "", devis: "principal", description: "" });
   }
   save();
   render();
 }
 window.ligneAdd = ligneAdd;
+
+// State for which lignes have their description expanded (UI-only, not persisted)
+let expandedLignes = new Set();
+function ligneToggleExpand(id) {
+  if (expandedLignes.has(id)) expandedLignes.delete(id);
+  else expandedLignes.add(id);
+  render();
+}
+window.ligneToggleExpand = ligneToggleExpand;
 
 function ligneDel(id) {
   if (!confirm("Supprimer cette ligne ?")) return;
@@ -1854,37 +1866,42 @@ function ligneSetDevis(id, devis) {
 window.ligneSetDevis = ligneSetDevis;
 
 function rLigne(l) {
+  const isExpanded = expandedLignes.has(l.id);
+  const hasDesc = (l.description || "").trim().length > 0;
+  const expandBtn = `<button class="lg-expand${hasDesc?' has':''}${isExpanded?' open':''}" onclick="ligneToggleExpand('${l.id}')" title="${isExpanded?'Replier la description':'Ajouter / voir la description'}">▸</button>`;
+  const desc = isExpanded
+    ? `<textarea class="lg-desc" placeholder="Description (apparaîtra sous l'intitulé dans le devis)" oninput="ligneUpd('${l.id}','description',this.value)">${esc(l.description||"")}</textarea>`
+    : "";
   if (l.type === "heures") {
-    return `<div class="lg-card lg-heures">
-      <div class="lg-head">
-        <span class="lg-ico">⏱️</span>
+    return `<div class="lg-row-wrap">
+      <div class="lg-row">
         <input class="lg-title" placeholder="Intitulé (ex : Préparation, Shooting, Post-prod…)" value="${esc(l.intitule)}" oninput="ligneUpd('${l.id}','intitule',this.value)">
-        <div class="lg-dur">
-          <input type="number" step="0.25" placeholder="0" value="${esc(l.duree)}" oninput="ligneUpd('${l.id}','duree',this.value)">
-          <div class="seg lg-seg">
-            <button class="${l.unit==='h'?'on':''}" onclick="ligneSetUnit('${l.id}','h')">heures</button>
-            <button class="${l.unit==='j'?'on':''}" onclick="ligneSetUnit('${l.id}','j')">jours</button>
-          </div>
+        <input class="lg-num" type="number" step="0.25" placeholder="0" value="${esc(l.duree)}" oninput="ligneUpd('${l.id}','duree',this.value)">
+        <div class="seg lg-toggle">
+          <button class="${l.unit==='h'?'on':''}" onclick="ligneSetUnit('${l.id}','h')">heures</button>
+          <button class="${l.unit==='j'?'on':''}" onclick="ligneSetUnit('${l.id}','j')">jours</button>
         </div>
+        ${expandBtn}
         <button class="lg-del" onclick="ligneDel('${l.id}')" title="Supprimer">×</button>
       </div>
-      <textarea class="lg-desc" placeholder="Description (optionnelle)…" oninput="ligneUpd('${l.id}','description',this.value)">${esc(l.description||"")}</textarea>
+      ${desc}
     </div>`;
   } else {
-    return `<div class="lg-card lg-materiel">
-      <div class="lg-head">
-        <span class="lg-ico">🛒</span>
+    return `<div class="lg-row-wrap">
+      <div class="lg-row">
         <input class="lg-title" placeholder="Intitulé (ex : Pellicule, Location studio…)" value="${esc(l.intitule)}" oninput="ligneUpd('${l.id}','intitule',this.value)">
         <div class="lg-prix">
           <input type="number" step="0.01" placeholder="0,00" value="${esc(l.prix)}" oninput="ligneUpd('${l.id}','prix',this.value)">
           <span class="unit">€</span>
         </div>
-        <div class="seg lg-seg-devis">
-          <button class="${(l.devis||'principal')==='principal'?'on':''}" onclick="ligneSetDevis('${l.id}','principal')">Devis principal</button>
-          <button class="${l.devis==='debours'?'on warn':''}" onclick="ligneSetDevis('${l.id}','debours')">Frais débours</button>
+        <div class="seg lg-toggle">
+          <button class="${(l.devis||'principal')==='principal'?'on':''}" onclick="ligneSetDevis('${l.id}','principal')">Principal</button>
+          <button class="${l.devis==='debours'?'on warn':''}" onclick="ligneSetDevis('${l.id}','debours')">Débours</button>
         </div>
+        ${expandBtn}
         <button class="lg-del" onclick="ligneDel('${l.id}')" title="Supprimer">×</button>
       </div>
+      ${desc}
     </div>`;
   }
 }
@@ -2321,7 +2338,7 @@ function rMS() {
         </select>
       </div>
     </div>
-    <div class="row" style="align-items:flex-end">
+    <div class="row">
       <div class="field"><label>Statut</label>
         <div class="seg">
           <button class="${declare?"on":""}" onclick="updMissionDeclare(true)">✓ Déclaré</button>
@@ -2376,13 +2393,20 @@ function rMS() {
       </div>`;
     })()}
 
-    <h4>Description prestation</h4>
-    <div class="lg-add">
-      <button class="btn ghost" onclick="ligneAdd('heures')"><span style="font-size:13px">⏱️</span> + Heures</button>
-      <button class="btn ghost" onclick="ligneAdd('materiel')"><span style="font-size:13px">🛒</span> + Matériel</button>
-    </div>
+    <h4>Heures</h4>
     <div class="lg-list">
-      ${(d.lignes || []).length === 0 ? `<div class="empty">Aucune ligne. Clique sur « + Heures » ou « + Matériel » ci-dessus pour commencer.</div>` : (d.lignes || []).map(l => rLigne(l)).join("")}
+      ${(d.lignes || []).filter(l => l.type === "heures").map(l => rLigne(l)).join("")}
+    </div>
+    <div class="lg-add">
+      <button class="btn ghost" onclick="ligneAdd('heures')">+ Ajouter des heures</button>
+    </div>
+
+    <h4 class="lg-section-mat">Matériel</h4>
+    <div class="lg-list">
+      ${(d.lignes || []).filter(l => l.type === "materiel").map(l => rLigne(l)).join("")}
+    </div>
+    <div class="lg-add">
+      <button class="btn ghost" onclick="ligneAdd('materiel')">+ Ajouter du matériel</button>
     </div>
 
     <h3>Déplacement</h3>
@@ -2395,7 +2419,7 @@ function rMS() {
     <div class="row"><div class="field"><label>Mode de transport</label>
       <div class="seg">
         <button class="${mode==="voiture"?"on":""}" onclick="updMissionMode('voiture')">🚗 Voiture</button>
-        <button class="${mode==="transports"?"on":""}" onclick="updMissionMode('transports')">🚆 Transports en commun</button>
+        <button class="${mode==="transports"?"on":""}" onclick="updMissionMode('transports')">🚆 Transports</button>
       </div>
     </div></div>
     ${mode === "voiture" ? `
@@ -2435,12 +2459,12 @@ function rMS() {
       </div>
       <div class="ech-warn" id="echWarn" style="${ok ? "display:none" : ""}">⚠ Les pourcentages doivent totaliser 100 %.</div>
       <div class="ech-actions">
-        <button class="btn ghost" onclick="echeanceAdd()" style="font-size:13px">+ Ajouter une échéance</button>
-        <button class="btn ghost" onclick="echeanceReset()" style="font-size:13px">↺ Réinitialiser</button>
+        <button class="btn ghost" onclick="echeanceAdd()">+ Ajouter une échéance</button>
+        <button class="btn ghost" onclick="echeanceReset()">↺ Réinitialiser</button>
       </div>`;
     })()}
 
-    <div class="row" style="margin-top:14px"><div class="field tiny"><label>Remise (%)</label><input type="number" step="1" min="0" max="100" value="${esc(d.remisePct)}" oninput="upd('mission.remisePct', this.value)"></div></div>
+    <div class="row row-section-break"><div class="field tiny"><label>Remise (%)</label><input type="number" step="1" min="0" max="100" value="${esc(d.remisePct)}" oninput="upd('mission.remisePct', this.value)"></div></div>
 
     <h3>Encadrés du devis</h3>
 
@@ -4849,6 +4873,21 @@ function rTR() {
 // Most recent version FIRST.
 // =============================================================
 const CHANGELOG = [
+  {
+    version: "v1.8",
+    date: "2026-04-29",
+    title: "Onglet Devis : refonte Description prestation + standardisation des espacements",
+    items: [
+      "Description prestation refondue en deux sections distinctes : « Heures » et « Matériel », chacune avec sa propre liste et son bouton « + Ajouter », séparées par un espace généreux. Plus de filet coloré, plus d'icônes ⏱🛒 — la lisibilité passe par la séparation visuelle des deux blocs et le contexte des sélecteurs.",
+      "Lignes Heures et Matériel : structure tabulaire 100 % identique : intitulé / valeur numérique / sélecteur / bouton ▸ détails / suppression. Toutes les colonnes alignées au pixel, hauteur 34 px partout.",
+      "Champ description : repli/dépliage par clic sur le bouton ▸ (devient ▾ une fois ouvert). Disponible désormais aussi sur les lignes Matériel (utile pour préciser ex. « Studio Tucker, demi-journée »). Le bouton passe en cyan quand la ligne contient une description, pour repérer les lignes documentées.",
+      "Sélecteurs Matériel raccourcis : « Devis principal » → « Principal », « Frais débours » → « Débours ». Largeur identique aux sélecteurs « heures / jours », ce qui aligne parfaitement les colonnes entre lignes Heures et Matériel.",
+      "Espacements verticaux standardisés : 14 px entre rangées (au lieu de 8 px) ; 22 px au-dessus de chaque sous-titre H4 (au lieu de 18 px) ; 32 px au-dessus de chaque section H3 (au lieu de 28 px). Plus de marge inline parasite.",
+      "Espacements horizontaux standardisés : 14 px entre champs d'une rangée (au lieu de 12 px), 10 px entre éléments d'une ligne Heures/Matériel (au lieu de 8 px) — plus aérés, plus lisibles.",
+      "Bouton « 🚆 Transports en commun » raccourci en « 🚆 Transports » pour avoir la même largeur que le toggle « Devis principal / Frais débours » juste au-dessus.",
+      "Inline styles parasites supprimés (align-items, margin-top, font-size injectés) — toute la mise en page passe maintenant par les classes CSS."
+    ]
+  },
   {
     version: "v1.7",
     date: "2026-04-28",
