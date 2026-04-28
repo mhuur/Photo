@@ -888,7 +888,13 @@ function rDevisPreview() {
   }
 
   const cat = (S.tarifs.catalog || DEFAULT_CATALOG).find(c => c.k === d.object);
-  const tarifH = cat ? num(cat.p) : 0;
+  // Tarif horaire facturé au client = (tarif de base + taux horaire retenu) × (1 + URSSAF si déclaré)
+  const _tmDevis = tauxMatos();
+  const _baseTarif = cat ? num(cat.p) : 0;
+  const _avecMatos = r2(_baseTarif + _tmDevis.tauxRetenu);
+  const _isDeclare = d.declare !== false;
+  const _urssafCoef = 1 + (num(d.urssafPct ?? 22)) / 100;
+  const tarifH = _isDeclare ? r2(_avecMatos * _urssafCoef) : _avecMatos;
   const sel = d.client.id ? S.clients.entries.find(x => x.id === d.client.id) : null;
   const cli = sel || d.client;
 
@@ -1450,9 +1456,14 @@ function r2(v) { return Math.round((+v + Number.EPSILON) * 100) / 100; }
 
 function totals() {
   const d = S.mission;
-  // Hourly rate from selected prestation
+  // Hourly rate from selected prestation, with material cost + URSSAF if declared
   const cat = (S.tarifs.catalog || DEFAULT_CATALOG).find(c => c.k === d.object);
-  const tarifH = cat ? num(cat.p) : 0;
+  const _tmTot = tauxMatos();
+  const _baseTotal = cat ? num(cat.p) : 0;
+  const _avecMatTot = r2(_baseTotal + _tmTot.tauxRetenu);
+  const _isDecTot = d.declare !== false;
+  const _urssafCoefTot = 1 + (num(d.urssafPct ?? 22)) / 100;
+  const tarifH = _isDecTot ? r2(_avecMatTot * _urssafCoefTot) : _avecMatTot;
   const HOURS_PER_DAY = 8;
   // Walk lignes — round each line individually before summing
   let lignesAmount = 0, debours = 0, totalHeures = 0;
@@ -1519,7 +1530,7 @@ function refreshTotals() {
 
 function totalsHtml(t) {
   return `
-    <div class="line muted"><span>Prestations (${t.totalHeures.toFixed(2).replace(".",",")} h × ${num(t.tarifH).toFixed(2).replace(".",",")} €/h + matériel)</span><span>${fmt(t.lignes)}</span></div>
+    <div class="line muted"><span>Prestations (${t.totalHeures.toFixed(2).replace(".",",")} h × ${num(t.tarifH).toFixed(2).replace(".",",")} €/h)</span><span>${fmt(t.lignes)}</span></div>
     <div class="line muted"><span>Frais de déplacement</span><span>${fmt(t.depl)}</span></div>
     <div class="line muted"><span>Autres</span><span>${fmt(t.autres)}</span></div>
     <div class="line"><span>Sous-total</span><span>${fmt(t.subtotal)}</span></div>
@@ -1640,6 +1651,27 @@ function rMS() {
       </div>
     </div></div>
     <div class="hint">Taux verrouillé par défaut. Cliquer sur ⋮ pour modifier.</div>
+
+    ${(() => {
+      const tm = tauxMatos();
+      const urssafApply = declare;
+      const tauxFinal = urssafApply ? r2(tm.tauxRetenu * (1 + (num(d.urssafPct ?? 22)) / 100)) : tm.tauxRetenu;
+      return `<div style="background:var(--surface-2);border:1px solid var(--border);border-radius:8px;padding:10px 14px;margin:8px 0 14px 0;max-width:680px">
+        <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;font-size:12.5px">
+          <div>
+            <span style="color:var(--text-muted);font-size:11px;text-transform:uppercase;letter-spacing:.04em">Taux horaire retenu</span>
+            <div style="color:var(--primary);font-weight:700;font-variant-numeric:tabular-nums;font-size:16px">${fmt(tm.tauxRetenu)}/h</div>
+          </div>
+          <div style="color:var(--text-dim);font-size:18px">${urssafApply ? "→" : "="}</div>
+          <div>
+            <span style="color:var(--text-muted);font-size:11px;text-transform:uppercase;letter-spacing:.04em">${urssafApply ? `Avec URSSAF (${num(d.urssafPct ?? 22)} %)` : "Sans URSSAF (au black)"}</span>
+            <div style="color:${urssafApply ? 'var(--accent, var(--primary))' : 'var(--warning)'};font-weight:800;font-variant-numeric:tabular-nums;font-size:18px">${fmt(tauxFinal)}/h</div>
+          </div>
+          <div style="flex:1"></div>
+          <a href="#" onclick="event.preventDefault();setTab('tarifs')" style="color:var(--text-muted);font-size:11px;text-decoration:underline">Modifier dans Frais &amp; Tarifs →</a>
+        </div>
+      </div>`;
+    })()}
 
     <h3>Prestation</h3>
     <div class="row"><div class="field"><label>Type de prestation</label>
@@ -1860,6 +1892,128 @@ function suiviAdd() {
   render();
 }
 window.suiviAdd = suiviAdd;
+const CLIENTS_SEED = [
+  {"num": "11", "name": "Groupe MACOHA", "address": "8 bis Quai François Mitterrand", "cityPostal": "44200 - Nantes", "contact": "Hadrien LAROUSSINIE", "email": "contact@macoha-nantes.com", "phone": "06 52 35 71 24", "via": ""},
+  {"num": "12", "name": "Tosma SAS", "address": "", "cityPostal": "", "contact": "Cyrille VANHULLE Théophile NOGRIX", "email": "tosma.org@gmail.com cyrille.vanhulle@tosma.org", "phone": "07 66 04 91 05", "via": "Ecole de Design"},
+  {"num": "13", "name": "Pick Up Production", "address": "17 rue Sanlecque", "cityPostal": "44000 - Nantes", "contact": "Jérémy TOURNEUR", "email": "jeremy.pickupprod@gmail.com", "phone": "02 40 35 28 44", "via": ""},
+  {"num": "14", "name": "Les Films du Dissident - Nantes", "address": "19 Bd Bâtonnier Cholet", "cityPostal": "44100 - Nantes", "contact": "William MONBILLARD", "email": "william@lesfilmsdissident.com", "phone": "07 63 87 31 61", "via": "Linkedin via une connaissance de l'école (portraits entreprise)"},
+  {"num": "15", "name": "Unpointcinq", "address": "", "cityPostal": "", "contact": "", "email": "", "phone": "", "via": ""},
+  {"num": "16", "name": "Robyn Roper", "address": "", "cityPostal": "", "contact": "", "email": "", "phone": "", "via": ""},
+  {"num": "17", "name": "Clément Bretaud", "address": "", "cityPostal": "", "contact": "", "email": "", "phone": "", "via": ""},
+  {"num": "18", "name": "Atelier Tour de la Terre", "address": "5 Rue Urvoy de Saint-Bedan", "cityPostal": "44000 - Nantes", "contact": "Yulie Echavídre", "email": "atelier.tourdelaterre@gmail.com", "phone": "07 82 19 03 16", "via": "Via Résilience Factory (domaine du sport associatif)"},
+  {"num": "19", "name": "linda marques", "address": "", "cityPostal": "", "contact": "", "email": "", "phone": "", "via": "Recommandation d'un gars en soirée (facebook post)"},
+  {"num": "20", "name": "saad artaud", "address": "", "cityPostal": "", "contact": "", "email": "", "phone": "", "via": "Ami d'un ami (musique)"},
+  {"num": "21", "name": "Maiwenn Callarec", "address": "", "cityPostal": "", "contact": "", "email": "", "phone": "", "via": "Démarchage"},
+  {"num": "22", "name": "Sonsofthevillain", "address": "", "cityPostal": "", "contact": "", "email": "", "phone": "", "via": "Anciens copains dans la musique"},
+  {"num": "23", "name": "Mouna Khalifa", "address": "", "cityPostal": "", "contact": "", "email": "", "phone": "", "via": "Léo Boulestreau (Clips et la vidéo)"},
+  {"num": "24", "name": "Max Adams", "address": "", "cityPostal": "", "contact": "", "email": "", "phone": "", "via": "Réseau social (profil d'amankaya danseuse chanteuse)"},
+  {"num": "25", "name": "Matilda", "address": "", "cityPostal": "", "contact": "", "email": "", "phone": "", "via": ""},
+  {"num": "26", "name": "Bain de Midi", "address": "", "cityPostal": "", "contact": "", "email": "", "phone": "", "via": ""},
+  {"num": "27", "name": "homeloop", "address": "", "cityPostal": "", "contact": "", "email": "", "phone": "", "via": ""},
+  {"num": "28", "name": "ibtissam.naji@hotmail.com", "address": "", "cityPostal": "", "contact": "", "email": "", "phone": "", "via": ""},
+  {"num": "29", "name": "levéso", "address": "", "cityPostal": "", "contact": "", "email": "", "phone": "", "via": ""},
+  {"num": "30", "name": "lucilia bayot", "address": "", "cityPostal": "", "contact": "", "email": "", "phone": "", "via": ""},
+  {"num": "32", "name": "menthol moose", "address": "", "cityPostal": "", "contact": "", "email": "", "phone": "", "via": ""},
+  {"num": "33", "name": "alexandre meme clermont", "address": "", "cityPostal": "", "contact": "", "email": "", "phone": "", "via": ""},
+  {"num": "34", "name": "Groupe Main Avenue, Mstream", "address": "5 Prom. Europa", "cityPostal": "44200 - Nantes", "contact": "Nicolas BERRIVIN - Main Avenue Group", "email": "nberrivin@mainavenue.fr", "phone": "609420782", "via": "Stage motion design"},
+  {"num": "35", "name": "mauve collectif", "address": "", "cityPostal": "", "contact": "", "email": "", "phone": "", "via": ""},
+  {"num": "36", "name": "Trempo", "address": "", "cityPostal": "", "contact": "", "email": "guillaume@trempo.com jeoffrey@trempo.com", "phone": "", "via": ""},
+  {"num": "37", "name": "Andrea Jouaud", "address": "", "cityPostal": "", "contact": "", "email": "", "phone": "", "via": ""},
+  {"num": "38", "name": "MyPhotobooth", "address": "21 Rue Léon Durocher", "cityPostal": "44200 - Nantes", "contact": "Victor VILETTE", "email": "photoboothlocations@gmail.com", "phone": "06 61 02 31 57", "via": ""},
+  {"num": "39", "name": "xavier hubert", "address": "", "cityPostal": "", "contact": "", "email": "xav.hubert@gmail.com", "phone": "661961120", "via": ""},
+  {"num": "40", "name": "chainons manquants 44", "address": "", "cityPostal": "", "contact": "", "email": "", "phone": "", "via": ""},
+  {"num": "41", "name": "bureau des congrès", "address": "", "cityPostal": "", "contact": "Servane DE BOUDEMANGE", "email": "servane.deboudemange@nantes-saintnazaire.fr", "phone": "06 84 98 99 61", "via": "Via l'alternante en communication, qui a cherché (insta ou linkedin)"},
+  {"num": "42", "name": "OWLOVE", "address": "", "cityPostal": "", "contact": "", "email": "", "phone": "", "via": ""},
+  {"num": "43", "name": "camille charrol", "address": "", "cityPostal": "", "contact": "", "email": "", "phone": "", "via": ""},
+  {"num": "44", "name": "clément masson", "address": "", "cityPostal": "", "contact": "", "email": "", "phone": "", "via": ""},
+  {"num": "45", "name": "Océane Feugueur", "address": "", "cityPostal": "", "contact": "", "email": "", "phone": "", "via": ""},
+  {"num": "46", "name": "daria", "address": "", "cityPostal": "", "contact": "", "email": "", "phone": "", "via": ""},
+  {"num": "47", "name": "diva", "address": "", "cityPostal": "", "contact": "", "email": "", "phone": "", "via": ""},
+  {"num": "48", "name": "cravate solidaire", "address": "", "cityPostal": "", "contact": "", "email": "nantes@lacravatesolidaire.org", "phone": "", "via": ""},
+  {"num": "49", "name": "Poulinet Brianne", "address": "", "cityPostal": "", "contact": "", "email": "", "phone": "", "via": ""},
+  {"num": "50", "name": "Aguado Daniel", "address": "", "cityPostal": "", "contact": "", "email": "", "phone": "", "via": ""},
+  {"num": "51", "name": "Ooshot", "address": "", "cityPostal": "", "contact": "", "email": "nicolas.simon@ooshot.com", "phone": "", "via": ""},
+  {"num": "52", "name": "Nonovibe", "address": "", "cityPostal": "", "contact": "", "email": "", "phone": "", "via": ""},
+  {"num": "53", "name": "Zahou", "address": "", "cityPostal": "", "contact": "", "email": "", "phone": "", "via": ""},
+  {"num": "54", "name": "dorian clair", "address": "", "cityPostal": "", "contact": "", "email": "", "phone": "", "via": ""},
+  {"num": "54", "name": "vautier emmanuelle", "address": "", "cityPostal": "", "contact": "", "email": "", "phone": "", "via": ""},
+  {"num": "55", "name": "camus le floch", "address": "", "cityPostal": "", "contact": "", "email": "", "phone": "", "via": ""},
+  {"num": "56", "name": "francois bourdin", "address": "", "cityPostal": "", "contact": "", "email": "", "phone": "", "via": ""},
+  {"num": "57", "name": "marie mauret cepas", "address": "", "cityPostal": "", "contact": "", "email": "", "phone": "", "via": ""},
+  {"num": "58", "name": "victoire rousseau", "address": "", "cityPostal": "", "contact": "", "email": "", "phone": "", "via": ""},
+  {"num": "59", "name": "lucie desirat", "address": "", "cityPostal": "", "contact": "", "email": "", "phone": "", "via": ""},
+  {"num": "60", "name": "Krack Records", "address": "22 Mail Pablo Picasso", "cityPostal": "44000 - Nantes", "contact": "Lyod Moyamy", "email": "info@krackrecords.com", "phone": "644729368", "via": ""},
+  {"num": "61", "name": "Cléophée Gourlet-Cloarec", "address": "", "cityPostal": "", "contact": "", "email": "", "phone": "", "via": ""},
+  {"num": "62", "name": "Take Off Com", "address": "", "cityPostal": "", "contact": "", "email": "", "phone": "", "via": ""},
+  {"num": "63", "name": "Margot Voisin", "address": "", "cityPostal": "", "contact": "", "email": "", "phone": "", "via": "par tunjay (rappeur nantais)"},
+  {"num": "64", "name": "Lensman", "address": "", "cityPostal": "", "contact": "", "email": "", "phone": "", "via": ""},
+  {"num": "65", "name": "Léa Jacquot", "address": "", "cityPostal": "", "contact": "", "email": "lea-jacquot@outlook.fr", "phone": "06 07 26 13 20", "via": "ami d'ami"},
+  {"num": "66", "name": "Sarah Martinache", "address": "", "cityPostal": "", "contact": "", "email": "", "phone": "", "via": "prospection paris"},
+  {"num": "67", "name": "L'Assaucisse Association", "address": "9 Bd Emile Romanet", "cityPostal": "44100 - Nantes", "contact": "Mathéo DESMARRES", "email": "matheodesmarres.contact@gmail.com", "phone": "605299980", "via": "Via Camus"},
+  {"num": "68", "name": "Tom Verdois", "address": "14 Rue du Chapeau Rouge", "cityPostal": "44000 - Nantes", "contact": "", "email": "tom.verdois@icloud.com", "phone": "647619302", "via": "Via suggestion insta"},
+  {"num": "69", "name": "Marie Ambroise", "address": "108 Rue du Patis Clos", "cityPostal": "49270 - La Varenne", "contact": "", "email": "ambroise.marie@outlook.fr", "phone": "641769106", "via": "via études motion design"},
+  {"num": "70", "name": "Théo Alexandre BEEMYPHONE", "address": "11 rue maître Pierre", "cityPostal": "44330 - Vallet", "contact": "", "email": "theoalexandre842@gmail.com", "phone": "06 28 70 18 23", "via": "Via Loris ami de Flo qui travaille à beemyphone"},
+  {"num": "71", "name": "Safa Farban", "address": "10 boulevard président René Coty", "cityPostal": "44100 - Nantes", "contact": "", "email": "safa.farban@outlook.com", "phone": "06 48 65 60 21", "via": "Amie de Rencontres par Insta (Ilona, Antoine)"},
+  {"num": "72", "name": "La Ville est Belle", "address": "11 rue La Noue Bras de Fer", "cityPostal": "44200 - Nantes", "contact": "Léopold Grosvenor", "email": "leopold.grosvenor@la-ville-est-belle.fr", "phone": "07 63 20 03 29", "via": "Via démarchage"},
+  {"num": "73", "name": "Manal BARNETT", "address": "8 rue de la barillerie", "cityPostal": "44000 - Nantes", "contact": "", "email": "manalbarnett09@gmail.com", "phone": "624254255", "via": "via tunjay"},
+  {"num": "74", "name": "Fedelin Kerro", "address": "43 rue bouchaud", "cityPostal": "44100 - Nantes", "contact": "", "email": "kerro.san44@gmail.com", "phone": "645731279", "via": "sur insta"},
+  {"num": "75", "name": "Onepoint", "address": "29 rue des sablons", "cityPostal": "75016 - Paris", "contact": "Mariem Zamouri", "email": "m.zamouri@groupeonepoint.com", "phone": "33668767953", "via": ""},
+  {"num": "76", "name": "Clarisse Valcy", "address": "20 rue Barbara", "cityPostal": "44300 - Nantes", "contact": "", "email": "valcyclarisse@gmail.com", "phone": "695588218", "via": "sur google"},
+  {"num": "77", "name": "Jonathan Lefebvre", "address": "", "cityPostal": "", "contact": "", "email": "vjblind@gmail.com", "phone": "", "via": "via hortense mauny"},
+  {"num": "78", "name": "Wilson Comba", "address": "3 Rue de Cholet", "cityPostal": "44800 - St Herblain", "contact": "", "email": "wilson.comba-lima@hotmail.com", "phone": "610383197", "via": "via eliyah / resilience / davis"},
+  {"num": "97", "name": "Arnaud Sollayr", "address": "", "cityPostal": "", "contact": "", "email": "", "phone": "", "via": "recommandation linkedin"},
+  {"num": "111", "name": "Association Confluence", "address": "1 bis avenue de Langeais", "cityPostal": "44800 - St Herblain", "contact": "Alexis Desmars", "email": "confluencemusique@gmail.com", "phone": "695023724", "via": "Amis de soirées"},
+  {"num": "129", "name": "UFOLEP", "address": "", "cityPostal": "", "contact": "", "email": "", "phone": "", "via": "photopresta"},
+  {"num": "144", "name": "RÉUNION DU SPORT DE L'EMPLOI ET DE LA CULTURE (RSLC - RESILIENCE)", "address": "43 Rue de Michel Chauty", "cityPostal": "44800 - Saint Herblain", "contact": "Davis MOUKALA", "email": "contact@resiliencefactory.org", "phone": "06 41 93 08 65", "via": "ami d'ami"},
+  {"num": "188", "name": "adèle ansuz", "address": "", "cityPostal": "", "contact": "", "email": "", "phone": "", "via": "ami d'ami"},
+  {"num": "227", "name": "Salma.choukri", "address": "", "cityPostal": "", "contact": "", "email": "", "phone": "", "via": ""},
+  {"num": "231", "name": "cenea pays de la loire", "address": "", "cityPostal": "", "contact": "", "email": "", "phone": "", "via": "soeur d'agathe rousseau alternante aux Films du Dissident"},
+  {"num": "441", "name": "sabrina artaud", "address": "", "cityPostal": "", "contact": "", "email": "", "phone": "", "via": "linkedin recherche"},
+  {"num": "511", "name": "SILVESTRODICE", "address": "", "cityPostal": "", "contact": "", "email": "", "phone": "", "via": ""},
+  {"num": "555", "name": "Mike & cheese", "address": "", "cityPostal": "", "contact": "", "email": "", "phone": "", "via": ""},
+  {"num": "771", "name": "cafeprod", "address": "", "cityPostal": "", "contact": "", "email": "", "phone": "", "via": ""},
+  {"num": "879", "name": "NOCTAMBULE", "address": "", "cityPostal": "", "contact": "", "email": "", "phone": "", "via": ""},
+  {"num": "1024", "name": "LEIDA", "address": "", "cityPostal": "", "contact": "", "email": "", "phone": "", "via": ""},
+  {"num": "1076", "name": "CWF", "address": "6 rue de la Tisonnière", "cityPostal": "85500 - Les Herbiers", "contact": "Manon BOUTIN\nBarbara GENDRE\nCécile PROCOPE", "email": "Manon.BOUTIN@cwf.fr Barbara.GENDRE@cwf.fr Cecile.PROCOPE@cwf.fr", "phone": "06 32 83 48 35\n06 08 80 51 94\n02 51 66 39 68", "via": "trouvée sur linkedin \"photographe nantes\""},
+  {"num": "1256", "name": "MARINE BELLEE", "address": "", "cityPostal": "", "contact": "", "email": "", "phone": "", "via": ""},
+  {"num": "79", "name": "Nicolas Halet", "address": "7 Rue Pitre Chevalier", "cityPostal": "44000 - Nantes", "contact": "", "email": "halet.nicolas@outlook.fr", "phone": "677565101", "via": "via laetitia amie du lycée (c'est son frère)"},
+  {"num": "80", "name": "Fanny LORCET", "address": "", "cityPostal": "", "contact": "", "email": "f.lorcet@free.fr", "phone": "06 40 30 96 57", "via": ""},
+  {"num": "81", "name": "Léonie Hubert", "address": "9 bd émile romanet", "cityPostal": "44100 - Nantes", "contact": "", "email": "leonie.hubert35@gmail.com", "phone": "06 95 03 13 03", "via": "par Amankaya"},
+  {"num": "82", "name": "Isabelle Nehlig", "address": "8 Rue des Épinettes", "cityPostal": "44830 - Bouaye", "contact": "", "email": "natacha.lebras@gmail.com", "phone": "677771256", "via": "par Natacha"},
+  {"num": "83", "name": "Boris Gbahi", "address": "", "cityPostal": "", "contact": "Océane Rocton", "email": "or.studiophoto@gmail.com", "phone": "616823795", "via": "insta (océane)"},
+  {"num": "84", "name": "Julie Clénet", "address": "5 Le Freuche La Limouzinière", "cityPostal": "44310 - St Philbert de Grand Lieu", "contact": "", "email": "julieclenetdu44@gmail.com", "phone": "06 14 30 81 74", "via": "par Mélissa"},
+  {"num": "85", "name": "Éva Lory", "address": "", "cityPostal": "", "contact": "", "email": "eva.lory@essca.eu", "phone": "", "via": ""},
+  {"num": "86", "name": "Axelle Martinelli", "address": "9 avenue de Normandie", "cityPostal": "44300 - Nantes", "contact": "", "email": "axelle@coachevolution.fr", "phone": "06 83 19 18 66", "via": "par maman"},
+  {"num": "87", "name": "Nicolas Thévenin", "address": "1 rue Paul Dubois", "cityPostal": "44000 - Nantes", "contact": "", "email": "ntvn@me.com", "phone": "06 20 31 02 35", "via": "par l'école de design (mon prof de cinéma)"},
+  {"num": "88", "name": "WAPOLLI", "address": "14 avenue de la libération", "cityPostal": "44143 - Rezé", "contact": "Apolline Watrelot", "email": "apollinewatrelot@gmail.com", "phone": "07 66 17 30 32", "via": "lyod krack records"},
+  {"num": "89", "name": "Nolan Guisneuf", "address": "5 rue du 11 novembre", "cityPostal": "44120 - Vertou", "contact": "", "email": "nolan.guisneuf@lagencelocale.com", "phone": "768791565", "via": "insta"},
+  {"num": "90", "name": "Éric Boistard", "address": "", "cityPostal": "Nantes", "contact": "", "email": "ericboistard@free.fr", "phone": "616302492", "via": "par romain charrier"},
+  {"num": "91", "name": "Rozenn et Ziad Zeitoun", "address": "71 rue Colmet Lépinay", "cityPostal": "93100 Montreuil", "contact": "", "email": "rozenn.ollivier@gmail.com", "phone": "06 95 01 04 91", "via": "par flore hubert (c'est sa soeur)"},
+  {"num": "92", "name": "Ségolène Fourmy", "address": "", "cityPostal": "Boulevard du Massacre, Nantes (44109)", "contact": "", "email": "segolene.fourmy@outlook.fr", "phone": "673362366", "via": "amie"},
+  {"num": "93", "name": "Ronan Virginie", "address": "", "cityPostal": "", "contact": "", "email": "ronanvirginie@gmail.com", "phone": "06 99 23 10 27", "via": "bota binks"},
+  {"num": "94", "name": "Tristan Rousseau", "address": "69 rue du largeau", "cityPostal": "44230 Saint Sébastien sur Loire", "contact": "", "email": "tristan.rousseau1806@gmail.com", "phone": "07.71.68.04.12", "via": ""},
+  {"num": "95", "name": "Cleblue", "address": "", "cityPostal": "", "contact": "", "email": "cleblue2015@gmail.com", "phone": "", "via": ""},
+  {"num": "96", "name": "Mélodie Contu-Favry", "address": "7 Chemin Bretonnelle", "cityPostal": "44100 Nantes", "contact": "", "email": "contufavrymelodie@gmail.com", "phone": "683834068", "via": ""},
+  {"num": "98", "name": "Louise Vayer", "address": "72 rue Gambetta", "cityPostal": "44000 - Nantes", "contact": "", "email": "louveho@gmail.com", "phone": "687612761", "via": "insta"},
+  {"num": "99", "name": "Lucas Jacquet", "address": "4 square de sendai", "cityPostal": "35700 - Rennes", "contact": "", "email": "potalakompote@gmail.com", "phone": "", "via": "insta"},
+  {"num": "100", "name": "Emma Bonneau", "address": "95 rue de la patouillerie", "cityPostal": "44700 - Orvault", "contact": "", "email": "emmaa.bonneau@gmail.com", "phone": "660766970", "via": "par ami d'ami"},
+  {"num": "101", "name": "Lilly Nadia", "address": "", "cityPostal": "", "contact": "", "email": "uwimpuhwe@yahoo.fr", "phone": "", "via": "nantes tribe up"},
+  {"num": "102", "name": "Angèle Simon", "address": "", "cityPostal": "", "contact": "", "email": "angele.simon.em@gmail.com", "phone": "06 71 23 92 24", "via": ""},
+  {"num": "103", "name": "Valentine Rabreau", "address": "4 RUE René Cassin", "cityPostal": "44230.0", "contact": "", "email": "Valentine.rabreau@gmail.com", "phone": "605017731", "via": ""},
+  {"num": "104", "name": "Juliette Ollivier", "address": "", "cityPostal": "", "contact": "", "email": "juliette.ollivier@outlook.fr", "phone": "783156091", "via": "mariage Flore et Rozenn"},
+  {"num": "105", "name": "Sibylle Baeyens-Bruyere", "address": "", "cityPostal": "", "contact": "", "email": "sidelphe@gmail.com", "phone": "781709798", "via": ""},
+  {"num": "106", "name": "Loic Renaud - Atelier NOIZY", "address": "", "cityPostal": "", "contact": "", "email": "loic5euro@gmail.com", "phone": "695610582", "via": "école de design"},
+  {"num": "107", "name": "Billy Buck Chicken", "address": "Place du grand Pré — 644 697 936 00018", "cityPostal": "44620 - La Montagne", "contact": "", "email": "", "phone": "259283936", "via": ""},
+  {"num": "108", "name": "Sohan Legras", "address": "", "cityPostal": "", "contact": "", "email": "sohan808music@icloud.com", "phone": "671737810", "via": "dj (camus?)"},
+  {"num": "109", "name": "Victoria SMAÏL", "address": "", "cityPostal": "", "contact": "", "email": "Nuarap@hotmail.com", "phone": "06.74.70.82.23", "via": "jjims"},
+  {"num": "110", "name": "Christelle Lepetit", "address": "", "cityPostal": "", "contact": "", "email": "clepetit@viadyssee.com", "phone": "06 62 38 21 89", "via": "event job à la cordée - eventbrite"},
+  {"num": "112", "name": "Oceanne Zabolonne", "address": "", "cityPostal": "", "contact": "", "email": "sabinejnn@gmail.com", "phone": "", "via": "amis communs"},
+  {"num": "113", "name": "Benjamin Latouche", "address": "", "cityPostal": "22000 - St Brieuc", "contact": "", "email": "Contact.youngsmusic@gmail.com", "phone": "658962244", "via": "insta"},
+  {"num": "114", "name": "Influenci", "address": "Rte de la Corniche", "cityPostal": "20110 - Propriano", "contact": "", "email": "contact@influenci.com", "phone": "06 50 77 98 60", "via": "OnePoint - Pierre Alexandre Kintzinger (vidéaste)"},
+  {"num": "115", "name": "Carla M.", "address": "", "cityPostal": "", "contact": "", "email": "m.carla2008@outlook.fr", "phone": "", "via": ""},
+  {"num": "116", "name": "Euphorbia", "address": "42 Quai de la Fosse", "cityPostal": "44000 Nantes", "contact": "", "email": "", "phone": "", "via": "irl devant leur salon par hasard"},
+];
+
 const SUIVI_SEED = [
   {date:"2026-04-20",ref:"",client:"#116 Euphorbia",prestation:"",montant:"124.20",heures:"4.50",echeance:"Accompte",paiement:"124.20",ca:"124.20",salaire:"27.92",ursaf:"27.32",tresorerie:"68.95",frais:"0.00",commentaires:"",statut:"envoye"},
   {date:"2026-04-20",ref:"",client:"#116 Euphorbia",prestation:"",montant:"289.80",heures:"0.00",echeance:"Reste à payer :",paiement:"289.80",ca:"289.80",salaire:"65.15",ursaf:"63.76",tresorerie:"160.89",frais:"0.00",commentaires:"",statut:"envoye"},
@@ -2723,61 +2877,148 @@ function clientsAdd() {
 window.clientsAdd = clientsAdd;
 
 // Import unique clients from SUIVI_SEED + S.suivi.entries
-function clientsImportFromSuivi() {
-  const sources = [
-    ...(typeof SUIVI_SEED !== "undefined" ? SUIVI_SEED : []),
-    ...(S.suivi && Array.isArray(S.suivi.entries) ? S.suivi.entries : [])
-  ];
-  // Extract unique clients by name from "#NNN Name" or "Name" patterns
-  const seen = new Set();
-  const candidates = [];
-  for (const e of sources) {
-    const raw = (e.client || "").trim();
-    if (!raw || seen.has(raw)) continue;
-    seen.add(raw);
-    // Parse "#NNN Name" → num "NNN", name "Name"; else num "", name = raw
-    const match = raw.match(/^#?(\d+)\s+(.+)$/);
-    if (match) {
-      candidates.push({ num: match[1], name: match[2].trim() });
-    } else {
-      candidates.push({ num: "", name: raw });
+// Parse contacts from a Tosma-like cell: "Cyrille VANHULLE Théophile NOGRIX" → 2 contacts
+// Heuristic: split on patterns where a Last name (UPPERCASE word) is followed by a Firstname (capitalized word)
+function parseMultiContactNames(raw) {
+  if (!raw) return [];
+  const s = raw.trim();
+  // First try: split on common separators (newlines, slashes, semicolons, commas)
+  if (/[\n;\/]/.test(s) || s.includes(",")) {
+    return s.split(/[\n,;\/]+/).map(x => x.trim()).filter(Boolean);
+  }
+  // Second try: detect "[Firstname] [LASTNAME] [Firstname] [LASTNAME]" pattern
+  // A LASTNAME (all upper) followed by a Firstname (cap+lower) means a new contact starts
+  const tokens = s.split(/\s+/);
+  if (tokens.length < 4) return [s]; // too short to be multi-contact
+  const groups = [];
+  let current = [];
+  for (let i = 0; i < tokens.length; i++) {
+    current.push(tokens[i]);
+    // If current token is ALL UPPERCASE (lastname) and next token starts with capital + lowercase (firstname),
+    // we have a contact boundary
+    const tk = tokens[i];
+    const next = tokens[i + 1];
+    const isLastname = tk.length >= 2 && tk === tk.toUpperCase() && /[A-ZÀ-Ÿ]/.test(tk);
+    const nextIsFirstname = next && /^[A-ZÀ-Ÿ][a-zà-ÿ]/.test(next);
+    if (isLastname && nextIsFirstname) {
+      groups.push(current.join(" "));
+      current = [];
     }
   }
-  // Filter out clients that already exist (match by name OR by num)
-  const existing = S.clients.entries;
-  const toAdd = candidates.filter(c => {
-    return !existing.some(x =>
-      (x.name || "").trim().toLowerCase() === c.name.toLowerCase()
-      || (c.num && (x.num || "").trim() === c.num)
-    );
-  });
-  if (toAdd.length === 0) {
-    alert("Tous les clients du Suivi sont déjà dans la liste — aucun ajout nécessaire.");
+  if (current.length) groups.push(current.join(" "));
+  return groups.length >= 2 ? groups : [s];
+}
+
+// Parse multi-emails (whitespace-separated emails in one cell)
+function parseMultiEmails(raw) {
+  if (!raw) return [];
+  // First try: split on newlines, commas, semicolons, slashes
+  if (/[\n,;\/]/.test(raw)) {
+    return raw.split(/[\n,;\/]+/).map(x => x.trim()).filter(Boolean);
+  }
+  // Then: split on whitespace if multiple @ are present
+  const atCount = (raw.match(/@/g) || []).length;
+  if (atCount >= 2) {
+    return raw.split(/\s+/).map(x => x.trim()).filter(x => x.includes("@"));
+  }
+  return [raw.trim()];
+}
+
+// Parse multi-phones similarly
+function parseMultiPhones(raw) {
+  if (!raw) return [];
+  if (/[\n,;\/]/.test(raw)) {
+    return raw.split(/[\n,;\/]+/).map(x => x.trim()).filter(Boolean);
+  }
+  return [raw.trim()];
+}
+
+// Build a clean contacts array from raw fields by zipping parsed values
+function buildContactsFromRaw(rawContact, rawPhone, rawEmail) {
+  const names = parseMultiContactNames(rawContact);
+  const phones = parseMultiPhones(rawPhone);
+  const emails = parseMultiEmails(rawEmail);
+  const max = Math.max(names.length, phones.length, emails.length, 1);
+  const contacts = [];
+  for (let i = 0; i < max; i++) {
+    contacts.push({
+      id: uid(),
+      name: names[i] || "",
+      phone: phones[i] || "",
+      email: emails[i] || ""
+    });
+  }
+  // Don't return entirely-empty array; ensure at least one slot
+  return contacts.length ? contacts : [{ id: uid(), name: "", phone: "", email: "" }];
+}
+
+function clientsImportFromSuivi() {
+  // Use CLIENTS_SEED (real data extracted from Excel) as authoritative source.
+  // Fallback to SUIVI_SEED parsing only if CLIENTS_SEED unavailable.
+  const seed = (typeof CLIENTS_SEED !== "undefined" && Array.isArray(CLIENTS_SEED)) ? CLIENTS_SEED : null;
+  if (!seed) {
+    alert("Seed clients indisponible (CLIENTS_SEED manquant).");
     return;
   }
-  if (!confirm(`Importer ${toAdd.length} client${toAdd.length > 1 ? "s" : ""} depuis le Suivi ?\n\nLes fiches seront créées avec un contact vide à compléter.\nLes clients existants ne seront pas modifiés.`)) return;
-  for (const c of toAdd) {
-    S.clients.entries.push({
-      id: uid(),
-      num: c.num,
-      name: c.name,
-      contacts: [{ id: uid(), name: "", phone: "", email: "" }],
-      contact: "", phone: "", email: "",
-      address: "",
-      cityPostal: "",
-      rencontre: ""
-    });
+  const existing = S.clients.entries;
+  // Decide for each seed entry: skip (exists) / import (new) / update (exists but contacts empty)
+  let added = 0, updated = 0, skipped = 0;
+  for (const c of seed) {
+    if (!c.name && !c.num) continue;
+    // Match by num first, then by exact name (case-insensitive)
+    const found = existing.find(x =>
+      (c.num && (x.num || "").trim() === c.num)
+      || (c.name && (x.name || "").trim().toLowerCase() === c.name.toLowerCase())
+    );
+    if (found) {
+      // Existing client — only fill missing data, never overwrite user's edits
+      const hasContent = Array.isArray(found.contacts) && found.contacts.some(k => k.name || k.phone || k.email);
+      if (!hasContent && (c.contact || c.phone || c.email)) {
+        found.contacts = buildContactsFromRaw(c.contact, c.phone, c.email);
+        if (!found.address) found.address = c.address || "";
+        if (!found.cityPostal) found.cityPostal = c.cityPostal || "";
+        if (!found.rencontre) found.rencontre = c.via || "";
+        if (!found.num) found.num = c.num || "";
+        // Sync legacy
+        syncClientLegacy(found);
+        updated++;
+      } else {
+        skipped++;
+      }
+    } else {
+      // New client
+      const contacts = buildContactsFromRaw(c.contact, c.phone, c.email);
+      const newClient = {
+        id: uid(),
+        num: c.num || "",
+        name: c.name || "",
+        contacts,
+        contact: "", phone: "", email: "",
+        address: c.address || "",
+        cityPostal: c.cityPostal || "",
+        rencontre: c.via || ""
+      };
+      syncClientLegacy(newClient);
+      S.clients.entries.push(newClient);
+      added++;
+    }
   }
   // Sort clients by num then name for tidiness
   S.clients.entries.sort((a, b) => {
-    const an = parseInt(a.num, 10) || 999999;
-    const bn = parseInt(b.num, 10) || 999999;
-    if (an !== bn) return an - bn;
+    const an = parseInt(a.num, 10);
+    const bn = parseInt(b.num, 10);
+    if (!isNaN(an) && !isNaN(bn) && an !== bn) return an - bn;
+    if (!isNaN(an) && isNaN(bn)) return -1;
+    if (isNaN(an) && !isNaN(bn)) return 1;
     return (a.name || "").localeCompare(b.name || "", "fr");
   });
   save();
   render();
-  alert(`${toAdd.length} client${toAdd.length > 1 ? "s" : ""} importé${toAdd.length > 1 ? "s" : ""}. À toi de compléter les contacts (nom + téléphone + email) dans chaque fiche.`);
+  const parts = [];
+  if (added) parts.push(`${added} ajouté${added > 1 ? "s" : ""}`);
+  if (updated) parts.push(`${updated} complété${updated > 1 ? "s" : ""}`);
+  if (skipped) parts.push(`${skipped} déjà à jour`);
+  alert(parts.length ? `Import terminé : ${parts.join(", ")}.` : "Aucun changement.");
 }
 window.clientsImportFromSuivi = clientsImportFromSuivi;
 
@@ -3008,7 +3249,7 @@ function rCL() {
 
     <div class="toolbar">
       <button class="btn" onclick="clientsAdd()">+ Ajouter un client</button>
-      <button class="btn ghost" onclick="clientsImportFromSuivi()" title="Crée des fiches clients à partir des libellés du Suivi (#numéro Nom)">↓ Importer depuis le Suivi</button>
+      <button class="btn ghost" onclick="clientsImportFromSuivi()" title="Crée / complète les fiches clients à partir du fichier Excel embarqué (119 clients)">↓ Importer depuis le fichier Excel</button>
       <input id="clientsSearchInput" class="search" type="text" placeholder="Rechercher…" oninput="clientsFilter(this.value)" autocomplete="off">
     </div>
 
@@ -3104,10 +3345,13 @@ function editAbonnementAndRefresh(id, field, val) {
 }
 window.editAbonnementAndRefresh = editAbonnementAndRefresh;
 
+// Debounced refresh — call save+render only after typing stops (500ms idle).
+// Prevents keystroke-by-keystroke render races that scrambled input values (160 → 061).
+let _tauxRefreshTimer = null;
 function tarifHeuresAnnuelles(val) {
   S.tarifs.heuresAnnuelles = val;
-  save();
-  refreshTauxMatos();
+  if (_tauxRefreshTimer) clearTimeout(_tauxRefreshTimer);
+  _tauxRefreshTimer = setTimeout(() => { save(); render(); }, 500);
 }
 window.tarifHeuresAnnuelles = tarifHeuresAnnuelles;
 
@@ -3136,8 +3380,8 @@ window.tarifHeuresRelock = tarifHeuresRelock;
 
 function tarifFacteurSecurite(val) {
   S.tarifs.facteurSecurite = val;
-  save();
-  refreshTauxMatos();
+  if (_tauxRefreshTimer) clearTimeout(_tauxRefreshTimer);
+  _tauxRefreshTimer = setTimeout(() => { save(); render(); }, 500);
 }
 window.tarifFacteurSecurite = tarifFacteurSecurite;
 
@@ -3235,6 +3479,8 @@ function tauxMatos() {
     tauxBrut,
     facteur,
     tauxAvecSecurite,
+    // Tarif horaire retenu : arrondi au 5€ supérieur du tauxAvecSecurite
+    tauxRetenu: tauxAvecSecurite > 0 ? Math.ceil(tauxAvecSecurite / 5) * 5 : 0,
     // legacy keys retained for any other consumer
     abonnementsAnnuels: r2(mensuelActif * 12),
     investissementsAnnuels: materielAnnuel,
@@ -3536,16 +3782,6 @@ function rCP() {
 function rTR() {
   // Prestations editing
   const cat = S.tarifs.catalog || DEFAULT_CATALOG;
-  const tarifRows = cat.map((c, idx) => `
-    <div class="tarif-row">
-      <input type="text" value="${esc(c.l)}" oninput="tarifEdit(${idx},'l',this.value)" placeholder="Libellé prestation">
-      <div class="rate ${num(c.p) === 0 ? "empty" : ""}">
-        <input type="number" step="0.5" value="${esc(c.p || "")}" oninput="tarifEdit(${idx},'p',this.value)" placeholder="—">
-        <span class="unit">€/h</span>
-      </div>
-      <div></div>
-    </div>
-  `).join("");
 
   // Abonnements
   const abEntries = S.abonnements.entries;
@@ -3599,17 +3835,119 @@ function rTR() {
 
   // Compute taux matos
   const tm = tauxMatos();
+  const urssafPct = num(S.mission && S.mission.urssafPct) || 22;
+  const tarifRows3col = cat.map((c, idx) => {
+    const taux = num(c.p);
+    const avecMat = r2(taux + tm.tauxRetenu);
+    const avecUrssaf = r2(avecMat * (1 + urssafPct / 100));
+    return `
+    <tr ${taux === 0 ? 'style="background:rgba(245,158,11,.06)"' : ''}>
+      <td><input type="text" value="${esc(c.l)}" oninput="tarifEdit(${idx},'l',this.value)" placeholder="Libellé prestation" style="border:0;background:transparent;color:var(--text);width:100%;font:inherit"></td>
+      <td style="text-align:right">
+        <div style="display:inline-flex;align-items:baseline;gap:3px">
+          <input type="number" step="0.5" value="${esc(c.p || "")}" oninput="tarifEdit(${idx},'p',this.value)" placeholder="—" style="width:64px;text-align:right;border:1px solid var(--border-light);background:var(--surface-2);color:var(--text);padding:4px 6px;border-radius:4px;font-variant-numeric:tabular-nums">
+          <span style="color:var(--text-dim);font-size:11px">€/h</span>
+        </div>
+      </td>
+      <td style="text-align:right;font-variant-numeric:tabular-nums;color:${taux > 0 ? 'var(--text)' : 'var(--warning)'}">${fmt(avecMat)}${taux === 0 ? '<div style="font-size:9px;color:var(--text-dim);margin-top:1px">plancher matériel</div>' : ''}</td>
+      <td style="text-align:right;font-variant-numeric:tabular-nums;color:${taux > 0 ? 'var(--primary)' : 'var(--warning)'};font-weight:600">${fmt(avecUrssaf)}${taux === 0 ? '<div style="font-size:9px;color:var(--text-dim);margin-top:1px;font-weight:400">plancher</div>' : ''}</td>
+    </tr>`;
+  }).join("");
 
   return `
     <h2>Frais &amp; Tarifs <span id="savedFlash" class="saved"></span></h2>
 
-    <h3>Prestations &amp; tarifs (€/h)</h3>
-    <div class="hint">Le tarif sélectionné dans Mission est multiplié par les heures de shooting. Les lignes en orange n'ont pas de tarif défini.</div>
-    <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:14px 16px;max-width:720px">
-      ${tarifRows}
-      <div style="margin-top:10px;display:flex;justify-content:flex-end">
-        <button class="btn ghost" onclick="tarifReset()" style="font-size:12px">↺ Réinitialiser aux tarifs par défaut</button>
+    <h3>Synthèse coûts horaires</h3>
+    <div class="hint" style="max-width:880px">Calcul du coût horaire à intégrer à ton tarif facturé.<br>
+      <strong>Abonnements</strong> : (mois écoulés cette année × coût mensuel des abonnements actifs) ÷ heures du mois (= heures annuelles ÷ 12).<br>
+      <strong>Matériel</strong> : pour chaque équipement encore en cours d'amortissement, mensualités à amortir sur les 12 prochains mois — sommé puis divisé par les heures annuelles.</div>
+
+    <div class="row" style="margin-bottom:14px;gap:18px">
+      <div class="field narrow"><label>Heures facturables annuelles</label>
+        <div class="lock-field">
+          <input id="heuresInput" type="number" step="10" min="1" value="${esc(S.tarifs.heuresAnnuelles || "900")}" ${tarifHeuresLocked ? "disabled" : `oninput="tarifHeuresAnnuelles(this.value)"`}>
+          <button class="lock-menu-btn" onclick="tarifHeuresLockToggle()" title="Options">⋮</button>
+          <div class="lock-popup" id="heuresMenu">
+            ${tarifHeuresLocked
+              ? `<button onclick="tarifHeuresUnlock()">🔓 Modifier</button>`
+              : `<button onclick="tarifHeuresRelock()">🔒 Verrouiller</button>`}
+          </div>
+        </div>
       </div>
+      <div class="field narrow"><label>Facteur sécurité (%)</label>
+        <div class="lock-field">
+          <input id="facteurInput" type="number" step="1" min="0" max="100" value="${esc(S.tarifs.facteurSecurite || "0")}" ${facteurSecuriteLocked ? "disabled" : `oninput="tarifFacteurSecurite(this.value)"`}>
+          <button class="lock-menu-btn" onclick="facteurSecuriteLockToggle()" title="Options">⋮</button>
+          <div class="lock-popup" id="facteurMenu">
+            ${facteurSecuriteLocked
+              ? `<button onclick="facteurSecuriteUnlock()">🔓 Modifier</button>`
+              : `<button onclick="facteurSecuriteRelock()">🔒 Verrouiller</button>`}
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="hint" style="margin-top:-10px">Heures : estimation prudente ≈ 900 h/an. Facteur sécurité : pour gonfler ton tarif (ex. 15 % d'imprévus / marge).</div>
+
+    <table class="hist" style="max-width:780px">
+      <thead>
+        <tr>
+          <th>Source</th>
+          <th style="width:200px;text-align:right">Détail (${tm.currentYear})</th>
+          <th style="width:140px;text-align:right">Coût horaire</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Abonnements professionnels<div style="font-size:11px;color:var(--text-dim);margin-top:2px">${tm.monthsElapsed} mois écoulés × ${fmt(tm.mensuelActif)}/mois</div></td>
+          <td class="amount" style="text-align:right;color:var(--text);font-variant-numeric:tabular-nums;padding-right:14px">${fmt(tm.abonnementsDepensesYTD)}<div style="font-size:11px;color:var(--text-dim);margin-top:2px">dépensés depuis le 1er janv.</div></td>
+          <td class="amount" style="text-align:right;color:var(--text);font-variant-numeric:tabular-nums;padding-right:14px;font-weight:600">${fmt(tm.tauxAbo)}</td>
+        </tr>
+        <tr>
+          <td>Amortissement matériel<div style="font-size:11px;color:var(--text-dim);margin-top:2px">Mensualités sur les 12 prochains mois (équipements en cours)</div></td>
+          <td class="amount" style="text-align:right;color:var(--text);font-variant-numeric:tabular-nums;padding-right:14px">${fmt(tm.materielAnnuel)}<div style="font-size:11px;color:var(--text-dim);margin-top:2px">amortissement annuel</div></td>
+          <td class="amount" style="text-align:right;color:var(--text);font-variant-numeric:tabular-nums;padding-right:14px;font-weight:600">${fmt(tm.tauxInv)}</td>
+        </tr>
+      </tbody>
+      <tfoot>
+        <tr style="background:var(--surface-hi)">
+          <td><strong>Coût horaire brut</strong></td>
+          <td></td>
+          <td class="amount" style="text-align:right;color:var(--text);font-weight:700;font-variant-numeric:tabular-nums;padding-right:14px;font-size:14px">${fmt(tm.tauxBrut)}</td>
+        </tr>
+        ${tm.facteur > 0 ? `<tr>
+          <td style="color:var(--text-muted)">+ Facteur sécurité (${tm.facteur} %)</td>
+          <td></td>
+          <td class="amount" style="text-align:right;color:var(--text-muted);font-variant-numeric:tabular-nums;padding-right:14px">+${fmt(r2(tm.tauxAvecSecurite - tm.tauxBrut))}</td>
+        </tr>` : ""}
+        <tr style="background:var(--primary-soft)">
+          <td><strong style="color:var(--primary)">Coût horaire calculé</strong></td>
+          <td></td>
+          <td class="amount" style="text-align:right;color:var(--primary);font-weight:700;font-variant-numeric:tabular-nums;padding-right:14px;font-size:14px">${fmt(tm.tauxAvecSecurite)}</td>
+        </tr>
+        <tr style="background:var(--accent-soft, var(--surface-hi))">
+          <td><strong style="color:var(--accent, var(--primary))">Taux horaire retenu</strong><div style="font-size:11px;color:var(--text-dim);margin-top:2px;font-weight:400">Arrondi au 5 € supérieur — utilisé dans Prestations &amp; Mission</div></td>
+          <td></td>
+          <td class="amount" style="text-align:right;color:var(--accent, var(--primary));font-weight:800;font-variant-numeric:tabular-nums;padding-right:14px;font-size:18px">${fmt(tm.tauxRetenu)}</td>
+        </tr>
+      </tfoot>
+    </table>
+    <div class="hint" style="margin-top:8px;max-width:780px">Le <strong>taux horaire retenu</strong> (${fmt(tm.tauxRetenu)}/h) est ajouté à chaque tarif de Prestations ci-dessous, et l'URSSAF (${urssafPct} %) appliquée par-dessus pour obtenir le tarif client final.</div>
+
+    <h3>Prestations &amp; tarifs (€/h)</h3>
+    <div class="hint" style="max-width:880px">Le tarif <strong>de base</strong> est ce que tu saisis (ton net souhaité par heure de shooting). Le tarif <strong>+ matériel</strong> ajoute le taux horaire retenu (${fmt(tm.tauxRetenu)}/h). Le tarif <strong>+ URSSAF</strong> ajoute en plus ${urssafPct} % pour le prix client final.</div>
+    <table class="hist" style="max-width:880px">
+      <thead>
+        <tr>
+          <th>Libellé</th>
+          <th style="width:110px;text-align:right">Tarif de base</th>
+          <th style="width:110px;text-align:right">+ matériel<div style="font-size:10px;font-weight:400;color:var(--text-muted);margin-top:1px">+${fmt(tm.tauxRetenu)}/h</div></th>
+          <th style="width:110px;text-align:right">+ URSSAF<div style="font-size:10px;font-weight:400;color:var(--text-muted);margin-top:1px">+${urssafPct} %</div></th>
+        </tr>
+      </thead>
+      <tbody>${tarifRows3col}</tbody>
+    </table>
+    <div style="margin-top:10px;display:flex;justify-content:flex-end;max-width:880px">
+      <button class="btn ghost" onclick="tarifReset()" style="font-size:12px">↺ Réinitialiser aux tarifs par défaut</button>
     </div>
 
     <h3>Abonnements professionnels</h3>
@@ -3668,77 +4006,6 @@ function rTR() {
         <td></td>
       </tr></tfoot>` : ""}
     </table>
-
-    <h3>Synthèse coûts horaires</h3>
-    <div class="hint" style="max-width:880px">Calcul du coût horaire à intégrer à ton tarif facturé.<br>
-      <strong>Abonnements</strong> : (mois écoulés cette année × coût mensuel des abonnements actifs) ÷ heures du mois (= heures annuelles ÷ 12).<br>
-      <strong>Matériel</strong> : pour chaque équipement encore en cours d'amortissement, mensualités à amortir sur les 12 prochains mois — sommé puis divisé par les heures annuelles.</div>
-
-    <div class="row" style="margin-bottom:14px;gap:18px">
-      <div class="field narrow"><label>Heures facturables annuelles</label>
-        <div class="lock-field">
-          <input id="heuresInput" type="number" step="10" min="1" value="${esc(S.tarifs.heuresAnnuelles || "900")}" ${tarifHeuresLocked ? "disabled" : `oninput="tarifHeuresAnnuelles(this.value)"`}>
-          <button class="lock-menu-btn" onclick="tarifHeuresLockToggle()" title="Options">⋮</button>
-          <div class="lock-popup" id="heuresMenu">
-            ${tarifHeuresLocked
-              ? `<button onclick="tarifHeuresUnlock()">🔓 Modifier</button>`
-              : `<button onclick="tarifHeuresRelock()">🔒 Verrouiller</button>`}
-          </div>
-        </div>
-      </div>
-      <div class="field narrow"><label>Facteur sécurité (%)</label>
-        <div class="lock-field">
-          <input id="facteurInput" type="number" step="1" min="0" max="100" value="${esc(S.tarifs.facteurSecurite || "0")}" ${facteurSecuriteLocked ? "disabled" : `oninput="tarifFacteurSecurite(this.value)"`}>
-          <button class="lock-menu-btn" onclick="facteurSecuriteLockToggle()" title="Options">⋮</button>
-          <div class="lock-popup" id="facteurMenu">
-            ${facteurSecuriteLocked
-              ? `<button onclick="facteurSecuriteUnlock()">🔓 Modifier</button>`
-              : `<button onclick="facteurSecuriteRelock()">🔒 Verrouiller</button>`}
-          </div>
-        </div>
-      </div>
-    </div>
-    <div class="hint" style="margin-top:-10px">Heures : estimation prudente ≈ 900 h/an. Facteur sécurité : pour gonfler ton tarif (ex. 15 % d'imprévus / marge).</div>
-
-    <table class="hist" style="max-width:780px">
-      <thead>
-        <tr>
-          <th>Source</th>
-          <th style="width:200px;text-align:right">Détail (${tm.currentYear})</th>
-          <th style="width:140px;text-align:right">Coût horaire</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr>
-          <td>Abonnements professionnels<div style="font-size:11px;color:var(--text-dim);margin-top:2px">${tm.monthsElapsed} mois écoulés × ${fmt(tm.mensuelActif)}/mois</div></td>
-          <td class="amount" id="tm-abo-an" style="text-align:right;color:var(--text);font-variant-numeric:tabular-nums;padding-right:14px">${fmt(tm.abonnementsDepensesYTD)}<div style="font-size:11px;color:var(--text-dim);margin-top:2px">dépensés depuis le 1er janv.</div></td>
-          <td class="amount" id="tm-abo-h" style="text-align:right;color:var(--text);font-variant-numeric:tabular-nums;padding-right:14px;font-weight:600">${fmt(tm.tauxAbo)}</td>
-        </tr>
-        <tr>
-          <td>Amortissement matériel<div style="font-size:11px;color:var(--text-dim);margin-top:2px">Mensualités à amortir sur les 12 prochains mois (équipements en cours)</div></td>
-          <td class="amount" id="tm-inv-an" style="text-align:right;color:var(--text);font-variant-numeric:tabular-nums;padding-right:14px">${fmt(tm.materielAnnuel)}<div style="font-size:11px;color:var(--text-dim);margin-top:2px">amortissement annuel</div></td>
-          <td class="amount" id="tm-inv-h" style="text-align:right;color:var(--text);font-variant-numeric:tabular-nums;padding-right:14px;font-weight:600">${fmt(tm.tauxInv)}</td>
-        </tr>
-      </tbody>
-      <tfoot>
-        <tr style="background:var(--surface-hi)">
-          <td><strong>Coût horaire brut</strong></td>
-          <td></td>
-          <td class="amount" id="tm-brut-h" style="text-align:right;color:var(--text);font-weight:700;font-variant-numeric:tabular-nums;padding-right:14px;font-size:14px">${fmt(tm.tauxBrut)}</td>
-        </tr>
-        ${tm.facteur > 0 ? `<tr>
-          <td style="color:var(--text-muted)">+ Facteur sécurité (${tm.facteur} %)</td>
-          <td></td>
-          <td class="amount" id="tm-sec-h" style="text-align:right;color:var(--text-muted);font-variant-numeric:tabular-nums;padding-right:14px">+${fmt(r2(tm.tauxAvecSecurite - tm.tauxBrut))}</td>
-        </tr>` : ""}
-        <tr style="background:var(--primary-soft)">
-          <td><strong style="color:var(--primary)">Coût horaire matériel total à intégrer</strong></td>
-          <td></td>
-          <td class="amount" id="tm-tot-h" style="text-align:right;color:var(--primary);font-weight:700;font-variant-numeric:tabular-nums;padding-right:14px;font-size:16px">${fmt(tm.tauxAvecSecurite)}</td>
-        </tr>
-      </tfoot>
-    </table>
-    <div class="hint" style="margin-top:8px;max-width:780px">À intégrer dans ton tarif horaire facturé : <code>net souhaité + URSSAF + ${fmt(tm.tauxAvecSecurite)} (matériel + sécurité)</code>. Les tarifs catalogue ci-dessus restent à ta main.</div>
 
     <h3>Bilan année par année</h3>
     <div class="hint" style="max-width:880px">Pour chaque année : trésorerie effectivement reçue (Suivi avec statut Accepté / Attente / Terminé) − abonnements actifs cette année − amortissement matériel de l'année (prorata mensuel sur l'année d'achat, années pleines ensuite). Un solde annuel positif signifie que l'année a couvert ses propres charges ; négatif qu'il a fallu puiser ailleurs.</div>
