@@ -202,9 +202,27 @@
   .encadres-grp > h4:first-of-type{margin-top:0}
 
   /* Prestation decomposition table — flat (option B), no card wrapper */
-  .presta-decomp{background:transparent;border:0;border-radius:0;padding:0;margin:8px 0 16px 0;max-width:540px}
+  .presta-decomp{background:transparent;border:0;border-radius:0;padding:0;margin:8px 0 16px 0;max-width:560px}
   .presta-decomp table{width:100%;border-collapse:collapse;font-size:13px}
   .presta-decomp th{text-align:right;padding:4px 8px;color:var(--text-muted);font-weight:600;font-size:13px;border-bottom:1px solid var(--border);text-transform:none;letter-spacing:0}
+
+  /* Statut field with (i) info button + tooltip on hover/focus */
+  .seg-with-info{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .tarif-info{position:relative;display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:50%;background:var(--surface-2);border:1px solid var(--border-light);color:var(--text-muted);font-size:12px;font-weight:700;font-style:italic;cursor:help;user-select:none;flex-shrink:0;padding:0;font-family:inherit;transition:color .12s,background .12s,border-color .12s}
+  .tarif-info:hover,.tarif-info:focus{outline:none;color:var(--primary);border-color:var(--primary);background:var(--primary-soft)}
+  .tarif-tooltip{position:absolute;top:calc(100% + 8px);left:50%;transform:translateX(-50%);background:var(--surface);border:1px solid var(--border-light);border-radius:8px;padding:14px 16px;box-shadow:var(--shadow);z-index:100;display:none;min-width:340px;text-align:left;font-style:normal;font-weight:normal;color:var(--text);cursor:default}
+  .tarif-tooltip::before{content:"";position:absolute;top:-6px;left:50%;transform:translateX(-50%) rotate(45deg);width:10px;height:10px;background:var(--surface);border-left:1px solid var(--border-light);border-top:1px solid var(--border-light)}
+  .tarif-tooltip .tt-title{font-size:13px;font-weight:600;color:var(--text);margin-bottom:8px}
+  .tarif-info:hover .tarif-tooltip,.tarif-info:focus .tarif-tooltip,.tarif-info:focus-within .tarif-tooltip{display:block}
+  .tarif-tooltip .presta-decomp{margin:0;max-width:none}
+
+  /* Wider 3-button toggle */
+  .seg.seg-3 button{padding:0 12px}
+
+  /* Inline breakdown shown below "Temps de trajet" when "taux" mode active */
+  .taux-breakdown{margin-top:12px;max-width:600px}
+  .taux-breakdown-lbl{display:block;font-size:13px;color:var(--text-muted);margin-bottom:6px;letter-spacing:.02em}
+  .taux-breakdown .presta-decomp{margin:0}
   .presta-decomp th.presta-final{color:var(--primary)}
   .presta-decomp td{text-align:right;padding:8px;font-variant-numeric:tabular-nums;font-size:15px;font-weight:600}
   .presta-decomp td.net.ok{color:var(--success)}
@@ -1326,10 +1344,8 @@ function rDevisPreview() {
 
   const cat = (S.tarifs.catalog || DEFAULT_CATALOG).find(c => c.k === d.object);
   // Le tarif catalogue saisi est le prix final TTC (URSSAF incluse). Au black, on enlève l'URSSAF.
-  const _baseTarif = cat ? num(cat.p) : 0;
-  const _isDeclare = d.declare !== false;
-  const _urssafCoef = 1 + (num(d.urssafPct ?? 22)) / 100;
-  const tarifH = _isDeclare ? _baseTarif : (_baseTarif > 0 ? r2(_baseTarif / _urssafCoef) : 0);
+  // En mode "Dans taux horaire", on utilise tarifHEff qui inclut le déplacement.
+  const tarifH = t.tarifHEff || t.tarifH;
   const sel = d.client.id ? S.clients.entries.find(x => x.id === d.client.id) : null;
   const cli = sel || d.client;
 
@@ -1360,7 +1376,7 @@ function rDevisPreview() {
   const deplDetail = mode === "voiture"
     ? `${num(d.deplacement.km).toFixed(1).replace(".",",")} km × ${tauxKm.toFixed(2).replace(".",",")} €/km${num(d.deplacement.peages) > 0 ? ` + ${fmt(num(d.deplacement.peages))} péages` : ""}${trajet > 0 ? ` + ${num(d.deplacement.trajetH)} h trajet` : ""}`
     : `Billets : ${fmt(num(d.deplacement.ticket))}${trajet > 0 ? ` + ${num(d.deplacement.trajetH)} h trajet` : ""}`;
-  const deplDevisMode = d.deplacement.devis || "principal";
+  const deplDevisMode = t.effectiveDeplMode || "principal";
   const deplLineHtml = t.depl > 0 ? `<div class="dp-line">
     <div class="lbl">Déplacement<div class="desc">${esc(deplDetail)}</div></div>
     <div class="qty"></div>
@@ -1369,6 +1385,7 @@ function rDevisPreview() {
   if (deplDevisMode === "principal") {
     linesHtml += deplLineHtml;
   }
+  // "taux" mode → no separate déplacement line (already baked into the hourly rate)
 
   // Débours items (separately)
   let deboursHtml = "";
@@ -1918,17 +1935,18 @@ function totals() {
   const _urssafCoefTot = 1 + (num(d.urssafPct ?? 22)) / 100;
   const tarifH = _isDecTot ? _baseTotal : (_baseTotal > 0 ? r2(_baseTotal / _urssafCoefTot) : 0);
   const HOURS_PER_DAY = 8;
-  // Walk lignes — round each line individually before summing
-  let lignesAmount = 0, debours = 0, totalHeures = 0;
+  // First pass: walk lignes — collect total hours, materiel split, hour list (for per-line rounding later)
+  let totalHeures = 0, materielPrincipal = 0, debours = 0;
+  const heuresHList = [];
   for (const l of d.lignes || []) {
     if (l.type === "heures") {
       const h = num(l.duree) * (l.unit === "j" ? HOURS_PER_DAY : 1);
       totalHeures = r2(totalHeures + h);
-      lignesAmount = r2(lignesAmount + r2(h * tarifH));
+      heuresHList.push(h);
     } else if (l.type === "materiel") {
       const p = r2(num(l.prix));
       if (l.devis === "debours") debours = r2(debours + p);
-      else lignesAmount = r2(lignesAmount + p);
+      else materielPrincipal = r2(materielPrincipal + p);
     }
   }
   // Déplacement — round each component
@@ -1938,12 +1956,30 @@ function totals() {
   const depl = mode === "voiture"
     ? r2(r2(num(d.deplacement.km) * tauxKm) + r2(num(d.deplacement.peages)) + trajet)
     : r2(r2(num(d.deplacement.ticket)) + trajet);
-  const deplGoesToDebours = (d.deplacement.devis || "principal") === "debours";
+  const deplMode = d.deplacement.devis || "principal";
+  const deplGoesToDebours = deplMode === "debours";
+  const deplGoesToTaux = deplMode === "taux";
+  const deplGoesToPrincipal = deplMode === "principal";
+  // Effective hourly rate (with déplacement baked in if "taux" mode)
+  let tarifHEff = tarifH;
+  let deplPerHour = 0;
+  if (deplGoesToTaux && totalHeures > 0 && depl > 0) {
+    deplPerHour = r2(depl / totalHeures);
+    tarifHEff = r2(tarifH + deplPerHour);
+  }
+  // Heures amount (per-ligne rounding for stable totals)
+  let heuresAmount = 0;
+  for (const h of heuresHList) {
+    heuresAmount = r2(heuresAmount + r2(h * tarifHEff));
+  }
+  const lignesAmount = r2(heuresAmount + materielPrincipal);
+  if (deplGoesToDebours) debours = r2(debours + depl);
   // Autres : champ retiré de l'UI il y a plusieurs versions. On l'ignore désormais.
   const autres = 0;
-  // If deplacement is set to "débours", add it to debours total and exclude from main subtotal
-  const subtotal = r2(lignesAmount + (deplGoesToDebours ? 0 : depl));
-  if (deplGoesToDebours) debours = r2(debours + depl);
+  // Subtotal: lignes (heures + matériel principal) + déplacement (if mode is principal, OR if taux mode but no hours to spread it across)
+  const deplInSubtotal = deplGoesToPrincipal || (deplGoesToTaux && totalHeures === 0);
+  const effectiveDeplMode = (deplGoesToTaux && totalHeures === 0) ? "principal" : deplMode;
+  const subtotal = r2(lignesAmount + (deplInSubtotal ? depl : 0));
   const remise = r2(subtotal * num(d.remisePct) / 100);
   const total = r2(subtotal - remise);
   // Échéances breakdown (% of total)
@@ -1953,7 +1989,8 @@ function totals() {
   const echeancesTotal = r2(echeances.reduce((s, e) => s + num(e.pct), 0));
   return {
     lignes: lignesAmount, debours, depl, autres,
-    subtotal, remise, total, totalHeures, tarifH,
+    subtotal, remise, total, totalHeures,
+    tarifH, tarifHEff, deplPerHour, deplMode, effectiveDeplMode,
     acompte: r2(total * 0.30), reste: r2(total * 0.70),
     echeances, echeancesTotal,
     prep: 0, prod: lignesAmount, post: 0
@@ -2307,6 +2344,57 @@ function rViewDevisModal() {
   </div>`;
 }
 
+function tarifBreakdown(includeDepl) {
+  // Compute per-hour breakdown: Net / +Déplacement / +Matériel / +URSSAF / =Tarif facturé
+  // includeDepl=true → also include deplacement spread (only effective if mode is "taux")
+  const d = S.mission;
+  const declared = d.declare !== false;
+  const cat = (S.tarifs.catalog || DEFAULT_CATALOG).find(c => c.k === d.object);
+  if (!cat || !d.object) return null;
+  const tm = tauxMatos();
+  const final = num(cat.p);
+  if (final <= 0) return null;
+  const urssafPct = num(d.urssafPct ?? 22);
+  const urssafCoef = 1 + urssafPct / 100;
+  const matos = tm.tauxAvecSecurite;
+  const t = totals();
+  const dpH = (includeDepl && t.deplMode === "taux" && t.totalHeures > 0) ? t.deplPerHour : 0;
+  // Tarif facturé per hour (= what the client pays per hour)
+  const tarifApplique = declared ? r2(final + dpH) : r2(r2(final / urssafCoef) + dpH);
+  // URSSAF amount displayed (always based on the TTC equivalent including dpH for info)
+  const urssafAmount = r2((final + dpH) - r2((final + dpH) / urssafCoef));
+  // Net per hour (true profit after URSSAF, matos, and actual déplacement cost)
+  const net = declared
+    ? r2(r2((final + dpH) / urssafCoef) - matos - dpH)
+    : r2(r2(final / urssafCoef) - matos);
+  return { net, matos, deplPerHour: dpH, urssafAmount, tarifApplique, declared, hasDepl: dpH > 0 };
+}
+
+function tarifBreakdownHtml(b) {
+  if (!b) return "";
+  const showD = b.hasDepl;
+  return `<table>
+    <thead>
+      <tr>
+        <th>Net</th>
+        ${showD ? `<th>+ Déplacement</th>` : ""}
+        <th>+ Matériel</th>
+        <th>+ URSSAF</th>
+        <th class="presta-final">= Tarif facturé</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="net ${b.net >= 0 ? 'ok' : 'bad'}">${fmt(b.net)}</td>
+        ${showD ? `<td class="muted">${fmt(b.deplPerHour)}</td>` : ""}
+        <td class="muted">${fmt(b.matos)}</td>
+        <td class="${b.declared ? 'muted' : 'strike'}">${fmt(b.urssafAmount)}</td>
+        <td class="presta-final ${b.declared ? 'declared' : 'black'}">${fmt(b.tarifApplique)}/h</td>
+      </tr>
+    </tbody>
+  </table>`;
+}
+
 function rMS() {
   const d = S.mission;
   const t = totals();
@@ -2340,9 +2428,16 @@ function rMS() {
     </div>
     <div class="row">
       <div class="field"><label>Statut</label>
-        <div class="seg">
-          <button class="${declare?"on":""}" onclick="updMissionDeclare(true)">✓ Déclaré</button>
-          <button class="${!declare?"on warn":""}" onclick="updMissionDeclare(false)">● Au black</button>
+        <div class="seg-with-info">
+          <div class="seg">
+            <button class="${declare?"on":""}" onclick="updMissionDeclare(true)">✓ Déclaré</button>
+            <button class="${!declare?"on warn":""}" onclick="updMissionDeclare(false)">● Au black</button>
+          </div>
+          ${(() => {
+            const b = tarifBreakdown(true);
+            if (!b) return "";
+            return `<button type="button" class="tarif-info" tabindex="0" aria-label="Voir le détail du tarif horaire">i<div class="tarif-tooltip" role="tooltip"><div class="tt-title">Décomposition du tarif horaire</div>${tarifBreakdownHtml(b)}</div></button>`;
+          })()}
         </div>
       </div>
       <div class="field"><label>Taux URSSAF (%)</label>
@@ -2357,41 +2452,6 @@ function rMS() {
         </div>
       </div>
     </div>
-
-    ${(() => {
-      const declared = declare;
-      const cat = (S.tarifs.catalog || DEFAULT_CATALOG).find(c => c.k === d.object);
-      if (!cat || !d.object) return "";
-      const tm = tauxMatos();
-      const final = num(cat.p);
-      const urssafPct = num(d.urssafPct ?? 22);
-      const urssafCoef = 1 + urssafPct / 100;
-      const sansUrssaf = final > 0 ? r2(final / urssafCoef) : 0;
-      const urssafAmount = final > 0 ? r2(final - sansUrssaf) : 0;
-      const matos = tm.tauxAvecSecurite;
-      const net = final > 0 ? r2(sansUrssaf - matos) : 0;
-      const tarifApplique = declared ? final : sansUrssaf;
-      return `<div class="presta-decomp">
-        <table>
-          <thead>
-            <tr>
-              <th>Net</th>
-              <th>+ Matériel</th>
-              <th>+ URSSAF</th>
-              <th class="presta-final">= Tarif facturé</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td class="net ${net >= 0 ? 'ok' : 'bad'}">${fmt(net)}</td>
-              <td class="muted">${fmt(matos)}</td>
-              <td class="${declared ? 'muted' : 'strike'}">${fmt(urssafAmount)}</td>
-              <td class="presta-final ${declared ? 'declared' : 'black'}">${fmt(tarifApplique)}/h</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>`;
-    })()}
 
     <h4>Heures</h4>
     <div class="lg-list">
@@ -2410,9 +2470,10 @@ function rMS() {
     </div>
 
     <h3>Déplacement</h3>
-    <div class="row"><div class="field"><label>Inclure dans</label>
-      <div class="seg">
+    <div class="row"><div class="field lg"><label>Inclure dans</label>
+      <div class="seg seg-3">
         <button class="${(d.deplacement.devis || 'principal') === 'principal' ? 'on' : ''}" onclick="updDeplDevis('principal')">Devis principal</button>
+        <button class="${d.deplacement.devis === 'taux' ? 'on' : ''}" onclick="updDeplDevis('taux')">Dans taux horaire</button>
         <button class="${d.deplacement.devis === 'debours' ? 'on' : ''}" onclick="updDeplDevis('debours')">Frais débours</button>
       </div>
     </div></div>
@@ -2430,6 +2491,21 @@ function rMS() {
     <div class="row"><div class="field narrow"><label>Prix des billets (€)</label><input type="number" step="0.01" value="${esc(d.deplacement.ticket)}" oninput="upd('mission.deplacement.ticket', this.value)"></div></div>
     `}
     <div class="row"><div class="field narrow"><label>Temps de trajet (h)</label><input type="number" step="0.25" value="${esc(d.deplacement.trajetH)}" oninput="upd('mission.deplacement.trajetH', this.value)"></div></div>
+
+    ${(() => {
+      // Inline breakdown: only when "taux" mode is active AND there are heures to spread depl across
+      if (d.deplacement.devis !== "taux") return "";
+      const t = totals();
+      if (t.totalHeures === 0) {
+        return `<div class="hint" style="margin-top:6px;color:var(--warning)">⚠ Pas d'heures dans le devis : le déplacement est facturé séparément en attendant.</div>`;
+      }
+      const b = tarifBreakdown(true);
+      if (!b) return `<div class="hint" style="margin-top:6px">Sélectionne un type de prestation pour voir la décomposition.</div>`;
+      return `<div class="taux-breakdown">
+        <label class="taux-breakdown-lbl">Tarif horaire mis à jour avec déplacement</label>
+        <div class="presta-decomp">${tarifBreakdownHtml(b)}</div>
+      </div>`;
+    })()}
 
     <h3>Paiement</h3>
 
@@ -4873,6 +4949,19 @@ function rTR() {
 // Most recent version FIRST.
 // =============================================================
 const CHANGELOG = [
+  {
+    version: "v1.9",
+    date: "2026-04-29",
+    title: "Tooltip sur Statut + nouvelle option Déplacement « Dans taux horaire »",
+    items: [
+      "Décomposition tarifaire (Net / + Matériel / + URSSAF / = Tarif facturé) retirée du flux principal de la page : elle apparaissait en gros sous la rangée Statut. Désormais accessible via un petit bouton ⓘ à côté des boutons « Déclaré / Au black ». Au survol (ou focus clavier), un tooltip affiche la décomposition complète. Le formulaire est plus dégagé.",
+      "Déplacement : la rangée « Inclure dans » passe de 2 à 3 boutons : « Devis principal » / « Dans taux horaire » / « Frais débours ».",
+      "Nouvelle option « Dans taux horaire » : les frais de déplacement sont répartis équitablement sur les heures du devis. Le tarif horaire facturé est augmenté en conséquence (tarif catalogue + déplacement / total heures), et la ligne « Frais de déplacement » disparaît du devis (déjà incluse dans les heures).",
+      "Sous le champ « Temps de trajet », quand le mode « Dans taux horaire » est actif, un tableau apparaît avec la décomposition mise à jour : Net / + Déplacement / + Matériel / + URSSAF / = Tarif facturé.",
+      "Cas limite géré : si « Dans taux horaire » est sélectionné mais qu'aucune heure n'est encore saisie, l'app retombe automatiquement en mode « Devis principal » (avec un avertissement) pour ne pas perdre le déplacement dans les calculs.",
+      "Math : la fonction `totals()` expose désormais `tarifHEff` (tarif horaire effectif incluant le déplacement si applicable) et `deplPerHour`, utilisés par le devis preview pour afficher le bon tarif horaire dans chaque ligne d'heures."
+    ]
+  },
   {
     version: "v1.8",
     date: "2026-04-29",
