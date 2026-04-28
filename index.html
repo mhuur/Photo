@@ -356,39 +356,46 @@
 
   /* Devis preview (in-page, at the bottom of Mission) */
   /* Devis preview (in-page, at the bottom of Mission) */
-  .devis-preview{margin-top:32px;background:var(--surface);border:1px solid var(--primary);border-radius:10px;padding:24px 28px;max-width:880px;box-shadow:0 8px 24px rgba(0,0,0,.3)}
+  .devis-preview{margin-top:0;background:var(--surface);border:1px solid var(--border-light);border-radius:10px;padding:32px 36px;max-width:880px;box-shadow:0 6px 18px rgba(0,0,0,.18)}
   .devis-preview .dp-head{display:flex;justify-content:space-between;align-items:flex-start;gap:20px;padding-bottom:16px;border-bottom:1px solid var(--border-light);margin-bottom:18px;flex-wrap:wrap}
-  .devis-preview .dp-title{font-size:22px;font-weight:700;color:var(--primary);margin:0}
+  .devis-preview .dp-title{font-size:22px;font-weight:700;color:var(--text);margin:0}
   .devis-preview .dp-ref{color:var(--text-muted);font-size:13px;font-variant-numeric:tabular-nums;margin-top:4px}
   .devis-preview .dp-meta{font-size:13px;color:var(--text-muted);text-align:right;line-height:1.6}
   .devis-preview .dp-meta strong{color:var(--text);font-weight:600}
   .devis-preview .dp-section{margin-bottom:18px}
-  .devis-preview h4{font-size:13px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;margin:0 0 8px;padding-bottom:4px;border-bottom:1px solid var(--border-soft)}
+  .devis-preview h4{font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.08em;margin:0 0 10px;padding-bottom:0;border-bottom:0}
   .devis-preview .dp-client{font-size:13px;color:var(--text);line-height:1.6}
   .devis-preview .dp-client .name{font-weight:600;font-size:13px}
   .devis-preview .dp-client .num{color:var(--text-muted);font-variant-numeric:tabular-nums;margin-right:8px}
-  .devis-preview .dp-line{display:flex;justify-content:space-between;align-items:flex-start;gap:14px;padding:7px 0;font-size:13px}
+  .devis-preview .dp-line{display:flex;justify-content:space-between;align-items:flex-start;gap:14px;padding:8px 0;font-size:13px}
   .devis-preview .dp-line:last-child{border-bottom:0}
   .devis-preview .dp-line .lbl{color:var(--text);flex:1}
-  .devis-preview .dp-line .lbl .desc{color:var(--text-dim);font-size:13px;margin-top:2px}
-  .devis-preview .dp-line .qty{color:var(--text-muted);font-size:13px;font-variant-numeric:tabular-nums;white-space:nowrap}
+  .devis-preview .dp-line .lbl .desc{color:var(--text-dim);font-size:12px;margin-top:2px;font-weight:400}
+  .devis-preview .dp-line .qty{color:var(--text-muted);font-size:12px;font-variant-numeric:tabular-nums;white-space:nowrap}
   .devis-preview .dp-line .amt{color:var(--text);font-weight:500;font-variant-numeric:tabular-nums;white-space:nowrap;min-width:90px;text-align:right}
-  .devis-preview .dp-totals{margin-top:14px;padding-top:14px;border-top:2px solid var(--border-light)}
+  .devis-preview .dp-totals{margin-top:18px;padding-top:14px;border-top:1px solid var(--border-light);max-width:340px;margin-left:auto}
   .devis-preview .dp-totals .dp-line{padding:5px 0;border-bottom:0;color:var(--text-muted)}
-  .devis-preview .dp-totals .dp-line.grand{font-size:16px;font-weight:700;padding:10px 0;margin-top:6px;border-top:1px solid var(--border-light)}
+  .devis-preview .dp-totals .dp-line.grand{font-size:17px;font-weight:700;padding:10px 0 6px;margin-top:4px;border-top:1px solid var(--border)}
   .devis-preview .dp-totals .dp-line.grand .lbl,.devis-preview .dp-totals .dp-line.grand .amt{color:var(--text)}
-  .devis-preview .dp-totals .dp-line.debours{color:var(--text-muted);font-style:italic;font-size:12px}
-  .devis-preview .dp-paiement{margin-top:22px;padding-top:14px;border-top:1px solid var(--border-soft)}
-  .devis-preview .dp-paiement h4{margin:0 0 10px;border:0;padding:0;font-size:13px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em}
+  .devis-preview .dp-totals .dp-line.debours{color:var(--text-muted);font-style:italic;font-size:12px;margin-top:6px;padding-top:4px}
+  .devis-preview .dp-paiement{margin-top:24px;padding-top:14px;border-top:1px solid var(--border-soft)}
+  .devis-preview .dp-paiement h4{margin:0 0 10px}
   .devis-preview .dp-paiement-line{display:flex;justify-content:space-between;align-items:baseline;padding:5px 0;font-size:13px;color:var(--text)}
   .devis-preview .dp-paiement-line .lbl{color:var(--text)}
   .devis-preview .dp-paiement-line .pct{color:var(--text-muted);font-size:12px;margin-left:2px}
   .devis-preview .dp-paiement-line .amt{font-variant-numeric:tabular-nums;font-weight:500}
-  .devis-preview .dp-objet{font-size:13px;color:var(--text);margin:0 0 18px 0;padding:0;line-height:1.5}
+  .devis-preview .dp-objet{font-size:13px;color:var(--text);margin:0 0 22px 0;padding:0;line-height:1.5}
   .devis-preview .dp-objet strong{font-weight:600}
-  .devis-preview .dp-footer{margin-top:18px;padding-top:14px;border-top:1px solid var(--border-soft);font-size:13px;color:var(--text-dim);text-align:center;line-height:1.6}
+  .devis-preview .dp-footer{margin-top:24px;padding-top:14px;border-top:1px solid var(--border-soft);text-align:center;line-height:1.5}
+  .devis-preview .dp-footer-line{font-size:12px;color:var(--text-dim);font-style:italic;margin-bottom:4px}
+  .devis-preview .dp-footer-mentions{font-size:11px;color:var(--text-dim);font-style:italic;line-height:1.4;opacity:.85}
   .devis-preview .dp-actions{display:flex;gap:10px;margin-top:18px;justify-content:flex-end}
   .devis-preview .dp-empty{text-align:center;padding:30px;color:var(--text-dim);font-size:13px}
+  /* Default signature block when user hasn't filled signatureBlock */
+  .devis-preview .dp-sig-default{font-size:13px;color:var(--text);line-height:1.8}
+  .devis-preview .dp-sig-row{display:flex;align-items:baseline;gap:8px;margin-bottom:8px}
+  .devis-preview .dp-sig-line{flex:1;border-bottom:1px dotted var(--border-light);min-width:140px;height:1em}
+  .devis-preview .dp-sig-box{margin-top:6px;height:60px;border:1px dashed var(--border-light);border-radius:4px}
 
   /* Preview tabs (Devis / Débours / Facture) */
   .preview-tabs-wrap{margin-top:32px;max-width:880px}
@@ -453,8 +460,8 @@
   .devis-preview .dp-receipt-line.restant.paid{font-size:15px}
 
   /* Devis header 2-col: photographer left, client+meta right */
-  .devis-preview .dp-header-grid{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:24px}
-  .devis-preview .dp-header-left{font-size:13px;color:var(--text);line-height:1.6;white-space:pre-wrap;border-right:1px solid var(--border-soft);padding-right:18px}
+  .devis-preview .dp-header-grid{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:22px;padding-bottom:18px;border-bottom:1px solid var(--border)}
+  .devis-preview .dp-header-left{font-size:13px;color:var(--text);line-height:1.6;white-space:pre-wrap;padding-right:0}
   .devis-preview .dp-header-left.empty{color:var(--text-dim);font-style:italic;font-size:13px}
   .devis-preview .dp-header-right{display:flex;flex-direction:column;align-items:flex-end;gap:0}
   .devis-preview .dp-meta-block{text-align:right;font-size:13px;color:var(--text-muted);line-height:1.6;margin-bottom:0}
@@ -539,76 +546,96 @@
       display: grid !important;
       grid-template-columns: 1fr 1fr !important;
       gap: 24pt !important;
-      padding: 0 0 10pt 0 !important;
-      margin-bottom: 14pt !important;
-      border-bottom: 1.2pt solid #1a1a1a !important;
+      padding: 0 0 14pt 0 !important;
+      margin-bottom: 18pt !important;
+      border-bottom: 1pt solid #1a1a1a !important;
     }
     .devis-preview .dp-header-left, .view-devis-snapshot .dp-header-left {
-      font-size: 8.5pt !important;
-      line-height: 1.4 !important;
-      color: #444 !important;
+      font-size: 9pt !important;
+      line-height: 1.45 !important;
+      color: #333 !important;
       white-space: pre-line !important;
+      border-right: 0 !important;
+      padding-right: 0 !important;
     }
     .devis-preview .dp-header-right, .view-devis-snapshot .dp-header-right {
       text-align: right !important;
-      font-size: 8.5pt !important;
-      color: #444 !important;
+      font-size: 9pt !important;
+      color: #333 !important;
+      gap: 0 !important;
     }
     .devis-preview .dp-header-right > div, .view-devis-snapshot .dp-header-right > div {
-      margin-bottom: 2pt !important;
+      margin-bottom: 0 !important;
     }
-    .devis-preview .dp-header-right strong, .view-devis-snapshot .dp-header-right strong {
+    .devis-preview .dp-meta-block, .view-devis-snapshot .dp-meta-block {
+      margin-bottom: 0 !important;
+      color: #555 !important;
+    }
+    .devis-preview .dp-meta-block .ref, .view-devis-snapshot .dp-meta-block .ref {
+      font-size: 14pt !important;
+      font-weight: 700 !important;
+      color: #1a1a1a !important;
+      letter-spacing: .005em !important;
+      margin-bottom: 8pt !important;
+      font-variant-numeric: tabular-nums !important;
+    }
+    .devis-preview .dp-meta-block strong, .view-devis-snapshot .dp-meta-block strong {
       color: #1a1a1a !important;
       font-weight: 600 !important;
     }
-
-    /* === BIG "DEVIS" TITLE === */
-    .devis-preview h1, .view-devis-snapshot h1 {
-      font-size: 24pt !important;
-      font-weight: 800 !important;
-      letter-spacing: -0.03em !important;
-      margin: 0 0 2pt 0 !important;
+    .devis-preview .dp-client-block, .view-devis-snapshot .dp-client-block {
+      margin-top: 0 !important;
       color: #1a1a1a !important;
-      text-transform: uppercase !important;
     }
-    .devis-preview h2, .view-devis-snapshot h2 {
+    .devis-preview .dp-client-block .name, .view-devis-snapshot .dp-client-block .name {
+      font-weight: 600 !important;
       font-size: 9pt !important;
-      font-weight: 700 !important;
-      text-transform: uppercase !important;
-      letter-spacing: 0.06em !important;
-      color: #444 !important;
-      margin: 14pt 0 6pt 0 !important;
-      padding-bottom: 3pt !important;
-      border-bottom: 0.5pt solid #ddd !important;
+      color: #1a1a1a !important;
     }
-    .devis-preview h3, .view-devis-snapshot h3 {
-      font-size: 8.5pt !important;
+
+    /* === OBJET === */
+    .devis-preview .dp-objet, .view-devis-snapshot .dp-objet {
+      font-size: 9.5pt !important;
+      color: #1a1a1a !important;
+      margin: 0 0 14pt 0 !important;
+    }
+    .devis-preview .dp-objet strong, .view-devis-snapshot .dp-objet strong {
+      font-weight: 600 !important;
+    }
+
+    /* === SECTION HEADERS === */
+    .devis-preview .dp-section h4, .view-devis-snapshot .dp-section h4,
+    .devis-preview .dp-paiement h4, .view-devis-snapshot .dp-paiement h4,
+    .devis-preview .dp-conditions h4, .view-devis-snapshot .dp-conditions h4 {
+      font-size: 8pt !important;
       font-weight: 700 !important;
       text-transform: uppercase !important;
-      letter-spacing: 0.05em !important;
+      letter-spacing: .08em !important;
       color: #666 !important;
-      margin: 10pt 0 4pt 0 !important;
+      margin: 0 0 6pt 0 !important;
+      border: 0 !important;
+      padding: 0 !important;
     }
 
     /* === LINE ITEMS — compact for one-page fit === */
+    .devis-preview .dp-section, .view-devis-snapshot .dp-section {
+      margin-bottom: 10pt !important;
+    }
     .devis-preview .dp-line, .view-devis-snapshot .dp-line {
       display: grid !important;
       grid-template-columns: 1fr auto 80pt !important;
       gap: 12pt !important;
       padding: 5pt 0 !important;
-      border-bottom: 0.4pt solid #e8e8e8 !important;
+      border-bottom: 0 !important;
       page-break-inside: avoid !important;
       align-items: baseline !important;
-    }
-    .devis-preview .dp-line:first-child, .view-devis-snapshot .dp-line:first-child {
-      border-top: 0.4pt solid #e8e8e8 !important;
     }
     .devis-preview .dp-line .lbl, .view-devis-snapshot .dp-line .lbl {
       font-weight: 500 !important;
       font-size: 9pt !important;
       color: #1a1a1a !important;
     }
-    .devis-preview .dp-line .desc, .view-devis-snapshot .dp-line .desc {
+    .devis-preview .dp-line .lbl .desc, .view-devis-snapshot .dp-line .lbl .desc {
       font-size: 7.5pt !important;
       color: #777 !important;
       margin-top: 1pt !important;
@@ -616,7 +643,7 @@
       line-height: 1.3 !important;
     }
     .devis-preview .dp-line .qty, .view-devis-snapshot .dp-line .qty {
-      font-size: 7.5pt !important;
+      font-size: 8pt !important;
       color: #777 !important;
       white-space: nowrap !important;
       font-variant-numeric: tabular-nums !important;
@@ -628,71 +655,150 @@
       white-space: nowrap !important;
       text-align: right !important;
       font-size: 9pt !important;
+      color: #1a1a1a !important;
     }
 
     /* === TOTALS === */
     .devis-preview .dp-totals, .view-devis-snapshot .dp-totals {
-      margin-top: 12pt !important;
+      margin-top: 14pt !important;
       margin-left: auto !important;
-      max-width: 240pt !important;
+      max-width: 280pt !important;
       page-break-inside: avoid !important;
+      padding-top: 8pt !important;
+      border-top: 1pt solid #1a1a1a !important;
     }
-    .devis-preview .dp-totals .line, .view-devis-snapshot .dp-totals .line {
+    .devis-preview .dp-totals .dp-line, .view-devis-snapshot .dp-totals .dp-line {
       display: flex !important;
       justify-content: space-between !important;
       padding: 3pt 0 !important;
-      font-size: 8.5pt !important;
+      font-size: 9pt !important;
       color: #444 !important;
+      grid-template-columns: none !important;
+      border: 0 !important;
     }
-    .devis-preview .dp-totals .line.muted, .view-devis-snapshot .dp-totals .line.muted {
-      color: #777 !important;
-      font-size: 8pt !important;
-    }
-    .devis-preview .dp-totals .total, .view-devis-snapshot .dp-totals .total {
-      font-size: 11pt !important;
+    .devis-preview .dp-totals .dp-line.grand, .view-devis-snapshot .dp-totals .dp-line.grand {
+      font-size: 12pt !important;
       font-weight: 800 !important;
       padding: 6pt 0 3pt 0 !important;
       margin-top: 4pt !important;
-      border-top: 1.2pt solid #1a1a1a !important;
+      border-top: 1pt solid #1a1a1a !important;
       color: #1a1a1a !important;
     }
-    .devis-preview .dp-totals .echeance, .view-devis-snapshot .dp-totals .echeance {
-      font-size: 8pt !important;
-      color: #555 !important;
+    .devis-preview .dp-totals .dp-line.grand .lbl, .view-devis-snapshot .dp-totals .dp-line.grand .lbl,
+    .devis-preview .dp-totals .dp-line.grand .amt, .view-devis-snapshot .dp-totals .dp-line.grand .amt {
+      color: #1a1a1a !important;
+    }
+    .devis-preview .dp-totals .dp-line.debours, .view-devis-snapshot .dp-totals .dp-line.debours {
+      font-size: 7.5pt !important;
+      color: #888 !important;
+      font-style: italic !important;
+      margin-top: 4pt !important;
+    }
+
+    /* === MODALITÉS DE PAIEMENT === */
+    .devis-preview .dp-paiement, .view-devis-snapshot .dp-paiement {
+      margin-top: 14pt !important;
+      padding-top: 8pt !important;
+      border-top: 0.5pt solid #ddd !important;
+      page-break-inside: avoid !important;
+    }
+    .devis-preview .dp-paiement-line, .view-devis-snapshot .dp-paiement-line {
+      display: flex !important;
+      justify-content: space-between !important;
       padding: 2pt 0 !important;
+      font-size: 8.5pt !important;
+      color: #333 !important;
+    }
+    .devis-preview .dp-paiement-line .lbl, .view-devis-snapshot .dp-paiement-line .lbl {
+      color: #333 !important;
+    }
+    .devis-preview .dp-paiement-line .pct, .view-devis-snapshot .dp-paiement-line .pct {
+      color: #888 !important;
+      font-size: 7.5pt !important;
+    }
+    .devis-preview .dp-paiement-line .amt, .view-devis-snapshot .dp-paiement-line .amt {
+      font-variant-numeric: tabular-nums !important;
+      font-weight: 600 !important;
+      color: #1a1a1a !important;
     }
 
     /* === CONDITIONS / SIGNATURE === */
     .devis-preview .dp-conditions, .view-devis-snapshot .dp-conditions {
-      margin-top: 10pt !important;
+      margin-top: 12pt !important;
+      padding-top: 8pt !important;
+      border-top: 0.5pt solid #ddd !important;
+      font-size: 8.5pt !important;
+      line-height: 1.5 !important;
+      color: #333 !important;
       page-break-inside: avoid !important;
     }
-    .devis-preview .dp-conditions h4, .view-devis-snapshot .dp-conditions h4 {
-      font-size: 8.5pt !important;
-      font-weight: 700 !important;
-      text-transform: uppercase !important;
-      letter-spacing: 0.05em !important;
-      color: #666 !important;
-      margin: 0 0 4pt 0 !important;
-    }
-    .devis-preview .dp-conditions:not(.cgv), .view-devis-snapshot .dp-conditions:not(.cgv) {
-      font-size: 8.5pt !important;
-      line-height: 1.4 !important;
-      color: #333 !important;
-    }
     .devis-preview .dp-conditions.signature, .view-devis-snapshot .dp-conditions.signature {
-      margin-top: 14pt !important;
+      margin-top: 18pt !important;
+      border: 0 !important;
+      border-top: 0.5pt solid #ddd !important;
+      padding: 8pt 0 0 !important;
+    }
+    .devis-preview .dp-sig-default, .view-devis-snapshot .dp-sig-default {
+      font-size: 9pt !important;
+      line-height: 1.8 !important;
+      color: #1a1a1a !important;
+    }
+    .devis-preview .dp-sig-row, .view-devis-snapshot .dp-sig-row {
+      display: flex !important;
+      align-items: baseline !important;
+      gap: 8pt !important;
+      margin-bottom: 6pt !important;
+    }
+    .devis-preview .dp-sig-line, .view-devis-snapshot .dp-sig-line {
+      flex: 1 !important;
+      border-bottom: 0.5pt dotted #888 !important;
+      min-width: 100pt !important;
+      height: 1em !important;
+    }
+    .devis-preview .dp-sig-box, .view-devis-snapshot .dp-sig-box {
+      margin-top: 4pt !important;
+      height: 50pt !important;
+      border: 0.5pt dashed #888 !important;
+      border-radius: 2pt !important;
     }
     .devis-preview .dp-footer, .view-devis-snapshot .dp-footer {
-      font-size: 7.5pt !important;
-      color: #888 !important;
-      margin-top: 8pt !important;
+      margin-top: 14pt !important;
+      padding-top: 6pt !important;
+      border-top: 0.4pt solid #ddd !important;
       text-align: center !important;
+    }
+    .devis-preview .dp-footer-line, .view-devis-snapshot .dp-footer-line {
+      font-size: 7.5pt !important;
+      color: #555 !important;
+      font-style: italic !important;
+      margin-bottom: 2pt !important;
+    }
+    .devis-preview .dp-footer-mentions, .view-devis-snapshot .dp-footer-mentions {
+      font-size: 6.5pt !important;
+      color: #888 !important;
+      line-height: 1.3 !important;
       font-style: italic !important;
     }
 
-    /* Empty preview */
+    /* === DÉBOURS / FACTURE doc title === */
+    .devis-preview .dp-doc-title, .view-devis-snapshot .dp-doc-title {
+      font-size: 18pt !important;
+      font-weight: 800 !important;
+      letter-spacing: -.02em !important;
+      margin: 0 0 4pt 0 !important;
+      text-transform: uppercase !important;
+      color: #1a1a1a !important;
+    }
+    .devis-preview .dp-doc-sub, .view-devis-snapshot .dp-doc-sub {
+      font-size: 8pt !important;
+      color: #666 !important;
+      margin-bottom: 12pt !important;
+    }
+
+    /* Empty preview — never print empty placeholders */
     .devis-preview .dp-empty, .view-devis-snapshot .dp-empty { display: none !important; }
+    .devis-preview .dp-header-left.empty, .view-devis-snapshot .dp-header-left.empty { visibility: hidden !important; }
+    .devis-preview .dp-objet:empty, .view-devis-snapshot .dp-objet:empty { display: none !important; }
 
     /* ===== ONE-PAGE FIT: PREVENT INTERNAL PAGE BREAKS ===== */
     /* Force everything before CGV to stay on the first page */
@@ -1541,11 +1647,21 @@ function rDevisPreview() {
       <h4>Conditions de paiement</h4>${richDisplayHtml(d.conditionsPaiement)}
     </div>` : ""}
 
-    ${(d.signatureBlock || "").trim() ? `<div class="dp-conditions signature">
-      <h4>Bon pour accord</h4>${richDisplayHtml(d.signatureBlock)}
-    </div>` : ""}
+    <div class="dp-conditions signature">
+      <h4>Bon pour accord</h4>
+      ${(d.signatureBlock || "").trim()
+        ? richDisplayHtml(d.signatureBlock)
+        : `<div class="dp-sig-default">
+            <div class="dp-sig-row"><span>Date :</span><span class="dp-sig-line"></span></div>
+            <div class="dp-sig-row"><span>Signature précédée de la mention « Bon pour accord » :</span></div>
+            <div class="dp-sig-box"></div>
+          </div>`}
+    </div>
 
-    <div class="dp-footer">Auto-entrepreneur · TVA non applicable, art. 293 B du CGI</div>
+    <div class="dp-footer">
+      <div class="dp-footer-line">Auto-entrepreneur · TVA non applicable, art. 293 B du CGI</div>
+      <div class="dp-footer-mentions">Pénalités de retard : 3× le taux d'intérêt légal en vigueur · Indemnité forfaitaire de recouvrement : 40 € (art. L441-10 et D441-5 du Code de commerce)</div>
+    </div>
 
     ${(d.cgv || "").trim() ? `
       <div class="devis-page-break"></div>
@@ -1735,7 +1851,10 @@ function rFacturePreview(opts) {
       <div class="dp-receipt-line restant ${fullyPaid ? 'paid' : ''}"><span class="lbl">${fullyPaid ? "✓ Soldée" : "Reste à payer"}</span><span class="amt" style="color:${fullyPaid ? 'var(--success)' : 'var(--warning)'}">${fmt(restant)}</span></div>
     </div>
 
-    <div class="dp-footer">Auto-entrepreneur · TVA non applicable, art. 293 B du CGI</div>
+    <div class="dp-footer">
+      <div class="dp-footer-line">Auto-entrepreneur · TVA non applicable, art. 293 B du CGI</div>
+      <div class="dp-footer-mentions">Pénalités de retard : 3× le taux d'intérêt légal en vigueur · Indemnité forfaitaire de recouvrement : 40 € (art. L441-10 et D441-5 du Code de commerce)</div>
+    </div>
 
     <div class="dp-actions">
       <button class="btn ghost" onclick="window.print()">🖨️ Imprimer</button>
@@ -5376,6 +5495,24 @@ function rTR() {
 // Most recent version FIRST.
 // =============================================================
 const CHANGELOG = [
+  {
+    version: "v1.14",
+    date: "2026-04-29",
+    title: "Mentions de pénalités + révision complète du rendu (écran et impression)",
+    items: [
+      "Pied de page enrichi : ajout de la mention légale obligatoire pour clients pro (B2B) — « Pénalités de retard : 3× le taux d'intérêt légal · Indemnité forfaitaire de recouvrement : 40 € (art. L441-10 et D441-5 du Code de commerce) ». Affichée sous la mention TVA, en typographie discrète.",
+      "Bon pour accord : la section apparaît maintenant systématiquement (avant elle disparaissait quand l'encadré « Bon pour accord » était vide). Si tu n'as rien rempli, un placeholder propre s'affiche : ligne pointillée pour « Date : », et un cadre vide pour la signature précédée de la mention « Bon pour accord ». À l'impression, ces espaces sont prêts à être remplis à la main par le client.",
+      "Encadré du devis sur écran : le cadre cyan brillant qui faisait \"écran d'app\" disparaît au profit d'une bordure neutre légère, plus discrète, plus document professionnel. L'ombre est aussi adoucie.",
+      "En-tête : ligne de séparation (trait fin) sous le bloc photographe + dates/client, comme sur un devis pro classique. Cohérent entre l'écran et l'impression.",
+      "Titres de sections (h4 dans le devis) : typographie raffinée — 11 px, lettrage espacé .08em, sans bordure inférieure. Plus document, moins app.",
+      "Total HT : un poil plus grand (17 px gras) pour mieux ressortir comme \"vraie\" totalité, et le bloc Totaux est désormais cadré sur la droite (max 340 px) comme sur un devis pro classique.",
+      "Détail des lignes : plus de fond, padding plus généreux (8 px), descriptions en 12 px (un poil plus petites que les libellés en 13 px) — hiérarchie visuelle plus fine.",
+      "Encadré « Bon pour accord » : trait simple en haut (au lieu du cadre tirets dashed) — cohérent avec les autres sections.",
+      "Impression : refonte complète du CSS d'impression. Les classes utilisées dans le devis (.dp-line.grand, .dp-paiement, .dp-objet, .dp-line.debours, .dp-footer-line, .dp-footer-mentions, .dp-sig-default…) ont maintenant chacune leur règle d'impression dédiée. Avant, plusieurs classes n'étaient pas couvertes et tombaient en formatage par défaut. Désormais le PDF/papier ressemble vraiment au document à l'écran (en N&B, A4, 9 pt corps, 12 pt total).",
+      "Impression : le placeholder « Renseigner vos coordonnées dans la section Photographe » est masqué (pas de pollution sur le papier si l'utilisateur imprime un brouillon).",
+      "Impression : les Modalités de paiement et le Bon pour accord (avec sa zone de signature dessinée) sont garantis ne pas être coupés en milieu de bloc (page-break-inside:avoid)."
+    ]
+  },
   {
     version: "v1.13",
     date: "2026-04-29",
