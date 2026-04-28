@@ -32,7 +32,7 @@
   .sb button.tab.active{background:var(--surface);color:#fff;border-left:3px solid var(--primary);padding-left:13px}
   .sb .user{margin-top:auto;padding:12px 16px;font-size:12px;color:var(--text-muted);border-top:1px solid var(--border)}
   .sb .user a{color:inherit}
-  main{flex:1;padding:24px 32px;max-width:1100px}
+  main{flex:1;padding:24px 32px;max-width:1100px;position:relative}
   h2{margin-top:0}
   h3{margin-top:24px;margin-bottom:8px;font-size:13px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid var(--border);padding-bottom:4px}
   .row{display:flex;gap:12px;margin-bottom:8px;flex-wrap:wrap}
@@ -189,7 +189,8 @@
   .field input,.field textarea,.field select{font-size:13px;padding:7px 10px}
   .field label{font-size:11px;letter-spacing:.02em}
   main h2{font-size:18px;font-weight:600;margin:0 0 4px;color:var(--text)}
-  main h3{font-size:11px;font-weight:600;margin-top:18px;margin-bottom:6px;color:var(--text-muted)}
+  main h3{font-size:14px;font-weight:700;margin:28px 0 12px 0;color:var(--text);padding-bottom:4px;border-bottom:1px solid var(--border)}
+  main h3:first-of-type{margin-top:4px}
   main h4{font-size:11px;font-weight:600;margin-top:14px;margin-bottom:6px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.04em}
   .encadres-grp{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:14px 16px;margin-bottom:14px}
   .encadres-grp > h4:first-of-type{margin-top:0}
@@ -638,7 +639,7 @@
   .locked-wrap .lock-corner-popup button:hover{background:var(--surface-hi)}
 
   /* Échéances UI */
-  .ech-list{display:flex;flex-direction:column;gap:6px;max-width:520px}
+  .ech-list{display:flex;flex-direction:column;gap:6px;max-width:380px}
   .ech-row{display:flex;align-items:center;gap:8px;background:var(--surface);border:1px solid var(--border-light);border-radius:6px;padding:6px 8px}
   .ech-row input.lbl{flex:1;border:0;background:transparent;color:var(--text);font:inherit;font-size:13px;padding:5px 7px;border-radius:4px;min-width:0}
   .ech-row input.lbl:hover{background:var(--surface-2)}
@@ -983,7 +984,7 @@ let tab = "mission";
 let cloudT = null;
 
 const TABS = [
-  ["mission", "📋 Mission"],
+  ["mission", "📋 Devis"],
   ["suivi",   "📊 Suivi"],
   ["clients", "👥 Clients"],
   ["tarifs",  "💰 Frais & Tarifs"],
@@ -2228,22 +2229,24 @@ function rMS() {
   const declare = d.declare !== false;
   const mode = d.deplacement.mode || "voiture";
   return `
-    <h2>Mission <span id="savedFlash" class="saved"></span></h2>
+    <span id="savedFlash" class="saved" style="position:absolute;top:18px;right:18px"></span>
 
-    <h3>Devis</h3>
+    <h3>Informations</h3>
+
+    <h4>Date du devis</h4>
     <div class="row">
       <div class="field narrow"><label>Date d'émission</label><input type="date" value="${esc(d.dateEmission)}" oninput="upd('mission.dateEmission', this.value)"></div>
       <div class="field narrow"><label>Validité</label><input type="date" value="${esc(d.dateValidite)}" oninput="upd('mission.dateValidite', this.value)"></div>
     </div>
 
-    <h3>Client</h3>
+    <h4>Client</h4>
     <div class="client-line">
       <div class="client-line-picker">${rClientPicker()}</div>
       <div class="client-line-contact">${rContactInline()}</div>
     </div>
     ${rContactPickerModal()}
 
-    <h3>Régime</h3>
+    <h4>Régime</h4>
     <div class="row" style="align-items:flex-end">
       <div class="field"><label>Statut</label>
         <div class="seg">
@@ -2263,9 +2266,10 @@ function rMS() {
         </div>
       </div>
     </div>
-    <div class="hint">Taux verrouillé par défaut. Cliquer sur ⋮ pour modifier.</div>
 
     <h3>Prestation</h3>
+
+    <h4>Type de prestation</h4>
     <div class="row"><div class="field"><label>Type de prestation</label>
       <select onchange="pickObject(this.value)">
         <option value="">— choisir —</option>
@@ -2289,7 +2293,6 @@ function rMS() {
       const urssafAmount = final > 0 ? r2(final - sansUrssaf) : 0;
       const matos = tm.tauxAvecSecurite;
       const net = final > 0 ? r2(sansUrssaf - matos) : 0;
-      // Tarif appliqué dans le devis: si déclaré → final ; sinon → sans URSSAF
       const tarifApplique = declared ? final : sansUrssaf;
       return `<div style="background:var(--surface-2);border:1px solid var(--border);border-radius:8px;padding:14px 16px;margin:8px 0 14px 0;max-width:680px">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;font-size:12.5px;color:var(--text-muted)">
@@ -2323,9 +2326,7 @@ function rMS() {
       </div>`;
     })()}
 
-    <div class="hint">Le tarif horaire de la prestation s'applique aux lignes de type « heures » et apparaît dans le devis ci-dessous. Les tarifs sont gérés dans « Frais & Tarifs ».</div>
-
-    <h3>Lignes</h3>
+    <h4>Description prestation</h4>
     <div class="lg-add">
       <button class="btn ghost" onclick="ligneAdd('heures')"><span style="font-size:14px">⏱️</span> + Heures</button>
       <button class="btn ghost" onclick="ligneAdd('materiel')"><span style="font-size:14px">🛒</span> + Matériel</button>
@@ -2355,17 +2356,14 @@ function rMS() {
     <div class="row"><div class="field narrow"><label>Prix des billets (€)</label><input type="number" step="0.01" value="${esc(d.deplacement.ticket)}" oninput="upd('mission.deplacement.ticket', this.value)"></div></div>
     `}
     <div class="row"><div class="field narrow"><label>Temps de trajet (h)</label><input type="number" step="0.25" value="${esc(d.deplacement.trajetH)}" oninput="upd('mission.deplacement.trajetH', this.value)"></div></div>
-    <div class="hint">Renseigner le temps de trajet uniquement si le trajet excède 1 h (hors trajet domicile / transport). Valorisation : 40 €/h.</div>
 
-    <h3>Remise</h3>
-    <div class="row"><div class="field tiny"><label>Remise (%)</label><input type="number" step="1" min="0" max="100" value="${esc(d.remisePct)}" oninput="upd('mission.remisePct', this.value)"></div></div>
+    <h3>Paiement</h3>
 
-    <h3>Échéances de paiement</h3>
+    <h4>Échéances de paiement</h4>
     ${(() => {
       const ts = totals();
       const pctSum = ts.echeancesTotal;
       return `
-      <div class="hint">Définir comment le total est réparti entre les échéances. Par défaut : 100 % à la livraison. Le total des pourcentages doit faire 100 %.</div>
       <div class="ech-list">
         ${(d.echeances || []).map(e => {
           const pct = num(e.pct);
@@ -2381,14 +2379,16 @@ function rMS() {
       <div class="ech-sum ${pctSum === 100 ? "ok" : "warn"}" id="echSum">
         Total : ${pctSum.toString().replace(".",",")} %${pctSum !== 100 ? ` <strong>(devrait faire 100 %)</strong>` : " ✓"}
       </div>
-      <div style="display:flex;gap:8px;margin-top:8px;max-width:520px">
+      <div style="display:flex;gap:8px;margin-top:8px;max-width:380px">
         <button class="btn ghost" onclick="echeanceAdd()" style="font-size:12px">+ Ajouter une échéance</button>
         <button class="btn ghost" onclick="echeanceReset()" style="font-size:12px;margin-left:auto">↺ Réinitialiser</button>
       </div>`;
     })()}
 
+    <h4>Remise</h4>
+    <div class="row"><div class="field tiny"><label>Remise (%)</label><input type="number" step="1" min="0" max="100" value="${esc(d.remisePct)}" oninput="upd('mission.remisePct', this.value)"></div></div>
+
     <h3>Encadrés du devis</h3>
-    <div class="hint">Textes verrouillés affichés dans le devis. Cliquer sur ⋮ pour modifier.</div>
 
     <div class="encadres-grp">
       <h4>Photographe (en-tête du devis)</h4>
