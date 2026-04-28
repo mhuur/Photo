@@ -360,8 +360,29 @@
   .devis-page-break{display:block;height:1px;margin:30px 0;border-top:2px dashed var(--border-light);position:relative}
   .devis-page-break::before{content:"— Page 2 —";position:absolute;top:-9px;left:50%;transform:translateX(-50%);background:var(--surface-2);padding:0 12px;font-size:10px;color:var(--text-dim);text-transform:uppercase;letter-spacing:.08em}
   @media print {
+    /* Hide everything except the devis preview */
+    body * { visibility: hidden !important; }
+    .devis-preview, .devis-preview * { visibility: visible !important; }
+    .devis-preview { position: absolute !important; left: 0; top: 0; width: 100%; padding: 0 !important; margin: 0 !important; }
+    /* Hide print/save buttons in the preview itself */
+    .devis-preview .dp-actions, .devis-preview button { display: none !important; }
+    /* Force black & white: override all colors */
+    .devis-preview, .devis-preview * {
+      color: #000 !important;
+      background: #fff !important;
+      background-color: #fff !important;
+      box-shadow: none !important;
+      text-shadow: none !important;
+    }
+    .devis-preview h1, .devis-preview h2, .devis-preview h3, .devis-preview .dp-header-right strong { color: #000 !important; font-weight: 700 !important; }
+    .devis-preview hr, .devis-preview .dp-line, .devis-preview .devis-page-break { border-color: #ccc !important; }
+    .devis-preview .dp-line { border-bottom: 1px solid #ddd !important; }
+    /* Page break inside CGV */
     .devis-page-break{page-break-before:always;border:0;height:0;margin:0}
     .devis-page-break::before{display:none}
+    /* Drop sidebar/main padding */
+    .sb, header, nav, footer { display: none !important; }
+    @page { margin: 1.5cm; }
   }
 
   /* Photographe textarea + conditions textarea in Mission */
@@ -401,6 +422,38 @@
   /* Contact picker (if multiple contacts) */
   .contact-picker{margin-top:6px;max-width:520px;background:var(--warning-soft);border:1px solid var(--warning);border-radius:6px;padding:10px 12px}
   .contact-picker.contact-picker-compact{background:var(--surface-2);border-color:var(--border);padding:8px 12px;max-width:680px}
+
+  /* Client + inline contact (point 5) */
+  .client-line{display:flex;align-items:flex-start;gap:14px;flex-wrap:wrap}
+  .client-line-picker{flex:0 0 auto;min-width:0}
+  .client-line-contact{flex:1 1 auto;min-width:200px;display:flex;align-items:center}
+  .contact-inline{display:flex;align-items:center;gap:8px;background:var(--surface-2);border:1px solid var(--border);border-radius:6px;padding:8px 12px;font-size:13px;color:var(--text);width:100%}
+  .contact-inline-lbl{color:var(--text-muted);font-size:11px;text-transform:uppercase;letter-spacing:.04em;font-weight:600;flex-shrink:0}
+  .contact-inline-val{flex:1;color:var(--text);font-size:13px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+  .contact-inline-change{background:transparent;border:1px solid var(--border);color:var(--text-muted);width:26px;height:26px;border-radius:5px;cursor:pointer;font-size:13px;display:flex;align-items:center;justify-content:center;padding:0;flex-shrink:0}
+  .contact-inline-change:hover{background:var(--surface-hi);color:var(--text);border-color:var(--primary)}
+
+  /* Modal overlay */
+  .modal-overlay{position:fixed;inset:0;background:rgba(8,15,28,.72);backdrop-filter:blur(3px);z-index:9999;display:flex;align-items:center;justify-content:center;padding:24px}
+  .modal-card{background:var(--bg-2);border:1px solid var(--border);border-radius:10px;padding:20px 22px;max-width:560px;width:100%;max-height:80vh;overflow-y:auto;box-shadow:0 16px 48px rgba(0,0,0,.5)}
+  .modal-title{font-size:14px;font-weight:700;color:var(--text);margin-bottom:4px}
+  .modal-sub{font-size:12px;color:var(--text-muted);margin-bottom:14px}
+  .modal-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:14px;padding-top:12px;border-top:1px solid var(--border)}
+  .contact-list{display:flex;flex-direction:column;gap:6px}
+  .contact-list-item{display:flex;flex-direction:column;align-items:flex-start;gap:4px;background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:10px 14px;cursor:pointer;text-align:left;font:inherit;color:var(--text);transition:all .12s}
+  .contact-list-item:hover{background:var(--surface-hi);border-color:var(--primary)}
+  .contact-list-item.selected{background:var(--primary-soft);border-color:var(--primary)}
+  .contact-list-name{font-weight:600;font-size:13px;color:var(--text)}
+  .contact-list-meta{display:flex;flex-wrap:wrap;gap:10px;font-size:11px;color:var(--text-muted)}
+
+  /* Large editor modal (point 6) */
+  .modal-card.modal-card-lg{max-width:780px;max-height:88vh;display:flex;flex-direction:column}
+  .text-editor-toolbar{display:flex;gap:4px;flex-wrap:wrap;padding:8px;background:var(--surface);border:1px solid var(--border);border-radius:6px;margin-bottom:8px}
+  .text-editor-toolbar .te-btn{background:transparent;border:1px solid transparent;color:var(--text-muted);padding:5px 9px;border-radius:4px;cursor:pointer;font:inherit;font-size:11px;font-weight:600}
+  .text-editor-toolbar .te-btn:hover{background:var(--surface-hi);color:var(--text);border-color:var(--border)}
+  .text-editor-toolbar .te-sep{width:1px;background:var(--border);margin:2px 4px}
+  .modal-textarea{flex:1;min-height:380px;width:100%;padding:14px 16px;border:1px solid var(--border-light);border-radius:6px;background:var(--surface);color:var(--text);font:inherit;font-size:14px;line-height:1.6;resize:vertical;font-family:'SF Mono', Menlo, Consolas, monospace}
+  .modal-textarea:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 2px var(--primary-soft)}
   .contact-picker .ttl{font-size:11px;font-weight:600;color:var(--warning);text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px}
   .contact-picker label{display:flex;align-items:center;gap:8px;padding:5px 8px;cursor:pointer;border-radius:4px;font-size:13px;color:var(--text)}
   .contact-picker label:hover{background:var(--surface-2)}
@@ -995,7 +1048,7 @@ function rDevisPreview() {
 
     <div class="dp-totals">
       <div class="dp-line"><span class="lbl">Sous-total</span><span class="amt">${fmt(t.subtotal)}</span></div>
-      ${t.remise > 0 ? `<div class="dp-line"><span class="lbl">Remise (${esc(d.remisePct)} %)</span><span class="amt">−${fmt(t.remise)}</span></div>` : ""}
+      ${t.remise > 0 ? `<div class="dp-line"><span class="lbl">Remise (${num(d.remisePct).toString().replace(".",",")} %)</span><span class="amt">−${fmt(t.remise)}</span></div>` : ""}
       <div class="dp-line grand"><span class="lbl">Total HT</span><span class="amt">${fmt(t.total)}</span></div>
       ${(t.echeances || []).map(e => `<div class="dp-line"><span class="lbl">${esc(e.label)} (${num(e.pct).toString().replace(".",",")} %)</span><span class="amt">${fmt(e.amount)}</span></div>`).join("")}
       ${t.debours > 0 ? `<div class="dp-line debours"><span class="lbl">+ Frais de débours (à rembourser sur justificatifs)</span><span class="amt">${fmt(t.debours)}</span></div>` : ""}
@@ -1140,8 +1193,6 @@ function cliPickSelect(id) {
   if (!e) return;
   const validContacts = (e.contacts || []).filter(c => c.name || c.phone || c.email);
   const onlyContact = validContacts.length === 1 ? validContacts[0] : null;
-  // If only one valid contact: auto-select it (no picker shown).
-  // If multiple valid contacts: leave contactId empty so picker stays open (orange warning) for explicit choice.
   S.mission.client = {
     id: e.id, num: e.num || "", name: e.name || "",
     contact: e.contact || "", address: e.address || "",
@@ -1151,7 +1202,8 @@ function cliPickSelect(id) {
     phoneSelected: onlyContact ? (onlyContact.phone || "") : "",
     emailSelected: onlyContact ? (onlyContact.email || "") : ""
   };
-  contactPickerForceOpen = false; // collapsed state will be governed by contactId presence
+  // If 2+ contacts, open the modal so user picks explicitly
+  contactPickerModalOpen = validContacts.length > 1;
   recomputeRef();
   cliPickQuery = "";
   cliPickCreating = false;
@@ -1536,7 +1588,7 @@ function totalsHtml(t) {
     <div class="line muted"><span>Frais de déplacement</span><span>${fmt(t.depl)}</span></div>
     <div class="line muted"><span>Autres</span><span>${fmt(t.autres)}</span></div>
     <div class="line"><span>Sous-total</span><span>${fmt(t.subtotal)}</span></div>
-    <div class="line muted"><span>Remise (${esc(S.mission.remisePct)} %)</span><span>−${fmt(t.remise)}</span></div>
+    <div class="line muted"><span>Remise (${num(S.mission.remisePct).toString().replace(".",",")} %)</span><span>−${fmt(t.remise)}</span></div>
     <div class="line total"><span>Total HT</span><span>${fmt(t.total)}</span></div>
     <div class="line muted"><span>Acompte 30 %</span><span>${fmt(t.acompte)}</span></div>
     <div class="line muted"><span>Reste 70 %</span><span>${fmt(t.reste)}</span></div>
@@ -1558,51 +1610,64 @@ function render() {
       ${TABS.map(([k,l]) => `<button class="tab ${tab===k?"active":""}" onclick="setTab('${k}')">${esc(l)}</button>`).join("")}
       <div class="user">${esc(user.email)}<br><a href="#" onclick="signOut();return false">Déconnexion</a></div>
     </aside>
-    <main>${view}</main>`;
+    <main>${view}</main>
+    ${rTextEditorModal()}`;
 }
 
 // State: track if picker is force-opened (e.g. after user clicks "Changer de contact")
-let contactPickerForceOpen = false;
+// State: contactPickerModalOpen — whether the modal is showing
+let contactPickerModalOpen = false;
 window.contactPickerToggleOpen = function(open) {
-  contactPickerForceOpen = open;
+  contactPickerModalOpen = open;
   render();
 };
 
-function rContactPicker() {
+// Modal that overlays the page when picking from multiple contacts
+function rContactPickerModal() {
+  if (!contactPickerModalOpen) return "";
   const c = S.mission.client || {};
   if (!c.id) return "";
   const sel = S.clients.entries.find(x => x.id === c.id);
-  if (!sel || !Array.isArray(sel.contacts) || sel.contacts.length <= 1) return "";
-  // Filter empty contacts (skip if all 3 fields empty)
+  if (!sel || !Array.isArray(sel.contacts)) return "";
   const valid = sel.contacts.filter(x => (x.name || x.phone || x.email));
   if (valid.length <= 1) return "";
-  const selectedId = c.contactId || valid[0].id;
-  const selectedContact = valid.find(x => x.id === selectedId) || valid[0];
-  // If a contact has been chosen and picker is not forced-open, show compact summary with "Changer" link
-  const hasSelection = !!c.contactId;
-  if (hasSelection && !contactPickerForceOpen) {
-    return `<div class="contact-picker contact-picker-compact">
-      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
-        <span style="color:var(--text-muted);font-size:11px;text-transform:uppercase;letter-spacing:.04em;font-weight:600">Contact retenu</span>
-        <span style="color:var(--text);font-weight:600">${esc(selectedContact.name || "(sans nom)")}</span>
-        ${selectedContact.phone ? `<span style="color:var(--text-muted);font-size:12px">📞 ${esc(selectedContact.phone)}</span>` : ""}
-        ${selectedContact.email ? `<span style="color:var(--text-muted);font-size:12px">✉ ${esc(selectedContact.email)}</span>` : ""}
-        <span style="flex:1"></span>
-        <button onclick="contactPickerToggleOpen(true)" style="background:transparent;border:1px solid var(--border);color:var(--text-muted);padding:4px 10px;border-radius:5px;cursor:pointer;font-size:11px">↻ Changer de contact</button>
+  const selectedId = c.contactId;
+  return `<div class="modal-overlay" onclick="if(event.target===this)contactPickerToggleOpen(false)">
+    <div class="modal-card">
+      <div class="modal-title">Choisir le contact à afficher dans le devis</div>
+      <div class="modal-sub">Client : <strong>${esc(sel.name || "—")}</strong> · ${valid.length} contacts disponibles</div>
+      <div class="contact-list">
+        ${valid.map(x => `<button class="contact-list-item ${selectedId === x.id ? "selected" : ""}" onclick="clientContactPick('${esc(x.id)}')">
+          <span class="contact-list-name">${esc(x.name || "(sans nom)")}</span>
+          <span class="contact-list-meta">
+            ${x.phone ? `<span>📞 ${esc(x.phone)}</span>` : ""}
+            ${x.email ? `<span>✉ ${esc(x.email)}</span>` : ""}
+          </span>
+        </button>`).join("")}
       </div>
-    </div>`;
-  }
-  // Otherwise show full picker
-  return `<div class="contact-picker">
-    <div class="ttl">⚠ Plusieurs contacts détectés — choisir celui à afficher dans le devis :</div>
-    ${valid.map(x => `<label class="contact-pick-row">
-      <input type="radio" name="contactSel" value="${esc(x.id)}" ${selectedId === x.id ? "checked" : ""} onchange="clientContactPick('${esc(x.id)}')">
-      <span class="contact-pick-info">
-        <span class="contact-pick-name">${esc(x.name || "(sans nom)")}</span>
-        ${x.phone ? `<span class="contact-pick-detail">📞 ${esc(x.phone)}</span>` : ""}
-        ${x.email ? `<span class="contact-pick-detail">✉ ${esc(x.email)}</span>` : ""}
-      </span>
-    </label>`).join("")}
+      <div class="modal-actions">
+        <button class="btn ghost" onclick="contactPickerToggleOpen(false)">Annuler</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+// Inline display: shown to the right of the Client field — same look as regular field text
+function rContactInline() {
+  const c = S.mission.client || {};
+  if (!c.id) return "";
+  const sel = S.clients.entries.find(x => x.id === c.id);
+  if (!sel || !Array.isArray(sel.contacts)) return "";
+  const valid = sel.contacts.filter(x => (x.name || x.phone || x.email));
+  if (valid.length === 0) return "";
+  // Resolve selected contact (by contactId, fallback to first valid)
+  const selectedId = c.contactId || valid[0].id;
+  const selected = valid.find(x => x.id === selectedId) || valid[0];
+  const multi = valid.length > 1;
+  return `<div class="contact-inline">
+    <span class="contact-inline-lbl">Contact</span>
+    <span class="contact-inline-val">${esc(selected.name || "(sans nom)")}${selected.phone ? ` · ${esc(selected.phone)}` : ""}${selected.email ? ` · ${esc(selected.email)}` : ""}</span>
+    ${multi ? `<button class="contact-inline-change" onclick="contactPickerToggleOpen(true)" title="Changer de contact">↻</button>` : ""}
   </div>`;
 }
 
@@ -1618,24 +1683,129 @@ function clientContactPick(contactId) {
       S.mission.client.emailSelected = c.email || "";
     }
   }
-  // Auto-collapse picker once a choice is made
-  contactPickerForceOpen = false;
+  // Close the modal once a choice is made
+  contactPickerModalOpen = false;
   save();
   render();
 }
 window.clientContactPick = clientContactPick;
 
-function renderLockedTextarea(field, value, label, placeholder) {
-  const locked = textLockState[field] !== false;
-  return `<div class="row"><div class="field lg"><label>${esc(label)}</label>
-    <div class="locked-wrap ${locked ? "is-locked" : ""}">
-      <textarea id="text-${field}" class="multi-text" placeholder="${placeholder}" ${locked ? "disabled" : `oninput="upd('mission.${field}', this.value)"`}>${esc(value)}</textarea>
-      <button class="lock-corner" onclick="textLockToggleMenu('${field}')" title="Options">⋮</button>
-      <div class="lock-corner-popup" id="lockMenu-${field}">
-        ${locked
-          ? `<button onclick="textLockUnlock('${field}')">🔓 Modifier</button>`
-          : `<button onclick="textLockRelock('${field}')">🔒 Verrouiller</button>`}
+// Modal editor state
+let textEditorModal = null; // { field, value, label }
+window.textEditorOpen = function(field, label, currentValue) {
+  textEditorModal = { field, label, value: currentValue || "" };
+  render();
+  // Focus textarea after render
+  requestAnimationFrame(() => {
+    const ta = document.getElementById("modal-textarea");
+    if (ta) {
+      ta.focus();
+      // Place cursor at end
+      ta.setSelectionRange(ta.value.length, ta.value.length);
+    }
+  });
+};
+window.textEditorClose = function(saveValue) {
+  if (saveValue && textEditorModal) {
+    const ta = document.getElementById("modal-textarea");
+    if (ta) {
+      upd("mission." + textEditorModal.field, ta.value);
+    }
+  }
+  textEditorModal = null;
+  render();
+};
+// Formatting toolbar actions on the modal textarea
+window.textEditorFmt = function(action) {
+  const ta = document.getElementById("modal-textarea");
+  if (!ta) return;
+  const start = ta.selectionStart;
+  const end = ta.selectionEnd;
+  const before = ta.value.slice(0, start);
+  const sel = ta.value.slice(start, end);
+  const after = ta.value.slice(end);
+  let inserted = "";
+  let cursorOffset = 0;
+  switch (action) {
+    case "bullet":
+      // Add "• " at line start of each selected line (or current line)
+      if (sel) {
+        inserted = sel.split("\n").map(l => "• " + l).join("\n");
+      } else {
+        inserted = "• ";
+      }
+      cursorOffset = inserted.length;
+      break;
+    case "numbered":
+      if (sel) {
+        inserted = sel.split("\n").map((l, i) => `${i + 1}. ` + l).join("\n");
+      } else {
+        inserted = "1. ";
+      }
+      cursorOffset = inserted.length;
+      break;
+    case "uppercase":
+      inserted = sel.toUpperCase();
+      cursorOffset = inserted.length;
+      break;
+    case "capitalize":
+      inserted = sel.replace(/\b\w/g, c => c.toUpperCase());
+      cursorOffset = inserted.length;
+      break;
+    case "lowercase":
+      inserted = sel.toLowerCase();
+      cursorOffset = inserted.length;
+      break;
+    case "separator":
+      inserted = "\n———————————————\n";
+      cursorOffset = inserted.length;
+      break;
+    case "tab":
+      inserted = "    " + sel;
+      cursorOffset = inserted.length;
+      break;
+    default: return;
+  }
+  ta.value = before + inserted + after;
+  ta.focus();
+  ta.setSelectionRange(start + cursorOffset, start + cursorOffset);
+};
+
+function rTextEditorModal() {
+  if (!textEditorModal) return "";
+  const m = textEditorModal;
+  // Read live value from S so it shows the current state
+  const liveValue = (S.mission[m.field] !== undefined) ? S.mission[m.field] : m.value;
+  return `<div class="modal-overlay" onclick="if(event.target===this)textEditorClose(false)">
+    <div class="modal-card modal-card-lg">
+      <div class="modal-title">${esc(m.label)}</div>
+      <div class="text-editor-toolbar">
+        <button class="te-btn" onclick="textEditorFmt('bullet')" title="Liste à puces">• Liste</button>
+        <button class="te-btn" onclick="textEditorFmt('numbered')" title="Liste numérotée">1. Liste</button>
+        <span class="te-sep"></span>
+        <button class="te-btn" onclick="textEditorFmt('uppercase')" title="MAJUSCULES">MAJ</button>
+        <button class="te-btn" onclick="textEditorFmt('capitalize')" title="Capitales en début de mot">Tt</button>
+        <button class="te-btn" onclick="textEditorFmt('lowercase')" title="minuscules">min</button>
+        <span class="te-sep"></span>
+        <button class="te-btn" onclick="textEditorFmt('separator')" title="Insérer un séparateur">—</button>
+        <button class="te-btn" onclick="textEditorFmt('tab')" title="Indenter">↹</button>
       </div>
+      <textarea id="modal-textarea" class="modal-textarea">${esc(liveValue)}</textarea>
+      <div class="modal-actions">
+        <button class="btn ghost" onclick="textEditorClose(false)">Annuler</button>
+        <button class="btn" onclick="textEditorClose(true)">✓ Enregistrer</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+function renderLockedTextarea(field, value, label, placeholder) {
+  // The textarea remains visible (read-only display). Clicking the ⋮ menu opens a modal editor for editing.
+  const v = value || "";
+  return `<div class="row"><div class="field lg"><label>${esc(label)}</label>
+    <div class="locked-wrap is-locked">
+      <textarea id="text-${field}" class="multi-text" placeholder="${placeholder}" disabled>${esc(v)}</textarea>
+      <button class="lock-corner" onclick="textEditorOpen('${field}', ${JSON.stringify(label).replace(/'/g, "\\'")}, ${JSON.stringify(v).replace(/'/g, "\\'")})" title="Modifier">✏</button>
     </div>
   </div></div>`;
 }
@@ -1649,45 +1819,58 @@ function rMS() {
     <h2>Mission <span id="savedFlash" class="saved"></span></h2>
 
     <h3>Devis</h3>
-    <div class="row"><div class="field narrow"><label>Date d'émission</label><input type="date" value="${esc(d.dateEmission)}" oninput="upd('mission.dateEmission', this.value)"></div></div>
-    <div class="row"><div class="field narrow"><label>Validité</label><input type="date" value="${esc(d.dateValidite)}" oninput="upd('mission.dateValidite', this.value)"></div></div>
+    <div class="row">
+      <div class="field narrow"><label>Date d'émission</label><input type="date" value="${esc(d.dateEmission)}" oninput="upd('mission.dateEmission', this.value)"></div>
+      <div class="field narrow"><label>Validité</label><input type="date" value="${esc(d.dateValidite)}" oninput="upd('mission.dateValidite', this.value)"></div>
+    </div>
 
     <h3>Client</h3>
-    ${rClientPicker()}
-    ${rContactPicker()}
+    <div class="client-line">
+      <div class="client-line-picker">${rClientPicker()}</div>
+      <div class="client-line-contact">${rContactInline()}</div>
+    </div>
+    ${rContactPickerModal()}
 
     <h3>Régime</h3>
-    <div class="row"><div class="field"><label>Statut</label>
-      <div class="seg">
-        <button class="${declare?"on":""}" onclick="updMissionDeclare(true)">✓ Déclaré</button>
-        <button class="${!declare?"on warn":""}" onclick="updMissionDeclare(false)">● Au black</button>
-      </div>
-    </div></div>
-    <div class="row"><div class="field narrow"><label>Taux URSSAF (%)</label>
-      <div class="lock-field">
-        <input id="urssafInput" type="number" step="0.1" value="${esc(d.urssafPct ?? "22")}" ${urssafUnlocked ? `oninput="upd('mission.urssafPct', this.value)"` : "disabled"}>
-        <button class="lock-menu-btn" onclick="urssafToggleMenu()" title="Options">⋮</button>
-        <div class="lock-popup" id="urssafMenu">
-          ${urssafUnlocked
-            ? `<button onclick="urssafResetDefault()">↺ Rétablir 22 % (par défaut)</button>`
-            : `<button onclick="urssafUnlock()">🔓 Modifier le taux</button>`}
+    <div class="row" style="align-items:flex-end">
+      <div class="field"><label>Statut</label>
+        <div class="seg">
+          <button class="${declare?"on":""}" onclick="updMissionDeclare(true)">✓ Déclaré</button>
+          <button class="${!declare?"on warn":""}" onclick="updMissionDeclare(false)">● Au black</button>
         </div>
       </div>
-    </div></div>
+      <div class="field narrow"><label>Taux URSSAF (%)</label>
+        <div class="lock-field">
+          <input id="urssafInput" type="number" step="0.1" value="${esc(d.urssafPct ?? "22")}" ${urssafUnlocked ? `oninput="upd('mission.urssafPct', this.value)"` : "disabled"}>
+          <button class="lock-menu-btn" onclick="urssafToggleMenu()" title="Options">⋮</button>
+          <div class="lock-popup" id="urssafMenu">
+            ${urssafUnlocked
+              ? `<button onclick="urssafResetDefault()">↺ Rétablir 22 % (par défaut)</button>`
+              : `<button onclick="urssafUnlock()">🔓 Modifier le taux</button>`}
+          </div>
+        </div>
+      </div>
+    </div>
     <div class="hint">Taux verrouillé par défaut. Cliquer sur ⋮ pour modifier.</div>
+
+    <h3>Prestation</h3>
+    <div class="row"><div class="field"><label>Type de prestation</label>
+      <select onchange="pickObject(this.value)">
+        <option value="">— choisir —</option>
+        ${(S.tarifs.catalog || DEFAULT_CATALOG).map(c => `<option value="${c.k}" ${d.object===c.k?"selected":""}>${esc(c.l)}</option>`).join("")}
+      </select>
+    </div></div>
 
     ${(() => {
       const declared = declare;
       const cat = (S.tarifs.catalog || DEFAULT_CATALOG).find(c => c.k === d.object);
-      const baseFinal = cat ? num(cat.p) : 0; // prix final TTC saisi pour la prestation
+      const baseFinal = cat ? num(cat.p) : 0;
       const urssafPct = num(d.urssafPct ?? 22);
       const urssafCoef = 1 + urssafPct / 100;
-      // Au black : on retire l'URSSAF du prix final
       const tauxApplique = declared ? baseFinal : (baseFinal > 0 ? r2(baseFinal / urssafCoef) : 0);
-      // Si pas de prestation sélectionnée, on affiche un message
       if (!cat || !d.object) {
         return `<div style="background:var(--surface-2);border:1px solid var(--border);border-radius:8px;padding:10px 14px;margin:8px 0 14px 0;max-width:680px;font-size:12px;color:var(--text-muted)">
-          Sélectionne une prestation ci-dessous pour voir le taux horaire applicable au devis.
+          Sélectionne une prestation ci-dessus pour voir le taux horaire applicable au devis.
         </div>`;
       }
       return `<div style="background:var(--surface-2);border:1px solid var(--border);border-radius:8px;padding:10px 14px;margin:8px 0 14px 0;max-width:680px">
@@ -1708,13 +1891,6 @@ function rMS() {
       </div>`;
     })()}
 
-    <h3>Prestation</h3>
-    <div class="row"><div class="field"><label>Type de prestation</label>
-      <select onchange="pickObject(this.value)">
-        <option value="">— choisir —</option>
-        ${(S.tarifs.catalog || DEFAULT_CATALOG).map(c => `<option value="${c.k}" ${d.object===c.k?"selected":""}>${esc(c.l)}</option>`).join("")}
-      </select>
-    </div></div>
     <div class="hint">Le tarif horaire de la prestation s'applique aux lignes de type « heures » et apparaît dans le devis ci-dessous. Les tarifs sont gérés dans « Frais & Tarifs ».</div>
 
     <h3>Lignes</h3>
@@ -1744,7 +1920,7 @@ function rMS() {
     <div class="hint">Renseigner le temps de trajet uniquement si le trajet excède 1 h (hors trajet domicile / transport). Valorisation : 40 €/h.</div>
 
     <h3>Remise</h3>
-    <div class="row"><div class="field tiny"><label>Remise (%)</label><input type="number" step="0.1" value="${esc(d.remisePct)}" oninput="upd('mission.remisePct', this.value)"></div></div>
+    <div class="row"><div class="field tiny"><label>Remise (%)</label><input type="number" step="1" min="0" max="100" value="${esc(d.remisePct)}" oninput="upd('mission.remisePct', this.value)"></div></div>
 
     <h3>Échéances de paiement</h3>
     ${(() => {
@@ -3887,14 +4063,14 @@ function rTR() {
     return `
     <tr ${final === 0 ? 'style="background:rgba(245,158,11,.06)"' : ''}>
       <td><input type="text" value="${esc(c.l)}" oninput="tarifEdit(${idx},'l',this.value)" placeholder="Libellé prestation" style="border:0;background:transparent;color:var(--text);width:100%;font:inherit"></td>
+      <td style="text-align:right;font-variant-numeric:tabular-nums;color:${final > 0 ? (net >= 0 ? 'var(--success)' : 'var(--danger)') : 'var(--text-dim)'};font-weight:600">${final > 0 ? fmt(net) : "—"}</td>
+      <td style="text-align:right;font-variant-numeric:tabular-nums;color:${final > 0 ? 'var(--text-muted)' : 'var(--text-dim)'}">${final > 0 ? fmt(tm.tauxRetenu) : "—"}</td>
       <td style="text-align:right">
         <div style="display:inline-flex;align-items:baseline;gap:3px">
           <input type="number" step="0.5" value="${esc(c.p || "")}" oninput="tarifEdit(${idx},'p',this.value)" placeholder="—" style="width:64px;text-align:right;border:1px solid var(--primary);background:var(--surface-2);color:var(--text);padding:4px 6px;border-radius:4px;font-variant-numeric:tabular-nums;font-weight:600">
           <span style="color:var(--text-dim);font-size:11px">€/h</span>
         </div>
       </td>
-      <td style="text-align:right;font-variant-numeric:tabular-nums;color:${final > 0 ? 'var(--text)' : 'var(--text-dim)'}">${final > 0 ? fmt(sansUrssaf) : "—"}</td>
-      <td style="text-align:right;font-variant-numeric:tabular-nums;color:${final > 0 ? (net >= 0 ? 'var(--success)' : 'var(--danger)') : 'var(--text-dim)'};font-weight:600">${final > 0 ? fmt(net) : "—"}</td>
     </tr>`;
   }).join("");
 
@@ -3978,14 +4154,14 @@ function rTR() {
     <div class="hint" style="margin-top:8px;max-width:780px">Le <strong>taux horaire retenu</strong> (${fmt(tm.tauxRetenu)}/h) est utilisé pour décomposer chaque prestation ci-dessous : on part du prix client final (TTC), on en retire l'URSSAF, puis le coût matériel — il reste le net pour ton temps.</div>
 
     <h3>Prestations &amp; tarifs (€/h)</h3>
-    <div class="hint" style="max-width:880px">Saisis le <strong>tarif final</strong> facturé au client (TTC, URSSAF incluse). Le tableau remonte le calcul : <strong>− URSSAF</strong> = ce que tu encaisses réellement, <strong>− matériel</strong> = net horaire restant pour ton temps.</div>
+    <div class="hint" style="max-width:880px">Saisis le <strong>tarif final</strong> facturé au client (TTC, URSSAF incluse, à droite). Le tableau remonte le calcul : <strong>− URSSAF − coût matériel = Net</strong> qui te reste pour ton temps.</div>
     <table class="hist" style="max-width:880px">
       <thead>
         <tr>
           <th>Libellé</th>
+          <th style="width:110px;text-align:right">Net<div style="font-size:10px;font-weight:400;color:var(--text-muted);margin-top:1px">pour ton temps</div></th>
+          <th style="width:110px;text-align:right">Coût matériel<div style="font-size:10px;font-weight:400;color:var(--text-muted);margin-top:1px">amortissement</div></th>
           <th style="width:110px;text-align:right">Tarif final<div style="font-size:10px;font-weight:400;color:var(--text-muted);margin-top:1px">prix client TTC</div></th>
-          <th style="width:110px;text-align:right">Sans URSSAF<div style="font-size:10px;font-weight:400;color:var(--text-muted);margin-top:1px">−${urssafPct} %</div></th>
-          <th style="width:110px;text-align:right">Net<div style="font-size:10px;font-weight:400;color:var(--text-muted);margin-top:1px">−${fmt(tm.tauxRetenu)} matériel</div></th>
         </tr>
       </thead>
       <tbody>${tarifRows3col}</tbody>
