@@ -367,7 +367,7 @@
   .devis-preview .dp-client{font-size:13px;color:var(--text);line-height:1.6}
   .devis-preview .dp-client .name{font-weight:600;font-size:13px}
   .devis-preview .dp-client .num{color:var(--text-muted);font-variant-numeric:tabular-nums;margin-right:8px}
-  .devis-preview .dp-line{display:flex;justify-content:space-between;align-items:flex-start;gap:14px;padding:7px 0;font-size:13px;border-bottom:1px solid var(--border-soft)}
+  .devis-preview .dp-line{display:flex;justify-content:space-between;align-items:flex-start;gap:14px;padding:7px 0;font-size:13px}
   .devis-preview .dp-line:last-child{border-bottom:0}
   .devis-preview .dp-line .lbl{color:var(--text);flex:1}
   .devis-preview .dp-line .lbl .desc{color:var(--text-dim);font-size:13px;margin-top:2px}
@@ -378,6 +378,12 @@
   .devis-preview .dp-totals .dp-line.grand{font-size:16px;font-weight:700;padding:10px 0;margin-top:6px;border-top:1px solid var(--border-light)}
   .devis-preview .dp-totals .dp-line.grand .lbl,.devis-preview .dp-totals .dp-line.grand .amt{color:var(--text)}
   .devis-preview .dp-totals .dp-line.debours{color:var(--text-muted);font-style:italic;font-size:12px}
+  .devis-preview .dp-paiement{margin-top:22px;padding-top:14px;border-top:1px solid var(--border-soft)}
+  .devis-preview .dp-paiement h4{margin:0 0 10px;border:0;padding:0;font-size:13px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em}
+  .devis-preview .dp-paiement-line{display:flex;justify-content:space-between;align-items:baseline;padding:5px 0;font-size:13px;color:var(--text)}
+  .devis-preview .dp-paiement-line .lbl{color:var(--text)}
+  .devis-preview .dp-paiement-line .pct{color:var(--text-muted);font-size:12px;margin-left:2px}
+  .devis-preview .dp-paiement-line .amt{font-variant-numeric:tabular-nums;font-weight:500}
   .devis-preview .dp-objet{font-size:13px;color:var(--text);margin:0 0 18px 0;padding:0;line-height:1.5}
   .devis-preview .dp-objet strong{font-weight:600}
   .devis-preview .dp-footer{margin-top:18px;padding-top:14px;border-top:1px solid var(--border-soft);font-size:13px;color:var(--text-dim);text-align:center;line-height:1.6}
@@ -452,7 +458,7 @@
   .devis-preview .dp-header-left.empty{color:var(--text-dim);font-style:italic;font-size:13px}
   .devis-preview .dp-header-right{display:flex;flex-direction:column;align-items:flex-end;gap:0}
   .devis-preview .dp-meta-block{text-align:right;font-size:13px;color:var(--text-muted);line-height:1.6;margin-bottom:0}
-  .devis-preview .dp-meta-block .ref{color:var(--text);font-weight:600;font-size:13px;font-variant-numeric:tabular-nums;margin-bottom:6px}
+  .devis-preview .dp-meta-block .ref{color:var(--text);font-weight:700;font-size:16px;font-variant-numeric:tabular-nums;margin-bottom:10px;letter-spacing:.01em}
   .devis-preview .dp-meta-block strong{color:var(--text);font-weight:600}
   .devis-preview .dp-client-block{text-align:right;font-size:13px;color:var(--text);line-height:1.6;padding:0;min-width:220px;margin-top:0}
   .devis-preview .dp-client-block .name{font-weight:600;font-size:13px;color:var(--text);display:block}
@@ -465,14 +471,14 @@
 
   .devis-preview .dp-conditions{margin-top:18px;padding:14px 0 0;border-top:1px solid var(--border-soft);font-size:13px;color:var(--text);line-height:1.7;white-space:pre-wrap}
   .devis-preview .dp-conditions h4{margin:0 0 8px;border:0;padding:0;font-size:13px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em}
-  .devis-preview .dp-conditions.signature{padding:14px 16px;border:1px dashed var(--border-light);border-radius:6px;margin-top:14px;border-top:1px dashed var(--border-light)}
-  .devis-preview .dp-conditions.signature h4{color:var(--accent)}
-  .devis-preview .dp-conditions.cgv h4{color:var(--primary)}
+  .devis-preview .dp-conditions.signature{padding:14px 0 0;border:0;border-top:1px solid var(--border-soft);border-radius:0;margin-top:18px}
+  .devis-preview .dp-conditions.signature h4{color:var(--text-muted)}
+  .devis-preview .dp-conditions.cgv h4{color:var(--text-muted)}
 
   /* Page break before CGV (page 2 when printed) */
 
-  .devis-page-break{display:block;height:1px;margin:30px 0;border-top:2px dashed var(--border-light);position:relative}
-  .devis-page-break::before{content:"— Page 2 —";position:absolute;top:-9px;left:50%;transform:translateX(-50%);background:var(--surface-2);padding:0 12px;font-size:13px;color:var(--text-dim);text-transform:uppercase;letter-spacing:.08em}
+  .devis-page-break{display:block;height:1px;margin:40px 0 30px;border-top:1px solid var(--border-light);position:relative}
+  .devis-page-break::before{content:"page 2";position:absolute;top:-9px;left:50%;transform:translateX(-50%);background:var(--surface-2);padding:0 14px;font-size:11px;color:var(--text-dim);letter-spacing:.12em;text-transform:uppercase}
   @media print {
     /* === ISOLATION === */
     body * { visibility: hidden !important; }
@@ -1479,7 +1485,7 @@ function rDevisPreview() {
       <div class="dp-header-left ${(d.photographe || "").trim() ? "" : "empty"}">${(d.photographe || "").trim() ? richDisplayHtml(d.photographe) : "Renseigner vos coordonnées dans la section « Photographe » de l'onglet Mission."}</div>
       <div class="dp-header-right">
         <div class="dp-meta-block">
-          <div class="ref">${esc(d.ref || "DEVIS-…-…")}</div>
+          <div class="ref">${esc(formatRef(d.ref, "devis"))}</div>
           <div>Émission : <strong>${dateFR(d.dateEmission) || "—"}</strong></div>
           <div>Validité : <strong>${dateFR(d.dateValidite) || "—"}</strong></div>
         </div>
@@ -1520,9 +1526,16 @@ function rDevisPreview() {
       <div class="dp-line"><span class="lbl">Sous-total</span><span class="amt">${fmt(t.subtotal)}</span></div>
       <div class="dp-line"><span class="lbl">Remise (${num(d.remisePct).toString().replace(".",",")} %)</span><span class="amt">−${fmt(t.remise)}</span></div>` : ""}
       <div class="dp-line grand"><span class="lbl">Total HT</span><span class="amt">${fmt(t.total)}</span></div>
-      ${(t.echeances || []).map(e => `<div class="dp-line"><span class="lbl">${esc(e.label)} (${num(e.pct).toString().replace(".",",")} %)</span><span class="amt">${fmt(e.amount)}</span></div>`).join("")}
       ${t.debours > 0 ? `<div class="dp-line debours"><span class="lbl">+ Frais de débours (à rembourser sur justificatifs, voir document séparé)</span><span class="amt">${fmt(t.debours)}</span></div>` : ""}
     </div>
+
+    ${(t.echeances || []).length > 0 ? `<div class="dp-paiement">
+      <h4>Modalités de paiement</h4>
+      ${(t.echeances || []).map(e => `<div class="dp-paiement-line">
+        <span class="lbl">${esc(e.label)} <span class="pct">(${num(e.pct).toString().replace(".",",")} %)</span></span>
+        <span class="amt">${fmt(e.amount)}</span>
+      </div>`).join("")}
+    </div>` : ""}
 
     ${(d.conditionsPaiement || "").trim() ? `<div class="dp-conditions">
       <h4>Conditions de paiement</h4>${richDisplayHtml(d.conditionsPaiement)}
@@ -1532,7 +1545,7 @@ function rDevisPreview() {
       <h4>Bon pour accord</h4>${richDisplayHtml(d.signatureBlock)}
     </div>` : ""}
 
-    <div class="dp-footer">TVA non applicable, art. 293 B du CGI</div>
+    <div class="dp-footer">Auto-entrepreneur · TVA non applicable, art. 293 B du CGI</div>
 
     ${(d.cgv || "").trim() ? `
       <div class="devis-page-break"></div>
@@ -1563,7 +1576,7 @@ function rDeboursPreview() {
   }
   const sel = d.client.id ? S.clients.entries.find(x => x.id === d.client.id) : null;
   const cli = sel || d.client;
-  const ref = (d.ref || "DEVIS-…-…").replace(/^DEVIS/, "DEBOURS");
+  const ref = formatRef(d.ref, "debours");
 
   // Build débours items
   let linesHtml = "";
@@ -1595,7 +1608,7 @@ function rDeboursPreview() {
       <div class="dp-header-left ${(d.photographe || "").trim() ? "" : "empty"}">${(d.photographe || "").trim() ? richDisplayHtml(d.photographe) : "Renseigner vos coordonnées dans la section « Photographe »."}</div>
       <div class="dp-header-right">
         <div class="dp-meta-block">
-          <div class="ref" style="color:var(--accent)">${esc(ref)}</div>
+          <div class="ref">${esc(ref)}</div>
           <div>Émission : <strong>${dateFR(d.dateEmission) || "—"}</strong></div>
         </div>
         <div class="dp-client-block">
@@ -1722,7 +1735,7 @@ function rFacturePreview(opts) {
       <div class="dp-receipt-line restant ${fullyPaid ? 'paid' : ''}"><span class="lbl">${fullyPaid ? "✓ Soldée" : "Reste à payer"}</span><span class="amt" style="color:${fullyPaid ? 'var(--success)' : 'var(--warning)'}">${fmt(restant)}</span></div>
     </div>
 
-    <div class="dp-footer">TVA non applicable, art. 293 B du CGI</div>
+    <div class="dp-footer">Auto-entrepreneur · TVA non applicable, art. 293 B du CGI</div>
 
     <div class="dp-actions">
       <button class="btn ghost" onclick="window.print()">🖨️ Imprimer</button>
@@ -2196,6 +2209,17 @@ function rLigne(l) {
 // Round to 2 decimals, killing IEEE-754 float garbage
 function r2(v) { return Math.round((+v + Number.EPSILON) * 100) / 100; }
 
+// Format a stored ref (e.g. "DEVIS-12-2026-04-26") into a human-readable display
+// ("Devis n° 12-2026-04-26" / "Débours n° ..." / "Facture n° ...").
+// Storage keeps the raw form for backward compat, display always uses this.
+function formatRef(ref, type) {
+  const labels = { devis: "Devis", debours: "Débours", facture: "Facture" };
+  const label = labels[type] || "Devis";
+  if (!ref || ref === "DEVIS-…-…") return `${label} n° …`;
+  const stripped = ref.replace(/^(DEVIS|DEBOURS|FACTURE)-/i, "");
+  return `${label} n° ${stripped}`;
+}
+
 function totals() {
   const d = S.mission;
   // Hourly rate: tarif catalogue saisi = prix final TTC. Au black, on enlève l'URSSAF.
@@ -2641,7 +2665,7 @@ function rViewDevisModal() {
   const when = dv.snapshotAt ? new Date(dv.snapshotAt).toLocaleString("fr-FR") : null;
   return `<div class="modal-overlay" onclick="if(event.target===this)viewDevisClose()">
     <div class="modal-card modal-card-lg">
-      <div class="modal-title">Devis émis ${esc(ref)}</div>
+      <div class="modal-title">${esc(formatRef(ref, "devis"))}</div>
       ${when ? `<div class="modal-sub">Émis le ${esc(when)}</div>` : ""}
       ${snapshot
         ? `<div class="devis-preview view-devis-snapshot">${snapshot}</div>`
@@ -2662,7 +2686,7 @@ function rViewFactureModal() {
   const dv = S.suivi.devis && S.suivi.devis[devisId];
   const lignes = (S.suivi.entries || []).filter(e => e.devisId === devisId);
   const refRaw = (dv && dv.ref) || devisId;
-  const factureRef = refRaw.replace(/^DEVIS/, "FACTURE") || `FACTURE-${devisId}`;
+  const factureRef = formatRef(refRaw, "facture");
   // Compute totals
   const totalDevis = lignes.reduce((s, e) => s + num(e.montant), 0);
   const paidLines = lignes.filter(e => e.paid);
@@ -2686,12 +2710,17 @@ function rViewFactureModal() {
     <div class="dp-receipt-line restant ${fullyPaid ? 'paid' : ''}"><span class="lbl">${fullyPaid ? "✓ Soldée" : "Reste à payer"}</span><span class="amt" style="color:${fullyPaid ? 'var(--success)' : 'var(--warning)'}">${fmt(restant)}</span></div>
   </div>`;
 
-  // Build the facture body: snapshot HTML (with FACTURE prefix swapped) + receipt section
+  // Build the facture body: snapshot HTML with the ref swapped from "Devis"/"DEVIS" → "Facture"/"FACTURE"
   let body;
   if (snapshot) {
-    // Replace DEVIS → FACTURE in the snapshot ref display, and primary color → success color for the title
     const snapshotFacture = snapshot
-      .replace(/(<div class="ref"[^>]*>)([^<]*)(<\/div>)/, (m, a, ref, c) => `${a}${ref.replace(/^DEVIS/, "FACTURE")}${c}`);
+      .replace(/(<div class="ref"[^>]*>)([\s\S]*?)(<\/div>)/, (m, a, content, end) => {
+        // Replace either old format ("DEVIS-...") or new format ("Devis n° ...")
+        const newContent = content
+          .replace(/^DEVIS\b/, "FACTURE")
+          .replace(/^Devis\b/, "Facture");
+        return `${a}${newContent}${end}`;
+      });
     body = `<div class="devis-preview view-devis-snapshot">${snapshotFacture}${receiptHtml}</div>`;
   } else {
     body = `<div class="empty" style="padding:40px;text-align:center">
@@ -2701,7 +2730,7 @@ function rViewFactureModal() {
 
   return `<div class="modal-overlay" onclick="if(event.target===this)viewFactureClose()">
     <div class="modal-card modal-card-lg">
-      <div class="modal-title" style="color:var(--success)">🧾 Facture ${esc(factureRef)} — ${esc(client)}</div>
+      <div class="modal-title" style="color:var(--success)">🧾 ${esc(factureRef)} — ${esc(client)}</div>
       ${when ? `<div class="modal-sub">Devis émis le ${esc(when)} · ${paidLines.length}/${lignes.length} échéance${lignes.length > 1 ? "s" : ""} payée${paidLines.length > 1 ? "s" : ""}</div>` : ""}
       ${body}
       <div class="modal-actions">
@@ -5347,6 +5376,19 @@ function rTR() {
 // Most recent version FIRST.
 // =============================================================
 const CHANGELOG = [
+  {
+    version: "v1.13",
+    date: "2026-04-29",
+    title: "Devis épuré : référence en titre, séparateurs, modalités de paiement, mentions auto-entrepreneur",
+    items: [
+      "Référence du devis : la chaîne brute « DEVIS-12-2026-04-26 » est désormais affichée comme « Devis n° 12-2026-04-26 », un peu plus grosse (16 px, gras) et en couleur de texte normale. Elle joue le rôle de titre du document, sans qu'il soit nécessaire d'ajouter un grand titre « DEVIS » séparé. Le stockage interne reste inchangé pour la compatibilité (la transformation se fait à l'affichage). Idem pour le débours (« Débours n° … ») et la facture (« Facture n° … »).",
+      "Lignes du détail : suppression des séparateurs horizontaux (border-bottom) entre chaque ligne. Le détail respire mieux, comme sur un devis professionnel. Les colonnes restent alignées par flexbox.",
+      "Pied de page : ajout de la mention « Auto-entrepreneur · TVA non applicable, art. 293 B du CGI » (au lieu de seulement la mention TVA). Mention légale standard pour un photographe en micro-entreprise.",
+      "Bloc « Bon pour accord » : suppression du cadre tirets (dashed) qui jurait avec le reste. Désormais simple trait de séparation au-dessus, comme les autres sections (Conditions de paiement, CGV).",
+      "Échéances de paiement : déplacées hors du bloc « Totaux ». Désormais dans une section dédiée « Modalités de paiement » sous les totaux, avec un titre en majuscules discrètes (comme les autres sections du devis). Plus clair pour le client : le total HT est isolé visuellement, puis on a la planification de paiement à part.",
+      "Saut de page avant CGV : séparateur visuel allégé (1 px solide au lieu de 2 px tirets, mention « page 2 » en bas-de-casse plus discrète). Pour le rendu papier, rien ne change."
+    ]
+  },
   {
     version: "v1.12",
     date: "2026-04-29",
