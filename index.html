@@ -194,6 +194,20 @@
   main h4{font-size:11px;font-weight:600;margin-top:14px;margin-bottom:6px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.04em}
   .encadres-grp{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:14px 16px;margin-bottom:14px}
   .encadres-grp > h4:first-of-type{margin-top:0}
+
+  /* Prestation decomposition table — compact, minimalist */
+  .presta-decomp{background:var(--surface-2);border:1px solid var(--border);border-radius:6px;padding:10px 12px;margin:10px 0 14px 0;max-width:540px}
+  .presta-decomp table{width:100%;border-collapse:collapse;font-size:12px}
+  .presta-decomp th{text-align:right;padding:4px 8px;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:.04em;font-size:10px;border-bottom:1px solid var(--border)}
+  .presta-decomp th.presta-final{color:var(--primary)}
+  .presta-decomp td{text-align:right;padding:8px;font-variant-numeric:tabular-nums;font-size:14px;font-weight:600}
+  .presta-decomp td.net.ok{color:var(--success)}
+  .presta-decomp td.net.bad{color:var(--danger)}
+  .presta-decomp td.muted{color:var(--text-muted);font-weight:500}
+  .presta-decomp td.strike{color:var(--text-dim);text-decoration:line-through;font-weight:500}
+  .presta-decomp td.presta-final{font-size:16px;font-weight:800}
+  .presta-decomp td.presta-final.declared{color:var(--primary)}
+  .presta-decomp td.presta-final.black{color:var(--warning)}
   .hint{font-size:11px;color:var(--text-dim);margin:-2px 0 6px}
 
   /* Cap field width so single-field rows don't span full main */
@@ -684,7 +698,7 @@
   .contact-list-meta{display:flex;flex-wrap:wrap;gap:10px;font-size:11px;color:var(--text-muted)}
 
   /* Large editor modal (point 6) */
-  .modal-card.modal-card-lg{max-width:1000px;max-height:72vh;display:flex;flex-direction:column}
+  .modal-card.modal-card-lg{max-width:1100px;max-height:70vh;display:flex;flex-direction:column}
   .text-editor-toolbar{display:flex;gap:4px;flex-wrap:wrap;padding:8px;background:var(--surface);border:1px solid var(--border);border-radius:6px;margin-bottom:8px}
   .text-editor-toolbar .te-btn{background:transparent;border:1px solid transparent;color:var(--text-muted);padding:5px 9px;border-radius:4px;cursor:pointer;font:inherit;font-size:11px;font-weight:600}
   .text-editor-toolbar .te-btn:hover{background:var(--surface-hi);color:var(--text);border-color:var(--border)}
@@ -693,12 +707,14 @@
   /* Hide live actions (Imprimer, + Enregistrer dans Suivi) when devis is shown inside the snapshot modal */
   .view-devis-snapshot .dp-actions{display:none !important}
   /* Read-only display under each encadré in Mission */
-  .rich-display-wrap{position:relative;max-width:520px}
-  .rich-display{min-height:80px;padding:9px 12px 9px 12px;padding-right:42px;border:1px solid var(--border-light);border-radius:6px;background:var(--surface);color:var(--text);font-size:13px;line-height:1.5;white-space:normal;overflow:hidden}
+  .rich-display-wrap{position:relative;max-width:880px}
+  .rich-display{padding:7px 42px 7px 12px;border:1px solid var(--border-light);border-radius:6px;background:var(--surface);color:var(--text-muted);font-size:12.5px;line-height:1.4;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;height:32px;display:flex;align-items:center}
+  .rich-display .rich-display-summary{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis}
   .rich-display:empty::before{content:attr(data-placeholder);color:var(--text-dim)}
   .rich-display-placeholder{color:var(--text-dim);font-style:italic}
-  .rich-display p, .rich-display div{margin:0}
-  .rich-display-edit{position:absolute;top:6px;right:6px;background:var(--surface-2);border:1px solid var(--border-light);color:var(--text-muted);cursor:pointer;border-radius:4px;width:28px;height:28px;font-size:14px;line-height:1;display:flex;align-items:center;justify-content:center;font-weight:700;z-index:2}
+  .rich-display p, .rich-display div, .rich-display br{display:inline}
+  .rich-display *{display:inline !important;font-weight:inherit !important;font-style:inherit !important}
+  .rich-display-edit{position:absolute;top:3px;right:3px;background:var(--surface-2);border:1px solid var(--border-light);color:var(--text-muted);cursor:pointer;border-radius:4px;width:26px;height:26px;font-size:13px;line-height:1;display:flex;align-items:center;justify-content:center;font-weight:700;z-index:2}
   .rich-display-edit:hover{color:var(--primary);border-color:var(--primary)}
 
   /* Editor modal toolbar */
@@ -2164,15 +2180,21 @@ function rTextEditorModal() {
 }
 
 function renderLockedTextarea(field, value, label, placeholder) {
-  // Display the rich-text content read-only. Click ✏ to open the modal editor.
+  // Compact summary: strip all HTML tags, show first ~120 chars on a single line.
   const v = value || "";
-  const previewHtml = v ? richDisplayHtml(v) : `<span class="rich-display-placeholder">${esc(placeholder)}</span>`;
-  return `<div class="row"><div class="field lg"><label>${esc(label)}</label>
-    <div class="rich-display-wrap">
-      <div class="rich-display">${previewHtml}</div>
-      <button type="button" class="rich-display-edit" onclick="textEditorOpen('${field}')" title="Modifier">✏</button>
-    </div>
-  </div></div>`;
+  let summary;
+  if (v) {
+    // Strip HTML tags safely, normalize whitespace, truncate
+    const plain = v.replace(/<br\s*\/?>/gi, " ").replace(/<\/(p|div|li|h[1-6])>/gi, " ").replace(/<[^>]+>/g, "").replace(/&nbsp;/g, " ").replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/\s+/g, " ").trim();
+    const truncated = plain.length > 120 ? plain.slice(0, 120) + "…" : plain;
+    summary = `<span class="rich-display-summary">${esc(truncated)}</span>`;
+  } else {
+    summary = `<span class="rich-display-placeholder">${esc(placeholder || "Vide — cliquer pour saisir")}</span>`;
+  }
+  return `<div class="rich-display-wrap">
+    <div class="rich-display">${summary}</div>
+    <button type="button" class="rich-display-edit" onclick="textEditorOpen('${field}')" title="Modifier">✏</button>
+  </div>`;
 }
 
 
@@ -2232,8 +2254,6 @@ function rMS() {
     <span id="savedFlash" class="saved" style="position:absolute;top:18px;right:18px"></span>
 
     <h3>Informations</h3>
-
-    <h4>Date du devis</h4>
     <div class="row">
       <div class="field narrow"><label>Date d'émission</label><input type="date" value="${esc(d.dateEmission)}" oninput="upd('mission.dateEmission', this.value)"></div>
       <div class="field narrow"><label>Validité</label><input type="date" value="${esc(d.dateValidite)}" oninput="upd('mission.dateValidite', this.value)"></div>
@@ -2246,8 +2266,15 @@ function rMS() {
     </div>
     ${rContactPickerModal()}
 
-    <h4>Régime</h4>
-    <div class="row" style="align-items:flex-end">
+    <h3>Prestation</h3>
+
+    <div class="row" style="align-items:flex-end;flex-wrap:wrap">
+      <div class="field"><label>Type de prestation</label>
+        <select onchange="pickObject(this.value)">
+          <option value="">— choisir —</option>
+          ${(S.tarifs.catalog || DEFAULT_CATALOG).map(c => `<option value="${c.k}" ${d.object===c.k?"selected":""}>${esc(c.l)}</option>`).join("")}
+        </select>
+      </div>
       <div class="field"><label>Statut</label>
         <div class="seg">
           <button class="${declare?"on":""}" onclick="updMissionDeclare(true)">✓ Déclaré</button>
@@ -2267,24 +2294,10 @@ function rMS() {
       </div>
     </div>
 
-    <h3>Prestation</h3>
-
-    <h4>Type de prestation</h4>
-    <div class="row"><div class="field"><label>Type de prestation</label>
-      <select onchange="pickObject(this.value)">
-        <option value="">— choisir —</option>
-        ${(S.tarifs.catalog || DEFAULT_CATALOG).map(c => `<option value="${c.k}" ${d.object===c.k?"selected":""}>${esc(c.l)}</option>`).join("")}
-      </select>
-    </div></div>
-
     ${(() => {
       const declared = declare;
       const cat = (S.tarifs.catalog || DEFAULT_CATALOG).find(c => c.k === d.object);
-      if (!cat || !d.object) {
-        return `<div style="background:var(--surface-2);border:1px solid var(--border);border-radius:8px;padding:10px 14px;margin:8px 0 14px 0;max-width:680px;font-size:12px;color:var(--text-muted)">
-          Sélectionne une prestation ci-dessus pour voir le tarif applicable au devis.
-        </div>`;
-      }
+      if (!cat || !d.object) return "";
       const tm = tauxMatos();
       const final = num(cat.p);
       const urssafPct = num(d.urssafPct ?? 22);
@@ -2294,35 +2307,25 @@ function rMS() {
       const matos = tm.tauxAvecSecurite;
       const net = final > 0 ? r2(sansUrssaf - matos) : 0;
       const tarifApplique = declared ? final : sansUrssaf;
-      return `<div style="background:var(--surface-2);border:1px solid var(--border);border-radius:8px;padding:14px 16px;margin:8px 0 14px 0;max-width:680px">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;font-size:12.5px;color:var(--text-muted)">
-          <span><strong style="color:var(--text)">${esc(cat.l)}</strong> · décomposition tarifaire</span>
-          <a href="#" onclick="event.preventDefault();setTab('tarifs')" style="color:var(--text-muted);font-size:11px;text-decoration:underline">Modifier →</a>
-        </div>
-        <table style="width:100%;border-collapse:collapse;font-size:12px">
+      return `<div class="presta-decomp">
+        <table>
           <thead>
-            <tr style="border-bottom:1px solid var(--border)">
-              <th style="text-align:right;padding:6px 10px;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:.04em;font-size:10.5px">Net</th>
-              <th style="text-align:right;padding:6px 10px;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:.04em;font-size:10.5px">+ Matériel</th>
-              <th style="text-align:right;padding:6px 10px;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:.04em;font-size:10.5px">+ URSSAF</th>
-              <th style="text-align:right;padding:6px 10px;color:var(--primary);font-weight:600;text-transform:uppercase;letter-spacing:.04em;font-size:10.5px">= Tarif facturé</th>
+            <tr>
+              <th>Net</th>
+              <th>+ Matériel</th>
+              <th>+ URSSAF</th>
+              <th class="presta-final">= Tarif facturé</th>
             </tr>
           </thead>
           <tbody>
             <tr>
-              <td style="text-align:right;padding:8px 10px;color:${net >= 0 ? 'var(--success)' : 'var(--danger)'};font-variant-numeric:tabular-nums;font-weight:600;font-size:14px">${fmt(net)}</td>
-              <td style="text-align:right;padding:8px 10px;color:var(--text-muted);font-variant-numeric:tabular-nums;font-size:13px">${fmt(matos)}</td>
-              <td style="text-align:right;padding:8px 10px;color:${declared ? 'var(--text-muted)' : 'var(--text-dim)'};font-variant-numeric:tabular-nums;font-size:13px;${declared ? '' : 'text-decoration:line-through'}">${fmt(urssafAmount)}</td>
-              <td style="text-align:right;padding:8px 10px;color:${declared ? 'var(--primary)' : 'var(--warning)'};font-variant-numeric:tabular-nums;font-weight:800;font-size:16px">${fmt(tarifApplique)}/h</td>
+              <td class="net ${net >= 0 ? 'ok' : 'bad'}">${fmt(net)}</td>
+              <td class="muted">${fmt(matos)}</td>
+              <td class="${declared ? 'muted' : 'strike'}">${fmt(urssafAmount)}</td>
+              <td class="presta-final ${declared ? 'declared' : 'black'}">${fmt(tarifApplique)}/h</td>
             </tr>
           </tbody>
         </table>
-        <div style="font-size:11px;color:var(--text-dim);margin-top:8px">
-          ${declared
-            ? `Tarif déclaré (URSSAF ${urssafPct} % incluse) : <strong style="color:var(--primary)">${fmt(final)}/h</strong> facturé au client.`
-            : `Au black : <strong style="color:var(--warning)">${fmt(sansUrssaf)}/h</strong> facturé (URSSAF non appliquée).`
-          }
-        </div>
       </div>`;
     })()}
 
@@ -2385,24 +2388,21 @@ function rMS() {
       </div>`;
     })()}
 
-    <h4>Remise</h4>
-    <div class="row"><div class="field tiny"><label>Remise (%)</label><input type="number" step="1" min="0" max="100" value="${esc(d.remisePct)}" oninput="upd('mission.remisePct', this.value)"></div></div>
+    <div class="row" style="margin-top:14px"><div class="field tiny"><label>Remise (%)</label><input type="number" step="1" min="0" max="100" value="${esc(d.remisePct)}" oninput="upd('mission.remisePct', this.value)"></div></div>
 
     <h3>Encadrés du devis</h3>
 
-    <div class="encadres-grp">
-      <h4>Photographe (en-tête du devis)</h4>
-      ${renderLockedTextarea("photographe", d.photographe || "", "Vos coordonnées telles qu'elles apparaîtront en haut à gauche du devis", "Nom Prénom&#10;Statut (auto-entrepreneur, micro-entreprise…)&#10;Adresse&#10;Code postal Ville&#10;SIRET / numéro&#10;Téléphone · Email")}
+    <h4>Photographe (en-tête du devis)</h4>
+    ${renderLockedTextarea("photographe", d.photographe || "", "", "Vos coordonnées en haut à gauche du devis…")}
 
-      <h4>Conditions de paiement</h4>
-      ${renderLockedTextarea("conditionsPaiement", d.conditionsPaiement || "", "Texte affiché en bas du devis, sous le total", "Acompte de 30 % à la commande, solde de 70 % à la livraison.&#10;Règlement par virement bancaire.&#10;…")}
+    <h4>Conditions de paiement</h4>
+    ${renderLockedTextarea("conditionsPaiement", d.conditionsPaiement || "", "", "Texte en bas du devis, sous le total…")}
 
-      <h4>Bon pour accord</h4>
-      ${renderLockedTextarea("signatureBlock", d.signatureBlock || "", "Bloc affiché sous les conditions de paiement, pour la signature du client", "Fait à _______________, le ___ / ___ / _____&#10;&#10;Signature du client précédée de la mention « Bon pour accord » :")}
+    <h4>Bon pour accord</h4>
+    ${renderLockedTextarea("signatureBlock", d.signatureBlock || "", "", "Bloc de signature client…")}
 
-      <h4>Conditions générales de vente (CGV)</h4>
-      ${renderLockedTextarea("cgv", d.cgv || "", "Mentions légales et conditions générales de vente affichées en page 2 du devis", "Droits d'auteur, modalités d'utilisation des images, propriété intellectuelle…")}
-    </div>
+    <h4>Conditions générales de vente (CGV)</h4>
+    ${renderLockedTextarea("cgv", d.cgv || "", "", "Mentions légales et CGV (page 2 du devis)…")}
 
     ${rDevisPreview()}
   `;
