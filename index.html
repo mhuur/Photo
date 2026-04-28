@@ -128,6 +128,15 @@
   table.hist tbody.devis-grp.expanded .suv-row-actions,
   table.hist tbody.devis-grp.editing .suv-row-actions{opacity:1;pointer-events:auto}
   table.hist tr.suv-detail .suv-row-actions{opacity:1;pointer-events:auto}
+
+  /* Wrapper: paid-toggle (always visible) + suv-row-actions (hidden until hover) sit side by side */
+  .actions-cell{display:inline-flex;gap:8px;align-items:center;justify-content:flex-end;width:100%}
+
+  /* Paid toggle pill (Suivi: marquer une échéance comme payée) — always visible */
+  .paid-toggle{display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:11px;background:var(--surface-2);border:1px solid var(--border);color:var(--text-muted);font-size:11px;font-weight:600;cursor:pointer;user-select:none;transition:background .12s,color .12s,border-color .12s;line-height:1;white-space:nowrap;flex-shrink:0}
+  .paid-toggle input[type=checkbox]{display:none}
+  .paid-toggle:hover{background:var(--surface);color:var(--text);border-color:var(--border-light)}
+  .paid-toggle.on{background:var(--success-soft);border-color:var(--success);color:var(--success)}
   .btn.btn-vert{background:var(--success);color:#fff}.btn.btn-vert:hover{background:var(--success-dark);box-shadow:0 2px 8px rgba(34,197,94,.3)}
   .btn.btn-rouge{background:var(--danger);color:#fff}.btn.btn-rouge:hover{background:var(--danger-dark);box-shadow:0 2px 8px rgba(239,68,68,.3)}
   .btn.btn-gris{background:var(--text-dim);color:#fff}.btn.btn-gris:hover{background:var(--text-muted)}
@@ -372,6 +381,35 @@
   .devis-preview .dp-footer{margin-top:18px;padding-top:14px;border-top:1px solid var(--border-soft);font-size:13px;color:var(--text-dim);text-align:center;line-height:1.6}
   .devis-preview .dp-actions{display:flex;gap:10px;margin-top:18px;justify-content:flex-end}
   .devis-preview .dp-empty{text-align:center;padding:30px;color:var(--text-dim);font-size:13px}
+
+  /* Preview tabs (Devis / Débours / Facture) */
+  .preview-tabs-wrap{margin-top:32px;max-width:880px}
+  .preview-tabs-nav{display:flex;gap:4px;border-bottom:1px solid var(--border);margin-bottom:0;padding:0 4px}
+  .preview-tabs-nav button{background:transparent;border:0;border-bottom:2px solid transparent;color:var(--text-muted);padding:10px 18px;cursor:pointer;font:inherit;font-size:13px;font-weight:500;transition:color .12s,border-color .12s;display:inline-flex;align-items:center;gap:6px;margin-bottom:-1px;border-radius:6px 6px 0 0}
+  .preview-tabs-nav button:hover{color:var(--text);background:var(--surface)}
+  .preview-tabs-nav button.on{color:var(--primary);border-bottom-color:var(--primary);background:var(--primary-soft)}
+  .preview-tabs-nav button .badge{font-size:11px;padding:1px 6px;background:var(--accent);color:#062b27;border-radius:8px;font-weight:600;margin-left:2px}
+  .preview-tabs-nav button.on .badge{background:var(--primary);color:#fff}
+  .preview-tabs-body{margin-top:0}
+  .preview-tabs-body .devis-preview{margin-top:0;border-top-left-radius:0}
+
+  /* Doc title (DÉBOURS / FACTURE) inside the preview */
+  .devis-preview .dp-doc-title{font-size:24px;font-weight:800;letter-spacing:-.01em;margin:18px 0 4px;text-transform:uppercase}
+  .devis-preview .dp-doc-sub{font-size:13px;color:var(--text-muted);margin-bottom:14px}
+
+  /* Receipt section in Facture preview */
+  .devis-preview .dp-receipt{margin-top:18px;padding:14px 16px;background:var(--surface-2);border:1px solid var(--border-light);border-radius:8px}
+  .devis-preview .dp-receipt h4{margin:0 0 10px;font-size:13px;font-weight:600;color:var(--text-muted);text-transform:none;letter-spacing:0;border:0;padding:0}
+  .devis-preview .dp-receipt-list{margin-bottom:8px}
+  .devis-preview .dp-receipt-line{display:flex;justify-content:space-between;align-items:baseline;padding:4px 0;font-size:13px}
+  .devis-preview .dp-receipt-line .lbl{color:var(--text-muted)}
+  .devis-preview .dp-receipt-line .lbl .dim{color:var(--text-dim)}
+  .devis-preview .dp-receipt-line .amt{font-variant-numeric:tabular-nums;color:var(--text)}
+  .devis-preview .dp-receipt-line.total{padding-top:8px;border-top:1px solid var(--border);font-weight:600}
+  .devis-preview .dp-receipt-line.total .lbl{color:var(--text)}
+  .devis-preview .dp-receipt-line.restant{font-weight:700;font-size:15px;padding-top:6px}
+  .devis-preview .dp-receipt-line.restant .lbl{color:var(--text)}
+  .devis-preview .dp-receipt-line.restant.paid{font-size:15px}
 
   /* Devis header 2-col: photographer left, client+meta right */
   .devis-preview .dp-header-grid{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:18px}
@@ -1485,6 +1523,219 @@ function rDevisPreview() {
   </div>`;
 }
 
+// ============ ACTIVE PREVIEW TAB STATE ============
+let activePreviewTab = "devis"; // 'devis' | 'debours' | 'facture'
+window.setPreviewTab = function(tab) {
+  activePreviewTab = tab;
+  render();
+};
+
+// ============ DÉBOURS PREVIEW ============
+function rDeboursPreview() {
+  const d = S.mission;
+  const t = totals();
+  if (t.debours <= 0) {
+    return `<div class="devis-preview"><div class="dp-empty">Pas de frais débours sur ce devis.<br><span style="font-size:13px;color:var(--text-dim)">Ajoutez du matériel en mode « Débours » dans Description prestation, ou choisissez « Frais débours » pour le déplacement.</span></div></div>`;
+  }
+  const sel = d.client.id ? S.clients.entries.find(x => x.id === d.client.id) : null;
+  const cli = sel || d.client;
+  const ref = (d.ref || "DEVIS-…-…").replace(/^DEVIS/, "DEBOURS");
+
+  // Build débours items
+  let linesHtml = "";
+  if ((d.deplacement.devis || "principal") === "debours" && t.depl > 0) {
+    const mode = d.deplacement.mode || "voiture";
+    const tauxKm = num(d.deplacement.tauxKm) || 0.40;
+    const trajet = num(d.deplacement.trajetH) * 40;
+    const deplDetail = mode === "voiture"
+      ? `${num(d.deplacement.km).toFixed(1).replace(".",",")} km × ${tauxKm.toFixed(2).replace(".",",")} €/km${num(d.deplacement.peages) > 0 ? ` + ${fmt(num(d.deplacement.peages))} péages` : ""}${trajet > 0 ? ` + ${num(d.deplacement.trajetH)} h trajet` : ""}`
+      : `Billets : ${fmt(num(d.deplacement.ticket))}${trajet > 0 ? ` + ${num(d.deplacement.trajetH)} h trajet` : ""}`;
+    linesHtml += `<div class="dp-line">
+      <div class="lbl">Déplacement<div class="desc">${esc(deplDetail)}</div></div>
+      <div class="qty"></div>
+      <div class="amt">${fmt(t.depl)}</div>
+    </div>`;
+  }
+  for (const l of (d.lignes || [])) {
+    if (l.type === "materiel" && l.devis === "debours") {
+      linesHtml += `<div class="dp-line">
+        <div class="lbl">${esc(l.intitule || "(Sans intitulé)")}${l.description ? `<div class="desc">${esc(l.description)}</div>` : ""}</div>
+        <div class="qty"></div>
+        <div class="amt">${fmt(num(l.prix))}</div>
+      </div>`;
+    }
+  }
+
+  return `<div class="devis-preview" id="deboursPreview">
+    <div class="dp-header-grid">
+      <div class="dp-header-left ${(d.photographe || "").trim() ? "" : "empty"}">${(d.photographe || "").trim() ? richDisplayHtml(d.photographe) : "Renseigner vos coordonnées dans la section « Photographe »."}</div>
+      <div class="dp-header-right">
+        <div class="dp-meta-block">
+          <div class="ref" style="color:var(--accent)">${esc(ref)}</div>
+          <div>Émission : <strong>${dateFR(d.dateEmission) || "—"}</strong></div>
+        </div>
+        <div class="dp-client-block">
+          <span class="num">${esc(cli.num || "—")}</span>
+          <span class="name">${esc(cli.name || "(Sélectionner un client)")}</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="dp-doc-title" style="color:var(--accent)">DÉBOURS</div>
+    <div class="dp-doc-sub">Frais à rembourser sur justificatifs</div>
+
+    <div class="dp-section">
+      <h4 style="color:var(--accent)">Détail</h4>
+      ${linesHtml}
+    </div>
+
+    <div class="dp-totals">
+      <div class="dp-line grand" style="color:var(--accent)"><span class="lbl">Total à rembourser</span><span class="amt">${fmt(t.debours)}</span></div>
+    </div>
+
+    <div class="dp-footer">À régler sur présentation des justificatifs joints.</div>
+
+    <div class="dp-actions">
+      <button class="btn ghost" onclick="window.print()">🖨️ Imprimer</button>
+    </div>
+  </div>`;
+}
+
+// ============ FACTURE PREVIEW ============
+function rFacturePreview(opts) {
+  // opts: { paidEntries: [{label, amount, date}] } — list of paid échéances. If null, treats as draft (paid=0).
+  const d = S.mission;
+  const t = totals();
+  const hasClient = !!(d.client && (d.client.id || d.client.name));
+  const hasContent = (d.lignes || []).length > 0;
+  if (!hasClient || !hasContent) {
+    return `<div class="devis-preview"><div class="dp-empty">La facture sera disponible une fois le devis rempli (client + au moins une ligne).<br><span style="font-size:13px;color:var(--text-dim)">Pour générer une facture avec un montant payé, va dans Suivi et marque les échéances comme payées.</span></div></div>`;
+  }
+  const sel = d.client.id ? S.clients.entries.find(x => x.id === d.client.id) : null;
+  const cli = sel || d.client;
+  const ref = (d.ref || "DEVIS-…-…").replace(/^DEVIS/, "FACTURE");
+
+  const tarifH = t.tarifHEff || t.tarifH;
+  const cat = (S.tarifs.catalog || DEFAULT_CATALOG).find(c => c.k === d.object);
+
+  // Build line items HTML (same as devis, without débours)
+  let linesHtml = "";
+  for (const l of (d.lignes || [])) {
+    if (l.type === "heures") {
+      const h = num(l.duree) * (l.unit === "j" ? HOURS_PER_DAY : 1);
+      const amount = h * tarifH;
+      linesHtml += `<div class="dp-line">
+        <div class="lbl">${esc(l.intitule || "(Sans intitulé)")}${l.description ? `<div class="desc">${esc(l.description)}</div>` : ""}</div>
+        <div class="qty">${num(l.duree).toFixed(2).replace(".",",")} ${l.unit === "j" ? "jour(s) × 8h" : "h"} × ${tarifH.toFixed(2).replace(".",",")} €/h</div>
+        <div class="amt">${fmt(amount)}</div>
+      </div>`;
+    } else if (l.type === "materiel" && l.devis !== "debours") {
+      linesHtml += `<div class="dp-line">
+        <div class="lbl">${esc(l.intitule || "(Sans intitulé)")}<div class="desc">${l.description ? esc(l.description) : "Matériel"}</div></div>
+        <div class="qty"></div>
+        <div class="amt">${fmt(num(l.prix))}</div>
+      </div>`;
+    }
+  }
+  // Déplacement line if mode is "principal"
+  const deplDevisMode = t.effectiveDeplMode || "principal";
+  if (deplDevisMode === "principal" && t.depl > 0) {
+    const mode = d.deplacement.mode || "voiture";
+    const tauxKm = num(d.deplacement.tauxKm) || 0.40;
+    const trajet = num(d.deplacement.trajetH) * 40;
+    const deplDetail = mode === "voiture"
+      ? `${num(d.deplacement.km).toFixed(1).replace(".",",")} km × ${tauxKm.toFixed(2).replace(".",",")} €/km${num(d.deplacement.peages) > 0 ? ` + ${fmt(num(d.deplacement.peages))} péages` : ""}${trajet > 0 ? ` + ${num(d.deplacement.trajetH)} h trajet` : ""}`
+      : `Billets : ${fmt(num(d.deplacement.ticket))}${trajet > 0 ? ` + ${num(d.deplacement.trajetH)} h trajet` : ""}`;
+    linesHtml += `<div class="dp-line">
+      <div class="lbl">Déplacement<div class="desc">${esc(deplDetail)}</div></div>
+      <div class="qty"></div>
+      <div class="amt">${fmt(t.depl)}</div>
+    </div>`;
+  }
+
+  // Payment summary
+  const paidEntries = (opts && Array.isArray(opts.paidEntries)) ? opts.paidEntries : [];
+  const totalPaid = r2(paidEntries.reduce((s, p) => s + num(p.amount), 0));
+  const restant = r2(t.total - totalPaid);
+  const fullyPaid = restant <= 0.01;
+
+  return `<div class="devis-preview" id="facturePreview">
+    <div class="dp-header-grid">
+      <div class="dp-header-left ${(d.photographe || "").trim() ? "" : "empty"}">${(d.photographe || "").trim() ? richDisplayHtml(d.photographe) : "Renseigner vos coordonnées dans la section « Photographe »."}</div>
+      <div class="dp-header-right">
+        <div class="dp-meta-block">
+          <div class="ref" style="color:var(--success)">${esc(ref)}</div>
+          <div>Émission : <strong>${dateFR(d.dateEmission) || "—"}</strong></div>
+        </div>
+        <div class="dp-client-block">
+          <span class="num">${esc(cli.num || "—")}</span>
+          <span class="name">${esc(cli.name || "(Sélectionner un client)")}</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="dp-doc-title" style="color:var(--success)">FACTURE</div>
+
+    ${cat ? `<div class="dp-section">
+      <h4>Prestation</h4>
+      <div class="dp-client"><div class="name">${esc(cat.l)}</div></div>
+    </div>` : ""}
+
+    <div class="dp-section">
+      <h4>Détail</h4>
+      ${linesHtml || `<div class="dp-empty" style="padding:14px">Aucune ligne.</div>`}
+    </div>
+
+    <div class="dp-totals">
+      <div class="dp-line"><span class="lbl">Sous-total</span><span class="amt">${fmt(t.subtotal)}</span></div>
+      ${t.remise > 0 ? `<div class="dp-line"><span class="lbl">Remise (${num(d.remisePct).toString().replace(".",",")} %)</span><span class="amt">−${fmt(t.remise)}</span></div>` : ""}
+      <div class="dp-line grand"><span class="lbl">Total HT</span><span class="amt">${fmt(t.total)}</span></div>
+    </div>
+
+    <div class="dp-receipt">
+      <h4>Récapitulatif paiement</h4>
+      ${paidEntries.length > 0 ? `<div class="dp-receipt-list">
+        ${paidEntries.map(p => `<div class="dp-receipt-line">
+          <span class="lbl">${esc(p.label)}${p.date ? ` — <span class="dim">${esc(p.date)}</span>` : ""}</span>
+          <span class="amt">${fmt(p.amount)}</span>
+        </div>`).join("")}
+      </div>` : ""}
+      <div class="dp-receipt-line total"><span class="lbl">Total payé</span><span class="amt" style="color:var(--success)">${fmt(totalPaid)}</span></div>
+      <div class="dp-receipt-line restant ${fullyPaid ? 'paid' : ''}"><span class="lbl">${fullyPaid ? "✓ Soldée" : "Reste à payer"}</span><span class="amt" style="color:${fullyPaid ? 'var(--success)' : 'var(--warning)'}">${fmt(restant)}</span></div>
+    </div>
+
+    <div class="dp-footer">TVA non applicable, art. 293 B du CGI</div>
+
+    <div class="dp-actions">
+      <button class="btn ghost" onclick="window.print()">🖨️ Imprimer</button>
+    </div>
+  </div>`;
+}
+
+// ============ TABBED PREVIEW WRAPPER ============
+function rPreviewTabs() {
+  const d = S.mission;
+  const t = totals();
+  const hasDebours = t.debours > 0;
+  const hasContent = (d.lignes || []).length > 0;
+
+  let bodyHtml = "";
+  if (activePreviewTab === "devis") bodyHtml = rDevisPreview();
+  else if (activePreviewTab === "debours") bodyHtml = rDeboursPreview();
+  else if (activePreviewTab === "facture") bodyHtml = rFacturePreview();
+
+  return `<div class="preview-tabs-wrap">
+    <div class="preview-tabs-nav">
+      <button class="${activePreviewTab==='devis'?'on':''}" onclick="setPreviewTab('devis')">📄 Devis</button>
+      <button class="${activePreviewTab==='debours'?'on':''} ${hasDebours?'has':''}" onclick="setPreviewTab('debours')">💸 Débours${hasDebours ? ` <span class="badge">${fmt(t.debours)}</span>` : ""}</button>
+      <button class="${activePreviewTab==='facture'?'on':''}" onclick="setPreviewTab('facture')">🧾 Facture</button>
+    </div>
+    <div class="preview-tabs-body">
+      ${bodyHtml}
+    </div>
+  </div>`;
+}
+
 // ============ CLIENT PICKER (Mission) ============
 let cliPickQuery = "";
 let cliPickCreating = false;
@@ -2057,7 +2308,8 @@ function render() {
     </aside>
     <main>${view}</main>
     ${rTextEditorModal()}
-    ${rViewDevisModal()}`;
+    ${rViewDevisModal()}
+    ${rViewFactureModal()}`;
 }
 
 // State: track if picker is force-opened (e.g. after user clicks "Changer de contact")
@@ -2344,6 +2596,62 @@ function rViewDevisModal() {
   </div>`;
 }
 
+function rViewFactureModal() {
+  if (!viewFactureModal) return "";
+  const devisId = viewFactureModal.devisId;
+  const dv = S.suivi.devis && S.suivi.devis[devisId];
+  const lignes = (S.suivi.entries || []).filter(e => e.devisId === devisId);
+  const refRaw = (dv && dv.ref) || devisId;
+  const factureRef = refRaw.replace(/^DEVIS/, "FACTURE") || `FACTURE-${devisId}`;
+  // Compute totals
+  const totalDevis = lignes.reduce((s, e) => s + num(e.montant), 0);
+  const paidLines = lignes.filter(e => e.paid);
+  const totalPaid = paidLines.reduce((s, e) => s + num(e.montant), 0);
+  const restant = r2(totalDevis - totalPaid);
+  const fullyPaid = restant <= 0.01 && totalPaid > 0;
+  const snapshot = (dv && dv.snapshotHtml) || "";
+  const client = (dv && dv.snapshotClient) || (lignes[0] && lignes[0].client) || "—";
+  const when = (dv && dv.snapshotAt) ? new Date(dv.snapshotAt).toLocaleString("fr-FR") : null;
+
+  // Build receipt section
+  const receiptHtml = `<div class="dp-receipt" style="margin:18px 0 0">
+    <h4>Récapitulatif paiement</h4>
+    ${paidLines.length > 0 ? `<div class="dp-receipt-list">
+      ${paidLines.map(p => `<div class="dp-receipt-line">
+        <span class="lbl">${esc(p.echeance || "Paiement")}${p.paidAt ? ` — <span class="dim">payée le ${esc(dateFR(p.paidAt))}</span>` : ""}</span>
+        <span class="amt">${fmt(p.montant)}</span>
+      </div>`).join("")}
+    </div>` : `<div class="dp-receipt-line"><span class="lbl dim" style="font-style:italic">Aucune échéance n'est marquée comme payée pour l'instant.</span></div>`}
+    <div class="dp-receipt-line total"><span class="lbl">Total payé</span><span class="amt" style="color:var(--success)">${fmt(totalPaid)}</span></div>
+    <div class="dp-receipt-line restant ${fullyPaid ? 'paid' : ''}"><span class="lbl">${fullyPaid ? "✓ Soldée" : "Reste à payer"}</span><span class="amt" style="color:${fullyPaid ? 'var(--success)' : 'var(--warning)'}">${fmt(restant)}</span></div>
+  </div>`;
+
+  // Build the facture body: snapshot HTML (with FACTURE prefix swapped) + receipt section
+  let body;
+  if (snapshot) {
+    // Replace DEVIS → FACTURE in the snapshot ref display, and primary color → success color for the title
+    const snapshotFacture = snapshot
+      .replace(/(<div class="ref"[^>]*>)([^<]*)(<\/div>)/, (m, a, ref, c) => `${a}${ref.replace(/^DEVIS/, "FACTURE")}${c}`);
+    body = `<div class="devis-preview view-devis-snapshot">${snapshotFacture}${receiptHtml}</div>`;
+  } else {
+    body = `<div class="empty" style="padding:40px;text-align:center">
+      Aucun snapshot devis disponible.<br><span style="font-size:13px;color:var(--text-dim)">La facture est générée à partir du snapshot du devis émis. Émets d'abord le devis depuis l'onglet Devis (« + Enregistrer dans Suivi »).</span>
+    </div>`;
+  }
+
+  return `<div class="modal-overlay" onclick="if(event.target===this)viewFactureClose()">
+    <div class="modal-card modal-card-lg">
+      <div class="modal-title" style="color:var(--success)">🧾 Facture ${esc(factureRef)} — ${esc(client)}</div>
+      ${when ? `<div class="modal-sub">Devis émis le ${esc(when)} · ${paidLines.length}/${lignes.length} échéance${lignes.length > 1 ? "s" : ""} payée${paidLines.length > 1 ? "s" : ""}</div>` : ""}
+      ${body}
+      <div class="modal-actions">
+        ${snapshot ? `<button class="btn ghost" onclick="viewFacturePrint()">🖨️ Imprimer</button>` : ""}
+        <button class="btn" onclick="viewFactureClose()">Fermer</button>
+      </div>
+    </div>
+  </div>`;
+}
+
 function tarifBreakdown(includeDepl) {
   // Compute per-hour breakdown: Net / +Déplacement / +Matériel / +URSSAF / =Tarif facturé
   // includeDepl=true → also include deplacement spread (only effective if mode is "taux")
@@ -2556,7 +2864,7 @@ function rMS() {
     <h4>Conditions générales de vente (CGV)</h4>
     ${renderLockedTextarea("cgv", d.cgv || "", "", "Mentions légales et CGV (page 2 du devis)…")}
 
-    ${rDevisPreview()}
+    ${rPreviewTabs()}
   `;
 }
 
@@ -3377,6 +3685,35 @@ function suiviToggle(id) {
 }
 window.suiviToggle = suiviToggle;
 
+// Toggle paid status on a Suivi entry (échéance line)
+function suiviTogglePaid(id) {
+  const e = S.suivi.entries.find(x => x.id === id);
+  if (!e) return;
+  e.paid = !e.paid;
+  if (e.paid && !e.paidAt) {
+    e.paidAt = new Date().toISOString().slice(0, 10);
+  } else if (!e.paid) {
+    delete e.paidAt;
+  }
+  save();
+  render();
+}
+window.suiviTogglePaid = suiviTogglePaid;
+
+// Facture viewer modal state
+let viewFactureModal = null; // { devisId }
+window.viewFactureOpen = function(devisId) {
+  viewFactureModal = { devisId };
+  render();
+};
+window.viewFactureClose = function() {
+  viewFactureModal = null;
+  render();
+};
+window.viewFacturePrint = function() {
+  window.print();
+};
+
 function suiviGroupToggle(devisId) {
   if (suiviGroupExpanded === devisId) {
     suiviGroupExpanded = null;
@@ -3557,11 +3894,18 @@ function rSV() {
           <td><strong>${esc(e.client) || "—"}</strong></td>
           <td class="amt">${fmt(e.montant)}</td>
           <td class="actions" onclick="${stop}">
-            <div class="suv-row-actions">
-              ${suiviActionsHtml(e)}
-              <button class="ico-btn" title="Voir le devis émis" onclick="viewDevisOpen('${g.devisId}')">👁</button>
-              <button class="ico-btn" title="Modifier les détails de la ligne" onclick="suiviToggle('${e.id}')">⋮</button>
-              <button class="ico-btn" title="Supprimer le devis" onclick="if(confirm('Supprimer ce devis ?'))suiviDelDevis('${g.devisId}')">×</button>
+            <div class="actions-cell">
+              <label class="paid-toggle ${e.paid?'on':''}" title="Marquer cette échéance comme payée">
+                <input type="checkbox" ${e.paid?'checked':''} onclick="suiviTogglePaid('${e.id}')">
+                <span>${e.paid?'✓ Payée':'Payée ?'}</span>
+              </label>
+              <div class="suv-row-actions">
+                ${suiviActionsHtml(e)}
+                <button class="ico-btn" title="Voir le devis émis" onclick="viewDevisOpen('${g.devisId}')">👁</button>
+                <button class="ico-btn" title="Voir / générer la facture" onclick="viewFactureOpen('${g.devisId}')">🧾</button>
+                <button class="ico-btn" title="Modifier les détails de la ligne" onclick="suiviToggle('${e.id}')">⋮</button>
+                <button class="ico-btn" title="Supprimer le devis" onclick="if(confirm('Supprimer ce devis ?'))suiviDelDevis('${g.devisId}')">×</button>
+              </div>
             </div>
           </td>
         </tr>`;
@@ -3588,6 +3932,7 @@ function rSV() {
           <div class="suv-row-actions">
             ${devisActionsHtml(g)}
             <button class="ico-btn" title="Voir le devis émis" onclick="viewDevisOpen('${g.devisId}')">👁</button>
+            <button class="ico-btn" title="Voir / générer la facture" onclick="viewFactureOpen('${g.devisId}')">🧾</button>
             <button class="ico-btn" title="Modifier la référence du devis" onclick="suiviGroupEditRef('${g.devisId}')">⋮</button>
             <button class="ico-btn" title="Supprimer le devis" onclick="if(confirm('Supprimer ce devis et toutes ses lignes ?'))suiviDelDevis('${g.devisId}')">×</button>
           </div>
@@ -3621,10 +3966,16 @@ function rSV() {
           <td colspan="3" class="sub-lib">${lib}</td>
           <td class="amt">${fmt(e.montant)}</td>
           <td class="actions">
-            <div class="suv-row-actions">
-              ${suiviActionsHtml(e, { hidePhase1: true })}
-              <button class="ico-btn" title="Modifier les détails de la ligne" onclick="suiviToggle('${e.id}')">⋮</button>
-              <button class="ico-btn" title="Supprimer cette ligne" onclick="if(confirm('Supprimer cette ligne du devis ?'))suiviDel('${e.id}')">×</button>
+            <div class="actions-cell">
+              <label class="paid-toggle ${e.paid?'on':''}" title="Marquer cette échéance comme payée">
+                <input type="checkbox" ${e.paid?'checked':''} onclick="suiviTogglePaid('${e.id}')">
+                <span>${e.paid?'✓ Payée':'Payée ?'}</span>
+              </label>
+              <div class="suv-row-actions">
+                ${suiviActionsHtml(e, { hidePhase1: true })}
+                <button class="ico-btn" title="Modifier les détails de la ligne" onclick="suiviToggle('${e.id}')">⋮</button>
+                <button class="ico-btn" title="Supprimer cette ligne" onclick="if(confirm('Supprimer cette ligne du devis ?'))suiviDel('${e.id}')">×</button>
+              </div>
             </div>
           </td>
         </tr>`;
@@ -4949,6 +5300,19 @@ function rTR() {
 // Most recent version FIRST.
 // =============================================================
 const CHANGELOG = [
+  {
+    version: "v1.10",
+    date: "2026-04-29",
+    title: "Onglets Devis / Débours / Facture + suivi des paiements par échéance",
+    items: [
+      "Espace d'aperçu de l'onglet Mission : 3 onglets en haut pour basculer entre les 3 documents (📄 Devis · 💸 Débours · 🧾 Facture). Un seul affiché à la fois pour rester compact. Devis sélectionné par défaut.",
+      "Onglet Débours : même structure que le devis mais avec une référence « DEBOURS-… » au lieu de « DEVIS-… », un titre DÉBOURS en orange, et seulement les lignes en mode débours (matériel + déplacement si applicable). Affiche un message explicite quand il n'y a pas de débours.",
+      "Onglet Facture : même structure que le devis mais avec une référence « FACTURE-… », un titre FACTURE en vert, et un bloc « Récapitulatif paiement » à la fin (style reçu) avec « Total payé » / « Reste à payer » / dates. Dans la vue Mission, affiche par défaut 0 € payé (la vraie facture se génère depuis Suivi).",
+      "Suivi : nouvelle pastille « Payée » à gauche de chaque ligne d'échéance (et sur les devis à ligne unique). Cliquable, persiste l'état (payée/non payée) avec date automatique. Toujours visible (pas besoin de survoler la ligne).",
+      "Suivi : nouveau bouton 🧾 par devis pour ouvrir la facture dans une modale. La facture reprend le snapshot du devis émis (avec swap DEVIS → FACTURE dans la référence) + un récapitulatif paiement calculé en temps réel à partir des échéances cochées « payée ».",
+      "Quand toutes les échéances d'un devis sont marquées payées, la modale facture affiche « ✓ Soldée » dans la ligne Reste à payer."
+    ]
+  },
   {
     version: "v1.9",
     date: "2026-04-29",
