@@ -360,12 +360,21 @@
   .devis-page-break{display:block;height:1px;margin:30px 0;border-top:2px dashed var(--border-light);position:relative}
   .devis-page-break::before{content:"— Page 2 —";position:absolute;top:-9px;left:50%;transform:translateX(-50%);background:var(--surface-2);padding:0 12px;font-size:10px;color:var(--text-dim);text-transform:uppercase;letter-spacing:.08em}
   @media print {
-    /* Hide everything by default */
+    /* === ISOLATION === */
+    /* Hide everything except the devis preview */
     body * { visibility: hidden !important; }
-    /* Show only the devis preview (live or modal snapshot) */
     .devis-preview, .devis-preview *,
     .view-devis-snapshot, .view-devis-snapshot * { visibility: visible !important; }
-    /* Position the printed devis at top of page */
+
+    /* Page setup */
+    @page {
+      size: A4;
+      margin: 18mm 16mm 18mm 16mm;
+    }
+
+    body, html { background: #fff !important; margin: 0 !important; padding: 0 !important; }
+
+    /* === DOCUMENT CONTAINER === */
     .devis-preview, .view-devis-snapshot {
       position: absolute !important;
       left: 0; top: 0; right: 0;
@@ -376,11 +385,14 @@
       border: 0 !important;
       box-shadow: none !important;
       background: #fff !important;
-      color: #000 !important;
-      font-family: Georgia, "Times New Roman", serif !important;
-      font-size: 11pt !important;
-      line-height: 1.5 !important;
+      color: #1a1a1a !important;
+      font-family: -apple-system, "Segoe UI", "Helvetica Neue", Helvetica, Arial, sans-serif !important;
+      font-size: 10.5pt !important;
+      line-height: 1.55 !important;
+      letter-spacing: -0.005em !important;
     }
+
+    /* Modal wrapper neutralization (when printing from snapshot modal) */
     .modal-overlay, .modal-card {
       position: static !important;
       background: #fff !important;
@@ -389,64 +401,184 @@
       padding: 0 !important;
       max-height: none !important;
       overflow: visible !important;
+      display: block !important;
     }
     .modal-title, .modal-sub, .modal-actions { display: none !important; }
-    /* Hide all buttons, action bars, and interactive elements in the printed devis */
+
+    /* Hide all interactive elements */
     .devis-preview .dp-actions, .devis-preview button,
     .view-devis-snapshot .dp-actions, .view-devis-snapshot button { display: none !important; }
-    /* Force black & white */
+
+    /* === COLORS: Black & white only === */
     .devis-preview *, .view-devis-snapshot * {
-      color: #000 !important;
+      color: #1a1a1a !important;
       background: transparent !important;
       background-color: transparent !important;
       box-shadow: none !important;
       text-shadow: none !important;
     }
-    /* Header layout (photographe + ref/dates + client) */
+
+    /* === HEADER (photographe / ref / client) === */
     .devis-preview .dp-header-grid, .view-devis-snapshot .dp-header-grid {
       display: grid !important;
       grid-template-columns: 1fr 1fr !important;
-      gap: 24pt !important;
-      padding-bottom: 12pt !important;
-      border-bottom: 1.5pt solid #000 !important;
-      margin-bottom: 18pt !important;
+      gap: 32pt !important;
+      padding: 0 0 18pt 0 !important;
+      margin-bottom: 24pt !important;
+      border-bottom: 1.5pt solid #1a1a1a !important;
     }
-    /* Headings */
-    .devis-preview h1, .view-devis-snapshot h1 { font-size: 24pt !important; font-weight: 700 !important; margin: 0 0 4pt 0 !important; letter-spacing: -.02em !important; }
-    .devis-preview h2, .view-devis-snapshot h2 { font-size: 14pt !important; font-weight: 700 !important; margin: 16pt 0 8pt 0 !important; padding-bottom: 4pt !important; border-bottom: .5pt solid #888 !important; }
-    .devis-preview h3, .view-devis-snapshot h3 { font-size: 12pt !important; font-weight: 700 !important; margin: 12pt 0 6pt 0 !important; }
-    /* Section headers and references */
-    .devis-preview .dp-header-right strong, .view-devis-snapshot .dp-header-right strong { font-weight: 700 !important; }
-    /* Lines */
+    .devis-preview .dp-header-left, .view-devis-snapshot .dp-header-left {
+      font-size: 9.5pt !important;
+      line-height: 1.5 !important;
+      color: #444 !important;
+      white-space: pre-line !important;
+    }
+    .devis-preview .dp-header-right, .view-devis-snapshot .dp-header-right {
+      text-align: right !important;
+      font-size: 9.5pt !important;
+      color: #444 !important;
+    }
+    .devis-preview .dp-header-right > div, .view-devis-snapshot .dp-header-right > div {
+      margin-bottom: 3pt !important;
+    }
+    .devis-preview .dp-header-right strong, .view-devis-snapshot .dp-header-right strong {
+      color: #1a1a1a !important;
+      font-weight: 600 !important;
+    }
+
+    /* === BIG "DEVIS" TITLE === */
+    .devis-preview h1, .view-devis-snapshot h1 {
+      font-size: 32pt !important;
+      font-weight: 800 !important;
+      letter-spacing: -0.03em !important;
+      margin: 0 0 4pt 0 !important;
+      color: #1a1a1a !important;
+      text-transform: uppercase !important;
+    }
+    .devis-preview h2, .view-devis-snapshot h2 {
+      font-size: 11pt !important;
+      font-weight: 700 !important;
+      text-transform: uppercase !important;
+      letter-spacing: 0.06em !important;
+      color: #444 !important;
+      margin: 24pt 0 12pt 0 !important;
+      padding-bottom: 4pt !important;
+      border-bottom: 0.5pt solid #ddd !important;
+    }
+    .devis-preview h3, .view-devis-snapshot h3 {
+      font-size: 10pt !important;
+      font-weight: 700 !important;
+      text-transform: uppercase !important;
+      letter-spacing: 0.05em !important;
+      color: #666 !important;
+      margin: 18pt 0 8pt 0 !important;
+    }
+
+    /* === LINE ITEMS === */
     .devis-preview .dp-line, .view-devis-snapshot .dp-line {
       display: grid !important;
-      grid-template-columns: 1fr auto auto !important;
-      gap: 12pt !important;
-      padding: 6pt 0 !important;
-      border-bottom: .25pt dotted #aaa !important;
+      grid-template-columns: 1fr auto 90pt !important;
+      gap: 16pt !important;
+      padding: 10pt 0 !important;
+      border-bottom: 0.5pt solid #e8e8e8 !important;
       page-break-inside: avoid !important;
+      align-items: baseline !important;
     }
-    .devis-preview .dp-line .lbl, .view-devis-snapshot .dp-line .lbl { font-weight: 500 !important; }
-    .devis-preview .dp-line .desc, .view-devis-snapshot .dp-line .desc { font-size: 9.5pt !important; color: #555 !important; margin-top: 2pt !important; }
-    .devis-preview .dp-line .qty, .view-devis-snapshot .dp-line .qty { font-size: 9.5pt !important; color: #555 !important; white-space: nowrap !important; }
-    .devis-preview .dp-line .amt, .view-devis-snapshot .dp-line .amt { font-weight: 600 !important; font-variant-numeric: tabular-nums !important; white-space: nowrap !important; min-width: 70pt !important; text-align: right !important; }
-    /* Totals */
-    .devis-preview .dp-totals, .view-devis-snapshot .dp-totals { margin-top: 12pt !important; padding-top: 8pt !important; border-top: 1pt solid #000 !important; }
-    .devis-preview .dp-totals .line, .view-devis-snapshot .dp-totals .line { display: flex !important; justify-content: space-between !important; padding: 3pt 0 !important; }
-    .devis-preview .dp-totals .total, .view-devis-snapshot .dp-totals .total { font-size: 14pt !important; font-weight: 700 !important; padding-top: 6pt !important; margin-top: 4pt !important; border-top: 1pt solid #000 !important; }
+    .devis-preview .dp-line:first-child, .view-devis-snapshot .dp-line:first-child {
+      border-top: 0.5pt solid #e8e8e8 !important;
+    }
+    .devis-preview .dp-line .lbl, .view-devis-snapshot .dp-line .lbl {
+      font-weight: 500 !important;
+      font-size: 10.5pt !important;
+      color: #1a1a1a !important;
+    }
+    .devis-preview .dp-line .desc, .view-devis-snapshot .dp-line .desc {
+      font-size: 9pt !important;
+      color: #777 !important;
+      margin-top: 3pt !important;
+      font-weight: 400 !important;
+    }
+    .devis-preview .dp-line .qty, .view-devis-snapshot .dp-line .qty {
+      font-size: 9pt !important;
+      color: #777 !important;
+      white-space: nowrap !important;
+      font-variant-numeric: tabular-nums !important;
+      text-align: right !important;
+    }
+    .devis-preview .dp-line .amt, .view-devis-snapshot .dp-line .amt {
+      font-weight: 600 !important;
+      font-variant-numeric: tabular-nums !important;
+      white-space: nowrap !important;
+      text-align: right !important;
+      font-size: 10.5pt !important;
+    }
+
+    /* === TOTALS BLOCK === */
+    .devis-preview .dp-totals, .view-devis-snapshot .dp-totals {
+      margin-top: 18pt !important;
+      margin-left: auto !important;
+      max-width: 280pt !important;
+    }
+    .devis-preview .dp-totals .line, .view-devis-snapshot .dp-totals .line {
+      display: flex !important;
+      justify-content: space-between !important;
+      padding: 5pt 0 !important;
+      font-size: 10pt !important;
+      color: #444 !important;
+    }
+    .devis-preview .dp-totals .line.muted, .view-devis-snapshot .dp-totals .line.muted {
+      color: #777 !important;
+      font-size: 9.5pt !important;
+    }
+    .devis-preview .dp-totals .total, .view-devis-snapshot .dp-totals .total {
+      font-size: 14pt !important;
+      font-weight: 800 !important;
+      padding: 10pt 0 4pt 0 !important;
+      margin-top: 6pt !important;
+      border-top: 1.5pt solid #1a1a1a !important;
+      color: #1a1a1a !important;
+    }
+    .devis-preview .dp-totals .echeance, .view-devis-snapshot .dp-totals .echeance {
+      font-size: 9.5pt !important;
+      color: #555 !important;
+      padding: 3pt 0 !important;
+    }
+
     /* Empty preview */
     .devis-preview .dp-empty, .view-devis-snapshot .dp-empty { display: none !important; }
+
     /* CGV page break */
     .devis-page-break { page-break-before: always !important; border: 0 !important; height: 0 !important; margin: 0 !important; }
     .devis-page-break::before { display: none !important; }
-    /* CGV content sized to fit */
-    .devis-preview .cgv-block, .view-devis-snapshot .cgv-block { font-size: 9pt !important; line-height: 1.4 !important; }
-    /* Hide chrome */
-    .sb, header, nav, footer { display: none !important; }
-    @page {
-      size: A4;
-      margin: 1.8cm 2cm 2cm 2cm;
+    .devis-preview .cgv-block, .view-devis-snapshot .cgv-block {
+      font-size: 8.5pt !important;
+      line-height: 1.5 !important;
+      color: #444 !important;
     }
+
+    /* Conditions / signature blocks */
+    .devis-preview .conditions-block, .view-devis-snapshot .conditions-block,
+    .devis-preview .signature-block, .view-devis-snapshot .signature-block {
+      font-size: 9.5pt !important;
+      line-height: 1.6 !important;
+      color: #333 !important;
+      white-space: pre-line !important;
+    }
+
+    /* Section headers used in body (Prestations, Frais débours, Conditions...) */
+    .devis-preview .dp-section-title, .view-devis-snapshot .dp-section-title {
+      font-size: 8.5pt !important;
+      font-weight: 700 !important;
+      text-transform: uppercase !important;
+      letter-spacing: 0.08em !important;
+      color: #888 !important;
+      margin: 16pt 0 6pt 0 !important;
+      padding-bottom: 3pt !important;
+      border-bottom: 0.25pt solid #ccc !important;
+    }
+
+    /* Hide app chrome */
+    .sb, header, nav, footer { display: none !important; }
   }
 
   /* Photographe textarea + conditions textarea in Mission */
@@ -517,7 +649,44 @@
   .text-editor-toolbar .te-btn{background:transparent;border:1px solid transparent;color:var(--text-muted);padding:5px 9px;border-radius:4px;cursor:pointer;font:inherit;font-size:11px;font-weight:600}
   .text-editor-toolbar .te-btn:hover{background:var(--surface-hi);color:var(--text);border-color:var(--border)}
   .text-editor-toolbar .te-sep{width:1px;background:var(--border);margin:2px 4px}
-  .modal-textarea{flex:1;min-height:380px;width:100%;padding:14px 16px;border:1px solid var(--border-light);border-radius:6px;background:var(--surface);color:var(--text);font:inherit;font-size:14px;line-height:1.6;resize:vertical;font-family:'SF Mono', Menlo, Consolas, monospace}
+  /* RICH-TEXT EDITOR (Word-style) */
+  /* Hide live actions (Imprimer, + Enregistrer dans Suivi) when devis is shown inside the snapshot modal */
+  .view-devis-snapshot .dp-actions{display:none !important}
+  /* Read-only display under each encadré in Mission */
+  .rich-display-wrap{position:relative;max-width:520px}
+  .rich-display{min-height:80px;padding:9px 12px 9px 12px;padding-right:42px;border:1px solid var(--border-light);border-radius:6px;background:var(--surface);color:var(--text);font-size:13px;line-height:1.5;white-space:normal;overflow:hidden}
+  .rich-display:empty::before{content:attr(data-placeholder);color:var(--text-dim)}
+  .rich-display-placeholder{color:var(--text-dim);font-style:italic}
+  .rich-display p, .rich-display div{margin:0}
+  .rich-display-edit{position:absolute;top:6px;right:6px;background:var(--surface-2);border:1px solid var(--border-light);color:var(--text-muted);cursor:pointer;border-radius:4px;width:28px;height:28px;font-size:14px;line-height:1;display:flex;align-items:center;justify-content:center;font-weight:700;z-index:2}
+  .rich-display-edit:hover{color:var(--primary);border-color:var(--primary)}
+
+  /* Editor modal toolbar */
+  .rte-toolbar{display:flex;gap:3px;flex-wrap:wrap;align-items:center;padding:6px 8px;background:var(--surface);border:1px solid var(--border);border-radius:6px;margin-bottom:8px}
+  .rte-btn{background:transparent;border:1px solid transparent;color:var(--text);padding:5px 9px;border-radius:4px;cursor:pointer;font:inherit;font-size:12px;font-weight:500;min-width:30px;line-height:1.3}
+  .rte-btn:hover{background:var(--surface-hi);border-color:var(--border)}
+  .rte-btn:active{background:var(--primary-soft)}
+  .rte-sep{width:1px;background:var(--border);margin:2px 4px;align-self:stretch}
+  .rte-select{background:var(--surface-2);color:var(--text);border:1px solid var(--border);border-radius:4px;padding:4px 6px;font:inherit;font-size:12px;cursor:pointer}
+  .rte-select.rte-size{width:100px}
+  .rte-color-wrap{position:relative;display:inline-flex;align-items:center}
+  .rte-color-btn{display:inline-flex;flex-direction:column;align-items:center;gap:2px;padding:4px 7px;pointer-events:none}
+  .rte-color-letter{font-size:13px;font-weight:700;line-height:1}
+  .rte-color-bar{width:20px;height:3px;background:#000;border-radius:1px}
+  .rte-color-input{position:absolute;top:0;left:0;width:100%;height:100%;opacity:0;cursor:pointer}
+
+  /* Editor area */
+  .rich-editor{flex:1;min-height:380px;width:100%;padding:14px 16px;border:1px solid var(--border-light);border-radius:6px;background:#fff;color:#000;font-size:14px;line-height:1.6;overflow-y:auto;outline:none;font-family:Arial, Helvetica, sans-serif}
+  .rich-editor:focus{border-color:var(--primary);box-shadow:0 0 0 2px var(--primary-soft)}
+  .rich-editor p, .rich-editor div{margin:0 0 6px 0}
+  .rich-editor ul, .rich-editor ol{margin:6px 0;padding-left:24px}
+  .rich-editor a{color:#0066cc}
+
+  /* Abonnements: "En cours" toggle (point 2) */
+  .ab-end-cell{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+  .ab-encours-toggle{display:inline-flex;align-items:center;gap:5px;cursor:pointer;font-size:11px;color:var(--success);font-weight:600;text-transform:uppercase;letter-spacing:.04em;padding:4px 10px;background:var(--success-soft);border:1px solid var(--success);border-radius:4px;user-select:none}
+  .ab-encours-toggle input[type="checkbox"]{accent-color:var(--success);cursor:pointer;margin:0}
+  tr[style*="opacity:.65"] .ab-encours-toggle{color:var(--text-muted);background:var(--surface-2);border-color:var(--border-light);font-weight:500}
   .modal-textarea:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 2px var(--primary-soft)}
   .contact-picker .ttl{font-size:11px;font-weight:600;color:var(--warning);text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px}
   .contact-picker label{display:flex;align-items:center;gap:8px;padding:5px 8px;cursor:pointer;border-radius:4px;font-size:13px;color:var(--text)}
@@ -1038,23 +1207,28 @@ function rDevisPreview() {
     }
   }
 
-  // Déplacement line
+  // Déplacement line — goes into either main lines (devis principal) or débours
   const mode = d.deplacement.mode || "voiture";
   const tauxKm = num(d.deplacement.tauxKm) || 0.40;
   const trajet = num(d.deplacement.trajetH) * 40;
   const deplDetail = mode === "voiture"
     ? `${num(d.deplacement.km).toFixed(1).replace(".",",")} km × ${tauxKm.toFixed(2).replace(".",",")} €/km${num(d.deplacement.peages) > 0 ? ` + ${fmt(num(d.deplacement.peages))} péages` : ""}${trajet > 0 ? ` + ${num(d.deplacement.trajetH)} h trajet` : ""}`
     : `Billets : ${fmt(num(d.deplacement.ticket))}${trajet > 0 ? ` + ${num(d.deplacement.trajetH)} h trajet` : ""}`;
-  if (t.depl > 0) {
-    linesHtml += `<div class="dp-line">
-      <div class="lbl">Déplacement<div class="desc">${esc(deplDetail)}</div></div>
-      <div class="qty"></div>
-      <div class="amt">${fmt(t.depl)}</div>
-    </div>`;
+  const deplDevisMode = d.deplacement.devis || "principal";
+  const deplLineHtml = t.depl > 0 ? `<div class="dp-line">
+    <div class="lbl">Déplacement<div class="desc">${esc(deplDetail)}</div></div>
+    <div class="qty"></div>
+    <div class="amt">${fmt(t.depl)}</div>
+  </div>` : "";
+  if (deplDevisMode === "principal") {
+    linesHtml += deplLineHtml;
   }
 
   // Débours items (separately)
   let deboursHtml = "";
+  if (deplDevisMode === "debours") {
+    deboursHtml += deplLineHtml;
+  }
   for (const l of (d.lignes || [])) {
     if (l.type === "materiel" && l.devis === "debours") {
       deboursHtml += `<div class="dp-line">
@@ -1067,7 +1241,7 @@ function rDevisPreview() {
 
   return `<div class="devis-preview" id="devisPreview">
     <div class="dp-header-grid">
-      <div class="dp-header-left ${(d.photographe || "").trim() ? "" : "empty"}">${(d.photographe || "").trim() ? esc(d.photographe) : "Renseigner vos coordonnées dans la section « Photographe » de l'onglet Mission."}</div>
+      <div class="dp-header-left ${(d.photographe || "").trim() ? "" : "empty"}">${(d.photographe || "").trim() ? richDisplayHtml(d.photographe) : "Renseigner vos coordonnées dans la section « Photographe » de l'onglet Mission."}</div>
       <div class="dp-header-right">
         <div class="dp-meta-block">
           <div class="ref">${esc(d.ref || "DEVIS-…-…")}</div>
@@ -1125,11 +1299,11 @@ function rDevisPreview() {
     </div>` : ""}
 
     ${(d.conditionsPaiement || "").trim() ? `<div class="dp-conditions">
-      <h4>Conditions de paiement</h4>${esc(d.conditionsPaiement)}
+      <h4>Conditions de paiement</h4>${richDisplayHtml(d.conditionsPaiement)}
     </div>` : ""}
 
     ${(d.signatureBlock || "").trim() ? `<div class="dp-conditions signature">
-      <h4>Bon pour accord</h4>${esc(d.signatureBlock)}
+      <h4>Bon pour accord</h4>${richDisplayHtml(d.signatureBlock)}
     </div>` : ""}
 
     <div class="dp-footer">TVA non applicable, art. 293 B du CGI</div>
@@ -1137,7 +1311,7 @@ function rDevisPreview() {
     ${(d.cgv || "").trim() ? `
       <div class="devis-page-break"></div>
       <div class="dp-conditions cgv">
-        <h4>Conditions générales de vente</h4>${esc(d.cgv)}
+        <h4>Conditions générales de vente</h4>${richDisplayHtml(d.cgv)}
       </div>
     ` : ""}
 
@@ -1604,9 +1778,12 @@ function totals() {
   const depl = mode === "voiture"
     ? r2(r2(num(d.deplacement.km) * tauxKm) + r2(num(d.deplacement.peages)) + trajet)
     : r2(r2(num(d.deplacement.ticket)) + trajet);
+  const deplGoesToDebours = (d.deplacement.devis || "principal") === "debours";
   // Autres : champ retiré de l'UI il y a plusieurs versions. On l'ignore désormais.
   const autres = 0;
-  const subtotal = r2(lignesAmount + depl);
+  // If deplacement is set to "débours", add it to debours total and exclude from main subtotal
+  const subtotal = r2(lignesAmount + (deplGoesToDebours ? 0 : depl));
+  if (deplGoesToDebours) debours = r2(debours + depl);
   const remise = r2(subtotal * num(d.remisePct) / 100);
   const total = r2(subtotal - remise);
   // Échéances breakdown (% of total)
@@ -1756,105 +1933,142 @@ function clientContactPick(contactId) {
 }
 window.clientContactPick = clientContactPick;
 
-// Modal editor state
+// =============================================================
+// RICH TEXT EDITOR (Word-style, contenteditable + execCommand)
+// =============================================================
 let textEditorModal = null; // { field }
+
+// Detect if a value is rich HTML or plain text
+function isRichHtml(s) {
+  if (!s) return false;
+  return /<\/?(p|div|span|br|b|i|u|strong|em|ul|ol|li|font|h[1-6])\b/i.test(s);
+}
+
+// Convert plain text → safe HTML (preserve newlines as <br>)
+function plainToHtml(s) {
+  if (!s) return "";
+  return esc(s).replace(/\n/g, "<br>");
+}
+
+// Used for read-only preview (in Mission and devis): outputs HTML
+// If value already contains HTML tags, render as-is. Else convert plain → HTML.
+function richDisplayHtml(s) {
+  if (!s) return "";
+  return isRichHtml(s) ? s : plainToHtml(s);
+}
+
 window.textEditorOpen = function(field) {
   textEditorModal = { field };
   render();
+  // Focus and place cursor at end after modal renders
   requestAnimationFrame(() => {
-    const ta = document.getElementById("modal-textarea");
-    if (ta) {
-      ta.focus();
-      ta.setSelectionRange(ta.value.length, ta.value.length);
+    const ed = document.getElementById("rich-editor");
+    if (ed) {
+      ed.focus();
+      // Place cursor at end
+      const range = document.createRange();
+      range.selectNodeContents(ed);
+      range.collapse(false);
+      const sel = window.getSelection();
+      sel.removeAllRanges();
+      sel.addRange(range);
     }
   });
 };
+
 window.textEditorClose = function(saveValue) {
   if (saveValue && textEditorModal) {
-    const ta = document.getElementById("modal-textarea");
-    if (ta) {
-      upd("mission." + textEditorModal.field, ta.value);
+    const ed = document.getElementById("rich-editor");
+    if (ed) {
+      // Save innerHTML as the new value
+      const html = ed.innerHTML;
+      upd("mission." + textEditorModal.field, html);
     }
   }
   textEditorModal = null;
   render();
 };
-// Formatting toolbar actions on the modal textarea
-window.textEditorFmt = function(action) {
-  const ta = document.getElementById("modal-textarea");
-  if (!ta) return;
-  const start = ta.selectionStart;
-  const end = ta.selectionEnd;
-  const before = ta.value.slice(0, start);
-  const sel = ta.value.slice(start, end);
-  const after = ta.value.slice(end);
-  let inserted = "";
-  let cursorOffset = 0;
-  switch (action) {
-    case "bullet":
-      // Add "• " at line start of each selected line (or current line)
-      if (sel) {
-        inserted = sel.split("\n").map(l => "• " + l).join("\n");
-      } else {
-        inserted = "• ";
-      }
-      cursorOffset = inserted.length;
-      break;
-    case "numbered":
-      if (sel) {
-        inserted = sel.split("\n").map((l, i) => `${i + 1}. ` + l).join("\n");
-      } else {
-        inserted = "1. ";
-      }
-      cursorOffset = inserted.length;
-      break;
-    case "uppercase":
-      inserted = sel.toUpperCase();
-      cursorOffset = inserted.length;
-      break;
-    case "capitalize":
-      inserted = sel.replace(/\b\w/g, c => c.toUpperCase());
-      cursorOffset = inserted.length;
-      break;
-    case "lowercase":
-      inserted = sel.toLowerCase();
-      cursorOffset = inserted.length;
-      break;
-    case "separator":
-      inserted = "\n———————————————\n";
-      cursorOffset = inserted.length;
-      break;
-    case "tab":
-      inserted = "    " + sel;
-      cursorOffset = inserted.length;
-      break;
-    default: return;
+
+// Apply a formatting command via execCommand (deprecated but still well-supported)
+window.textEditorCmd = function(cmd, val) {
+  const ed = document.getElementById("rich-editor");
+  if (!ed) return;
+  ed.focus();
+  try {
+    document.execCommand(cmd, false, val || null);
+  } catch (e) {
+    console.warn("execCommand failed", cmd, e);
   }
-  ta.value = before + inserted + after;
-  ta.focus();
-  ta.setSelectionRange(start + cursorOffset, start + cursorOffset);
+};
+
+// Color picker
+window.textEditorColor = function(color) {
+  textEditorCmd("foreColor", color);
+};
+
+// Font family change
+window.textEditorFont = function(fontName) {
+  if (!fontName) return;
+  textEditorCmd("fontName", fontName);
+};
+
+// Font size change (1-7 in execCommand scale)
+window.textEditorSize = function(size) {
+  if (!size) return;
+  textEditorCmd("fontSize", size);
 };
 
 function rTextEditorModal() {
   if (!textEditorModal) return "";
   const field = textEditorModal.field;
   const label = ENCADRE_LABELS[field] || field;
-  const liveValue = (S.mission && S.mission[field] !== undefined) ? S.mission[field] : "";
+  const rawValue = (S.mission && S.mission[field] !== undefined) ? S.mission[field] : "";
+  const initialHtml = isRichHtml(rawValue) ? rawValue : plainToHtml(rawValue);
   return `<div class="modal-overlay" onclick="if(event.target===this)textEditorClose(false)">
     <div class="modal-card modal-card-lg">
-      <div class="modal-title">${esc(label)}</div>
-      <div class="text-editor-toolbar">
-        <button class="te-btn" onclick="textEditorFmt('bullet')" title="Liste à puces">• Liste</button>
-        <button class="te-btn" onclick="textEditorFmt('numbered')" title="Liste numérotée">1. Liste</button>
-        <span class="te-sep"></span>
-        <button class="te-btn" onclick="textEditorFmt('uppercase')" title="MAJUSCULES">MAJ</button>
-        <button class="te-btn" onclick="textEditorFmt('capitalize')" title="Capitales en début de mot">Tt</button>
-        <button class="te-btn" onclick="textEditorFmt('lowercase')" title="minuscules">min</button>
-        <span class="te-sep"></span>
-        <button class="te-btn" onclick="textEditorFmt('separator')" title="Insérer un séparateur">—</button>
-        <button class="te-btn" onclick="textEditorFmt('tab')" title="Indenter">↹</button>
+      <div class="modal-title">✏ ${esc(label)}</div>
+      <div class="rte-toolbar">
+        <select class="rte-select" onchange="textEditorFont(this.value);this.value=''" title="Police">
+          <option value="">Police</option>
+          <option value="Arial">Arial</option>
+          <option value="Georgia">Georgia</option>
+          <option value="Helvetica">Helvetica</option>
+          <option value="'Times New Roman'">Times New Roman</option>
+          <option value="Verdana">Verdana</option>
+          <option value="Courier New">Courier New</option>
+          <option value="'Trebuchet MS'">Trebuchet MS</option>
+          <option value="Tahoma">Tahoma</option>
+        </select>
+        <select class="rte-select rte-size" onchange="textEditorSize(this.value);this.value=''" title="Taille">
+          <option value="">Taille</option>
+          <option value="1">Très petit</option>
+          <option value="2">Petit</option>
+          <option value="3">Normal</option>
+          <option value="4">Grand</option>
+          <option value="5">Très grand</option>
+          <option value="6">Énorme</option>
+        </select>
+        <span class="rte-sep"></span>
+        <button class="rte-btn" onclick="textEditorCmd('bold')" title="Gras (Ctrl+B)"><strong>G</strong></button>
+        <button class="rte-btn" onclick="textEditorCmd('italic')" title="Italique (Ctrl+I)"><em>I</em></button>
+        <button class="rte-btn" onclick="textEditorCmd('underline')" title="Souligné (Ctrl+U)"><u>S</u></button>
+        <button class="rte-btn" onclick="textEditorCmd('strikeThrough')" title="Barré"><s>B</s></button>
+        <span class="rte-sep"></span>
+        <div class="rte-color-wrap">
+          <button class="rte-btn rte-color-btn" title="Couleur du texte"><span class="rte-color-letter">A</span><span class="rte-color-bar" id="rte-color-current"></span></button>
+          <input type="color" class="rte-color-input" oninput="textEditorColor(this.value);document.getElementById('rte-color-current').style.background=this.value" title="Choisir couleur">
+        </div>
+        <span class="rte-sep"></span>
+        <button class="rte-btn" onclick="textEditorCmd('justifyLeft')" title="Aligner à gauche">⇤</button>
+        <button class="rte-btn" onclick="textEditorCmd('justifyCenter')" title="Centrer">↔</button>
+        <button class="rte-btn" onclick="textEditorCmd('justifyRight')" title="Aligner à droite">⇥</button>
+        <span class="rte-sep"></span>
+        <button class="rte-btn" onclick="textEditorCmd('insertUnorderedList')" title="Liste à puces">• Liste</button>
+        <button class="rte-btn" onclick="textEditorCmd('insertOrderedList')" title="Liste numérotée">1. Liste</button>
+        <span class="rte-sep"></span>
+        <button class="rte-btn" onclick="textEditorCmd('removeFormat')" title="Effacer le formatage">⌫ Format</button>
       </div>
-      <textarea id="modal-textarea" class="modal-textarea">${esc(liveValue)}</textarea>
+      <div id="rich-editor" class="rich-editor" contenteditable="true" spellcheck="true">${initialHtml}</div>
       <div class="modal-actions">
         <button class="btn ghost" onclick="textEditorClose(false)">Annuler</button>
         <button class="btn" onclick="textEditorClose(true)">✓ Enregistrer</button>
@@ -1863,29 +2077,19 @@ function rTextEditorModal() {
   </div>`;
 }
 
-// Static label map for encadrés du devis
-const ENCADRE_LABELS = {
-  photographe: "Photographe (en-tête du devis)",
-  conditionsPaiement: "Conditions de paiement",
-  signatureBlock: "Bon pour accord",
-  cgv: "Conditions générales de vente (CGV)"
-};
+function renderLockedTextarea(field, value, label, placeholder) {
+  // Display the rich-text content read-only. Click ✏ to open the modal editor.
+  const v = value || "";
+  const previewHtml = v ? richDisplayHtml(v) : `<span class="rich-display-placeholder">${esc(placeholder)}</span>`;
+  return `<div class="row"><div class="field lg"><label>${esc(label)}</label>
+    <div class="rich-display-wrap">
+      <div class="rich-display">${previewHtml}</div>
+      <button type="button" class="rich-display-edit" onclick="textEditorOpen('${field}')" title="Modifier">✏</button>
+    </div>
+  </div></div>`;
+}
 
-// View original devis modal
-let viewDevisModal = null; // { devisId }
-window.viewDevisOpen = function(devisId) {
-  viewDevisModal = { devisId };
-  render();
-};
-window.viewDevisClose = function() {
-  viewDevisModal = null;
-  render();
-};
-window.viewDevisPrint = function() {
-  // Use a transient "print mode" by printing the modal contents
-  // The modal already contains .devis-preview; print CSS will isolate it
-  window.print();
-};
+
 function rViewDevisModal() {
   if (!viewDevisModal) return "";
   const dv = S.suivi.devis && S.suivi.devis[viewDevisModal.devisId];
@@ -1908,17 +2112,6 @@ function rViewDevisModal() {
       </div>
     </div>
   </div>`;
-}
-
-function renderLockedTextarea(field, value, label, placeholder) {
-  // The textarea remains visible (read-only display). Clicking the ✏ icon opens a modal editor.
-  const v = value || "";
-  return `<div class="row"><div class="field lg"><label>${esc(label)}</label>
-    <div class="locked-wrap is-locked">
-      <textarea id="text-${field}" class="multi-text" placeholder="${placeholder}" disabled>${esc(v)}</textarea>
-      <button class="lock-corner" onclick="textEditorOpen('${field}')" title="Modifier">✏</button>
-    </div>
-  </div></div>`;
 }
 
 function rMS() {
@@ -1975,30 +2168,50 @@ function rMS() {
     ${(() => {
       const declared = declare;
       const cat = (S.tarifs.catalog || DEFAULT_CATALOG).find(c => c.k === d.object);
-      const baseFinal = cat ? num(cat.p) : 0;
-      const urssafPct = num(d.urssafPct ?? 22);
-      const urssafCoef = 1 + urssafPct / 100;
-      const tauxApplique = declared ? baseFinal : (baseFinal > 0 ? r2(baseFinal / urssafCoef) : 0);
       if (!cat || !d.object) {
         return `<div style="background:var(--surface-2);border:1px solid var(--border);border-radius:8px;padding:10px 14px;margin:8px 0 14px 0;max-width:680px;font-size:12px;color:var(--text-muted)">
-          Sélectionne une prestation ci-dessus pour voir le taux horaire applicable au devis.
+          Sélectionne une prestation ci-dessus pour voir le tarif applicable au devis.
         </div>`;
       }
-      return `<div style="background:var(--surface-2);border:1px solid var(--border);border-radius:8px;padding:10px 14px;margin:8px 0 14px 0;max-width:680px">
-        <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;font-size:12.5px">
-          <div>
-            <span style="color:var(--text-muted);font-size:11px;text-transform:uppercase;letter-spacing:.04em">Tarif final ${esc(cat.l)}</span>
-            <div style="color:var(--text);font-weight:700;font-variant-numeric:tabular-nums;font-size:16px">${fmt(baseFinal)}/h</div>
-          </div>
-          <div style="color:var(--text-dim);font-size:18px">${declared ? "=" : "−URSSAF"}</div>
-          <div>
-            <span style="color:var(--text-muted);font-size:11px;text-transform:uppercase;letter-spacing:.04em">${declared ? `Avec URSSAF (${urssafPct} %)` : "Sans URSSAF (au black)"}</span>
-            <div style="color:${declared ? 'var(--primary)' : 'var(--warning)'};font-weight:800;font-variant-numeric:tabular-nums;font-size:18px">${fmt(tauxApplique)}/h</div>
-          </div>
-          <div style="flex:1"></div>
-          <a href="#" onclick="event.preventDefault();setTab('tarifs')" style="color:var(--text-muted);font-size:11px;text-decoration:underline">Modifier dans Frais &amp; Tarifs →</a>
+      const tm = tauxMatos();
+      const final = num(cat.p);
+      const urssafPct = num(d.urssafPct ?? 22);
+      const urssafCoef = 1 + urssafPct / 100;
+      const sansUrssaf = final > 0 ? r2(final / urssafCoef) : 0;
+      const urssafAmount = final > 0 ? r2(final - sansUrssaf) : 0;
+      const matos = tm.tauxAvecSecurite;
+      const net = final > 0 ? r2(sansUrssaf - matos) : 0;
+      // Tarif appliqué dans le devis: si déclaré → final ; sinon → sans URSSAF
+      const tarifApplique = declared ? final : sansUrssaf;
+      return `<div style="background:var(--surface-2);border:1px solid var(--border);border-radius:8px;padding:14px 16px;margin:8px 0 14px 0;max-width:680px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;font-size:12.5px;color:var(--text-muted)">
+          <span><strong style="color:var(--text)">${esc(cat.l)}</strong> · décomposition tarifaire</span>
+          <a href="#" onclick="event.preventDefault();setTab('tarifs')" style="color:var(--text-muted);font-size:11px;text-decoration:underline">Modifier →</a>
         </div>
-        <div style="font-size:11px;color:var(--text-dim);margin-top:6px">${declared ? "Tarif facturé tel que saisi dans Frais & Tarifs (URSSAF incluse)." : "Tarif sans URSSAF — montant que tu encaisses si tu ne déclares pas."}</div>
+        <table style="width:100%;border-collapse:collapse;font-size:12px">
+          <thead>
+            <tr style="border-bottom:1px solid var(--border)">
+              <th style="text-align:right;padding:6px 10px;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:.04em;font-size:10.5px">Net</th>
+              <th style="text-align:right;padding:6px 10px;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:.04em;font-size:10.5px">+ Matériel</th>
+              <th style="text-align:right;padding:6px 10px;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:.04em;font-size:10.5px">+ URSSAF</th>
+              <th style="text-align:right;padding:6px 10px;color:var(--primary);font-weight:600;text-transform:uppercase;letter-spacing:.04em;font-size:10.5px">= Tarif facturé</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td style="text-align:right;padding:8px 10px;color:${net >= 0 ? 'var(--success)' : 'var(--danger)'};font-variant-numeric:tabular-nums;font-weight:600;font-size:14px">${fmt(net)}</td>
+              <td style="text-align:right;padding:8px 10px;color:var(--text-muted);font-variant-numeric:tabular-nums;font-size:13px">${fmt(matos)}</td>
+              <td style="text-align:right;padding:8px 10px;color:${declared ? 'var(--text-muted)' : 'var(--text-dim)'};font-variant-numeric:tabular-nums;font-size:13px;${declared ? '' : 'text-decoration:line-through'}">${fmt(urssafAmount)}</td>
+              <td style="text-align:right;padding:8px 10px;color:${declared ? 'var(--primary)' : 'var(--warning)'};font-variant-numeric:tabular-nums;font-weight:800;font-size:16px">${fmt(tarifApplique)}/h</td>
+            </tr>
+          </tbody>
+        </table>
+        <div style="font-size:11px;color:var(--text-dim);margin-top:8px">
+          ${declared
+            ? `Tarif déclaré (URSSAF ${urssafPct} % incluse) : <strong style="color:var(--primary)">${fmt(final)}/h</strong> facturé au client.`
+            : `Au black : <strong style="color:var(--warning)">${fmt(sansUrssaf)}/h</strong> facturé (URSSAF non appliquée).`
+          }
+        </div>
       </div>`;
     })()}
 
@@ -2014,6 +2227,12 @@ function rMS() {
     </div>
 
     <h3>Déplacement</h3>
+    <div class="row"><div class="field"><label>Inclure dans</label>
+      <div class="seg">
+        <button class="${(d.deplacement.devis || 'principal') === 'principal' ? 'on' : ''}" onclick="upd('mission.deplacement.devis', 'principal')">Devis principal</button>
+        <button class="${d.deplacement.devis === 'debours' ? 'on' : ''}" onclick="upd('mission.deplacement.devis', 'debours')">Frais débours</button>
+      </div>
+    </div></div>
     <div class="row"><div class="field"><label>Mode de transport</label>
       <div class="seg">
         <button class="${mode==="voiture"?"on":""}" onclick="updMissionMode('voiture')">🚗 Voiture</button>
@@ -2204,7 +2423,12 @@ function suiviAdd() {
   let snapshotHtml = "";
   try {
     const el = document.getElementById("devisPreview");
-    if (el) snapshotHtml = el.innerHTML;
+    if (el) {
+      // Clone and strip interactive elements (.dp-actions) before capturing
+      const clone = el.cloneNode(true);
+      clone.querySelectorAll(".dp-actions").forEach(n => n.remove());
+      snapshotHtml = clone.innerHTML;
+    }
   } catch (e) {
     console.warn("Snapshot devis failed", e);
   }
@@ -3693,6 +3917,20 @@ function editAbonnementAndRefresh(id, field, val) {
 }
 window.editAbonnementAndRefresh = editAbonnementAndRefresh;
 
+// Toggle "En cours" : if checked → clear dateFin (active subscription), else set today's date as default
+function abonnementToggleEnCours(id, isEnCours) {
+  if (isEnCours) {
+    editAbonnement(id, "dateFin", "");
+  } else {
+    // Default to today's date when switching to "ended"
+    const today = new Date().toISOString().slice(0, 10);
+    editAbonnement(id, "dateFin", today);
+  }
+  refreshTauxMatos();
+  render();
+}
+window.abonnementToggleEnCours = abonnementToggleEnCours;
+
 // Debounced refresh — call save+render only after typing stops (500ms idle).
 // Prevents keystroke-by-keystroke render races that scrambled input values (160 → 061).
 let _tauxRefreshTimer = null;
@@ -3827,8 +4065,8 @@ function tauxMatos() {
     tauxBrut,
     facteur,
     tauxAvecSecurite,
-    // Tarif horaire retenu : arrondi au 5€ supérieur du tauxAvecSecurite
-    tauxRetenu: tauxAvecSecurite > 0 ? Math.ceil(tauxAvecSecurite / 5) * 5 : 0,
+    // tauxRetenu is now identical to tauxAvecSecurite (no rounding) — kept as alias for back-compat
+    tauxRetenu: tauxAvecSecurite,
     // legacy keys retained for any other consumer
     abonnementsAnnuels: r2(mensuelActif * 12),
     investissementsAnnuels: materielAnnuel,
@@ -4138,16 +4376,18 @@ function rTR() {
   const abRows = abEntries.map(e => {
     const isActif = !e.dateFin;
     return `
-    <tr ${isActif ? "" : 'style="opacity:.6"'}>
-      <td><input value="${esc(e.libelle)}" oninput="editAbonnementAndRefresh('${e.id}','libelle',this.value)" placeholder="Libellé"></td>
-      <td><input type="date" value="${esc(e.dateDebut || "")}" oninput="editAbonnementAndRefresh('${e.id}','dateDebut',this.value)"></td>
-      <td>
-        <input type="date" value="${esc(e.dateFin || "")}" oninput="editAbonnementAndRefresh('${e.id}','dateFin',this.value)" style="${isActif ? 'opacity:.4' : ''}" placeholder="actif">
-        ${isActif ? `<span style="display:block;font-size:10px;color:var(--success);text-align:center;margin-top:2px;font-weight:600;text-transform:uppercase;letter-spacing:.04em">● Actif</span>` : ""}
+    <tr ${isActif ? "" : 'style="opacity:.65"'}>
+      <td style="padding:4px 8px"><input value="${esc(e.libelle)}" oninput="editAbonnementAndRefresh('${e.id}','libelle',this.value)" placeholder="Libellé" style="width:100%"></td>
+      <td style="padding:4px 8px"><input type="date" value="${esc(e.dateDebut || "")}" oninput="editAbonnementAndRefresh('${e.id}','dateDebut',this.value)" style="width:100%"></td>
+      <td style="padding:4px 8px">
+        <div class="ab-end-cell">
+          <label class="ab-encours-toggle"><input type="checkbox" ${isActif ? "checked" : ""} onchange="abonnementToggleEnCours('${e.id}', this.checked)"> <span>En cours</span></label>
+          ${isActif ? "" : `<input type="date" value="${esc(e.dateFin || "")}" oninput="editAbonnementAndRefresh('${e.id}','dateFin',this.value)" style="width:140px">`}
+        </div>
       </td>
-      <td class="amount"><input type="number" step="0.01" value="${esc(e.annuel)}" oninput="editAbonnementAndRefresh('${e.id}','annuel',this.value); refreshAbonnementMensuel('${e.id}')"></td>
-      <td class="amount" id="ab-mens-${e.id}" style="text-align:right;color:var(--text-muted);font-variant-numeric:tabular-nums;padding-right:14px">${fmt(num(e.annuel) / 12)}</td>
-      <td class="actions"><button title="Supprimer" onclick="if(confirm('Supprimer cet abonnement ?'))deleteAbonnement('${e.id}')">×</button></td>
+      <td style="text-align:right;padding:4px 8px"><input type="number" step="0.01" value="${esc(e.annuel)}" oninput="editAbonnementAndRefresh('${e.id}','annuel',this.value); refreshAbonnementMensuel('${e.id}')" style="width:90px;text-align:right"></td>
+      <td class="amount" id="ab-mens-${e.id}" style="text-align:right;color:var(--text-muted);font-variant-numeric:tabular-nums;padding:4px 14px 4px 8px">${fmt(num(e.annuel) / 12)}</td>
+      <td class="actions" style="padding:4px"><button title="Supprimer" onclick="if(confirm('Supprimer cet abonnement ?'))deleteAbonnement('${e.id}')">×</button></td>
     </tr>`;
   }).join("");
 
@@ -4269,18 +4509,13 @@ function rTR() {
           <td class="amount" style="text-align:right;color:var(--text-muted);font-variant-numeric:tabular-nums;padding-right:14px">+${fmt(r2(tm.tauxAvecSecurite - tm.tauxBrut))}</td>
         </tr>` : ""}
         <tr style="background:var(--primary-soft)">
-          <td><strong style="color:var(--primary)">Coût horaire calculé</strong></td>
+          <td><strong style="color:var(--primary)">Coût horaire matériel</strong><div style="font-size:11px;color:var(--text-dim);margin-top:2px;font-weight:400">À répercuter dans tes tarifs (cf. tableau Prestations ci-dessous)</div></td>
           <td></td>
-          <td class="amount" style="text-align:right;color:var(--primary);font-weight:700;font-variant-numeric:tabular-nums;padding-right:14px;font-size:14px">${fmt(tm.tauxAvecSecurite)}</td>
-        </tr>
-        <tr style="background:var(--accent-soft, var(--surface-hi))">
-          <td><strong style="color:var(--accent, var(--primary))">Taux horaire retenu</strong><div style="font-size:11px;color:var(--text-dim);margin-top:2px;font-weight:400">Arrondi au 5 € supérieur — utilisé dans Prestations &amp; Mission</div></td>
-          <td></td>
-          <td class="amount" style="text-align:right;color:var(--accent, var(--primary));font-weight:800;font-variant-numeric:tabular-nums;padding-right:14px;font-size:18px">${fmt(tm.tauxRetenu)}</td>
+          <td class="amount" style="text-align:right;color:var(--primary);font-weight:800;font-variant-numeric:tabular-nums;padding-right:14px;font-size:18px">${fmt(tm.tauxAvecSecurite)}</td>
         </tr>
       </tfoot>
     </table>
-    <div class="hint" style="margin-top:8px;max-width:780px">Le <strong>taux horaire retenu</strong> (${fmt(tm.tauxRetenu)}/h) est utilisé pour décomposer chaque prestation ci-dessous : on part du prix client final (TTC), on en retire l'URSSAF, puis le coût matériel — il reste le net pour ton temps.</div>
+    <div class="hint" style="margin-top:8px;max-width:780px">Le <strong>coût horaire matériel</strong> (${fmt(tm.tauxAvecSecurite)}/h) est utilisé pour décomposer chaque prestation ci-dessous : on part du prix client final (TTC), on en retire l'URSSAF, puis le coût matériel — il reste le net pour ton temps.</div>
 
     <h3>Prestations &amp; tarifs (€/h)</h3>
     <div class="hint" style="max-width:880px">Saisis le <strong>tarif final</strong> facturé au client (TTC, URSSAF incluse, à droite). Le tableau remonte le calcul : <strong>− URSSAF − coût matériel = Net</strong> qui te reste pour ton temps.</div>
@@ -4300,7 +4535,7 @@ function rTR() {
     </div>
 
     <h3>Abonnements professionnels</h3>
-    <div class="hint">Coût mensuel calculé automatiquement à partir du coût annuel. Le total ne compte que les abonnements actifs (sans date de fin). Si la date de fin n'est pas renseignée, l'abonnement est marqué <span style="color:var(--success);font-weight:600">● Actif</span>.</div>
+    <div class="hint">Coût mensuel calculé automatiquement à partir du coût annuel. Le total ne compte que les abonnements <span style="color:var(--success);font-weight:600">En cours</span> (case cochée). Décocher pour saisir une date de fin.</div>
     <div class="toolbar">
       <button class="btn" onclick="addAbonnement()">+ Ajouter un abonnement</button>
     </div>
