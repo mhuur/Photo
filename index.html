@@ -190,6 +190,9 @@
   .field label{font-size:11px;letter-spacing:.02em}
   main h2{font-size:18px;font-weight:600;margin:0 0 4px;color:var(--text)}
   main h3{font-size:11px;font-weight:600;margin-top:18px;margin-bottom:6px;color:var(--text-muted)}
+  main h4{font-size:11px;font-weight:600;margin-top:14px;margin-bottom:6px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.04em}
+  .encadres-grp{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:14px 16px;margin-bottom:14px}
+  .encadres-grp > h4:first-of-type{margin-top:0}
   .hint{font-size:11px;color:var(--text-dim);margin:-2px 0 6px}
 
   /* Cap field width so single-field rows don't span full main */
@@ -397,6 +400,7 @@
 
   /* Contact picker (if multiple contacts) */
   .contact-picker{margin-top:6px;max-width:520px;background:var(--warning-soft);border:1px solid var(--warning);border-radius:6px;padding:10px 12px}
+  .contact-picker.contact-picker-compact{background:var(--surface-2);border-color:var(--border);padding:8px 12px;max-width:680px}
   .contact-picker .ttl{font-size:11px;font-weight:600;color:var(--warning);text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px}
   .contact-picker label{display:flex;align-items:center;gap:8px;padding:5px 8px;cursor:pointer;border-radius:4px;font-size:13px;color:var(--text)}
   .contact-picker label:hover{background:var(--surface-2)}
@@ -888,13 +892,11 @@ function rDevisPreview() {
   }
 
   const cat = (S.tarifs.catalog || DEFAULT_CATALOG).find(c => c.k === d.object);
-  // Tarif horaire facturé au client = (tarif de base + taux horaire retenu) × (1 + URSSAF si déclaré)
-  const _tmDevis = tauxMatos();
+  // Le tarif catalogue saisi est le prix final TTC (URSSAF incluse). Au black, on enlève l'URSSAF.
   const _baseTarif = cat ? num(cat.p) : 0;
-  const _avecMatos = r2(_baseTarif + _tmDevis.tauxRetenu);
   const _isDeclare = d.declare !== false;
   const _urssafCoef = 1 + (num(d.urssafPct ?? 22)) / 100;
-  const tarifH = _isDeclare ? r2(_avecMatos * _urssafCoef) : _avecMatos;
+  const tarifH = _isDeclare ? _baseTarif : (_baseTarif > 0 ? r2(_baseTarif / _urssafCoef) : 0);
   const sel = d.client.id ? S.clients.entries.find(x => x.id === d.client.id) : null;
   const cli = sel || d.client;
 
@@ -1136,18 +1138,20 @@ window.cliPickSearch = cliPickSearch;
 function cliPickSelect(id) {
   const e = S.clients.entries.find(x => x.id === id);
   if (!e) return;
-  // Auto-pick first non-empty contact (or first one)
   const validContacts = (e.contacts || []).filter(c => c.name || c.phone || c.email);
-  const firstContact = validContacts[0] || (e.contacts && e.contacts[0]);
+  const onlyContact = validContacts.length === 1 ? validContacts[0] : null;
+  // If only one valid contact: auto-select it (no picker shown).
+  // If multiple valid contacts: leave contactId empty so picker stays open (orange warning) for explicit choice.
   S.mission.client = {
     id: e.id, num: e.num || "", name: e.name || "",
     contact: e.contact || "", address: e.address || "",
     phone: e.phone || "", email: e.email || "",
-    contactId: firstContact ? firstContact.id : "",
-    contactSelected: firstContact ? (firstContact.name || "") : "",
-    phoneSelected: firstContact ? (firstContact.phone || "") : "",
-    emailSelected: firstContact ? (firstContact.email || "") : ""
+    contactId: onlyContact ? onlyContact.id : "",
+    contactSelected: onlyContact ? (onlyContact.name || "") : "",
+    phoneSelected: onlyContact ? (onlyContact.phone || "") : "",
+    emailSelected: onlyContact ? (onlyContact.email || "") : ""
   };
+  contactPickerForceOpen = false; // collapsed state will be governed by contactId presence
   recomputeRef();
   cliPickQuery = "";
   cliPickCreating = false;
@@ -1456,14 +1460,12 @@ function r2(v) { return Math.round((+v + Number.EPSILON) * 100) / 100; }
 
 function totals() {
   const d = S.mission;
-  // Hourly rate from selected prestation, with material cost + URSSAF if declared
+  // Hourly rate: tarif catalogue saisi = prix final TTC. Au black, on enlève l'URSSAF.
   const cat = (S.tarifs.catalog || DEFAULT_CATALOG).find(c => c.k === d.object);
-  const _tmTot = tauxMatos();
   const _baseTotal = cat ? num(cat.p) : 0;
-  const _avecMatTot = r2(_baseTotal + _tmTot.tauxRetenu);
   const _isDecTot = d.declare !== false;
   const _urssafCoefTot = 1 + (num(d.urssafPct ?? 22)) / 100;
-  const tarifH = _isDecTot ? r2(_avecMatTot * _urssafCoefTot) : _avecMatTot;
+  const tarifH = _isDecTot ? _baseTotal : (_baseTotal > 0 ? r2(_baseTotal / _urssafCoefTot) : 0);
   const HOURS_PER_DAY = 8;
   // Walk lignes — round each line individually before summing
   let lignesAmount = 0, debours = 0, totalHeures = 0;
@@ -1559,6 +1561,13 @@ function render() {
     <main>${view}</main>`;
 }
 
+// State: track if picker is force-opened (e.g. after user clicks "Changer de contact")
+let contactPickerForceOpen = false;
+window.contactPickerToggleOpen = function(open) {
+  contactPickerForceOpen = open;
+  render();
+};
+
 function rContactPicker() {
   const c = S.mission.client || {};
   if (!c.id) return "";
@@ -1568,6 +1577,22 @@ function rContactPicker() {
   const valid = sel.contacts.filter(x => (x.name || x.phone || x.email));
   if (valid.length <= 1) return "";
   const selectedId = c.contactId || valid[0].id;
+  const selectedContact = valid.find(x => x.id === selectedId) || valid[0];
+  // If a contact has been chosen and picker is not forced-open, show compact summary with "Changer" link
+  const hasSelection = !!c.contactId;
+  if (hasSelection && !contactPickerForceOpen) {
+    return `<div class="contact-picker contact-picker-compact">
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+        <span style="color:var(--text-muted);font-size:11px;text-transform:uppercase;letter-spacing:.04em;font-weight:600">Contact retenu</span>
+        <span style="color:var(--text);font-weight:600">${esc(selectedContact.name || "(sans nom)")}</span>
+        ${selectedContact.phone ? `<span style="color:var(--text-muted);font-size:12px">📞 ${esc(selectedContact.phone)}</span>` : ""}
+        ${selectedContact.email ? `<span style="color:var(--text-muted);font-size:12px">✉ ${esc(selectedContact.email)}</span>` : ""}
+        <span style="flex:1"></span>
+        <button onclick="contactPickerToggleOpen(true)" style="background:transparent;border:1px solid var(--border);color:var(--text-muted);padding:4px 10px;border-radius:5px;cursor:pointer;font-size:11px">↻ Changer de contact</button>
+      </div>
+    </div>`;
+  }
+  // Otherwise show full picker
   return `<div class="contact-picker">
     <div class="ttl">⚠ Plusieurs contacts détectés — choisir celui à afficher dans le devis :</div>
     ${valid.map(x => `<label class="contact-pick-row">
@@ -1593,6 +1618,8 @@ function clientContactPick(contactId) {
       S.mission.client.emailSelected = c.email || "";
     }
   }
+  // Auto-collapse picker once a choice is made
+  contactPickerForceOpen = false;
   save();
   render();
 }
@@ -1620,9 +1647,6 @@ function rMS() {
   const mode = d.deplacement.mode || "voiture";
   return `
     <h2>Mission <span id="savedFlash" class="saved"></span></h2>
-
-    <h3>Photographe (en-tête du devis)</h3>
-    ${renderLockedTextarea("photographe", d.photographe || "", "Vos coordonnées telles qu'elles apparaîtront en haut à gauche du devis", "Nom Prénom&#10;Statut (auto-entrepreneur, micro-entreprise…)&#10;Adresse&#10;Code postal Ville&#10;SIRET / numéro&#10;Téléphone · Email")}
 
     <h3>Devis</h3>
     <div class="row"><div class="field narrow"><label>Date d'émission</label><input type="date" value="${esc(d.dateEmission)}" oninput="upd('mission.dateEmission', this.value)"></div></div>
@@ -1653,23 +1677,34 @@ function rMS() {
     <div class="hint">Taux verrouillé par défaut. Cliquer sur ⋮ pour modifier.</div>
 
     ${(() => {
-      const tm = tauxMatos();
-      const urssafApply = declare;
-      const tauxFinal = urssafApply ? r2(tm.tauxRetenu * (1 + (num(d.urssafPct ?? 22)) / 100)) : tm.tauxRetenu;
+      const declared = declare;
+      const cat = (S.tarifs.catalog || DEFAULT_CATALOG).find(c => c.k === d.object);
+      const baseFinal = cat ? num(cat.p) : 0; // prix final TTC saisi pour la prestation
+      const urssafPct = num(d.urssafPct ?? 22);
+      const urssafCoef = 1 + urssafPct / 100;
+      // Au black : on retire l'URSSAF du prix final
+      const tauxApplique = declared ? baseFinal : (baseFinal > 0 ? r2(baseFinal / urssafCoef) : 0);
+      // Si pas de prestation sélectionnée, on affiche un message
+      if (!cat || !d.object) {
+        return `<div style="background:var(--surface-2);border:1px solid var(--border);border-radius:8px;padding:10px 14px;margin:8px 0 14px 0;max-width:680px;font-size:12px;color:var(--text-muted)">
+          Sélectionne une prestation ci-dessous pour voir le taux horaire applicable au devis.
+        </div>`;
+      }
       return `<div style="background:var(--surface-2);border:1px solid var(--border);border-radius:8px;padding:10px 14px;margin:8px 0 14px 0;max-width:680px">
         <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;font-size:12.5px">
           <div>
-            <span style="color:var(--text-muted);font-size:11px;text-transform:uppercase;letter-spacing:.04em">Taux horaire retenu</span>
-            <div style="color:var(--primary);font-weight:700;font-variant-numeric:tabular-nums;font-size:16px">${fmt(tm.tauxRetenu)}/h</div>
+            <span style="color:var(--text-muted);font-size:11px;text-transform:uppercase;letter-spacing:.04em">Tarif final ${esc(cat.l)}</span>
+            <div style="color:var(--text);font-weight:700;font-variant-numeric:tabular-nums;font-size:16px">${fmt(baseFinal)}/h</div>
           </div>
-          <div style="color:var(--text-dim);font-size:18px">${urssafApply ? "→" : "="}</div>
+          <div style="color:var(--text-dim);font-size:18px">${declared ? "=" : "−URSSAF"}</div>
           <div>
-            <span style="color:var(--text-muted);font-size:11px;text-transform:uppercase;letter-spacing:.04em">${urssafApply ? `Avec URSSAF (${num(d.urssafPct ?? 22)} %)` : "Sans URSSAF (au black)"}</span>
-            <div style="color:${urssafApply ? 'var(--accent, var(--primary))' : 'var(--warning)'};font-weight:800;font-variant-numeric:tabular-nums;font-size:18px">${fmt(tauxFinal)}/h</div>
+            <span style="color:var(--text-muted);font-size:11px;text-transform:uppercase;letter-spacing:.04em">${declared ? `Avec URSSAF (${urssafPct} %)` : "Sans URSSAF (au black)"}</span>
+            <div style="color:${declared ? 'var(--primary)' : 'var(--warning)'};font-weight:800;font-variant-numeric:tabular-nums;font-size:18px">${fmt(tauxApplique)}/h</div>
           </div>
           <div style="flex:1"></div>
           <a href="#" onclick="event.preventDefault();setTab('tarifs')" style="color:var(--text-muted);font-size:11px;text-decoration:underline">Modifier dans Frais &amp; Tarifs →</a>
         </div>
+        <div style="font-size:11px;color:var(--text-dim);margin-top:6px">${declared ? "Tarif facturé tel que saisi dans Frais & Tarifs (URSSAF incluse)." : "Tarif sans URSSAF — montant que tu encaisses si tu ne déclares pas."}</div>
       </div>`;
     })()}
 
@@ -1738,14 +1773,22 @@ function rMS() {
       </div>`;
     })()}
 
-    <h3>Conditions de paiement</h3>
-    ${renderLockedTextarea("conditionsPaiement", d.conditionsPaiement || "", "Texte affiché en bas du devis, sous le total", "Acompte de 30 % à la commande, solde de 70 % à la livraison.&#10;Règlement par virement bancaire.&#10;…")}
+    <h3>Encadrés du devis</h3>
+    <div class="hint">Textes verrouillés affichés dans le devis. Cliquer sur ⋮ pour modifier.</div>
 
-    <h3>Bon pour accord</h3>
-    ${renderLockedTextarea("signatureBlock", d.signatureBlock || "", "Bloc affiché sous les conditions de paiement, pour la signature du client", "Fait à _______________, le ___ / ___ / _____&#10;&#10;Signature du client précédée de la mention « Bon pour accord » :")}
+    <div class="encadres-grp">
+      <h4>Photographe (en-tête du devis)</h4>
+      ${renderLockedTextarea("photographe", d.photographe || "", "Vos coordonnées telles qu'elles apparaîtront en haut à gauche du devis", "Nom Prénom&#10;Statut (auto-entrepreneur, micro-entreprise…)&#10;Adresse&#10;Code postal Ville&#10;SIRET / numéro&#10;Téléphone · Email")}
 
-    <h3>Conditions générales de vente (CGV)</h3>
-    ${renderLockedTextarea("cgv", d.cgv || "", "Mentions légales et conditions générales de vente affichées en page 2 du devis", "Droits d'auteur, modalités d'utilisation des images, propriété intellectuelle…")}
+      <h4>Conditions de paiement</h4>
+      ${renderLockedTextarea("conditionsPaiement", d.conditionsPaiement || "", "Texte affiché en bas du devis, sous le total", "Acompte de 30 % à la commande, solde de 70 % à la livraison.&#10;Règlement par virement bancaire.&#10;…")}
+
+      <h4>Bon pour accord</h4>
+      ${renderLockedTextarea("signatureBlock", d.signatureBlock || "", "Bloc affiché sous les conditions de paiement, pour la signature du client", "Fait à _______________, le ___ / ___ / _____&#10;&#10;Signature du client précédée de la mention « Bon pour accord » :")}
+
+      <h4>Conditions générales de vente (CGV)</h4>
+      ${renderLockedTextarea("cgv", d.cgv || "", "Mentions légales et conditions générales de vente affichées en page 2 du devis", "Droits d'auteur, modalités d'utilisation des images, propriété intellectuelle…")}
+    </div>
 
     ${rDevisPreview()}
   `;
@@ -3836,21 +3879,22 @@ function rTR() {
   // Compute taux matos
   const tm = tauxMatos();
   const urssafPct = num(S.mission && S.mission.urssafPct) || 22;
+  const urssafCoef = 1 + urssafPct / 100;
   const tarifRows3col = cat.map((c, idx) => {
-    const taux = num(c.p);
-    const avecMat = r2(taux + tm.tauxRetenu);
-    const avecUrssaf = r2(avecMat * (1 + urssafPct / 100));
+    const final = num(c.p);
+    const sansUrssaf = final > 0 ? r2(final / urssafCoef) : 0;
+    const net = final > 0 ? r2(sansUrssaf - tm.tauxRetenu) : 0;
     return `
-    <tr ${taux === 0 ? 'style="background:rgba(245,158,11,.06)"' : ''}>
+    <tr ${final === 0 ? 'style="background:rgba(245,158,11,.06)"' : ''}>
       <td><input type="text" value="${esc(c.l)}" oninput="tarifEdit(${idx},'l',this.value)" placeholder="Libellé prestation" style="border:0;background:transparent;color:var(--text);width:100%;font:inherit"></td>
       <td style="text-align:right">
         <div style="display:inline-flex;align-items:baseline;gap:3px">
-          <input type="number" step="0.5" value="${esc(c.p || "")}" oninput="tarifEdit(${idx},'p',this.value)" placeholder="—" style="width:64px;text-align:right;border:1px solid var(--border-light);background:var(--surface-2);color:var(--text);padding:4px 6px;border-radius:4px;font-variant-numeric:tabular-nums">
+          <input type="number" step="0.5" value="${esc(c.p || "")}" oninput="tarifEdit(${idx},'p',this.value)" placeholder="—" style="width:64px;text-align:right;border:1px solid var(--primary);background:var(--surface-2);color:var(--text);padding:4px 6px;border-radius:4px;font-variant-numeric:tabular-nums;font-weight:600">
           <span style="color:var(--text-dim);font-size:11px">€/h</span>
         </div>
       </td>
-      <td style="text-align:right;font-variant-numeric:tabular-nums;color:${taux > 0 ? 'var(--text)' : 'var(--warning)'}">${fmt(avecMat)}${taux === 0 ? '<div style="font-size:9px;color:var(--text-dim);margin-top:1px">plancher matériel</div>' : ''}</td>
-      <td style="text-align:right;font-variant-numeric:tabular-nums;color:${taux > 0 ? 'var(--primary)' : 'var(--warning)'};font-weight:600">${fmt(avecUrssaf)}${taux === 0 ? '<div style="font-size:9px;color:var(--text-dim);margin-top:1px;font-weight:400">plancher</div>' : ''}</td>
+      <td style="text-align:right;font-variant-numeric:tabular-nums;color:${final > 0 ? 'var(--text)' : 'var(--text-dim)'}">${final > 0 ? fmt(sansUrssaf) : "—"}</td>
+      <td style="text-align:right;font-variant-numeric:tabular-nums;color:${final > 0 ? (net >= 0 ? 'var(--success)' : 'var(--danger)') : 'var(--text-dim)'};font-weight:600">${final > 0 ? fmt(net) : "—"}</td>
     </tr>`;
   }).join("");
 
@@ -3931,17 +3975,17 @@ function rTR() {
         </tr>
       </tfoot>
     </table>
-    <div class="hint" style="margin-top:8px;max-width:780px">Le <strong>taux horaire retenu</strong> (${fmt(tm.tauxRetenu)}/h) est ajouté à chaque tarif de Prestations ci-dessous, et l'URSSAF (${urssafPct} %) appliquée par-dessus pour obtenir le tarif client final.</div>
+    <div class="hint" style="margin-top:8px;max-width:780px">Le <strong>taux horaire retenu</strong> (${fmt(tm.tauxRetenu)}/h) est utilisé pour décomposer chaque prestation ci-dessous : on part du prix client final (TTC), on en retire l'URSSAF, puis le coût matériel — il reste le net pour ton temps.</div>
 
     <h3>Prestations &amp; tarifs (€/h)</h3>
-    <div class="hint" style="max-width:880px">Le tarif <strong>de base</strong> est ce que tu saisis (ton net souhaité par heure de shooting). Le tarif <strong>+ matériel</strong> ajoute le taux horaire retenu (${fmt(tm.tauxRetenu)}/h). Le tarif <strong>+ URSSAF</strong> ajoute en plus ${urssafPct} % pour le prix client final.</div>
+    <div class="hint" style="max-width:880px">Saisis le <strong>tarif final</strong> facturé au client (TTC, URSSAF incluse). Le tableau remonte le calcul : <strong>− URSSAF</strong> = ce que tu encaisses réellement, <strong>− matériel</strong> = net horaire restant pour ton temps.</div>
     <table class="hist" style="max-width:880px">
       <thead>
         <tr>
           <th>Libellé</th>
-          <th style="width:110px;text-align:right">Tarif de base</th>
-          <th style="width:110px;text-align:right">+ matériel<div style="font-size:10px;font-weight:400;color:var(--text-muted);margin-top:1px">+${fmt(tm.tauxRetenu)}/h</div></th>
-          <th style="width:110px;text-align:right">+ URSSAF<div style="font-size:10px;font-weight:400;color:var(--text-muted);margin-top:1px">+${urssafPct} %</div></th>
+          <th style="width:110px;text-align:right">Tarif final<div style="font-size:10px;font-weight:400;color:var(--text-muted);margin-top:1px">prix client TTC</div></th>
+          <th style="width:110px;text-align:right">Sans URSSAF<div style="font-size:10px;font-weight:400;color:var(--text-muted);margin-top:1px">−${urssafPct} %</div></th>
+          <th style="width:110px;text-align:right">Net<div style="font-size:10px;font-weight:400;color:var(--text-muted);margin-top:1px">−${fmt(tm.tauxRetenu)} matériel</div></th>
         </tr>
       </thead>
       <tbody>${tarifRows3col}</tbody>
