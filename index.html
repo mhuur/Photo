@@ -393,6 +393,39 @@
   .preview-tabs-body{margin-top:0}
   .preview-tabs-body .devis-preview{margin-top:0;border-top-left-radius:0}
 
+  /* Tarifs view: cell inputs match Mission style (flat, transparent at rest) */
+  .tr-cell-input{width:100%;border:1px solid transparent;background:transparent;color:var(--text);font:inherit;padding:5px 8px;border-radius:4px;height:var(--input-h);box-sizing:border-box;transition:border-color .12s,background .12s}
+  .tr-cell-input:hover{background:var(--surface-2)}
+  .tr-cell-input:focus{outline:none;border-color:var(--primary);background:var(--surface-2)}
+  .tr-cell-input.num{text-align:right;font-variant-numeric:tabular-nums;width:90px}
+  .tr-cell-input.center{text-align:center}
+  .tarif-input-wrap{display:inline-flex;align-items:center;gap:4px;justify-content:flex-end}
+  .tr-tarif-input{width:64px;text-align:right;border:1px solid transparent;background:var(--surface-2);color:var(--text);padding:4px 8px;border-radius:4px;font-variant-numeric:tabular-nums;font-weight:600;height:var(--input-h);box-sizing:border-box;transition:border-color .12s,background .12s;font:inherit}
+  .tr-tarif-input:hover{background:var(--surface)}
+  .tr-tarif-input:focus{outline:none;border-color:var(--primary);background:var(--surface-2)}
+  .tarif-input-wrap .unit{color:var(--text-dim);font-size:13px}
+  /* Tarifs cells colors */
+  table.hist td.net-cell{font-variant-numeric:tabular-nums;font-weight:600;text-align:right}
+  table.hist td.net-cell.ok{color:var(--success)}
+  table.hist td.net-cell.bad{color:var(--danger)}
+  table.hist td.net-cell.dim{color:var(--text-dim)}
+  table.hist td.muted-cell{font-variant-numeric:tabular-nums;color:var(--text-muted);text-align:right;padding-right:14px}
+  table.hist td.muted-cell.dim{color:var(--text-dim)}
+  table.hist td.tarif-cell{text-align:right}
+  table.hist td.tr-amorti-cell{font-variant-numeric:tabular-nums;color:var(--success);text-align:right;padding-right:14px}
+  table.hist td.tr-reste-cell{font-variant-numeric:tabular-nums;text-align:right;padding-right:14px}
+  table.hist td.tr-reste-cell.pending{color:var(--warning)}
+  table.hist td.tr-reste-cell.done{color:var(--text-dim)}
+  table.hist td.center{text-align:center}
+  table.hist tr.row-empty{background:rgba(245,158,11,.06)}
+  table.hist tr.row-inactive{opacity:.65}
+  table.hist tr.row-amorti{background:rgba(34,197,94,.04)}
+  /* Status badges in Tarifs view (Investissements) */
+  .tr-badge{padding:3px 8px;border-radius:10px;font-size:13px;font-weight:600;text-transform:uppercase;display:inline-block;line-height:1.4}
+  .tr-badge.ok{background:var(--success-soft);color:var(--success)}
+  .tr-badge.partial{background:var(--warning-soft);color:var(--warning)}
+  .tr-badge.none{background:var(--danger-soft);color:var(--danger)}
+
   /* Doc title (DÉBOURS / FACTURE) inside the preview */
   .devis-preview .dp-doc-title{font-size:24px;font-weight:800;letter-spacing:-.01em;margin:18px 0 4px;text-transform:uppercase}
   .devis-preview .dp-doc-sub{font-size:13px;color:var(--text-muted);margin-bottom:14px}
@@ -1100,9 +1133,9 @@ let cloudT = null;
 
 const TABS = [
   ["mission", "📋 Devis"],
+  ["tarifs",  "💰 Frais & Tarifs"],
   ["suivi",   "📊 Suivi"],
   ["clients", "👥 Clients"],
-  ["tarifs",  "💰 Frais & Tarifs"],
   ["compta",  "📈 Compta"],
   ["bugs",    "📝 Notes"],
   ["maj",     "🔄 Mises à jour"]
@@ -2248,20 +2281,61 @@ function totals() {
   };
 }
 
+function rTauxBreakdown() {
+  // Inline breakdown shown under "Temps de trajet" when "Dans taux horaire" mode is active.
+  const d = S.mission;
+  if (d.deplacement.devis !== "taux") return "";
+  const t = totals();
+  if (t.totalHeures === 0) {
+    return `<div class="hint" style="margin-top:6px;color:var(--warning)">⚠ Pas d'heures dans le devis : le déplacement est facturé séparément en attendant.</div>`;
+  }
+  const b = tarifBreakdown(true);
+  if (!b) return `<div class="hint" style="margin-top:6px">Sélectionne un type de prestation pour voir la décomposition.</div>`;
+  return `<div class="taux-breakdown">
+    <label class="taux-breakdown-lbl">Tarif horaire mis à jour avec déplacement</label>
+    <div class="presta-decomp">${tarifBreakdownHtml(b)}</div>
+  </div>`;
+}
+
 function refreshTotals() {
-  // Re-render the devis preview block
-  const el = document.getElementById("devisPreview");
-  if (el) {
-    const wrap = document.createElement("div");
-    wrap.innerHTML = rDevisPreview();
-    const fresh = wrap.firstElementChild;
-    if (fresh) el.parentNode.replaceChild(fresh, el);
+  // Re-render the active preview tab body (Devis / Débours / Facture)
+  const previewBody = document.querySelector(".preview-tabs-body");
+  if (previewBody) {
+    let bodyHtml = "";
+    if (activePreviewTab === "devis") bodyHtml = rDevisPreview();
+    else if (activePreviewTab === "debours") bodyHtml = rDeboursPreview();
+    else if (activePreviewTab === "facture") bodyHtml = rFacturePreview();
+    previewBody.innerHTML = bodyHtml;
+  } else {
+    // Fallback for any orphan #devisPreview (e.g. inside view-devis-snapshot)
+    const el = document.getElementById("devisPreview");
+    if (el) {
+      const wrap = document.createElement("div");
+      wrap.innerHTML = rDevisPreview();
+      const fresh = wrap.firstElementChild;
+      if (fresh) el.parentNode.replaceChild(fresh, el);
+    }
+  }
+  // Update the inline taux breakdown (under "Temps de trajet")
+  const tauxWrap = document.getElementById("tauxBreakdownWrap");
+  if (tauxWrap) tauxWrap.innerHTML = rTauxBreakdown();
+  // Update the tooltip content (Statut → ⓘ)
+  const tooltip = document.querySelector(".tarif-tooltip");
+  if (tooltip) {
+    const b = tarifBreakdown(true);
+    if (b) tooltip.innerHTML = `<div class="tt-title">Décomposition du tarif horaire</div>${tarifBreakdownHtml(b)}`;
+  }
+  // Update the badge on the Débours tab button (total débours amount)
+  const t2 = totals();
+  const deboursBtn = document.querySelector(".preview-tabs-nav button[onclick*=\"'debours'\"]");
+  if (deboursBtn) {
+    const hasDebours = t2.debours > 0;
+    deboursBtn.innerHTML = `💸 Débours${hasDebours ? ` <span class="badge">${fmt(t2.debours)}</span>` : ""}`;
   }
   // Re-render the échéances inline amounts (not the inputs themselves to avoid focus loss)
-  const t = totals();
   (S.mission.echeances || []).forEach(e => {
     const cell = document.querySelector(`[data-ech-amt="${e.id}"]`);
-    if (cell) cell.textContent = fmt(r2(t.total * num(e.pct) / 100));
+    if (cell) cell.textContent = fmt(r2(t2.total * num(e.pct) / 100));
   });
   // Update the new "Total" row at the bottom of the échéances list
   const totalRow = document.getElementById("echTotalRow");
@@ -2269,11 +2343,11 @@ function refreshTotals() {
   const totalAmt = document.getElementById("echTotalAmt");
   const warnEl = document.getElementById("echWarn");
   if (totalRow && totalPct && totalAmt) {
-    const pctSum = t.echeancesTotal;
+    const pctSum = t2.echeancesTotal;
     const ok = pctSum === 100;
     totalRow.className = `ech-row ech-total ${ok ? "ok" : "warn"}`;
     totalPct.textContent = `${pctSum.toString().replace(".",",")} %${ok ? " ✓" : ""}`;
-    totalAmt.textContent = fmt(t.total);
+    totalAmt.textContent = fmt(t2.total);
     if (warnEl) warnEl.style.display = ok ? "none" : "";
   }
 }
@@ -2479,7 +2553,7 @@ function rTextEditorModal() {
   const label = ENCADRE_LABELS[field] || field;
   const rawValue = (S.mission && S.mission[field] !== undefined) ? S.mission[field] : "";
   const initialHtml = isRichHtml(rawValue) ? rawValue : plainToHtml(rawValue);
-  return `<div class="modal-overlay" onclick="if(event.target===this)textEditorClose(false)">
+  return `<div class="modal-overlay">
     <div class="modal-card modal-card-lg">
       <div class="modal-title">✏ ${esc(label)}</div>
       <div class="rte-toolbar">
@@ -2517,6 +2591,7 @@ function rTextEditorModal() {
         <button class="rte-btn" onclick="textEditorCmd('justifyLeft')" title="Aligner à gauche">⇤</button>
         <button class="rte-btn" onclick="textEditorCmd('justifyCenter')" title="Centrer">↔</button>
         <button class="rte-btn" onclick="textEditorCmd('justifyRight')" title="Aligner à droite">⇥</button>
+        <button class="rte-btn" onclick="textEditorCmd('justifyFull')" title="Justifier (texte aligné aux deux marges)">≡</button>
         <span class="rte-sep"></span>
         <button class="rte-btn" onclick="textEditorCmd('insertUnorderedList')" title="Liste à puces">• Liste</button>
         <button class="rte-btn" onclick="textEditorCmd('insertOrderedList')" title="Liste numérotée">1. Liste</button>
@@ -2800,20 +2875,7 @@ function rMS() {
     `}
     <div class="row"><div class="field narrow"><label>Temps de trajet (h)</label><input type="number" step="0.25" value="${esc(d.deplacement.trajetH)}" oninput="upd('mission.deplacement.trajetH', this.value)"></div></div>
 
-    ${(() => {
-      // Inline breakdown: only when "taux" mode is active AND there are heures to spread depl across
-      if (d.deplacement.devis !== "taux") return "";
-      const t = totals();
-      if (t.totalHeures === 0) {
-        return `<div class="hint" style="margin-top:6px;color:var(--warning)">⚠ Pas d'heures dans le devis : le déplacement est facturé séparément en attendant.</div>`;
-      }
-      const b = tarifBreakdown(true);
-      if (!b) return `<div class="hint" style="margin-top:6px">Sélectionne un type de prestation pour voir la décomposition.</div>`;
-      return `<div class="taux-breakdown">
-        <label class="taux-breakdown-lbl">Tarif horaire mis à jour avec déplacement</label>
-        <div class="presta-decomp">${tarifBreakdownHtml(b)}</div>
-      </div>`;
-    })()}
+    <div id="tauxBreakdownWrap">${rTauxBreakdown()}</div>
 
     <h3>Paiement</h3>
 
@@ -5039,13 +5101,13 @@ function rTR() {
   const abRows = abEntries.map(e => {
     const isActif = !e.dateFin;
     return `
-    <tr ${isActif ? "" : 'style="opacity:.65"'}>
-      <td style="padding:4px 8px"><input value="${esc(e.libelle)}" oninput="editAbonnementAndRefresh('${e.id}','libelle',this.value)" placeholder="Libellé" style="width:100%"></td>
-      <td style="padding:4px 8px"><input type="date" value="${esc(e.dateDebut || "")}" oninput="editAbonnementAndRefresh('${e.id}','dateDebut',this.value)" style="width:100%"></td>
-      <td style="padding:4px 8px">${rDateOrEnCoursCell(e.id, e.dateFin)}</td>
-      <td style="text-align:right;padding:4px 8px"><input type="number" step="0.01" value="${esc(e.annuel)}" oninput="editAbonnementAndRefresh('${e.id}','annuel',this.value); refreshAbonnementMensuel('${e.id}')" style="width:90px;text-align:right"></td>
-      <td class="amount" id="ab-mens-${e.id}" style="text-align:right;color:var(--text-muted);font-variant-numeric:tabular-nums;padding:4px 14px 4px 8px">${fmt(num(e.annuel) / 12)}</td>
-      <td class="actions" style="padding:4px"><button title="Supprimer" onclick="if(confirm('Supprimer cet abonnement ?'))deleteAbonnement('${e.id}')">×</button></td>
+    <tr class="${isActif ? "" : "row-inactive"}">
+      <td><input value="${esc(e.libelle)}" oninput="editAbonnementAndRefresh('${e.id}','libelle',this.value)" placeholder="Libellé" class="tr-cell-input"></td>
+      <td><input type="date" value="${esc(e.dateDebut || "")}" oninput="editAbonnementAndRefresh('${e.id}','dateDebut',this.value)" class="tr-cell-input"></td>
+      <td>${rDateOrEnCoursCell(e.id, e.dateFin)}</td>
+      <td class="amount"><input type="number" step="0.01" value="${esc(e.annuel)}" oninput="editAbonnementAndRefresh('${e.id}','annuel',this.value); refreshAbonnementMensuel('${e.id}')" class="tr-cell-input num"></td>
+      <td class="amount muted-cell" id="ab-mens-${e.id}">${fmt(num(e.annuel) / 12)}</td>
+      <td class="actions"><button title="Supprimer" onclick="if(confirm('Supprimer cet abonnement ?'))deleteAbonnement('${e.id}')">×</button></td>
     </tr>`;
   }).join("");
 
@@ -5061,20 +5123,20 @@ function rTR() {
     const annuel = duree > 0 ? r2(prix / duree) : 0;
     const am1 = amortMap[e.id] || { amorti: 0, reste: prix, fullyAmorti: false };
     const badge = am1.fullyAmorti
-      ? `<span style="background:var(--success-soft);color:var(--success);padding:3px 8px;border-radius:10px;font-size:13px;font-weight:600;text-transform:uppercase">✓ Amorti</span>`
+      ? `<span class="tr-badge ok">✓ Amorti</span>`
       : am1.amorti > 0
-      ? `<span style="background:var(--warning-soft);color:var(--warning);padding:3px 8px;border-radius:10px;font-size:13px;font-weight:600;text-transform:uppercase">Partiel</span>`
-      : `<span style="background:var(--danger-soft);color:var(--danger);padding:3px 8px;border-radius:10px;font-size:13px;font-weight:600;text-transform:uppercase">Non</span>`;
+      ? `<span class="tr-badge partial">Partiel</span>`
+      : `<span class="tr-badge none">Non</span>`;
     return `
-    <tr ${am1.fullyAmorti ? 'style="background:rgba(34,197,94,.04)"' : ''}>
-      <td><input type="date" value="${esc(e.date)}" oninput="editInvestissement('${e.id}','date',this.value)"></td>
-      <td><input value="${esc(e.descriptif)}" oninput="editInvestissement('${e.id}','descriptif',this.value)" placeholder="Descriptif"></td>
-      <td class="amount"><input type="number" step="0.01" value="${esc(e.prix)}" oninput="editInvestissement('${e.id}','prix',this.value)"></td>
-      <td class="amount"><input type="number" step="0.5" min="0.5" value="${esc(e.dureeVie || "5")}" oninput="editInvestissement('${e.id}','dureeVie',this.value)" style="text-align:center"></td>
-      <td class="amount" style="text-align:right;color:var(--text-muted);font-variant-numeric:tabular-nums;padding-right:14px">${fmt(annuel)}</td>
-      <td class="amount" style="text-align:right;color:var(--success);font-variant-numeric:tabular-nums;padding-right:14px">${fmt(am1.amorti)}</td>
-      <td class="amount" style="text-align:right;color:${am1.reste > 0 ? 'var(--warning)' : 'var(--text-dim)'};font-variant-numeric:tabular-nums;padding-right:14px">${fmt(am1.reste)}</td>
-      <td style="text-align:center">${badge}</td>
+    <tr class="${am1.fullyAmorti ? 'row-amorti' : ''}">
+      <td><input type="date" value="${esc(e.date)}" oninput="editInvestissement('${e.id}','date',this.value)" class="tr-cell-input"></td>
+      <td><input value="${esc(e.descriptif)}" oninput="editInvestissement('${e.id}','descriptif',this.value)" placeholder="Descriptif" class="tr-cell-input"></td>
+      <td class="amount"><input type="number" step="0.01" value="${esc(e.prix)}" oninput="editInvestissement('${e.id}','prix',this.value)" class="tr-cell-input num"></td>
+      <td class="amount"><input type="number" step="0.5" min="0.5" value="${esc(e.dureeVie || "5")}" oninput="editInvestissement('${e.id}','dureeVie',this.value)" class="tr-cell-input num center"></td>
+      <td class="amount muted-cell">${fmt(annuel)}</td>
+      <td class="amount tr-amorti-cell">${fmt(am1.amorti)}</td>
+      <td class="amount tr-reste-cell ${am1.reste > 0 ? 'pending' : 'done'}">${fmt(am1.reste)}</td>
+      <td class="center">${badge}</td>
       <td class="actions"><button title="Supprimer" onclick="if(confirm('Supprimer cet investissement ?'))deleteInvestissement('${e.id}')">×</button></td>
     </tr>`;
   }).join("");
@@ -5088,14 +5150,14 @@ function rTR() {
     const sansUrssaf = final > 0 ? r2(final / urssafCoef) : 0;
     const net = final > 0 ? r2(sansUrssaf - tm.tauxRetenu) : 0;
     return `
-    <tr ${final === 0 ? 'style="background:rgba(245,158,11,.06)"' : ''}>
-      <td><input type="text" value="${esc(c.l)}" oninput="tarifEdit(${idx},'l',this.value)" placeholder="Libellé prestation" style="border:0;background:transparent;color:var(--text);width:100%;font:inherit"></td>
-      <td style="text-align:right;font-variant-numeric:tabular-nums;color:${final > 0 ? (net >= 0 ? 'var(--success)' : 'var(--danger)') : 'var(--text-dim)'};font-weight:600">${final > 0 ? fmt(net) : "—"}</td>
-      <td style="text-align:right;font-variant-numeric:tabular-nums;color:${final > 0 ? 'var(--text-muted)' : 'var(--text-dim)'}">${final > 0 ? fmt(tm.tauxRetenu) : "—"}</td>
-      <td style="text-align:right">
-        <div style="display:inline-flex;align-items:baseline;gap:3px">
-          <input type="number" step="0.5" value="${esc(c.p || "")}" oninput="tarifEdit(${idx},'p',this.value)" placeholder="—" style="width:64px;text-align:right;border:1px solid var(--primary);background:var(--surface-2);color:var(--text);padding:4px 6px;border-radius:4px;font-variant-numeric:tabular-nums;font-weight:600">
-          <span style="color:var(--text-dim);font-size:13px">€/h</span>
+    <tr ${final === 0 ? 'class="row-empty"' : ''}>
+      <td><input type="text" value="${esc(c.l)}" oninput="tarifEdit(${idx},'l',this.value)" placeholder="Libellé prestation" class="tr-cell-input"></td>
+      <td class="amount net-cell ${final > 0 ? (net >= 0 ? 'ok' : 'bad') : 'dim'}">${final > 0 ? fmt(net) : "—"}</td>
+      <td class="amount muted-cell ${final > 0 ? '' : 'dim'}">${final > 0 ? fmt(tm.tauxRetenu) : "—"}</td>
+      <td class="amount tarif-cell">
+        <div class="tarif-input-wrap">
+          <input type="number" step="0.5" value="${esc(c.p || "")}" oninput="tarifEdit(${idx},'p',this.value)" placeholder="—" class="tr-tarif-input">
+          <span class="unit">€/h</span>
         </div>
       </td>
     </tr>`;
@@ -5300,6 +5362,18 @@ function rTR() {
 // Most recent version FIRST.
 // =============================================================
 const CHANGELOG = [
+  {
+    version: "v1.11",
+    date: "2026-04-29",
+    title: "Réorganisation onglets + mise à jour instantanée du déplacement + protection éditeur de texte",
+    items: [
+      "Onglet « 💰 Frais & Tarifs » déplacé en 2ᵉ position (juste après Devis), pour qu'il soit accessible plus vite quand tu ajustes tes tarifs.",
+      "Onglet Frais & Tarifs : nettoyage graphique pour s'aligner sur le style de l'onglet Devis. Les inputs dans les tableaux (libellés, dates, prix, durées, tarifs) ont la même apparence flat que dans Devis : transparent au repos, bordure cyan au focus. Les badges « ✓ Amorti / Partiel / Non » et les couleurs des montants sont préservés mais via classes CSS plutôt qu'inline styles.",
+      "Onglet Devis → Déplacement : mise à jour instantanée. Quand tu tapes un montant (km, péages, billets, temps de trajet), le tableau de décomposition « Tarif horaire mis à jour avec déplacement » (mode « Dans taux horaire ») se recalcule en temps réel, ainsi que le tooltip ⓘ à côté de Statut, et l'aperçu du devis actif (Devis / Débours / Facture). Plus besoin de quitter le champ pour voir le résultat.",
+      "Onglet Devis → Éditeur de texte enrichi (ouvert via les encadrés Photographe, Conditions de paiement, Bon pour accord, CGV) : la modale ne se ferme plus quand on clique en dehors. Désormais seuls les boutons « Annuler » et « ✓ Enregistrer » la ferment. Plus de risque de perdre la mise en forme par un clic accidentel.",
+      "Éditeur de texte enrichi : nouveau bouton « Justifier » (≡) à côté des alignements gauche / centre / droite. Pour les paragraphes de CGV ou de conditions, le texte peut maintenant être aligné aux deux marges (style document professionnel)."
+    ]
+  },
   {
     version: "v1.10",
     date: "2026-04-29",
