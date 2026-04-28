@@ -375,9 +375,11 @@
   .devis-preview .dp-line .amt{color:var(--text);font-weight:500;font-variant-numeric:tabular-nums;white-space:nowrap;min-width:90px;text-align:right}
   .devis-preview .dp-totals{margin-top:14px;padding-top:14px;border-top:2px solid var(--border-light)}
   .devis-preview .dp-totals .dp-line{padding:5px 0;border-bottom:0;color:var(--text-muted)}
-  .devis-preview .dp-totals .dp-line.grand{font-size:15px;font-weight:700;padding:10px 0;margin-top:6px;border-top:1px solid var(--border-light)}
-  .devis-preview .dp-totals .dp-line.grand .lbl,.devis-preview .dp-totals .dp-line.grand .amt{color:var(--primary)}
-  .devis-preview .dp-totals .dp-line.debours{color:var(--accent)}
+  .devis-preview .dp-totals .dp-line.grand{font-size:16px;font-weight:700;padding:10px 0;margin-top:6px;border-top:1px solid var(--border-light)}
+  .devis-preview .dp-totals .dp-line.grand .lbl,.devis-preview .dp-totals .dp-line.grand .amt{color:var(--text)}
+  .devis-preview .dp-totals .dp-line.debours{color:var(--text-muted);font-style:italic;font-size:12px}
+  .devis-preview .dp-objet{font-size:13px;color:var(--text);margin:0 0 18px 0;padding:0;line-height:1.5}
+  .devis-preview .dp-objet strong{font-weight:600}
   .devis-preview .dp-footer{margin-top:18px;padding-top:14px;border-top:1px solid var(--border-soft);font-size:13px;color:var(--text-dim);text-align:center;line-height:1.6}
   .devis-preview .dp-actions{display:flex;gap:10px;margin-top:18px;justify-content:flex-end}
   .devis-preview .dp-empty{text-align:center;padding:30px;color:var(--text-dim);font-size:13px}
@@ -445,15 +447,14 @@
   .devis-preview .dp-receipt-line.restant.paid{font-size:15px}
 
   /* Devis header 2-col: photographer left, client+meta right */
-  .devis-preview .dp-header-grid{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:18px}
+  .devis-preview .dp-header-grid{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:24px}
   .devis-preview .dp-header-left{font-size:13px;color:var(--text);line-height:1.6;white-space:pre-wrap;border-right:1px solid var(--border-soft);padding-right:18px}
   .devis-preview .dp-header-left.empty{color:var(--text-dim);font-style:italic;font-size:13px}
-  .devis-preview .dp-header-right{display:flex;flex-direction:column;align-items:flex-end;gap:14px}
-  .devis-preview .dp-meta-block{text-align:right;font-size:13px;color:var(--text-muted);line-height:1.6}
-  .devis-preview .dp-meta-block .ref{color:var(--primary);font-weight:600;font-size:13px;font-variant-numeric:tabular-nums;margin-bottom:6px}
+  .devis-preview .dp-header-right{display:flex;flex-direction:column;align-items:flex-end;gap:0}
+  .devis-preview .dp-meta-block{text-align:right;font-size:13px;color:var(--text-muted);line-height:1.6;margin-bottom:0}
+  .devis-preview .dp-meta-block .ref{color:var(--text);font-weight:600;font-size:13px;font-variant-numeric:tabular-nums;margin-bottom:6px}
   .devis-preview .dp-meta-block strong{color:var(--text);font-weight:600}
-  .devis-preview .dp-client-block{text-align:right;font-size:13px;color:var(--text);line-height:1.6;padding:0;min-width:220px}
-  .devis-preview .dp-client-block .num{color:var(--text-muted);font-size:13px;font-variant-numeric:tabular-nums;display:block;margin-bottom:2px}
+  .devis-preview .dp-client-block{text-align:right;font-size:13px;color:var(--text);line-height:1.6;padding:0;min-width:220px;margin-top:0}
   .devis-preview .dp-client-block .name{font-weight:600;font-size:13px;color:var(--text);display:block}
   @media (max-width:680px){
     .devis-preview .dp-header-grid{grid-template-columns:1fr}
@@ -1483,7 +1484,6 @@ function rDevisPreview() {
           <div>Validité : <strong>${dateFR(d.dateValidite) || "—"}</strong></div>
         </div>
         <div class="dp-client-block">
-          <span class="num">${esc(cli.num || "—")}</span>
           <span class="name">${esc(cli.name || "(Sélectionner un client)")}</span>
           ${(() => {
             // Resolve current contact from contactId if any
@@ -1509,28 +1509,20 @@ function rDevisPreview() {
       </div>
     </div>
 
-    ${cat ? `<div class="dp-section">
-      <h4>Prestation</h4>
-      <div class="dp-client"><div class="name">${esc(cat.l)}</div></div>
-    </div>` : ""}
+    ${cat ? `<div class="dp-objet">Objet : <strong>${esc(cat.l)}</strong></div>` : ""}
 
     <div class="dp-section">
-      <h4>Détail</h4>
       ${linesHtml || `<div class="dp-empty" style="padding:14px">Aucune ligne pour l'instant.</div>`}
     </div>
 
     <div class="dp-totals">
+      ${t.remise > 0 ? `
       <div class="dp-line"><span class="lbl">Sous-total</span><span class="amt">${fmt(t.subtotal)}</span></div>
-      ${t.remise > 0 ? `<div class="dp-line"><span class="lbl">Remise (${num(d.remisePct).toString().replace(".",",")} %)</span><span class="amt">−${fmt(t.remise)}</span></div>` : ""}
+      <div class="dp-line"><span class="lbl">Remise (${num(d.remisePct).toString().replace(".",",")} %)</span><span class="amt">−${fmt(t.remise)}</span></div>` : ""}
       <div class="dp-line grand"><span class="lbl">Total HT</span><span class="amt">${fmt(t.total)}</span></div>
       ${(t.echeances || []).map(e => `<div class="dp-line"><span class="lbl">${esc(e.label)} (${num(e.pct).toString().replace(".",",")} %)</span><span class="amt">${fmt(e.amount)}</span></div>`).join("")}
-      ${t.debours > 0 ? `<div class="dp-line debours"><span class="lbl">+ Frais de débours (à rembourser sur justificatifs)</span><span class="amt">${fmt(t.debours)}</span></div>` : ""}
+      ${t.debours > 0 ? `<div class="dp-line debours"><span class="lbl">+ Frais de débours (à rembourser sur justificatifs, voir document séparé)</span><span class="amt">${fmt(t.debours)}</span></div>` : ""}
     </div>
-
-    ${deboursHtml ? `<div class="dp-section" style="margin-top:14px">
-      <h4 style="color:var(--accent)">Frais de débours détaillés</h4>
-      ${deboursHtml}
-    </div>` : ""}
 
     ${(d.conditionsPaiement || "").trim() ? `<div class="dp-conditions">
       <h4>Conditions de paiement</h4>${richDisplayHtml(d.conditionsPaiement)}
@@ -1550,14 +1542,13 @@ function rDevisPreview() {
     ` : ""}
 
     <div class="dp-actions">
-      <button class="btn ghost" onclick="window.print()">🖨️ Imprimer</button>
       <button class="btn" onclick="suiviAdd()">+ Enregistrer dans Suivi</button>
     </div>
   </div>`;
 }
 
 // ============ ACTIVE PREVIEW TAB STATE ============
-let activePreviewTab = "devis"; // 'devis' | 'debours' | 'facture'
+let activePreviewTab = "devis"; // 'devis' | 'debours'
 window.setPreviewTab = function(tab) {
   activePreviewTab = tab;
   render();
@@ -1608,7 +1599,6 @@ function rDeboursPreview() {
           <div>Émission : <strong>${dateFR(d.dateEmission) || "—"}</strong></div>
         </div>
         <div class="dp-client-block">
-          <span class="num">${esc(cli.num || "—")}</span>
           <span class="name">${esc(cli.name || "(Sélectionner un client)")}</span>
         </div>
       </div>
@@ -1627,10 +1617,6 @@ function rDeboursPreview() {
     </div>
 
     <div class="dp-footer">À régler sur présentation des justificatifs joints.</div>
-
-    <div class="dp-actions">
-      <button class="btn ghost" onclick="window.print()">🖨️ Imprimer</button>
-    </div>
   </div>`;
 }
 
@@ -1701,7 +1687,6 @@ function rFacturePreview(opts) {
           <div>Émission : <strong>${dateFR(d.dateEmission) || "—"}</strong></div>
         </div>
         <div class="dp-client-block">
-          <span class="num">${esc(cli.num || "—")}</span>
           <span class="name">${esc(cli.name || "(Sélectionner un client)")}</span>
         </div>
       </div>
@@ -1752,16 +1737,17 @@ function rPreviewTabs() {
   const hasDebours = t.debours > 0;
   const hasContent = (d.lignes || []).length > 0;
 
+  // Defensive: if a previously stored state had "facture", fall back to "devis"
+  if (activePreviewTab === "facture") activePreviewTab = "devis";
+
   let bodyHtml = "";
   if (activePreviewTab === "devis") bodyHtml = rDevisPreview();
   else if (activePreviewTab === "debours") bodyHtml = rDeboursPreview();
-  else if (activePreviewTab === "facture") bodyHtml = rFacturePreview();
 
   return `<div class="preview-tabs-wrap">
     <div class="preview-tabs-nav">
       <button class="${activePreviewTab==='devis'?'on':''}" onclick="setPreviewTab('devis')">📄 Devis</button>
       <button class="${activePreviewTab==='debours'?'on':''} ${hasDebours?'has':''}" onclick="setPreviewTab('debours')">💸 Débours${hasDebours ? ` <span class="badge">${fmt(t.debours)}</span>` : ""}</button>
-      <button class="${activePreviewTab==='facture'?'on':''}" onclick="setPreviewTab('facture')">🧾 Facture</button>
     </div>
     <div class="preview-tabs-body">
       ${bodyHtml}
@@ -2298,13 +2284,12 @@ function rTauxBreakdown() {
 }
 
 function refreshTotals() {
-  // Re-render the active preview tab body (Devis / Débours / Facture)
+  // Re-render the active preview tab body (Devis / Débours)
   const previewBody = document.querySelector(".preview-tabs-body");
   if (previewBody) {
     let bodyHtml = "";
     if (activePreviewTab === "devis") bodyHtml = rDevisPreview();
     else if (activePreviewTab === "debours") bodyHtml = rDeboursPreview();
-    else if (activePreviewTab === "facture") bodyHtml = rFacturePreview();
     previewBody.innerHTML = bodyHtml;
   } else {
     // Fallback for any orphan #devisPreview (e.g. inside view-devis-snapshot)
@@ -5362,6 +5347,24 @@ function rTR() {
 // Most recent version FIRST.
 // =============================================================
 const CHANGELOG = [
+  {
+    version: "v1.12",
+    date: "2026-04-29",
+    title: "Devis épuré + Facture/Imprimer déplacés vers Suivi uniquement",
+    items: [
+      "Onglet Devis : suppression de l'onglet « 🧾 Facture ». La facture n'est plus disponible que depuis l'onglet Suivi (bouton 🧾 par devis). L'onglet Devis ne contient plus que « 📄 Devis » et « 💸 Débours ».",
+      "Onglet Devis : suppression du bouton « 🖨️ Imprimer » dans tous les aperçus (Devis et Débours). L'impression n'est plus disponible que depuis Suivi (modale 👁 Voir le devis émis et modale 🧾 Voir la facture). Avantage : tu ne peux plus imprimer un brouillon non enregistré, donc plus de risque de perdre le devis.",
+      "Aperçu Devis nettoyé : référence « DEVIS-… » qui était en cyan repasse en couleur de texte normale (cohérence avec un document professionnel).",
+      "Aperçu Devis : numéro client retiré de l'en-tête (info technique inutile pour le client).",
+      "Aperçu Devis : suppression de l'espace entre la date de validité et le bloc client. Les deux blocs droite (dates + client) flottent maintenant en continu, ce qui aligne mieux la hauteur visuelle avec la colonne photographe à gauche.",
+      "Aperçu Devis : suppression du titre « Prestation » (information évidente). Remplacé par une ligne discrète « Objet : [type] » sous l'en-tête.",
+      "Aperçu Devis : suppression du titre « Détail ». Les lignes parlent d'elles-mêmes.",
+      "Aperçu Devis : section « Frais de débours détaillés » retirée du devis principal. Les débours apparaissent maintenant uniquement dans le document débours dédié, plus une ligne de rappel discrète en italique dans les totaux du devis principal (« + Frais de débours, voir document séparé »).",
+      "Aperçu Devis : « Sous-total » uniquement affiché s'il y a une remise. Sinon on passe directement au Total HT (qui est alors aussi le sous-total).",
+      "Aperçu Devis : « Total HT » repasse en couleur de texte normale (la mise en valeur se fait par la taille et le poids, plus par la couleur).",
+      "Aperçu Devis : ligne « + Frais de débours » dans les totaux passe d'orange vif à italique muté discret."
+    ]
+  },
   {
     version: "v1.11",
     date: "2026-04-29",
