@@ -360,29 +360,93 @@
   .devis-page-break{display:block;height:1px;margin:30px 0;border-top:2px dashed var(--border-light);position:relative}
   .devis-page-break::before{content:"— Page 2 —";position:absolute;top:-9px;left:50%;transform:translateX(-50%);background:var(--surface-2);padding:0 12px;font-size:10px;color:var(--text-dim);text-transform:uppercase;letter-spacing:.08em}
   @media print {
-    /* Hide everything except the devis preview */
+    /* Hide everything by default */
     body * { visibility: hidden !important; }
-    .devis-preview, .devis-preview * { visibility: visible !important; }
-    .devis-preview { position: absolute !important; left: 0; top: 0; width: 100%; padding: 0 !important; margin: 0 !important; }
-    /* Hide print/save buttons in the preview itself */
-    .devis-preview .dp-actions, .devis-preview button { display: none !important; }
-    /* Force black & white: override all colors */
-    .devis-preview, .devis-preview * {
-      color: #000 !important;
+    /* Show only the devis preview (live or modal snapshot) */
+    .devis-preview, .devis-preview *,
+    .view-devis-snapshot, .view-devis-snapshot * { visibility: visible !important; }
+    /* Position the printed devis at top of page */
+    .devis-preview, .view-devis-snapshot {
+      position: absolute !important;
+      left: 0; top: 0; right: 0;
+      width: 100% !important;
+      max-width: none !important;
+      padding: 0 !important;
+      margin: 0 !important;
+      border: 0 !important;
+      box-shadow: none !important;
       background: #fff !important;
-      background-color: #fff !important;
+      color: #000 !important;
+      font-family: Georgia, "Times New Roman", serif !important;
+      font-size: 11pt !important;
+      line-height: 1.5 !important;
+    }
+    .modal-overlay, .modal-card {
+      position: static !important;
+      background: #fff !important;
+      border: 0 !important;
+      box-shadow: none !important;
+      padding: 0 !important;
+      max-height: none !important;
+      overflow: visible !important;
+    }
+    .modal-title, .modal-sub, .modal-actions { display: none !important; }
+    /* Hide all buttons, action bars, and interactive elements in the printed devis */
+    .devis-preview .dp-actions, .devis-preview button,
+    .view-devis-snapshot .dp-actions, .view-devis-snapshot button { display: none !important; }
+    /* Force black & white */
+    .devis-preview *, .view-devis-snapshot * {
+      color: #000 !important;
+      background: transparent !important;
+      background-color: transparent !important;
       box-shadow: none !important;
       text-shadow: none !important;
     }
-    .devis-preview h1, .devis-preview h2, .devis-preview h3, .devis-preview .dp-header-right strong { color: #000 !important; font-weight: 700 !important; }
-    .devis-preview hr, .devis-preview .dp-line, .devis-preview .devis-page-break { border-color: #ccc !important; }
-    .devis-preview .dp-line { border-bottom: 1px solid #ddd !important; }
-    /* Page break inside CGV */
-    .devis-page-break{page-break-before:always;border:0;height:0;margin:0}
-    .devis-page-break::before{display:none}
-    /* Drop sidebar/main padding */
+    /* Header layout (photographe + ref/dates + client) */
+    .devis-preview .dp-header-grid, .view-devis-snapshot .dp-header-grid {
+      display: grid !important;
+      grid-template-columns: 1fr 1fr !important;
+      gap: 24pt !important;
+      padding-bottom: 12pt !important;
+      border-bottom: 1.5pt solid #000 !important;
+      margin-bottom: 18pt !important;
+    }
+    /* Headings */
+    .devis-preview h1, .view-devis-snapshot h1 { font-size: 24pt !important; font-weight: 700 !important; margin: 0 0 4pt 0 !important; letter-spacing: -.02em !important; }
+    .devis-preview h2, .view-devis-snapshot h2 { font-size: 14pt !important; font-weight: 700 !important; margin: 16pt 0 8pt 0 !important; padding-bottom: 4pt !important; border-bottom: .5pt solid #888 !important; }
+    .devis-preview h3, .view-devis-snapshot h3 { font-size: 12pt !important; font-weight: 700 !important; margin: 12pt 0 6pt 0 !important; }
+    /* Section headers and references */
+    .devis-preview .dp-header-right strong, .view-devis-snapshot .dp-header-right strong { font-weight: 700 !important; }
+    /* Lines */
+    .devis-preview .dp-line, .view-devis-snapshot .dp-line {
+      display: grid !important;
+      grid-template-columns: 1fr auto auto !important;
+      gap: 12pt !important;
+      padding: 6pt 0 !important;
+      border-bottom: .25pt dotted #aaa !important;
+      page-break-inside: avoid !important;
+    }
+    .devis-preview .dp-line .lbl, .view-devis-snapshot .dp-line .lbl { font-weight: 500 !important; }
+    .devis-preview .dp-line .desc, .view-devis-snapshot .dp-line .desc { font-size: 9.5pt !important; color: #555 !important; margin-top: 2pt !important; }
+    .devis-preview .dp-line .qty, .view-devis-snapshot .dp-line .qty { font-size: 9.5pt !important; color: #555 !important; white-space: nowrap !important; }
+    .devis-preview .dp-line .amt, .view-devis-snapshot .dp-line .amt { font-weight: 600 !important; font-variant-numeric: tabular-nums !important; white-space: nowrap !important; min-width: 70pt !important; text-align: right !important; }
+    /* Totals */
+    .devis-preview .dp-totals, .view-devis-snapshot .dp-totals { margin-top: 12pt !important; padding-top: 8pt !important; border-top: 1pt solid #000 !important; }
+    .devis-preview .dp-totals .line, .view-devis-snapshot .dp-totals .line { display: flex !important; justify-content: space-between !important; padding: 3pt 0 !important; }
+    .devis-preview .dp-totals .total, .view-devis-snapshot .dp-totals .total { font-size: 14pt !important; font-weight: 700 !important; padding-top: 6pt !important; margin-top: 4pt !important; border-top: 1pt solid #000 !important; }
+    /* Empty preview */
+    .devis-preview .dp-empty, .view-devis-snapshot .dp-empty { display: none !important; }
+    /* CGV page break */
+    .devis-page-break { page-break-before: always !important; border: 0 !important; height: 0 !important; margin: 0 !important; }
+    .devis-page-break::before { display: none !important; }
+    /* CGV content sized to fit */
+    .devis-preview .cgv-block, .view-devis-snapshot .cgv-block { font-size: 9pt !important; line-height: 1.4 !important; }
+    /* Hide chrome */
     .sb, header, nav, footer { display: none !important; }
-    @page { margin: 1.5cm; }
+    @page {
+      size: A4;
+      margin: 1.8cm 2cm 2cm 2cm;
+    }
   }
 
   /* Photographe textarea + conditions textarea in Mission */
@@ -424,14 +488,15 @@
   .contact-picker.contact-picker-compact{background:var(--surface-2);border-color:var(--border);padding:8px 12px;max-width:680px}
 
   /* Client + inline contact (point 5) */
-  .client-line{display:flex;align-items:flex-start;gap:14px;flex-wrap:wrap}
+  .client-line{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
   .client-line-picker{flex:0 0 auto;min-width:0}
-  .client-line-contact{flex:1 1 auto;min-width:200px;display:flex;align-items:center}
-  .contact-inline{display:flex;align-items:center;gap:8px;background:var(--surface-2);border:1px solid var(--border);border-radius:6px;padding:8px 12px;font-size:13px;color:var(--text);width:100%}
-  .contact-inline-lbl{color:var(--text-muted);font-size:11px;text-transform:uppercase;letter-spacing:.04em;font-weight:600;flex-shrink:0}
+  .client-line-contact{flex:1 1 320px;min-width:280px;max-width:480px;display:flex;align-items:center}
+  /* Match cli-pick .selected exactly so client + contact boxes line up perfectly */
+  .contact-inline{display:flex;align-items:center;gap:10px;background:var(--surface);border:1px solid var(--border-light);border-radius:6px;padding:10px 12px;font-size:13px;color:var(--text);width:100%;min-height:42px;box-sizing:border-box}
+  .contact-inline-lbl{color:var(--text-muted);font-size:11px;font-variant-numeric:tabular-nums;flex-shrink:0}
   .contact-inline-val{flex:1;color:var(--text);font-size:13px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
-  .contact-inline-change{background:transparent;border:1px solid var(--border);color:var(--text-muted);width:26px;height:26px;border-radius:5px;cursor:pointer;font-size:13px;display:flex;align-items:center;justify-content:center;padding:0;flex-shrink:0}
-  .contact-inline-change:hover{background:var(--surface-hi);color:var(--text);border-color:var(--primary)}
+  .contact-inline-change{background:transparent;border:0;color:var(--primary);font-size:13px;cursor:pointer;padding:2px 8px;border-radius:4px;flex-shrink:0}
+  .contact-inline-change:hover{background:var(--primary-soft)}
 
   /* Modal overlay */
   .modal-overlay{position:fixed;inset:0;background:rgba(8,15,28,.72);backdrop-filter:blur(3px);z-index:9999;display:flex;align-items:center;justify-content:center;padding:24px}
@@ -1092,21 +1157,21 @@ function rClientPicker() {
   const c = S.mission.client || {};
   const sel = c.id ? S.clients.entries.find(x => x.id === c.id) : null;
   if (sel && !cliPickCreating) {
-    return `<div class="row"><div class="cli-pick">
+    return `<div class="cli-pick">
       <div class="selected">
         <span class="num">${esc(sel.num || "—")}</span>
         <span class="name">${esc(sel.name || "(sans nom)")}</span>
         <button class="change" onclick="cliPickReset()">Changer</button>
       </div>
-    </div></div>`;
+    </div>`;
   }
   const draft = cliPickDraft;
-  return `<div class="row"><div class="cli-pick" id="cliPickRoot">
+  return `<div class="cli-pick" id="cliPickRoot">
     <div class="cli-search-wrap">
       <span class="ico">🔍</span>
       <input id="cliPickInput" type="text" placeholder="Rechercher un client par nom, n°, contact, email…" value="${esc(cliPickQuery)}" oninput="cliPickSearch(this.value)" onfocus="cliPickShowDropdown()" onblur="cliPickHideDropdown()" onclick="cliPickShowDropdown()" autocomplete="off">
     </div>
-  </div></div>
+  </div>
   ${cliPickCreating ? `
     <div class="cli-create-panel">
       <h4>Nouveau client</h4>
@@ -1611,7 +1676,8 @@ function render() {
       <div class="user">${esc(user.email)}<br><a href="#" onclick="signOut();return false">Déconnexion</a></div>
     </aside>
     <main>${view}</main>
-    ${rTextEditorModal()}`;
+    ${rTextEditorModal()}
+    ${rViewDevisModal()}`;
 }
 
 // State: track if picker is force-opened (e.g. after user clicks "Changer de contact")
@@ -1691,16 +1757,14 @@ function clientContactPick(contactId) {
 window.clientContactPick = clientContactPick;
 
 // Modal editor state
-let textEditorModal = null; // { field, value, label }
-window.textEditorOpen = function(field, label, currentValue) {
-  textEditorModal = { field, label, value: currentValue || "" };
+let textEditorModal = null; // { field }
+window.textEditorOpen = function(field) {
+  textEditorModal = { field };
   render();
-  // Focus textarea after render
   requestAnimationFrame(() => {
     const ta = document.getElementById("modal-textarea");
     if (ta) {
       ta.focus();
-      // Place cursor at end
       ta.setSelectionRange(ta.value.length, ta.value.length);
     }
   });
@@ -1773,12 +1837,12 @@ window.textEditorFmt = function(action) {
 
 function rTextEditorModal() {
   if (!textEditorModal) return "";
-  const m = textEditorModal;
-  // Read live value from S so it shows the current state
-  const liveValue = (S.mission[m.field] !== undefined) ? S.mission[m.field] : m.value;
+  const field = textEditorModal.field;
+  const label = ENCADRE_LABELS[field] || field;
+  const liveValue = (S.mission && S.mission[field] !== undefined) ? S.mission[field] : "";
   return `<div class="modal-overlay" onclick="if(event.target===this)textEditorClose(false)">
     <div class="modal-card modal-card-lg">
-      <div class="modal-title">${esc(m.label)}</div>
+      <div class="modal-title">${esc(label)}</div>
       <div class="text-editor-toolbar">
         <button class="te-btn" onclick="textEditorFmt('bullet')" title="Liste à puces">• Liste</button>
         <button class="te-btn" onclick="textEditorFmt('numbered')" title="Liste numérotée">1. Liste</button>
@@ -1799,13 +1863,60 @@ function rTextEditorModal() {
   </div>`;
 }
 
+// Static label map for encadrés du devis
+const ENCADRE_LABELS = {
+  photographe: "Photographe (en-tête du devis)",
+  conditionsPaiement: "Conditions de paiement",
+  signatureBlock: "Bon pour accord",
+  cgv: "Conditions générales de vente (CGV)"
+};
+
+// View original devis modal
+let viewDevisModal = null; // { devisId }
+window.viewDevisOpen = function(devisId) {
+  viewDevisModal = { devisId };
+  render();
+};
+window.viewDevisClose = function() {
+  viewDevisModal = null;
+  render();
+};
+window.viewDevisPrint = function() {
+  // Use a transient "print mode" by printing the modal contents
+  // The modal already contains .devis-preview; print CSS will isolate it
+  window.print();
+};
+function rViewDevisModal() {
+  if (!viewDevisModal) return "";
+  const dv = S.suivi.devis && S.suivi.devis[viewDevisModal.devisId];
+  if (!dv) return "";
+  const ref = dv.ref || viewDevisModal.devisId;
+  const snapshot = dv.snapshotHtml || "";
+  const when = dv.snapshotAt ? new Date(dv.snapshotAt).toLocaleString("fr-FR") : null;
+  return `<div class="modal-overlay" onclick="if(event.target===this)viewDevisClose()">
+    <div class="modal-card modal-card-lg">
+      <div class="modal-title">Devis émis ${esc(ref)}</div>
+      ${when ? `<div class="modal-sub">Émis le ${esc(when)}</div>` : ""}
+      ${snapshot
+        ? `<div class="devis-preview view-devis-snapshot">${snapshot}</div>`
+        : `<div class="empty" style="padding:40px;text-align:center">
+            Aucun snapshot disponible pour ce devis.<br><span style="font-size:11px;color:var(--text-dim)">Les snapshots sont créés à partir de l'émission depuis l'onglet Mission « + Enregistrer dans Suivi ».</span>
+           </div>`}
+      <div class="modal-actions">
+        ${snapshot ? `<button class="btn ghost" onclick="viewDevisPrint()">🖨️ Imprimer</button>` : ""}
+        <button class="btn" onclick="viewDevisClose()">Fermer</button>
+      </div>
+    </div>
+  </div>`;
+}
+
 function renderLockedTextarea(field, value, label, placeholder) {
-  // The textarea remains visible (read-only display). Clicking the ⋮ menu opens a modal editor for editing.
+  // The textarea remains visible (read-only display). Clicking the ✏ icon opens a modal editor.
   const v = value || "";
   return `<div class="row"><div class="field lg"><label>${esc(label)}</label>
     <div class="locked-wrap is-locked">
       <textarea id="text-${field}" class="multi-text" placeholder="${placeholder}" disabled>${esc(v)}</textarea>
-      <button class="lock-corner" onclick="textEditorOpen('${field}', ${JSON.stringify(label).replace(/'/g, "\\'")}, ${JSON.stringify(v).replace(/'/g, "\\'")})" title="Modifier">✏</button>
+      <button class="lock-corner" onclick="textEditorOpen('${field}')" title="Modifier">✏</button>
     </div>
   </div></div>`;
 }
@@ -2088,7 +2199,23 @@ function suiviAdd() {
   const client = m.client.name || "";
   const prestation = cat ? cat.l : "";
   const devisId = uid();
-  S.suivi.devis[devisId] = { ref: m.ref || "" };
+
+  // Snapshot the rendered devis HTML so we can re-display it later from Suivi
+  let snapshotHtml = "";
+  try {
+    const el = document.getElementById("devisPreview");
+    if (el) snapshotHtml = el.innerHTML;
+  } catch (e) {
+    console.warn("Snapshot devis failed", e);
+  }
+
+  S.suivi.devis[devisId] = {
+    ref: m.ref || "",
+    snapshotHtml,
+    snapshotAt: new Date().toISOString(),
+    snapshotTotal: t.total,
+    snapshotClient: client
+  };
 
   const mkLine = (echeance, montant, heures) => ({
     id: uid(), devisId, date, client, prestation,
@@ -2948,6 +3075,7 @@ function rSV() {
           <td class="actions" onclick="${stop}">
             <div class="suv-row-actions">
               ${suiviActionsHtml(e)}
+              <button class="ico-btn" title="Voir le devis émis" onclick="viewDevisOpen('${g.devisId}')">👁</button>
               <button class="ico-btn" title="Modifier les détails de la ligne" onclick="suiviToggle('${e.id}')">⋮</button>
               <button class="ico-btn" title="Supprimer le devis" onclick="if(confirm('Supprimer ce devis ?'))suiviDelDevis('${g.devisId}')">×</button>
             </div>
@@ -2975,6 +3103,7 @@ function rSV() {
         <td class="actions" onclick="${stop}">
           <div class="suv-row-actions">
             ${devisActionsHtml(g)}
+            <button class="ico-btn" title="Voir le devis émis" onclick="viewDevisOpen('${g.devisId}')">👁</button>
             <button class="ico-btn" title="Modifier la référence du devis" onclick="suiviGroupEditRef('${g.devisId}')">⋮</button>
             <button class="ico-btn" title="Supprimer le devis" onclick="if(confirm('Supprimer ce devis et toutes ses lignes ?'))suiviDelDevis('${g.devisId}')">×</button>
           </div>
