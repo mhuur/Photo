@@ -28,7 +28,7 @@
   ::-webkit-scrollbar-thumb{background:var(--surface-hi);border-radius:4px}
   ::-webkit-scrollbar-thumb:hover{background:var(--border-light)}
   *{box-sizing:border-box}
-  body{margin:0;font-family:'Inter',system-ui,-apple-system,sans-serif;background:linear-gradient(180deg,var(--bg) 0%,var(--bg-3) 100%);background-attachment:fixed;color:var(--text)}
+  body{margin:0;font-family:'Inter',system-ui,-apple-system,sans-serif;background:linear-gradient(180deg,var(--bg) 0%,var(--bg-3) 100%);background-attachment:fixed;color:var(--text);font-variant-numeric:tabular-nums}
   #app{display:flex;min-height:100vh}
   .sb{width:220px;background:var(--bg-2);color:var(--text);border-right:1px solid var(--border);display:flex;flex-direction:column;position:sticky;top:0;height:100vh;overflow-y:auto;flex-shrink:0;z-index:100}
   .sb h1{font-size:13px;padding:18px 16px 10px;margin:0;color:var(--accent);letter-spacing:.05em;text-transform:uppercase;font-weight:700}
@@ -44,7 +44,9 @@
   .field{display:flex;flex-direction:column;flex:1;min-width:160px}
   .field.sm{max-width:140px}
   .field label{font-size:13px;color:var(--text-muted);margin-bottom:4px}
-  .field input,.field textarea,.field select{padding:8px 10px;border:1px solid var(--border-light);border-radius:6px;font:inherit;background:var(--surface);color:var(--text)}
+  .field input,.field textarea,.field select{padding:8px 10px;border:1px solid transparent;border-radius:6px;font:inherit;background:var(--surface-2);color:var(--text);transition:border-color .12s,box-shadow .12s,background .12s;font-variant-numeric:tabular-nums}
+  .field input:hover,.field textarea:hover,.field select:hover{border-color:var(--border-light)}
+  .field input:focus,.field textarea:focus,.field select:focus{outline:none;border-color:var(--primary);background:var(--surface);box-shadow:0 0 0 3px var(--primary-soft)}
   .field textarea{min-height:60px;resize:vertical}
   .btn{background:var(--primary);color:#fff;border:0;padding:10px 16px;border-radius:6px;cursor:pointer;font:inherit;font-weight:500;transition:all .15s}
   .btn:hover{background:var(--primary-dark);box-shadow:0 2px 8px rgba(74,158,255,.3)}
@@ -184,11 +186,11 @@
   .stats{display:flex;gap:8px;flex-wrap:wrap;margin:14px 0 4px}
   .stat{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:10px 14px;font-size:13px;color:var(--text-muted);min-width:120px;box-shadow:var(--shadow-sm)}
   .stat strong{display:block;font-size:15px;color:var(--text);font-weight:600;margin-top:2px;font-variant-numeric:tabular-nums}
-  .seg{display:inline-flex;background:var(--surface);border:1px solid var(--border-light);border-radius:8px;padding:3px;gap:2px;align-self:flex-start}
-  .seg button{background:transparent;border:0;padding:7px 16px;border-radius:5px;color:var(--text-muted);cursor:pointer;font:inherit;font-size:13px;font-weight:500;transition:all .15s;display:inline-flex;align-items:center;gap:6px}
+  .seg{display:inline-flex;background:var(--surface-2);border:1px solid var(--border);border-radius:7px;padding:2px;gap:0;align-self:flex-start}
+  .seg button{background:transparent;border:0;padding:6px 14px;border-radius:5px;color:var(--text-muted);cursor:pointer;font:inherit;font-size:13px;font-weight:500;transition:background .12s,color .12s;display:inline-flex;align-items:center;gap:6px}
   .seg button:hover{color:var(--text)}
-  .seg button.on{background:var(--primary);color:#fff;box-shadow:0 1px 3px rgba(74,158,255,.3)}
-  .seg button.on.warn{background:var(--warning);box-shadow:0 1px 3px rgba(245,158,11,.3)}
+  .seg button.on{background:var(--surface-hi);color:var(--text);box-shadow:0 1px 2px rgba(0,0,0,.15)}
+  .seg button.on.warn{background:var(--surface-hi);color:var(--warning)}
 
   /* Smaller, capped fields */
   .field input,.field textarea,.field select{font-size:13px;padding:7px 10px}
@@ -231,7 +233,9 @@
   .cli-pick .selected .change:hover{background:var(--primary-soft)}
   .cli-search-wrap{position:relative}
   .cli-search-wrap .ico{position:absolute;left:11px;top:50%;transform:translateY(-50%);color:var(--text-dim);font-size:13px;pointer-events:none;z-index:1}
-  .cli-search-wrap input{width:100%;padding:9px 12px 9px 32px;border:1px solid var(--border-light);border-radius:6px;background:var(--surface);color:var(--text);font:inherit;font-size:13px}
+  .cli-search-wrap input{width:100%;padding:9px 12px 9px 32px;border:1px solid transparent;border-radius:6px;background:var(--surface-2);color:var(--text);font:inherit;font-size:13px;transition:border-color .12s,box-shadow .12s,background .12s}
+  .cli-search-wrap input:hover{border-color:var(--border-light)}
+  .cli-search-wrap input:focus{outline:none;border-color:var(--primary);background:var(--surface);box-shadow:0 0 0 3px var(--primary-soft)}
   .cli-search-wrap input:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 3px var(--primary-soft)}
   /* The dropdown is portaled to body and uses position:fixed - escapes ALL parent stacking contexts */
   #cliPickPortal{display:none;position:fixed;background:var(--surface-2);border:1px solid var(--primary);border-radius:6px;max-height:420px;overflow-y:auto;z-index:9999;box-shadow:0 12px 32px rgba(0,0,0,.6)}
@@ -753,6 +757,20 @@
   .rich-editor ul, .rich-editor ol{margin:6px 0;padding-left:24px}
   .rich-editor a{color:#0066cc}
 
+  /* Changelog (onglet Mises à jour) */
+  .maj-list{display:flex;flex-direction:column;gap:8px;max-width:880px}
+  .maj-entry{background:var(--surface);border:1px solid var(--border);border-radius:8px;overflow:hidden}
+  .maj-entry.is-open{border-color:var(--border-light)}
+  .maj-head{width:100%;display:grid;grid-template-columns:auto auto 1fr auto;gap:14px;align-items:center;padding:12px 16px;background:transparent;border:0;color:var(--text);cursor:pointer;font:inherit;text-align:left}
+  .maj-head:hover{background:var(--surface-hi)}
+  .maj-caret{color:var(--text-muted);font-size:11px;width:10px;display:inline-block}
+  .maj-version{font-weight:700;color:var(--primary);font-size:13px;min-width:50px;font-variant-numeric:tabular-nums}
+  .maj-title{color:var(--text);font-size:13px;font-weight:500}
+  .maj-date{color:var(--text-dim);font-size:11px;font-variant-numeric:tabular-nums}
+  .maj-items{margin:0;padding:4px 16px 14px 56px;list-style:none}
+  .maj-items li{position:relative;padding:6px 0 6px 14px;font-size:13px;color:var(--text-muted);line-height:1.5}
+  .maj-items li::before{content:"";position:absolute;left:0;top:14px;width:4px;height:4px;border-radius:50%;background:var(--text-dim)}
+
   /* Abonnements: "En cours" toggle (point 2) */
   .ab-end-cell{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
   .ab-encours-toggle{display:inline-flex;align-items:center;gap:5px;cursor:pointer;font-size:11px;color:var(--success);font-weight:600;text-transform:uppercase;letter-spacing:.04em;padding:4px 10px;background:var(--success-soft);border:1px solid var(--success);border-radius:4px;user-select:none}
@@ -1020,7 +1038,8 @@ const TABS = [
   ["clients", "👥 Clients"],
   ["tarifs",  "💰 Frais & Tarifs"],
   ["compta",  "📈 Compta"],
-  ["bugs",    "📝 Notes"]
+  ["bugs",    "📝 Notes"],
+  ["maj",     "🔄 Mises à jour"]
 ];
 
 const app = document.getElementById("app");
@@ -1961,7 +1980,7 @@ function render() {
     app.innerHTML = `<div class="login"><h1>🌊 Devis Photo</h1><button class="btn" onclick="signIn()">Se connecter avec Google</button></div>`;
     return;
   }
-  const renderers = { mission: rMS, suivi: rSV, clients: rCL, tarifs: rTR, compta: rCP, bugs: rBG };
+  const renderers = { mission: rMS, suivi: rSV, clients: rCL, tarifs: rTR, compta: rCP, bugs: rBG, maj: rMAJ };
   const view = (renderers[tab] || (() => ""))();
   app.innerHTML = `
     <aside class="sb">
@@ -4806,6 +4825,98 @@ function rTR() {
     })()}
   `;
 }
+
+// =============================================================
+// CHANGELOG (version history of the app)
+// Most recent version FIRST.
+// =============================================================
+const CHANGELOG = [
+  {
+    version: "v1.4",
+    date: "2026-04-28",
+    title: "Esthétique : pill toggles, focus rings, tabular numerics",
+    items: [
+      "Toggles segmentés (Déclaré/Au black, Voiture/Transports, etc.) : style « pill subtle » Linear/Vercel — bouton actif en gris neutre plutôt que cyan, contraste discret par 1 niveau de gris.",
+      "Inputs : bordure transparente au repos, surface-2 en fond. Au focus : bordure primary + halo soft de 3px. Style Stripe.",
+      "Tabular numerics partout : `body { font-variant-numeric: tabular-nums }`. Tous les chiffres alignés au pixel près dans les colonnes.",
+      "Nouvel onglet « 🔄 Mises à jour » avec changelog des versions consultable."
+    ]
+  },
+  {
+    version: "v1.3",
+    date: "2026-04-28",
+    title: "Esthétique : palette désaturée, échelle typographique, devis blanc",
+    items: [
+      "Palette désaturée : primary cyan #4a9eff → bleu-gris #5b8db8. Bordures hairline (rgba alpha .06 au lieu de couleurs vives).",
+      "Échelle typographique stricte : 11/13/15/32px seulement (avant : 9 niveaux mélangés).",
+      "Devis preview en « feuille blanche » : fond blanc, texte noir, ombre flottante, police Apple/Segoe, padding 48px. Boutons d'action en noir."
+    ]
+  },
+  {
+    version: "v1.2",
+    date: "2026-04-28",
+    title: "Restructure onglet Devis (ex-Mission)",
+    items: [
+      "Onglet « Mission » renommé « 📋 Devis ».",
+      "5 sections H3 : Informations / Prestation / Déplacement / Paiement / Encadrés du devis.",
+      "URSSAF déplacé dans Prestation (sur même ligne que Type + Statut).",
+      "Encadrés textes (Photographe, Conditions, etc.) : preview compact 1 ligne tronqué, modal d'édition élargie à 1100px.",
+      "Tableau décomposition tarifaire minimaliste : Net / + Matériel / + URSSAF / = Tarif facturé.",
+      "Suppression des hints redondantes (Taux verrouillé, tarif horaire, temps de trajet, échéances)."
+    ]
+  },
+  {
+    version: "v1.1",
+    date: "2026-04-28",
+    title: "Date En cours, impression A4, bouton déplacement",
+    items: [
+      "Date de fin abonnement : popover custom avec bouton « ● En cours » + sélecteur de date natif (style LinkedIn/Notion).",
+      "Impression : tout sur 1 page A4 sauf CGV en page 2. Marges 12mm, police 9pt, page-break-inside:avoid.",
+      "Modal d'édition encadré agrandie (1000px × 70vh).",
+      "Bug fix : bouton déplacement principal/débours ne se mettait pas à jour visuellement."
+    ]
+  },
+  {
+    version: "v1.0",
+    date: "2026-04-27",
+    title: "Suivi du devis émis, snapshot HTML",
+    items: [
+      "Bouton 👁 dans Suivi : ouvre modal avec le devis tel qu'émis (snapshot HTML capturé à `suiviAdd()`).",
+      "Snapshot strippé du `.dp-actions` (plus de bouton « + Enregistrer dans Suivi » dupliqué).",
+      "Éditeur riche style Word : police, taille, gras/italique/souligné/barré, color picker, alignement, listes.",
+      "Migration auto des champs plain text → HTML."
+    ]
+  }
+];
+
+let majExpanded = {}; // { version: bool }
+window.majToggleVersion = function(version) {
+  majExpanded[version] = !majExpanded[version];
+  render();
+};
+
+function rMAJ() {
+  let h = `<h2>Mises à jour <span id="savedFlash" class="saved"></span></h2>`;
+  h += `<div class="hint" style="max-width:780px;margin-bottom:16px">Historique des modifications. Pour revenir à une version précédente, donne-moi son numéro (ex. « reviens à la version v1.2 »).</div>`;
+  h += `<div class="maj-list">`;
+  for (const v of CHANGELOG) {
+    const isOpen = majExpanded[v.version] !== false; // open by default
+    h += `<div class="maj-entry ${isOpen ? 'is-open' : ''}">
+      <button class="maj-head" onclick="majToggleVersion('${esc(v.version)}')" type="button">
+        <span class="maj-caret">${isOpen ? '▾' : '▸'}</span>
+        <span class="maj-version">${esc(v.version)}</span>
+        <span class="maj-title">${esc(v.title)}</span>
+        <span class="maj-date">${esc(v.date)}</span>
+      </button>
+      ${isOpen ? `<ul class="maj-items">
+        ${v.items.map(it => `<li>${esc(it)}</li>`).join("")}
+      </ul>` : ""}
+    </div>`;
+  }
+  h += `</div>`;
+  return h;
+}
+
 
 function rBG() {
   if (!S.bugs || !Array.isArray(S.bugs.items)) S.bugs = { items: [] };
