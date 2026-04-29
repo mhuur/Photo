@@ -3369,6 +3369,8 @@ function refreshTotals() {
   }
   // Refresh per-line final cost indicators (in materiel form rows)
   refreshFinalCosts();
+  // Refresh the remise tooltip live (so tooltip reflects current state without re-render)
+  refreshRemiseTooltip();
 }
 
 function totalsHtml(t) {
@@ -4227,6 +4229,65 @@ function computeRemiseInfo() {
   };
 }
 
+// ============ REMISE TOOLTIP HTML (live-rebuilt on every refreshTotals) ============
+function buildRemiseTooltipHtml(ri) {
+  // Compute the live "marge actuelle" %: based on currentRemise, in real time.
+  const liveMargePct = ri.totalSansRemise > 0
+    ? r2(ri.currentMargeApresRemise / ri.totalSansRemise * 100)
+    : 0;
+  const margeColor = liveMargePct < 0 ? "#e74c3c" : (liveMargePct < 10 ? "#f59e0b" : "#22c55e");
+  return `
+    <div class="remise-tt-marge-actuelle" style="color:${margeColor}">
+      Marge actuelle : <strong>${liveMargePct.toString().replace(".", ",")} %</strong>
+      <span class="remise-tt-marge-amt">(${fmt(ri.currentMargeApresRemise)})</span>
+    </div>
+    <div class="remise-tt-title">💰 Décomposition de la marge</div>
+    <table class="remise-tt-table">
+      <tr><td>Total HT (avant remise)</td><td>${fmt(ri.totalSansRemise)}</td></tr>
+      ${ri.declared
+        ? `<tr class="muted"><td>− URSSAF (${num(S.mission.urssafPct ?? 22).toString().replace(".",",")} %)</td><td>−${fmt(ri.urssafActuelle)}</td></tr>`
+        : `<tr class="muted"><td>− URSSAF</td><td>au black</td></tr>`}
+      <tr><td>= Net encaissé</td><td>${fmt(ri.netActuel)}</td></tr>
+    </table>
+    <table class="remise-tt-table">
+      <tr class="section-title"><td colspan="2">Coûts réels</td></tr>
+      <tr class="muted"><td>· Matériel amorti (${ri.totalHeures.toFixed(1).replace(".",",")} h)</td><td>${fmt(ri.coutsReels.matos)}</td></tr>
+      <tr class="muted"><td>· Déplacement réel</td><td>${fmt(ri.coutsReels.deplReel)}</td></tr>
+      <tr class="muted"><td>· Sommes avancées</td><td>${fmt(ri.coutsReels.avances)}</td></tr>
+      <tr><td>Total coûts</td><td>${fmt(ri.coutsReels.total)}</td></tr>
+    </table>
+    <table class="remise-tt-table">
+      <tr><td>Marge brute (sans remise)</td><td><strong>${fmt(ri.margeBrute)}</strong></td></tr>
+      ${ri.currentRemisePct > 0 ? `
+      <tr class="${ri.isOverMax ? 'danger' : ''}"><td>Marge après remise actuelle</td><td><strong>${fmt(ri.currentMargeApresRemise)}</strong></td></tr>
+      ` : ''}
+    </table>
+    <div class="remise-tt-summary">
+      <strong>Remise max : ${ri.remiseMaxPct} %</strong> (point mort)<br>
+      Au-delà tu paies de ta poche.
+    </div>`;
+}
+
+// Refresh the remise tooltip + max attribute on the input, without re-rendering the form
+// (so input focus and caret are preserved). Called from refreshTotals().
+function refreshRemiseTooltip() {
+  const ri = computeRemiseInfo();
+  const tt = document.querySelector(".remise-tooltip");
+  if (tt) tt.innerHTML = buildRemiseTooltipHtml(ri);
+  // Update max attribute on the input + the onchange handler's max param
+  const inp = document.querySelector(".remise-input-wrap input");
+  if (inp) {
+    inp.setAttribute("max", String(ri.remiseMaxPct));
+    inp.setAttribute("oninput", `updRemise(this.value, ${ri.remiseMaxPct})`);
+    // If the current value now exceeds the new max (e.g. user added more cost items), clamp it
+    if (num(inp.value) > ri.remiseMaxPct) {
+      inp.value = String(ri.remiseMaxPct);
+      S.mission.remisePct = String(ri.remiseMaxPct);
+      save();
+    }
+  }
+}
+
 function tarifBreakdown(includeDepl) {
   // Compute per-hour breakdown: Net / +Déplacement / +Matériel / +URSSAF / =Tarif facturé
   // includeDepl=true → also include deplacement spread (only effective if mode is "taux")
@@ -4511,41 +4572,7 @@ function rMS() {
 
     ${(() => {
       const ri = computeRemiseInfo();
-      // Compute the live "marge actuelle" %: based on currentRemise, in real time.
-      const liveMargePct = ri.totalSansRemise > 0
-        ? r2(ri.currentMargeApresRemise / ri.totalSansRemise * 100)
-        : 0;
-      const margeColor = liveMargePct < 0 ? "#e74c3c" : (liveMargePct < 10 ? "#f59e0b" : "#22c55e");
-      const tooltipHtml = `
-        <div class="remise-tt-marge-actuelle" style="color:${margeColor}">
-          Marge actuelle : <strong>${liveMargePct.toString().replace(".", ",")} %</strong>
-          <span class="remise-tt-marge-amt">(${fmt(ri.currentMargeApresRemise)})</span>
-        </div>
-        <div class="remise-tt-title">💰 Décomposition de la marge</div>
-        <table class="remise-tt-table">
-          <tr><td>Total HT (avant remise)</td><td>${fmt(ri.totalSansRemise)}</td></tr>
-          ${ri.declared
-            ? `<tr class="muted"><td>− URSSAF (${num(S.mission.urssafPct ?? 22).toString().replace(".",",")} %)</td><td>−${fmt(ri.urssafActuelle)}</td></tr>`
-            : `<tr class="muted"><td>− URSSAF</td><td>au black</td></tr>`}
-          <tr><td>= Net encaissé</td><td>${fmt(ri.netActuel)}</td></tr>
-        </table>
-        <table class="remise-tt-table">
-          <tr class="section-title"><td colspan="2">Coûts réels</td></tr>
-          <tr class="muted"><td>· Matériel amorti (${ri.totalHeures.toFixed(1).replace(".",",")} h)</td><td>${fmt(ri.coutsReels.matos)}</td></tr>
-          <tr class="muted"><td>· Déplacement réel</td><td>${fmt(ri.coutsReels.deplReel)}</td></tr>
-          <tr class="muted"><td>· Sommes avancées</td><td>${fmt(ri.coutsReels.avances)}</td></tr>
-          <tr><td>Total coûts</td><td>${fmt(ri.coutsReels.total)}</td></tr>
-        </table>
-        <table class="remise-tt-table">
-          <tr><td>Marge brute (sans remise)</td><td><strong>${fmt(ri.margeBrute)}</strong></td></tr>
-          ${ri.currentRemisePct > 0 ? `
-          <tr class="${ri.isOverMax ? 'danger' : ''}"><td>Marge après remise actuelle</td><td><strong>${fmt(ri.currentMargeApresRemise)}</strong></td></tr>
-          ` : ''}
-        </table>
-        <div class="remise-tt-summary">
-          <strong>Remise max : ${ri.remiseMaxPct} %</strong> (point mort)<br>
-          Au-delà tu paies de ta poche.
-        </div>`;
+      const tooltipHtml = buildRemiseTooltipHtml(ri);
       return `<div class="row row-section-break">
         <div class="field tiny">
           <label>Remise (%)</label>
