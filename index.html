@@ -365,6 +365,21 @@
   .devis-preview .dp-doc-ref{color:var(--text);font-weight:700;font-size:18px;font-variant-numeric:tabular-nums;letter-spacing:.01em;text-align:right;flex-shrink:0;align-self:flex-end;line-height:1.2}
   /* Logo field in form */
   .logo-field{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:14px;max-width:520px}
+  /* CGV structured editor */
+  .cgv-edit-list{display:flex;flex-direction:column;gap:10px;margin-bottom:6px}
+  .cgv-edit-empty{padding:18px;background:var(--surface-2);border:1px dashed var(--border);border-radius:6px;color:var(--text-muted);font-size:13px;line-height:1.5;text-align:center}
+  .cgv-edit-row{background:var(--surface-2);border:1px solid var(--border-soft);border-radius:6px;padding:10px 12px}
+  .cgv-edit-head{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+  .cgv-edit-num{color:var(--primary);font-weight:700;font-variant-numeric:tabular-nums;font-size:14px;min-width:24px;flex-shrink:0}
+  .cgv-edit-title{flex:1;background:var(--surface);border:1px solid var(--border-soft);color:var(--text);padding:6px 10px;border-radius:4px;font-size:13px;font-weight:600;height:var(--input-h,34px);outline:none}
+  .cgv-edit-title:focus{border-color:var(--primary)}
+  .cgv-edit-actions{display:flex;gap:4px;flex-shrink:0}
+  .cgv-edit-actions .btn-icon{background:transparent;border:1px solid var(--border-soft);color:var(--text-muted);width:28px;height:28px;border-radius:4px;cursor:pointer;font-size:14px;line-height:1;display:inline-flex;align-items:center;justify-content:center;transition:all .15s}
+  .cgv-edit-actions .btn-icon:hover:not(:disabled){border-color:var(--primary);color:var(--primary)}
+  .cgv-edit-actions .btn-icon:disabled{opacity:.3;cursor:not-allowed}
+  .cgv-edit-actions .btn-icon.danger:hover{border-color:var(--danger,#e74c3c);color:var(--danger,#e74c3c)}
+  .cgv-edit-body{width:100%;background:var(--surface);border:1px solid var(--border-soft);color:var(--text);padding:8px 10px;border-radius:4px;font-size:13px;line-height:1.5;font-family:inherit;resize:vertical;min-height:64px;outline:none}
+  .cgv-edit-body:focus{border-color:var(--primary)}
   .logo-field.has-logo{align-items:flex-start}
   .logo-field .logo-preview{max-width:200px;max-height:80px;width:auto;height:auto;object-fit:contain;background:var(--surface-2);border:1px solid var(--border-light);border-radius:6px;padding:8px}
   .logo-field .logo-actions{display:flex;gap:8px;flex-wrap:wrap}
@@ -1437,7 +1452,9 @@ const DEFAULT_S = {
     photographe: "",
     conditionsPaiement: "Acompte de 30 % à la commande, solde de 70 % à la livraison.\nRèglement par virement bancaire.\nEn cas de retard de paiement, des pénalités de 3 fois le taux d'intérêt légal seront appliquées.",
     paiement: { delai: "30j_fdm", banque: "", titulaire: "", iban: "", bic: "" },
-    cgv: "Le présent devis est établi sous réserve d'acceptation par le client.\nLa signature du devis vaut acceptation des conditions générales de vente.\nLes droits d'auteur sur les images restent la propriété du photographe ; toute utilisation commerciale au-delà de l'usage privé du client doit faire l'objet d'un accord préalable.\nLes images livrées ne peuvent être recadrées, retouchées ou modifiées sans l'accord du photographe.\nLe client autorise le photographe à utiliser les images réalisées pour son portfolio et sa communication, sauf mention contraire écrite.",
+    cgv: "",
+    cgvPreambule: "",
+    cgvSections: [],
     signatureBlock: "Fait à __________________________, le ____ / ____ / ________\n\nSignature du client précédée de la mention « Bon pour accord » :"
   },
   devis:    {},
@@ -1487,6 +1504,14 @@ if (!Array.isArray(S.bugs.items)) S.bugs.items = [];
 // Migrate paiement: ensure structured payment object exists
 if (S.mission && !S.mission.paiement) {
   S.mission.paiement = { delai: "30j_fdm", banque: "", titulaire: "", iban: "", bic: "" };
+}
+
+// Migrate CGV: parse legacy text into structured sections (preamble + sections array)
+if (S.mission && !Array.isArray(S.mission.cgvSections)) {
+  const parsed = parseCgvText(S.mission.cgv || "");
+  S.mission.cgvSections = parsed.sections;
+  S.mission.cgvPreambule = S.mission.cgvPreambule || parsed.preambule;
+  // Don't delete S.mission.cgv yet (keep for safety); rendering uses cgvSections only
 }
 // Migrate from old structured entries (title/desc/status)
 if (S.bugs.items.length === 0 && Array.isArray(S.bugs.entries) && S.bugs.entries.length) {
@@ -1991,7 +2016,8 @@ function rDevisPreview() {
     </div>
 
     ${(() => {
-      const hasCgv = (d.cgv || "").trim().length > 0;
+      const cgvSections = Array.isArray(d.cgvSections) ? d.cgvSections.filter(s => s && (s.title || s.body)) : [];
+      const hasCgv = cgvSections.length > 0 || (d.cgvPreambule || "").trim().length > 0;
       // If no CGV: legal mentions stay in page 1 footer (fallback). If CGV exists: page 2 holds them.
       if (hasCgv) return "";
       return `<div class="dp-footer">
@@ -2000,17 +2026,20 @@ function rDevisPreview() {
       </div>`;
     })()}
 
-    ${(d.cgv || "").trim() ? `
-      <div class="devis-page-break"></div>
+    ${(() => {
+      const cgvSections = Array.isArray(d.cgvSections) ? d.cgvSections.filter(s => s && (s.title || s.body)) : [];
+      const hasCgv = cgvSections.length > 0 || (d.cgvPreambule || "").trim().length > 0;
+      if (!hasCgv) return "";
+      return `<div class="devis-page-break"></div>
       <div class="dp-conditions cgv">
         <div class="dp-cgv-header">
           <h4>Conditions générales de vente</h4>
           <div class="dp-cgv-identity">Annexe au ${esc(formatRef(d.ref, "devis"))} · Auto-entrepreneur · TVA non applicable, art. 293 B du CGI</div>
         </div>
-        <div class="dp-cgv-body">${renderCgv(d.cgv)}</div>
+        <div class="dp-cgv-body">${renderCgvSections(d.cgvPreambule, d.cgvSections)}</div>
         <div class="dp-cgv-mentions">Pénalités de retard : 3× le taux d'intérêt légal en vigueur · Indemnité forfaitaire de recouvrement : 40 € (art. L441-10 et D441-5 du Code de commerce).</div>
-      </div>
-    ` : ""}
+      </div>`;
+    })()}
 
     <div class="dp-actions">
       <button class="btn" onclick="suiviAdd()">+ Enregistrer dans Suivi</button>
@@ -2983,99 +3012,135 @@ function richDisplayHtml(s) {
   return isRichHtml(s) ? s : plainToHtml(s);
 }
 
-// ============ CGV RENDERING ============
-// Parse free-text CGV into structured sections (detects "N. Title" patterns)
-// and render with consistent typography for the 2-column print layout.
-function renderCgv(rawText) {
-  if (!rawText || !String(rawText).trim()) return "";
-  // Strip any HTML tags (rich-text editor may have wrapped in <p>). Keep <strong>/<em>/<b>/<i>/<u>.
+// ============ CGV (structured sections) ============
+// Each CGV is composed of an optional preamble paragraph + an array of {id, title, body} sections.
+// renderCgvSections() turns this data into the HTML used in the devis preview / printed output.
+function renderCgvSections(preambule, sections) {
+  const safePreamb = (preambule || "").trim();
+  const list = Array.isArray(sections) ? sections : [];
+  const validSections = list.filter(s => s && (s.title || s.body));
+  if (!safePreamb && validSections.length === 0) return "";
+  let html = "";
+  if (safePreamb) {
+    html += `<p class="cgv-paragraph">${esc(safePreamb).replace(/\n/g, "<br>")}</p>`;
+  }
+  validSections.forEach((s, i) => {
+    html += `<div class="cgv-section">
+      <h5 class="cgv-section-title"><span class="cgv-num">${i + 1}.</span> ${esc(s.title || "")}</h5>
+      ${s.body ? `<p class="cgv-section-body">${esc(s.body).replace(/\n/g, "<br>")}</p>` : ""}
+    </div>`;
+  });
+  return html;
+}
+
+// parseCgvText: one-shot migration helper that turns legacy free-text CGV into {preambule, sections[]}.
+// Used at app load to migrate existing data, and never called again afterwards.
+function parseCgvText(rawText) {
+  if (!rawText || !String(rawText).trim()) return { preambule: "", sections: [] };
   let text = String(rawText)
     .replace(/<\/p>\s*<p[^>]*>/gi, "\n\n")
     .replace(/<br\s*\/?>/gi, "\n")
     .replace(/<\/?p[^>]*>/gi, "")
     .replace(/&nbsp;/g, " ");
-  // Normalize whitespace
   text = text.replace(/\r\n?/g, "\n").trim();
-  // Split into paragraphs (double newline)
   const paragraphs = text.split(/\n\s*\n/).map(p => p.trim()).filter(Boolean);
-  return paragraphs.map(renderCgvParagraph).join("");
-}
-
-function renderCgvParagraph(p) {
-  if (!p) return "";
-  // Detect "N. " at start of paragraph (case-insensitive numbered section)
-  const numMatch = p.match(/^(\d+)\.\s+([\s\S]+)$/);
-  if (!numMatch) {
-    // Regular paragraph (preamble or unnumbered text)
-    return `<p class="cgv-paragraph">${esc(p).replace(/\n/g, "<br>")}</p>`;
-  }
-  const num = numMatch[1];
-  const rest = numMatch[2];
-  // Try to split title from body
-  let title, body;
-  const newlineIdx = rest.indexOf("\n");
-  if (newlineIdx > 0 && newlineIdx <= 80) {
-    // Pattern: "N. Title\nBody..."
-    title = rest.substring(0, newlineIdx).trim();
-    body = rest.substring(newlineIdx + 1).trim();
-  } else {
-    // Pattern: "N. Title. Body..." — first sentence is title
-    const sentMatch = rest.match(/^([^.\n]{2,80})\.\s+([\s\S]+)$/);
-    if (sentMatch) {
-      title = sentMatch[1].trim();
-      body = sentMatch[2].trim();
+  const sections = [];
+  const preambleParts = [];
+  let foundFirstSection = false;
+  for (const p of paragraphs) {
+    const numMatch = p.match(/^(\d+)\.\s+([\s\S]+)$/);
+    if (numMatch) {
+      foundFirstSection = true;
+      const rest = numMatch[2];
+      let title, body;
+      const newlineIdx = rest.indexOf("\n");
+      if (newlineIdx > 0 && newlineIdx <= 80) {
+        title = rest.substring(0, newlineIdx).trim();
+        body = rest.substring(newlineIdx + 1).trim();
+      } else {
+        const sentMatch = rest.match(/^([^.\n]{2,80})\.\s+([\s\S]+)$/);
+        if (sentMatch) {
+          title = sentMatch[1].trim();
+          body = sentMatch[2].trim();
+        } else {
+          title = rest.length <= 80 ? rest.replace(/\.$/, "").trim() : rest.substring(0, 60).trim() + "…";
+          body = rest.length <= 80 ? "" : rest;
+        }
+      }
+      sections.push({ id: uid(), title, body });
+    } else if (!foundFirstSection) {
+      // Preamble (only paragraphs before the first numbered section count as preamble)
+      preambleParts.push(p);
     } else {
-      // No clear separator → first 60 chars as title, rest as body if any
-      title = rest.length <= 80 ? rest.replace(/\.$/, "").trim() : rest.substring(0, 60).trim() + "…";
-      body = rest.length <= 80 ? "" : rest;
+      // Unnumbered paragraph after sections — append to last section's body
+      if (sections.length > 0) {
+        sections[sections.length - 1].body = (sections[sections.length - 1].body || "") + "\n\n" + p;
+      } else {
+        preambleParts.push(p);
+      }
     }
   }
-  return `<div class="cgv-section">
-    <h5 class="cgv-section-title"><span class="cgv-num">${esc(num)}.</span> ${esc(title)}</h5>
-    ${body ? `<p class="cgv-section-body">${esc(body).replace(/\n/g, "<br>")}</p>` : ""}
-  </div>`;
+  return { preambule: preambleParts.join("\n\n"), sections };
 }
 
-function countCgvSections(rawText) {
-  if (!rawText) return 0;
-  const text = String(rawText)
-    .replace(/<\/p>\s*<p[^>]*>/gi, "\n\n")
-    .replace(/<br\s*\/?>/gi, "\n")
-    .replace(/<\/?p[^>]*>/gi, "");
-  const matches = text.match(/^\s*\d+\.\s+\S/gm);
-  return matches ? matches.length : 0;
-}
+// CRUD handlers (no full re-render on every keystroke — render only on add/remove/move)
+window.cgvSectionAdd = function() {
+  if (!Array.isArray(S.mission.cgvSections)) S.mission.cgvSections = [];
+  S.mission.cgvSections.push({ id: uid(), title: "", body: "" });
+  save();
+  render();
+};
+window.cgvSectionUpdate = function(id, field, val) {
+  const s = (S.mission.cgvSections || []).find(x => x.id === id);
+  if (!s) return;
+  s[field] = val;
+  save();
+  // No render — would lose focus in input/textarea
+};
+window.cgvSectionRemove = function(id) {
+  const s = (S.mission.cgvSections || []).find(x => x.id === id);
+  if (!s) return;
+  const label = s.title ? `« ${s.title} »` : "cette section";
+  if (!confirm(`Supprimer ${label} ?`)) return;
+  S.mission.cgvSections = (S.mission.cgvSections || []).filter(x => x.id !== id);
+  save();
+  render();
+};
+window.cgvSectionMoveUp = function(id) {
+  const sections = S.mission.cgvSections || [];
+  const i = sections.findIndex(x => x.id === id);
+  if (i <= 0) return;
+  [sections[i - 1], sections[i]] = [sections[i], sections[i - 1]];
+  save();
+  render();
+};
+window.cgvSectionMoveDown = function(id) {
+  const sections = S.mission.cgvSections || [];
+  const i = sections.findIndex(x => x.id === id);
+  if (i < 0 || i >= sections.length - 1) return;
+  [sections[i + 1], sections[i]] = [sections[i], sections[i + 1]];
+  save();
+  render();
+};
 
-const CGV_TEMPLATE_PHOTOGRAPHE = `Le présent document précise les conditions générales de vente applicables aux prestations photographiques et audiovisuelles. Il complète et fait partie intégrante du devis qu'il accompagne.
-
-1. Objet
-Le prestataire propose des prestations photographiques et/ou audiovisuelles. Les présentes conditions générales, ainsi que le devis associé, constituent le cadre contractuel entre le prestataire et le commanditaire.
-
-2. Réservation et acompte
-La réservation d'une prestation se fait sous réserve de la disponibilité du prestataire. Elle nécessite le retour du devis signé avec la mention « bon pour accord », accompagné d'un acompte de 30 % du montant total. Le solde est dû à l'issue de la prestation, avant livraison des fichiers.
-
-3. Délai de rétractation
-Le commanditaire dispose d'un délai de rétractation de 7 jours à compter de la signature du devis. Toute décision de rétractation effectuée dans ce délai donne lieu au remboursement du montant versé. Passé ce délai, l'acompte n'est plus remboursable.
-
-4. Délais et livraison
-Le prestataire s'efforce de respecter les délais de livraison indiqués (généralement sous 15 jours ouvrés). Ces délais sont donnés à titre indicatif et ne peuvent donner lieu à indemnité en cas de dépassement raisonnable.
-
-5. Prise de vue
-En extérieur, en cas de mauvais temps ou de force majeure, le prestataire se réserve le droit de suspendre la prestation s'il juge que celle-ci risque de compromettre la qualité du travail ou la sécurité de son matériel. Une nouvelle date sera convenue d'un commun accord.
-
-6. Force majeure et maladie
-En cas de force majeure ou de maladie empêchant la réalisation de la prestation, le prestataire peut annuler ou reporter sans engager sa responsabilité. L'acompte est intégralement remboursé en cas d'annulation par le prestataire ; il s'engage par ailleurs à proposer un remplaçant si le commanditaire le souhaite.
-
-7. Propriété intellectuelle et droit à l'image
-Les œuvres réalisées confèrent au prestataire des droits de propriété intellectuelle conformément au code de la propriété intellectuelle. Le commanditaire s'engage à diffuser les fichiers livrés en l'état (sans recadrage ni retouche), sauf accord préalable écrit. Le prestataire conserve le droit de diffuser les œuvres dans le cadre de sa communication professionnelle (portfolio, réseaux sociaux, expositions à but non lucratif), sauf mention contraire écrite.
-
-8. Annulation
-Toute annulation du commanditaire après signature du devis entraîne la conservation de l'acompte par le prestataire à titre de dédommagement.`;
+// Photographer template — populates preambule + sections array
+const CGV_TEMPLATE_PREAMBLE = "Le présent document précise les conditions générales de vente applicables aux prestations photographiques et audiovisuelles. Il complète et fait partie intégrante du devis qu'il accompagne.";
+const CGV_TEMPLATE_SECTIONS = [
+  { title: "Objet", body: "Le prestataire propose des prestations photographiques et/ou audiovisuelles. Les présentes conditions générales, ainsi que le devis associé, constituent le cadre contractuel entre le prestataire et le commanditaire." },
+  { title: "Réservation et acompte", body: "La réservation d'une prestation se fait sous réserve de la disponibilité du prestataire. Elle nécessite le retour du devis signé avec la mention « bon pour accord », accompagné d'un acompte de 30 % du montant total. Le solde est dû à l'issue de la prestation, avant livraison des fichiers." },
+  { title: "Délai de rétractation", body: "Le commanditaire dispose d'un délai de rétractation de 7 jours à compter de la signature du devis. Toute décision de rétractation effectuée dans ce délai donne lieu au remboursement du montant versé. Passé ce délai, l'acompte n'est plus remboursable." },
+  { title: "Délais et livraison", body: "Le prestataire s'efforce de respecter les délais de livraison indiqués (généralement sous 15 jours ouvrés). Ces délais sont donnés à titre indicatif et ne peuvent donner lieu à indemnité en cas de dépassement raisonnable." },
+  { title: "Prise de vue", body: "En extérieur, en cas de mauvais temps ou de force majeure, le prestataire se réserve le droit de suspendre la prestation s'il juge que celle-ci risque de compromettre la qualité du travail ou la sécurité de son matériel. Une nouvelle date sera convenue d'un commun accord." },
+  { title: "Force majeure et maladie", body: "En cas de force majeure ou de maladie empêchant la réalisation de la prestation, le prestataire peut annuler ou reporter sans engager sa responsabilité. L'acompte est intégralement remboursé en cas d'annulation par le prestataire ; il s'engage par ailleurs à proposer un remplaçant si le commanditaire le souhaite." },
+  { title: "Propriété intellectuelle et droit à l'image", body: "Les œuvres réalisées confèrent au prestataire des droits de propriété intellectuelle conformément au code de la propriété intellectuelle. Le commanditaire s'engage à diffuser les fichiers livrés en l'état (sans recadrage ni retouche), sauf accord préalable écrit. Le prestataire conserve le droit de diffuser les œuvres dans le cadre de sa communication professionnelle (portfolio, réseaux sociaux, expositions à but non lucratif), sauf mention contraire écrite." },
+  { title: "Annulation", body: "Toute annulation du commanditaire après signature du devis entraîne la conservation de l'acompte par le prestataire à titre de dédommagement." }
+];
 
 window.cgvLoadTemplate = function() {
-  const current = (S.mission.cgv || "").trim();
-  if (current && !confirm("Cela remplacera ton texte CGV actuel par le modèle photographe. Continuer ?")) return;
-  S.mission.cgv = CGV_TEMPLATE_PHOTOGRAPHE;
+  const existing = (S.mission.cgvSections || []).filter(s => s.title || s.body);
+  if (existing.length > 0 && !confirm(`Cela remplacera tes ${existing.length} section${existing.length > 1 ? "s" : ""} CGV par le modèle photographe (8 sections + préambule). Continuer ?`)) return;
+  S.mission.cgvSections = CGV_TEMPLATE_SECTIONS.map(s => ({ id: uid(), title: s.title, body: s.body }));
+  S.mission.cgvPreambule = CGV_TEMPLATE_PREAMBLE;
   save();
   render();
 };
@@ -3246,6 +3311,44 @@ window.paiementClearLegacy = function() {
   save();
   render();
 };
+
+function rCgvEditor() {
+  const sections = (S.mission.cgvSections || []);
+  const preambule = S.mission.cgvPreambule || "";
+  const sectionsHtml = sections.map((s, i) => `
+    <div class="cgv-edit-row" data-id="${s.id}">
+      <div class="cgv-edit-head">
+        <span class="cgv-edit-num">${i + 1}.</span>
+        <input type="text" class="cgv-edit-title" placeholder="Titre de la section (ex : Objet, Réservation, …)" value="${esc(s.title || "")}" oninput="cgvSectionUpdate('${s.id}', 'title', this.value)">
+        <div class="cgv-edit-actions">
+          <button class="btn-icon" onclick="cgvSectionMoveUp('${s.id}')" title="Monter" ${i === 0 ? "disabled" : ""}>↑</button>
+          <button class="btn-icon" onclick="cgvSectionMoveDown('${s.id}')" title="Descendre" ${i === sections.length - 1 ? "disabled" : ""}>↓</button>
+          <button class="btn-icon danger" onclick="cgvSectionRemove('${s.id}')" title="Supprimer">×</button>
+        </div>
+      </div>
+      <textarea class="cgv-edit-body" placeholder="Contenu de la section…" rows="3" oninput="cgvSectionUpdate('${s.id}', 'body', this.value)">${esc(s.body || "")}</textarea>
+    </div>
+  `).join("");
+
+  return `
+    <div class="hint" style="margin:0 0 14px;font-size:12px;color:var(--text-muted);line-height:1.5">
+      Saisie structurée : préambule optionnel (italique) + sections numérotées (titre + contenu). Chaque section apparaît avec son numéro auto-généré, son titre en uppercase et son corps justifié à l'impression.
+    </div>
+
+    <div class="field" style="margin-bottom:18px">
+      <label>Préambule (optionnel)</label>
+      <textarea rows="2" placeholder="Texte d'introduction qui apparaîtra en italique au-dessus des sections numérotées (ex : « Le présent document précise les conditions générales… »)" oninput="upd('mission.cgvPreambule', this.value)">${esc(preambule)}</textarea>
+    </div>
+
+    <div class="cgv-edit-list">
+      ${sections.length === 0
+        ? `<div class="cgv-edit-empty">Aucune section. Clique sur « + Ajouter une section » ci-dessous, ou utilise « 📋 Charger modèle photographe » pour partir d'un modèle pré-rempli.</div>`
+        : sectionsHtml}
+    </div>
+
+    <button class="btn ghost" style="margin-top:8px" onclick="cgvSectionAdd()">+ Ajouter une section</button>
+  `;
+}
 
 function rLogoField() {
   const url = (S.mission && S.mission.logoUrl) || "";
@@ -3723,10 +3826,7 @@ function rMS() {
       <span>Conditions générales de vente (CGV)</span>
       <button class="btn ghost" style="padding:5px 12px;font-size:11px;font-weight:500;letter-spacing:0;text-transform:none" onclick="cgvLoadTemplate()">📋 Charger modèle photographe</button>
     </h4>
-    <div class="hint" style="margin:0 0 10px;font-size:12px;color:var(--text-muted);line-height:1.5">
-      Format détecté automatiquement : numéroter les sections « 1. Titre » sur une ligne, suivies du texte sur les lignes suivantes. <span style="color:var(--primary);font-weight:600">Sections détectées : ${countCgvSections(d.cgv)}</span>
-    </div>
-    ${renderLockedTextarea("cgv", d.cgv || "", "", "Mentions légales et CGV (page 2 du devis)…\n\nAstuce : numérote tes sections « 1. Objet », « 2. Réservation »… elles seront stylées automatiquement à l'impression (titre uppercase + numéro en accent + corps justifié sur 2 colonnes).")}
+    ${rCgvEditor()}
 
     ${rPreviewTabs()}
   `;
@@ -6164,6 +6264,20 @@ function rTR() {
 // Most recent version FIRST.
 // =============================================================
 const CHANGELOG = [
+  {
+    version: "v1.23",
+    date: "2026-04-29",
+    title: "Saisie CGV structurée : préambule + sections (titre/contenu) avec ajouter/supprimer/réordonner",
+    items: [
+      "🔥 Refonte complète de la saisie des CGV. Avant : un seul champ texte rich-text avec parser auto-détectant les patterns « 1. Titre » — fragile, demandait au user de respecter une syntaxe précise. Désormais : saisie structurée comme pour les prestations. Un champ « Préambule » (textarea optionnel pour l'introduction italique) + une liste de sections où chaque section a un champ « Titre » (input) et un champ « Contenu » (textarea), plus 3 boutons (↑ monter, ↓ descendre, × supprimer). Bouton « + Ajouter une section » en bas pour créer une nouvelle section vide.",
+      "Numérotation auto : tu n'écris plus « 1. », « 2. »… Le numéro de section est généré automatiquement à l'affichage selon l'ordre de la liste. Tu peux réordonner sans renommer.",
+      "Migration auto au chargement : si tu avais des CGV dans l'ancien champ texte (`S.mission.cgv`), elles sont parsées en sections structurées au démarrage de l'app. Préambule (paragraphes avant la 1ʳᵉ section numérotée) + sections (titre + body extraits des patterns « 1. Titre. Body » ou « 1. Titre\\nBody »). Aucune perte de données, l'ancien champ est conservé en backup.",
+      "Bouton « 📋 Charger modèle photographe » mis à jour : remplit `cgvSections` avec 8 sections pré-rédigées (Objet, Réservation, Délai rétractation, Délais livraison, Prise de vue, Force majeure, Propriété intellectuelle, Annulation) + un préambule générique. Confirme avant de remplacer si tu as déjà des sections.",
+      "Affichage devis page 2 inchangé visuellement : le rendu utilise désormais `renderCgvSections(preambule, sections[])` au lieu de parser du texte. Plus rapide, plus fiable, aucun bug de parsing possible.",
+      "Pattern technique aligné sur les prestations : `cgvSectionAdd / cgvSectionUpdate / cgvSectionRemove / cgvSectionMoveUp / cgvSectionMoveDown` reproduisent exactement la sémantique de `ligneAdd/ligneUpd/ligneRemove`. Update sans render() pour ne pas perdre le focus en saisie.",
+      "Anciens snapshots Suivi : la nouvelle structure ne s'applique qu'aux nouvelles émissions. Les snapshots anciens conservent leur HTML figé."
+    ]
+  },
   {
     version: "v1.22",
     date: "2026-04-29",
