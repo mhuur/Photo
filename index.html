@@ -38,6 +38,20 @@
   h3{margin-top:24px;margin-bottom:8px;font-size:13px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid var(--border);padding-bottom:4px}
   .row{display:flex;gap:14px;margin-bottom:14px;flex-wrap:wrap}
   .row-section-break{margin-top:8px}
+  /* Edit accordion (Édition du devis section) — collapsible groups */
+  .edit-accordion-list{display:flex;flex-direction:column;gap:8px;margin-top:6px;margin-bottom:18px;max-width:880px}
+  .edit-section{background:var(--surface-2);border:1px solid var(--border-soft);border-radius:8px;overflow:hidden;transition:border-color .15s}
+  .edit-section.open{border-color:var(--border-light)}
+  .edit-section-header{width:100%;display:flex;align-items:center;gap:10px;padding:10px 14px;background:transparent;border:0;color:var(--text);font:inherit;font-size:13px;font-weight:600;cursor:pointer;text-align:left;transition:background .12s}
+  .edit-section-header:hover{background:rgba(255,255,255,.03)}
+  .edit-section-header:focus{outline:none;background:rgba(255,255,255,.04)}
+  .edit-section-chevron{font-size:11px;color:var(--text-muted);transition:transform .18s ease;flex-shrink:0;width:14px;display:inline-flex;align-items:center;justify-content:center}
+  .edit-section.open .edit-section-chevron{transform:rotate(90deg);color:var(--primary)}
+  .edit-section-title{flex:1;letter-spacing:.01em}
+  .edit-section-action{margin-left:auto;padding:5px 12px;font-size:11px;font-weight:500;letter-spacing:0;text-transform:none;flex-shrink:0}
+  .edit-section-body{padding:4px 14px 14px;border-top:1px solid var(--border-soft);background:var(--surface)}
+  .edit-section-body[hidden]{display:none}
+  .edit-section-body > h4:first-child{margin-top:8px}
   .field{display:flex;flex-direction:column;flex:1;min-width:160px}
   .field.sm{max-width:140px}
   .field label{font-size:13px;color:var(--text-muted);margin-bottom:4px}
@@ -3714,6 +3728,35 @@ function rTextEditorModal() {
   </div>`;
 }
 
+// ============ EDIT ACCORDION ============
+// Module-scoped state: which sections are open. Default: all closed.
+const _editSectionOpen = { logo: false, photographe: false, modalites: false, signature: false, cgv: false };
+
+function rEditSection(key, title, bodyHtml, headerActionHtml = "") {
+  const open = !!_editSectionOpen[key];
+  return `<div class="edit-section ${open ? 'open' : ''}" data-edit-section="${key}">
+    <button type="button" class="edit-section-header" onclick="editSectionToggle('${key}')" aria-expanded="${open}">
+      <span class="edit-section-chevron" aria-hidden="true">▸</span>
+      <span class="edit-section-title">${esc(title)}</span>
+      ${headerActionHtml}
+    </button>
+    <div class="edit-section-body" ${open ? '' : 'hidden'}>${bodyHtml}</div>
+  </div>`;
+}
+
+window.editSectionToggle = function(key) {
+  _editSectionOpen[key] = !_editSectionOpen[key];
+  // Toggle the DOM directly (avoids full re-render → preserves form state, focus, scroll).
+  const el = document.querySelector(`.edit-section[data-edit-section="${key}"]`);
+  if (!el) return;
+  const open = _editSectionOpen[key];
+  el.classList.toggle("open", open);
+  const body = el.querySelector(".edit-section-body");
+  const header = el.querySelector(".edit-section-header");
+  if (body) body.hidden = !open;
+  if (header) header.setAttribute("aria-expanded", open ? "true" : "false");
+};
+
 function rPaiementFields() {
   const p = (S.mission && S.mission.paiement) || {};
   const delaiOptions = DELAIS_PAIEMENT.map(d =>
@@ -4356,25 +4399,14 @@ function rMS() {
 
     <div class="row row-section-break"><div class="field tiny"><label>Remise (%)</label><input type="number" step="1" min="0" max="100" value="${esc(d.remisePct)}" oninput="upd('mission.remisePct', this.value)"></div></div>
 
-    <h3>Encadrés du devis</h3>
-
-    <h4>Logo (optionnel)</h4>
-    ${rLogoField()}
-
-    <h4>Photographe (en-tête du devis)</h4>
-    ${renderLockedTextarea("photographe", d.photographe || "", "", "Vos coordonnées en haut à gauche du devis…")}
-
-    <h4>Modalités de paiement</h4>
-    ${rPaiementFields()}
-
-    <h4>Bon pour accord</h4>
-    ${renderLockedTextarea("signatureBlock", d.signatureBlock || "", "", "Bloc de signature client…")}
-
-    <h4 style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">
-      <span>Conditions générales de vente (CGV)</span>
-      <button class="btn ghost" style="padding:5px 12px;font-size:11px;font-weight:500;letter-spacing:0;text-transform:none" onclick="cgvLoadTemplate()">📋 Charger modèle photographe</button>
-    </h4>
-    ${rCgvEditor()}
+    <h3>Édition du devis</h3>
+    <div class="edit-accordion-list">
+      ${rEditSection("logo", "Logo (optionnel)", rLogoField())}
+      ${rEditSection("photographe", "Photographe (en-tête du devis)", renderLockedTextarea("photographe", d.photographe || "", "", "Vos coordonnées en haut à gauche du devis…"))}
+      ${rEditSection("modalites", "Modalités de paiement", rPaiementFields())}
+      ${rEditSection("signature", "Bon pour accord", renderLockedTextarea("signatureBlock", d.signatureBlock || "", "", "Bloc de signature client…"))}
+      ${rEditSection("cgv", "Conditions générales de vente (CGV)", rCgvEditor(), `<button class="btn ghost edit-section-action" onclick="event.stopPropagation();cgvLoadTemplate()">📋 Charger modèle photographe</button>`)}
+    </div>
 
     ${rPreviewTabs()}
   `;
