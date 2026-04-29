@@ -2274,25 +2274,32 @@ function rDeboursPreview() {
   const d = S.mission;
   const t = totals();
   if (t.debours <= 0) {
-    return `<div class="devis-preview"><div class="dp-empty">Pas de frais débours sur ce devis.<br><span style="font-size:13px;color:var(--text-dim)">Ajoutez du matériel en mode « Débours » dans Description prestation, ou choisissez « Frais débours » pour le déplacement.</span></div></div>`;
+    return `<div class="devis-preview"><div class="dp-empty">Pas de frais débours sur ce devis.<br><span style="font-size:13px;color:var(--text-dim)">Ajoutez du matériel en mode « Débours » dans Description prestation, ou choisissez « Débours » pour le déplacement.</span></div></div>`;
   }
   const sel = d.client.id ? S.clients.entries.find(x => x.id === d.client.id) : null;
   const cli = sel || d.client;
   const ref = formatRef(d.ref, "debours");
 
-  // Build débours items
+  // Build débours items — same numbered layout as devis principal
   let linesHtml = "";
+  let lineNum = 0;
+  // Déplacement débours line
   if ((d.deplacement.devis || "principal") === "debours" && t.depl > 0) {
+    lineNum++;
     linesHtml += `<div class="dp-line">
+      <div class="num">${lineNum}.</div>
       <div class="lbl">Déplacement</div>
       <div class="qty"></div>
       <div class="amt">${fmt(t.depl)}</div>
     </div>`;
   }
+  // Materiel débours lines
   for (const l of (d.lignes || [])) {
     if (l.type === "materiel" && l.devis === "debours") {
+      lineNum++;
       linesHtml += `<div class="dp-line">
-        <div class="lbl">${esc(l.intitule || "(Sans intitulé)")}${l.description ? `<div class="desc">${esc(l.description)}</div>` : ""}</div>
+        <div class="num">${lineNum}.</div>
+        <div class="lbl">${esc(l.intitule || "(Sans intitulé)")}<div class="desc">${l.description ? esc(l.description) : "Frais débours"}</div></div>
         <div class="qty"></div>
         <div class="amt">${fmt(num(l.prix))}</div>
       </div>`;
@@ -2305,32 +2312,93 @@ function rDeboursPreview() {
       <div class="dp-doc-ref">${esc(ref)}</div>
     </div>
     <div class="dp-header-grid">
-      <div class="dp-header-left ${(d.photographe || "").trim() ? "" : "empty"}">${(d.photographe || "").trim() ? richDisplayHtml(d.photographe) : "Renseigner vos coordonnées dans la section « Photographe »."}</div>
+      <div class="dp-header-left ${(d.photographe || "").trim() ? "" : "empty"}">${(d.photographe || "").trim() ? richDisplayHtml(d.photographe) : "Renseigner vos coordonnées dans la section « Photographe » de l'onglet Mission."}</div>
       <div class="dp-header-right">
         <div class="dp-meta-block">
           <div>Émission : <strong>${dateFR(d.dateEmission) || "—"}</strong></div>
+          <div class="dp-validity-mention">Document à conserver avec les justificatifs.</div>
         </div>
         <div class="dp-client-block">
           <span class="name">${esc(cli.name || "(Sélectionner un client)")}</span>
-          ${cli.address ? `<div>${esc(cli.address)}</div>` : ""}
-          ${cli.cityPostal ? `<div>${esc(cli.cityPostal)}</div>` : ""}
+          ${(() => {
+            let pickedContact = null;
+            if (S.mission.client.contactId && Array.isArray(cli.contacts)) {
+              pickedContact = cli.contacts.find(c => c.id === S.mission.client.contactId);
+            }
+            if (!pickedContact && Array.isArray(cli.contacts)) {
+              pickedContact = cli.contacts.find(c => c.name || c.phone || c.email) || cli.contacts[0];
+            }
+            const contactName = pickedContact ? pickedContact.name : (S.mission.client.contactSelected || (cli.contact || "").split(/[\n,;\/]+/)[0].trim());
+            const contactPhone = pickedContact ? pickedContact.phone : (S.mission.client.phoneSelected || (cli.phone || "").split(/[\n,;\/]+/)[0].trim());
+            const contactEmail = pickedContact ? pickedContact.email : (S.mission.client.emailSelected || (cli.email || "").split(/[\n,;\/]+/)[0].trim());
+            return `
+              ${contactName ? `<div>${esc(contactName)}</div>` : ""}
+              ${cli.address ? `<div>${esc(cli.address)}</div>` : ""}
+              ${cli.cityPostal ? `<div>${esc(cli.cityPostal)}</div>` : ""}
+              ${contactEmail ? `<div>${esc(contactEmail)}</div>` : ""}
+              ${contactPhone ? `<div>${esc(contactPhone)}</div>` : ""}
+            `;
+          })()}
         </div>
       </div>
     </div>
 
     <div class="dp-doc-title" style="color:var(--accent)">DÉBOURS</div>
-    <div class="dp-doc-sub">Frais à rembourser sur justificatifs</div>
+    <div class="dp-doc-sub">Refacturation de frais avancés au nom et pour le compte du client (art. 267 II du CGI)</div>
 
     <div class="dp-section">
-      <h4 style="color:var(--accent)">Détail</h4>
-      ${linesHtml}
+      ${linesHtml || `<div class="dp-empty" style="padding:14px">Aucune ligne de débours.</div>`}
     </div>
 
     <div class="dp-totals">
       <div class="dp-line grand" style="color:var(--accent)"><span class="lbl">Total à rembourser</span><span class="amt">${fmt(t.debours)}</span></div>
     </div>
 
-    <div class="dp-footer">À régler sur présentation des justificatifs joints.</div>
+    ${(() => {
+      const p = d.paiement || {};
+      const hasNew = !!(p.banque || p.iban || p.bic || p.titulaire);
+      if (!hasNew) return "";
+      return `<div class="dp-payment-info">
+        <h4>Coordonnées de remboursement</h4>
+        <div class="dp-payment-block dp-bank">
+          ${p.banque ? `<div class="dp-bank-line"><span class="lbl">Banque</span><span class="val">${esc(p.banque)}</span></div>` : ""}
+          ${p.titulaire ? `<div class="dp-bank-line"><span class="lbl">Titulaire</span><span class="val">${esc(p.titulaire)}</span></div>` : ""}
+          ${p.iban ? `<div class="dp-bank-line iban"><span class="lbl">IBAN</span><span class="val">${esc(p.iban)}</span></div>` : ""}
+          ${p.bic ? `<div class="dp-bank-line"><span class="lbl">BIC</span><span class="val">${esc(p.bic)}</span></div>` : ""}
+        </div>
+      </div>`;
+    })()}
+
+    <div class="dp-spacer"></div>
+
+    <div class="dp-signature-row">
+      ${(d.signatureBlock || "").trim()
+        ? richDisplayHtml(d.signatureBlock)
+        : `<div class="dp-sig-default">
+            <div class="dp-sig-row"><span>Fait à</span><span class="dp-sig-line"></span><span>, le</span><span class="dp-sig-line short"></span><span>/</span><span class="dp-sig-line short"></span><span>/</span><span class="dp-sig-line short"></span></div>
+            <div class="dp-sig-mention">Signature précédée de la mention « Bon pour accord »</div>
+          </div>`}
+    </div>
+
+    <div class="dp-footer">Auto-entrepreneur · Refacturation au centime près sur justificatifs · TVA non applicable, art. 293 B du CGI</div>
+
+    ${(() => {
+      const cgvSections = Array.isArray(d.cgvSections) ? d.cgvSections.filter(s => s && (s.title || s.body)) : [];
+      const hasCgv = cgvSections.length > 0 || (d.cgvPreambule || "").trim().length > 0;
+      if (!hasCgv) return "";
+      return `<div class="devis-page-break"></div>
+      <div class="dp-conditions cgv">
+        <div class="dp-cgv-header">
+          <span class="dp-cgv-title">Conditions générales de vente</span><span class="dp-cgv-sep"> — </span><span class="dp-cgv-ref">Annexe au ${esc(ref)}</span>
+        </div>
+        <div class="dp-cgv-body">${renderCgvSections(d.cgvPreambule, d.cgvSections)}</div>
+        <div class="dp-cgv-mentions">Pénalités de retard : 3× le taux d'intérêt légal en vigueur · Indemnité forfaitaire de recouvrement : 40 € (art. L441-10 et D441-5 du Code de commerce).</div>
+      </div>`;
+    })()}
+
+    <div class="dp-actions">
+      <button class="btn ghost" onclick="printWithTip()">🖨️ Imprimer le débours</button>
+    </div>
   </div>`;
 }
 
@@ -3972,13 +4040,17 @@ function computePrintFilename() {
   } else if (typeof viewFactureModal !== "undefined" && viewFactureModal) {
     dv = S.suivi.devis && S.suivi.devis[viewFactureModal.devisId];
     kind = "Facture";
+  } else if (typeof activePreviewTab !== "undefined" && activePreviewTab === "debours") {
+    // Printing the débours tab from Mission preview
+    kind = "Débours";
   }
   if (!dv) {
     // Fallback: building from current mission
     const m = S.mission || {};
     const cli = (m.client && (m.client.name || "Client")) || "Client";
     const ref = m.ref || "DEVIS";
-    return sanitizeFilename(`${cli} - ${ref}`);
+    const refClean = ref.replace(/^(DEVIS|DEBOURS|FACTURE)-?/i, "");
+    return sanitizeFilename(`${cli} - ${kind} ${refClean}`);
   }
   // Try to get prestation from the first suivi entry of this devis
   const devisId = (viewDevisModal && viewDevisModal.devisId) || (viewFactureModal && viewFactureModal.devisId);
@@ -4698,7 +4770,11 @@ function suiviMigrate() {
   }
 
   const ungrouped = S.suivi.entries.filter(e => !e.devisId);
-  if (ungrouped.length === 0) return;
+  if (ungrouped.length === 0) {
+    // Even when nothing to group, refs may still need recomputing
+    suiviRecomputeRefs();
+    return;
+  }
 
   const byKey = new Map();
   for (const e of ungrouped) {
@@ -4752,6 +4828,54 @@ function suiviMigrate() {
         for (const e of frais) assign(e, e.ref);
       }
     }
+  }
+  // After grouping is done, auto-recompute any missing/malformed refs
+  suiviRecomputeRefs();
+}
+
+// Auto-recompute Suivi refs at load time (and any time we want).
+// For each devis group: if ref is empty or doesn't match the canonical "DEVIS-NUM-DATE"
+// pattern, regenerate it using:
+//   - NUM = client num (from S.clients fiche, matched by raw client string)
+//   - DATE = earliest line date in the group
+// Operates silently. No alert. Safe to run multiple times (idempotent).
+function suiviRecomputeRefs() {
+  if (!S.suivi || !S.suivi.devis || !Array.isArray(S.suivi.entries)) return;
+  // Group entries by devisId
+  const byDevisId = new Map();
+  for (const e of S.suivi.entries) {
+    if (!e.devisId) continue;
+    if (!byDevisId.has(e.devisId)) byDevisId.set(e.devisId, []);
+    byDevisId.get(e.devisId).push(e);
+  }
+  // Pattern: DEVIS-<NUM>-<YYYY-MM-DD>
+  const validRefPattern = /^DEVIS-\d+-\d{4}-\d{2}-\d{2}$/i;
+  for (const [devisId, lignes] of byDevisId.entries()) {
+    if (!S.suivi.devis[devisId]) S.suivi.devis[devisId] = { ref: "" };
+    const currentRef = (S.suivi.devis[devisId].ref || "").trim();
+    if (currentRef && validRefPattern.test(currentRef)) continue; // already valid, skip
+    // Earliest date among lignes (fallback: first non-empty)
+    const dates = lignes.map(l => l.date).filter(Boolean).sort();
+    const date = dates[0] || "";
+    if (!date) continue; // no usable date → skip silently
+    // Find the client num — use cleanClientLabel logic but keep the num
+    const rawClient = lignes.find(l => l.client)?.client || "";
+    let num = "";
+    const m = String(rawClient).trim().match(/^#(\d+)\s*(.*)$/);
+    if (m) num = m[1];
+    // Try to match a fiche client (by num first, then by name) and use its num
+    if (S.clients && Array.isArray(S.clients.entries)) {
+      const cleanedName = m ? m[2].trim() : rawClient.trim();
+      let found = null;
+      if (num) found = S.clients.entries.find(c => (c.num || "").trim() === num);
+      if (!found && cleanedName) {
+        const lower = cleanedName.toLowerCase();
+        found = S.clients.entries.find(c => (c.name || "").trim().toLowerCase() === lower);
+      }
+      if (found && found.num) num = String(found.num).trim();
+    }
+    if (!num) continue; // no usable num → skip silently (don't generate broken refs)
+    S.suivi.devis[devisId].ref = `DEVIS-${num}-${date}`;
   }
 }
 
@@ -5685,7 +5809,7 @@ function rSV() {
       if (cardOpen) cls.push("expanded");
       if (editing) cls.push("editing");
       const summary = `
-        <tr class="suv-row clickable" onclick="suiviGroupToggle('${g.devisId}')">
+        <tr class="suv-row clickable" onclick="suiviToggle('${e.id}')">
           <td class="cb" onclick="${stop}"><input type="checkbox" ${selected ? "checked" : ""} onclick="suiviToggleOne('${g.devisId}', this.checked, event)"></td>
           <td class="statut">${pastille(g.statutGlobal)}</td>
           <td>${esc(dateFR(e.date))}</td>
@@ -5725,7 +5849,7 @@ function rSV() {
         <td class="statut">${pastille(g.statutGlobal)}</td>
         <td>${dateLabel}</td>
         <td class="ref-cell suv-nowrap">${esc(g.ref) || `<span class="muted">—</span>`}</td>
-        <td class="suv-nowrap"><span class="suv-caret">${cardOpen ? "▾" : "▸"}</span> <strong>${esc(cleanClientLabel(g.client)) || "—"}</strong></td>
+        <td class="suv-nowrap"><strong>${esc(cleanClientLabel(g.client)) || "—"}</strong></td>
         <td class="amt">${fmt(g.total)}</td>
         <td class="actions" onclick="${stop}">
           <div class="suv-row-actions">
