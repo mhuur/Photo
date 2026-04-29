@@ -518,12 +518,22 @@
   .devis-preview .dp-footer{margin-top:18px;padding-top:8px;border-top:1px solid var(--border-soft);font-size:10px;color:var(--text-dim);text-align:center;font-style:italic;line-height:1.4}
   /* Débours line in totals: shorter text */
   .devis-preview .dp-totals .dp-line.debours .debours-note{color:var(--text-dim);font-size:11px;font-style:italic;font-weight:400}
-  /* CGV preamble (penalties moved here) */
-  .devis-preview .dp-cgv-preamble{font-size:11px;color:var(--text-muted);font-style:italic;margin-bottom:18px;padding-bottom:12px;border-bottom:1px solid var(--border-soft)}
-  /* CGV body: 2 columns on screen for readability */
+  /* CGV header (identity strip) */
+  .devis-preview .dp-conditions.cgv{margin-top:18px;padding:14px 0 0;border-top:1px solid var(--border-soft);font-size:13px;color:var(--text);line-height:1.7}
+  .devis-preview .dp-cgv-header{margin-bottom:18px;padding-bottom:12px;border-bottom:1px solid var(--border)}
+  .devis-preview .dp-cgv-header h4{margin:0 0 6px;border:0;padding:0;font-size:15px;font-weight:700;color:var(--text);text-transform:uppercase;letter-spacing:.04em}
+  .devis-preview .dp-cgv-identity{font-size:11px;color:var(--text-muted);font-style:italic;line-height:1.4}
+  /* CGV body — sections styled */
   .devis-preview .dp-cgv-body{font-size:12px;line-height:1.55;color:var(--text);text-align:justify;hyphens:auto}
-  .devis-preview .dp-cgv-body p{margin:0 0 8px}
-  .devis-preview .dp-cgv-body strong,.devis-preview .dp-cgv-body b{display:inline-block;margin-top:8px;font-weight:700;color:var(--text)}
+  .devis-preview .dp-cgv-body .cgv-paragraph{margin:0 0 12px;font-style:italic;color:var(--text-muted);font-size:11.5px;line-height:1.5}
+  .devis-preview .dp-cgv-body .cgv-section{margin:14px 0 10px;break-inside:avoid;page-break-inside:avoid}
+  .devis-preview .dp-cgv-body .cgv-section-title{margin:0 0 4px;font-size:11px;font-weight:700;color:var(--text);text-transform:uppercase;letter-spacing:.05em}
+  .devis-preview .dp-cgv-body .cgv-num{color:var(--primary);margin-right:6px;font-variant-numeric:tabular-nums;font-weight:700}
+  .devis-preview .dp-cgv-body .cgv-section-body{margin:0;font-size:12px;line-height:1.55;color:var(--text)}
+  /* CGV mentions footer */
+  .devis-preview .dp-cgv-mentions{margin-top:18px;padding-top:10px;border-top:1px solid var(--border-soft);font-size:10px;color:var(--text-dim);font-style:italic;line-height:1.4;text-align:center}
+  /* Fallback footer mentions (page 1, when no CGV) */
+  .devis-preview .dp-footer .dp-footer-mentions-fallback{font-size:9px;color:var(--text-dim);margin-top:2px;line-height:1.3}
 
   /* Page break before CGV (page 2 when printed) */
 
@@ -994,16 +1004,30 @@
       line-height: 1.3 !important;
     }
 
-    /* CGV preamble (penalties moved here) */
-    .devis-preview .dp-cgv-preamble, .view-devis-snapshot .dp-cgv-preamble {
+    /* === CGV PAGE 2: HEADER + 2-COL BODY + FOOTER === */
+    /* CGV header (title + identity strip) — full width above the 2-column body */
+    .devis-preview .dp-cgv-header, .view-devis-snapshot .dp-cgv-header {
+      margin-bottom: 12pt !important;
+      padding-bottom: 8pt !important;
+      border-bottom: 0.6pt solid #1a1a1a !important;
+    }
+    .devis-preview .dp-cgv-header h4, .view-devis-snapshot .dp-cgv-header h4 {
+      font-size: 13pt !important;
+      font-weight: 800 !important;
+      color: #1a1a1a !important;
+      margin: 0 0 4pt 0 !important;
+      padding: 0 !important;
+      border: 0 !important;
+      text-transform: uppercase !important;
+      letter-spacing: .04em !important;
+    }
+    .devis-preview .dp-cgv-identity, .view-devis-snapshot .dp-cgv-identity {
       font-size: 7.5pt !important;
       color: #666 !important;
       font-style: italic !important;
-      margin-bottom: 12pt !important;
-      padding-bottom: 8pt !important;
-      border-bottom: 0.4pt solid #ccc !important;
+      line-height: 1.4 !important;
     }
-    /* CGV body: 2 columns, justified, smaller text */
+    /* CGV body: 2 columns, justified, smaller text, structured sections */
     .devis-preview .dp-cgv-body, .view-devis-snapshot .dp-cgv-body {
       column-count: 2 !important;
       column-gap: 18pt !important;
@@ -1015,17 +1039,62 @@
       hyphens: auto !important;
       -webkit-hyphens: auto !important;
     }
-    .devis-preview .dp-cgv-body p, .view-devis-snapshot .dp-cgv-body p {
-      margin: 0 0 6pt !important;
+    /* Preamble paragraph (before numbered sections) */
+    .devis-preview .dp-cgv-body .cgv-paragraph, .view-devis-snapshot .dp-cgv-body .cgv-paragraph {
+      margin: 0 0 8pt !important;
+      font-style: italic !important;
+      color: #555 !important;
+      font-size: 7pt !important;
+      line-height: 1.4 !important;
       break-inside: avoid !important;
     }
-    .devis-preview .dp-cgv-body strong, .view-devis-snapshot .dp-cgv-body strong,
-    .devis-preview .dp-cgv-body b, .view-devis-snapshot .dp-cgv-body b {
-      display: inline-block !important;
-      margin-top: 6pt !important;
+    /* Numbered section block */
+    .devis-preview .dp-cgv-body .cgv-section, .view-devis-snapshot .dp-cgv-body .cgv-section {
+      margin: 0 0 8pt !important;
+      break-inside: avoid !important;
+      page-break-inside: avoid !important;
+    }
+    .devis-preview .dp-cgv-body .cgv-section-title, .view-devis-snapshot .dp-cgv-body .cgv-section-title {
+      margin: 0 0 2pt !important;
+      font-size: 7.5pt !important;
       font-weight: 700 !important;
       color: #1a1a1a !important;
+      text-transform: uppercase !important;
+      letter-spacing: .04em !important;
       break-after: avoid !important;
+      page-break-after: avoid !important;
+    }
+    .devis-preview .dp-cgv-body .cgv-num, .view-devis-snapshot .dp-cgv-body .cgv-num {
+      color: #1a1a1a !important;
+      margin-right: 4pt !important;
+      font-variant-numeric: tabular-nums !important;
+      font-weight: 700 !important;
+    }
+    .devis-preview .dp-cgv-body .cgv-section-body, .view-devis-snapshot .dp-cgv-body .cgv-section-body {
+      margin: 0 !important;
+      font-size: 7.5pt !important;
+      line-height: 1.45 !important;
+      color: #333 !important;
+      text-align: justify !important;
+    }
+    /* CGV mentions footer (penalties at bottom of page 2) */
+    .devis-preview .dp-cgv-mentions, .view-devis-snapshot .dp-cgv-mentions {
+      margin-top: 12pt !important;
+      padding-top: 6pt !important;
+      border-top: 0.4pt solid #ccc !important;
+      font-size: 6.5pt !important;
+      color: #888 !important;
+      font-style: italic !important;
+      line-height: 1.4 !important;
+      text-align: center !important;
+    }
+    /* Fallback footer mentions on page 1 (only if no CGV) */
+    .devis-preview .dp-footer .dp-footer-mentions-fallback,
+    .view-devis-snapshot .dp-footer .dp-footer-mentions-fallback {
+      font-size: 6pt !important;
+      color: #888 !important;
+      margin-top: 1pt !important;
+      line-height: 1.3 !important;
     }
 
     /* === DÉBOURS / FACTURE doc title === */
@@ -1070,19 +1139,9 @@
     .devis-preview .dp-conditions.cgv, .view-devis-snapshot .dp-conditions.cgv {
       page-break-before: always !important;
       page-break-inside: auto !important;
-      font-size: 8pt !important;
-      line-height: 1.5 !important;
-      color: #333 !important;
       margin-top: 0 !important;
       padding-top: 0 !important;
-    }
-    .devis-preview .dp-conditions.cgv h4, .view-devis-snapshot .dp-conditions.cgv h4 {
-      font-size: 12pt !important;
-      color: #1a1a1a !important;
-      margin-bottom: 10pt !important;
-      padding-bottom: 4pt !important;
-      border-bottom: 1pt solid #1a1a1a !important;
-      letter-spacing: 0.04em !important;
+      border-top: 0 !important;
     }
 
     /* Hide app chrome */
@@ -1931,14 +1990,25 @@ function rDevisPreview() {
           </div>`}
     </div>
 
-    <div class="dp-footer">Auto-entrepreneur · TVA non applicable, art. 293 B du CGI</div>
+    ${(() => {
+      const hasCgv = (d.cgv || "").trim().length > 0;
+      // If no CGV: legal mentions stay in page 1 footer (fallback). If CGV exists: page 2 holds them.
+      if (hasCgv) return "";
+      return `<div class="dp-footer">
+        <div>Auto-entrepreneur · TVA non applicable, art. 293 B du CGI</div>
+        <div class="dp-footer-mentions-fallback">Pénalités de retard : 3× le taux d'intérêt légal · Indemnité forfaitaire de recouvrement : 40 € (art. L441-10 et D441-5 du Code de commerce)</div>
+      </div>`;
+    })()}
 
     ${(d.cgv || "").trim() ? `
       <div class="devis-page-break"></div>
       <div class="dp-conditions cgv">
-        <h4>Conditions générales de vente</h4>
-        <div class="dp-cgv-preamble">Pénalités de retard : 3× le taux d'intérêt légal en vigueur · Indemnité forfaitaire de recouvrement : 40 € (art. L441-10 et D441-5 du Code de commerce).</div>
-        <div class="dp-cgv-body">${richDisplayHtml(d.cgv)}</div>
+        <div class="dp-cgv-header">
+          <h4>Conditions générales de vente</h4>
+          <div class="dp-cgv-identity">Annexe au ${esc(formatRef(d.ref, "devis"))} · Auto-entrepreneur · TVA non applicable, art. 293 B du CGI</div>
+        </div>
+        <div class="dp-cgv-body">${renderCgv(d.cgv)}</div>
+        <div class="dp-cgv-mentions">Pénalités de retard : 3× le taux d'intérêt légal en vigueur · Indemnité forfaitaire de recouvrement : 40 € (art. L441-10 et D441-5 du Code de commerce).</div>
       </div>
     ` : ""}
 
@@ -2913,6 +2983,103 @@ function richDisplayHtml(s) {
   return isRichHtml(s) ? s : plainToHtml(s);
 }
 
+// ============ CGV RENDERING ============
+// Parse free-text CGV into structured sections (detects "N. Title" patterns)
+// and render with consistent typography for the 2-column print layout.
+function renderCgv(rawText) {
+  if (!rawText || !String(rawText).trim()) return "";
+  // Strip any HTML tags (rich-text editor may have wrapped in <p>). Keep <strong>/<em>/<b>/<i>/<u>.
+  let text = String(rawText)
+    .replace(/<\/p>\s*<p[^>]*>/gi, "\n\n")
+    .replace(/<br\s*\/?>/gi, "\n")
+    .replace(/<\/?p[^>]*>/gi, "")
+    .replace(/&nbsp;/g, " ");
+  // Normalize whitespace
+  text = text.replace(/\r\n?/g, "\n").trim();
+  // Split into paragraphs (double newline)
+  const paragraphs = text.split(/\n\s*\n/).map(p => p.trim()).filter(Boolean);
+  return paragraphs.map(renderCgvParagraph).join("");
+}
+
+function renderCgvParagraph(p) {
+  if (!p) return "";
+  // Detect "N. " at start of paragraph (case-insensitive numbered section)
+  const numMatch = p.match(/^(\d+)\.\s+([\s\S]+)$/);
+  if (!numMatch) {
+    // Regular paragraph (preamble or unnumbered text)
+    return `<p class="cgv-paragraph">${esc(p).replace(/\n/g, "<br>")}</p>`;
+  }
+  const num = numMatch[1];
+  const rest = numMatch[2];
+  // Try to split title from body
+  let title, body;
+  const newlineIdx = rest.indexOf("\n");
+  if (newlineIdx > 0 && newlineIdx <= 80) {
+    // Pattern: "N. Title\nBody..."
+    title = rest.substring(0, newlineIdx).trim();
+    body = rest.substring(newlineIdx + 1).trim();
+  } else {
+    // Pattern: "N. Title. Body..." — first sentence is title
+    const sentMatch = rest.match(/^([^.\n]{2,80})\.\s+([\s\S]+)$/);
+    if (sentMatch) {
+      title = sentMatch[1].trim();
+      body = sentMatch[2].trim();
+    } else {
+      // No clear separator → first 60 chars as title, rest as body if any
+      title = rest.length <= 80 ? rest.replace(/\.$/, "").trim() : rest.substring(0, 60).trim() + "…";
+      body = rest.length <= 80 ? "" : rest;
+    }
+  }
+  return `<div class="cgv-section">
+    <h5 class="cgv-section-title"><span class="cgv-num">${esc(num)}.</span> ${esc(title)}</h5>
+    ${body ? `<p class="cgv-section-body">${esc(body).replace(/\n/g, "<br>")}</p>` : ""}
+  </div>`;
+}
+
+function countCgvSections(rawText) {
+  if (!rawText) return 0;
+  const text = String(rawText)
+    .replace(/<\/p>\s*<p[^>]*>/gi, "\n\n")
+    .replace(/<br\s*\/?>/gi, "\n")
+    .replace(/<\/?p[^>]*>/gi, "");
+  const matches = text.match(/^\s*\d+\.\s+\S/gm);
+  return matches ? matches.length : 0;
+}
+
+const CGV_TEMPLATE_PHOTOGRAPHE = `Le présent document précise les conditions générales de vente applicables aux prestations photographiques et audiovisuelles. Il complète et fait partie intégrante du devis qu'il accompagne.
+
+1. Objet
+Le prestataire propose des prestations photographiques et/ou audiovisuelles. Les présentes conditions générales, ainsi que le devis associé, constituent le cadre contractuel entre le prestataire et le commanditaire.
+
+2. Réservation et acompte
+La réservation d'une prestation se fait sous réserve de la disponibilité du prestataire. Elle nécessite le retour du devis signé avec la mention « bon pour accord », accompagné d'un acompte de 30 % du montant total. Le solde est dû à l'issue de la prestation, avant livraison des fichiers.
+
+3. Délai de rétractation
+Le commanditaire dispose d'un délai de rétractation de 7 jours à compter de la signature du devis. Toute décision de rétractation effectuée dans ce délai donne lieu au remboursement du montant versé. Passé ce délai, l'acompte n'est plus remboursable.
+
+4. Délais et livraison
+Le prestataire s'efforce de respecter les délais de livraison indiqués (généralement sous 15 jours ouvrés). Ces délais sont donnés à titre indicatif et ne peuvent donner lieu à indemnité en cas de dépassement raisonnable.
+
+5. Prise de vue
+En extérieur, en cas de mauvais temps ou de force majeure, le prestataire se réserve le droit de suspendre la prestation s'il juge que celle-ci risque de compromettre la qualité du travail ou la sécurité de son matériel. Une nouvelle date sera convenue d'un commun accord.
+
+6. Force majeure et maladie
+En cas de force majeure ou de maladie empêchant la réalisation de la prestation, le prestataire peut annuler ou reporter sans engager sa responsabilité. L'acompte est intégralement remboursé en cas d'annulation par le prestataire ; il s'engage par ailleurs à proposer un remplaçant si le commanditaire le souhaite.
+
+7. Propriété intellectuelle et droit à l'image
+Les œuvres réalisées confèrent au prestataire des droits de propriété intellectuelle conformément au code de la propriété intellectuelle. Le commanditaire s'engage à diffuser les fichiers livrés en l'état (sans recadrage ni retouche), sauf accord préalable écrit. Le prestataire conserve le droit de diffuser les œuvres dans le cadre de sa communication professionnelle (portfolio, réseaux sociaux, expositions à but non lucratif), sauf mention contraire écrite.
+
+8. Annulation
+Toute annulation du commanditaire après signature du devis entraîne la conservation de l'acompte par le prestataire à titre de dédommagement.`;
+
+window.cgvLoadTemplate = function() {
+  const current = (S.mission.cgv || "").trim();
+  if (current && !confirm("Cela remplacera ton texte CGV actuel par le modèle photographe. Continuer ?")) return;
+  S.mission.cgv = CGV_TEMPLATE_PHOTOGRAPHE;
+  save();
+  render();
+};
+
 window.textEditorOpen = function(field) {
   textEditorModal = { field };
   render();
@@ -3552,8 +3719,14 @@ function rMS() {
     <h4>Bon pour accord</h4>
     ${renderLockedTextarea("signatureBlock", d.signatureBlock || "", "", "Bloc de signature client…")}
 
-    <h4>Conditions générales de vente (CGV)</h4>
-    ${renderLockedTextarea("cgv", d.cgv || "", "", "Mentions légales et CGV (page 2 du devis)…")}
+    <h4 style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">
+      <span>Conditions générales de vente (CGV)</span>
+      <button class="btn ghost" style="padding:5px 12px;font-size:11px;font-weight:500;letter-spacing:0;text-transform:none" onclick="cgvLoadTemplate()">📋 Charger modèle photographe</button>
+    </h4>
+    <div class="hint" style="margin:0 0 10px;font-size:12px;color:var(--text-muted);line-height:1.5">
+      Format détecté automatiquement : numéroter les sections « 1. Titre » sur une ligne, suivies du texte sur les lignes suivantes. <span style="color:var(--primary);font-weight:600">Sections détectées : ${countCgvSections(d.cgv)}</span>
+    </div>
+    ${renderLockedTextarea("cgv", d.cgv || "", "", "Mentions légales et CGV (page 2 du devis)…\n\nAstuce : numérote tes sections « 1. Objet », « 2. Réservation »… elles seront stylées automatiquement à l'impression (titre uppercase + numéro en accent + corps justifié sur 2 colonnes).")}
 
     ${rPreviewTabs()}
   `;
@@ -5991,6 +6164,20 @@ function rTR() {
 // Most recent version FIRST.
 // =============================================================
 const CHANGELOG = [
+  {
+    version: "v1.22",
+    date: "2026-04-29",
+    title: "Refonte CGV : page dédiée avec en-tête identité, parser de sections et bouton modèle",
+    items: [
+      "🔥 Refonte de la page CGV : structure en 3 zones distinctes. (1) En-tête : titre « CONDITIONS GÉNÉRALES DE VENTE » avec en sous-titre l'identité légale (« Annexe au Devis n° X · Auto-entrepreneur · TVA non applicable, art. 293 B du CGI »), séparé du corps par un trait fin. (2) Corps : sections numérotées détectées et stylées en 2 colonnes justifiées avec hyphenation. (3) Pied : mention pénalités de retard centrée en italique discret.",
+      "Auto-entrepreneur/TVA et Pénalités regroupés sur la page CGV (avant : TVA en pied de page 1 + Pénalités en préambule de page 2 → impression de duplication). Désormais les deux mentions sont sur la page CGV, à des places sémantiquement justes : identité en haut, pénalités en bas. Page 1 a un pied minimal (vide si CGV présente, fallback si pas de CGV).",
+      "Parser automatique des sections numérotées : nouvelle fonction `renderCgv()` qui détecte les patterns « 1. Titre. Body » (sur une ligne) ou « 1. Titre\\nBody » (titre puis paragraphe) et les style en blocs distincts. Numéro en gras, titre en uppercase 7,5 pt avec letter-spacing, corps en 7,5 pt justifié. Préambule (texte avant les sections numérotées) en italique muted.",
+      "Sections détectées : compteur live dans le formulaire d'édition (« Sections détectées : 6 ») pour vérifier que le numérotage est bien parsé.",
+      "Layout CGV à l'impression : 2 colonnes avec column-rule fin, gap 18 pt, sections avec `break-inside: avoid` (une section ne se coupe jamais entre 2 colonnes), justified + hyphens-auto pour un rendu type magazine.",
+      "Bouton « 📋 Charger modèle photographe » dans le formulaire CGV : pré-remplit avec un modèle propre 8 sections (Objet, Réservation, Délai rétractation, Délais livraison, Prise de vue, Force majeure, Propriété intellectuelle, Annulation) — base solide adaptable. Confirme avant remplacement si un texte existe.",
+      "Conséquence sur les anciens snapshots : les devis émis avant v1.22 conservent leur ancienne structure (`dp-cgv-preamble`) figée dans le snapshot HTML, mais les classes CSS correspondantes ont été retirées. Pour bénéficier de la nouvelle mise en page sur un devis ancien, le réémettre via « + Enregistrer dans Suivi »."
+    ]
+  },
   {
     version: "v1.21",
     date: "2026-04-29",
