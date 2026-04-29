@@ -1382,17 +1382,14 @@
   .paiement-info-grid{display:grid;grid-template-columns:max-content 1fr;gap:6px 12px;align-items:start}
   .paiement-info-lbl{font-weight:600;color:var(--text-muted);font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;padding-top:1px}
   .paiement-info-grid > span:not(.paiement-info-lbl){color:var(--text);font-size:12px}
-  /* Marges block in Materiel section */
-  .marges-block{margin:14px 0 8px;padding:14px 16px;background:var(--surface-2);border:1px solid var(--border-soft);border-radius:8px;max-width:680px}
-  .marges-title{margin:0 0 10px;font-size:12px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;border:0;padding:0}
-  .marges-row{display:flex;align-items:flex-end;gap:14px;margin-bottom:8px}
-  .marges-row:last-child{margin-bottom:0}
-  .marges-row .field.narrow{flex:0 0 220px}
-  .marges-row .field.marges-hint{flex:1;padding-bottom:10px}
-  .marges-row .hint{font-size:12px;color:var(--text-muted);line-height:1.5}
+  /* Au black mode warning banner */
+  .black-warning{margin:8px 0 14px;padding:12px 16px;background:rgba(231,76,60,.08);border-left:3px solid var(--danger,#e74c3c);border-radius:0 6px 6px 0;font-size:13px;color:var(--text);line-height:1.5;max-width:880px}
+  .black-warning strong{color:var(--danger,#e74c3c)}
   .depl-pmt-wrap{display:flex;align-items:center;gap:10px}
-  /* Final client-facing cost shown inline in the row, after the price input */
-  .lg-final-cost-inline{font-size:13px;color:var(--primary);font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap;flex-shrink:0;padding:0 8px;border-left:2px solid var(--primary-soft);height:var(--input-h);display:flex;align-items:center}
+  /* Final client-facing cost shown inline in the row, after the price input.
+     Always reserve a min-width slot so adjacent buttons don't shift between materiel rows. */
+  .lg-final-cost-inline{font-size:13px;color:var(--primary);font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap;flex-shrink:0;padding:0 8px;border-left:2px solid var(--primary-soft);height:var(--input-h);display:flex;align-items:center;min-width:110px;justify-content:flex-start}
+  .lg-final-cost-inline.empty{border-left-color:transparent;color:transparent}
   .lg-expand{background:transparent;border:0;color:var(--text-dim);font-size:14px;line-height:1;cursor:pointer;height:var(--input-h);width:30px;display:flex;align-items:center;justify-content:center;padding:0;border-radius:4px;flex-shrink:0;transition:transform .15s,color .12s,background .12s}
   .lg-expand:hover{background:rgba(255,255,255,.06);color:var(--text)}
   .lg-expand.open{transform:rotate(90deg);color:var(--primary)}
@@ -1724,7 +1721,7 @@ function upd(path, val) {
     refreshRefDisplay();
   }
   save();
-  if (path.startsWith("mission.prep") || path.startsWith("mission.prod") || path.startsWith("mission.postprod") || path.startsWith("mission.deplacement") || path.startsWith("mission.autres") || path.startsWith("mission.lignes") || path === "mission.remisePct" || path === "mission.object" || path === "mission.paiement.margeAvance" || path === "mission.paiement.margeUrssaf") {
+  if (path.startsWith("mission.prep") || path.startsWith("mission.prod") || path.startsWith("mission.postprod") || path.startsWith("mission.deplacement") || path.startsWith("mission.autres") || path.startsWith("mission.lignes") || path === "mission.remisePct" || path === "mission.object" || path === "mission.paiement.margeAvance" || path === "mission.urssafPct") {
     refreshTotals();
   }
 }
@@ -1939,8 +1936,10 @@ function rDevisPreview() {
   const cli = sel || d.client;
 
   // Build line items HTML — with numbering (1., 2., 3., …)
-  const ma = num((d.paiement || {}).margeAvance ?? 0);
-  const mu = num((d.paiement || {}).margeUrssaf ?? 22);
+  // Au black (declare === false) → no URSSAF compensation, no marge avance.
+  const _isDeclared = d.declare !== false;
+  const ma = _isDeclared ? num((d.paiement || {}).margeAvance ?? 0) : 0;
+  const mu = _isDeclared ? num(d.urssafPct ?? 22) : 0;
   let linesHtml = "";
   let lineNum = 0;
   for (const l of (d.lignes || [])) {
@@ -2925,9 +2924,11 @@ function _ensureTooltipEl() {
 window.showPaiementInfo = function(evt, kind, id) {
   const el = _ensureTooltipEl();
   let info = null;
-  const p = (S.mission && S.mission.paiement) || {};
-  const margeAvance = num(p.margeAvance ?? 0);
-  const margeUrssaf = num(p.margeUrssaf ?? 22);
+  const m = S.mission || {};
+  const p = m.paiement || {};
+  const isDeclared = m.declare !== false;
+  const margeAvance = isDeclared ? num(p.margeAvance ?? 0) : 0;
+  const margeUrssaf = isDeclared ? num(m.urssafPct ?? 22) : 0;
   if (kind === "ligne") {
     const l = S.mission.lignes.find(x => x.id === id);
     if (l && l.type === "materiel") {
@@ -2993,14 +2994,16 @@ function rLigne(l) {
     const secondTitle = isDebours
       ? "Le fournisseur facture directement ton client final"
       : "Tu avances la dépense, marge appliquée";
-    // Compute client-facing displayed amount (with URSSAF + avance markup if applicable)
-    // Form view shows full breakdown for the photographer.
-    const ma = num((S.mission.paiement || {}).margeAvance ?? 0);
-    const mu = num((S.mission.paiement || {}).margeUrssaf ?? 22);
+    // Compute client-facing displayed amount (with URSSAF + avance markup if applicable).
+    // Au black: no markups (URSSAF=0, avance=0).
+    const _declared = S.mission.declare !== false;
+    const ma = _declared ? num((S.mission.paiement || {}).margeAvance ?? 0) : 0;
+    const mu = _declared ? num(S.mission.urssafPct ?? 22) : 0;
     const dispInfo = ligneDisplayInfo(l.devis, pmt, l.prix, ma, mu, false);
+    // Always render the slot (even empty) so adjacent buttons don't shift across rows
     const finalCostInline = dispInfo.hasMarkup
       ? `<div class="lg-final-cost-inline" title="Coût final pour le client : ${esc(dispInfo.breakdown)}">→ ${fmt(dispInfo.amount)}</div>`
-      : "";
+      : `<div class="lg-final-cost-inline empty" aria-hidden="true"></div>`;
     return `<div class="lg-row-wrap">
       <div class="lg-row">
         <input class="lg-title" placeholder="Intitulé (ex : Pellicule, Location studio…)" value="${esc(l.intitule)}" oninput="ligneUpd('${l.id}','intitule',this.value)">
@@ -3061,16 +3064,22 @@ function delaiPaiementLabel(k) {
 
 function totals() {
   const d = S.mission;
-  // Hourly rate: tarif catalogue saisi = prix final TTC. Au black, on enlève l'URSSAF.
+  // Hourly rate logic. The catalog price `cat.p` is the photographer's gross billed price
+  // (CA déclaré, URSSAF incluse). For French auto-entrepreneur, URSSAF = X% du CA :
+  //   net before matos = gross × (1 - URSSAF%)
+  //   gross = net / (1 - URSSAF%)
+  // Au black, the photographer can pass the URSSAF saved as a discount to the client:
+  //   tarif au black = gross × (1 - URSSAF%) — équivalent net
   const cat = (S.tarifs.catalog || DEFAULT_CATALOG).find(c => c.k === d.object);
   const _baseTotal = cat ? num(cat.p) : 0;
   const _isDecTot = d.declare !== false;
-  const _urssafCoefTot = 1 + (num(d.urssafPct ?? 22)) / 100;
-  const tarifH = _isDecTot ? _baseTotal : (_baseTotal > 0 ? r2(_baseTotal / _urssafCoefTot) : 0);
+  const _urssafFactorTot = 1 - (num(d.urssafPct ?? 22)) / 100; // e.g., 0.78 for 22%
+  const tarifH = _isDecTot ? _baseTotal : (_baseTotal > 0 ? r2(_baseTotal * _urssafFactorTot) : 0);
   const HOURS_PER_DAY = 8;
-  // Marge rates (read first, used by ligneDisplayInfo per-line)
-  const margeAvancePct = num(d.paiement?.margeAvance ?? 0);
-  const margeUrssafPct = num(d.paiement?.margeUrssaf ?? 22);
+  // Marge rates: au black ⇒ no compensation (everything raw).
+  // URSSAF rate read from the unique source of truth (mission.urssafPct).
+  const margeAvancePct = _isDecTot ? num(d.paiement?.margeAvance ?? 0) : 0;
+  const margeUrssafPct = _isDecTot ? num(d.urssafPct ?? 22) : 0;
   // First pass: walk lignes — accumulate hours and per-line final amounts.
   // For Principal items, use ligneDisplayInfo() to compute the final (post-URSSAF, post-avance)
   // amount with the inverse formula. The sum is what the client owes.
@@ -4012,6 +4021,12 @@ function rViewFactureModal() {
 function tarifBreakdown(includeDepl) {
   // Compute per-hour breakdown: Net / +Déplacement / +Matériel / +URSSAF / =Tarif facturé
   // includeDepl=true → also include deplacement spread (only effective if mode is "taux")
+  //
+  // CORRECT URSSAF FORMULA:
+  // For French auto-entrepreneur, URSSAF cotisation = X % du CA. So:
+  //   gross billed = CA, URSSAF prélevée = gross × X%, net = gross × (1 - X%).
+  // Au black: the photographer can give a discount to the client equal to the URSSAF saved,
+  //   so tarif au black = gross × (1 - X%).
   const d = S.mission;
   const declared = d.declare !== false;
   const cat = (S.tarifs.catalog || DEFAULT_CATALOG).find(c => c.k === d.object);
@@ -4020,18 +4035,20 @@ function tarifBreakdown(includeDepl) {
   const final = num(cat.p);
   if (final <= 0) return null;
   const urssafPct = num(d.urssafPct ?? 22);
-  const urssafCoef = 1 + urssafPct / 100;
+  const urssafFactor = 1 - urssafPct / 100; // e.g., 0.78 for 22%
   const matos = tm.tauxAvecSecurite;
   const t = totals();
   const dpH = (includeDepl && t.deplMode === "taux" && t.totalHeures > 0) ? t.deplPerHour : 0;
-  // Tarif facturé per hour (= what the client pays per hour)
-  const tarifApplique = declared ? r2(final + dpH) : r2(r2(final / urssafCoef) + dpH);
-  // URSSAF amount displayed (always based on the TTC equivalent including dpH for info)
-  const urssafAmount = r2((final + dpH) - r2((final + dpH) / urssafCoef));
-  // Net per hour (true profit after URSSAF, matos, and actual déplacement cost)
+  // Tarif facturé per hour: declared = catalog gross + déplacement; au black = gross × (1-URSSAF%) + déplacement
+  const tarifApplique = declared ? r2(final + dpH) : r2(r2(final * urssafFactor) + dpH);
+  // URSSAF amount: declared = X% of gross billed; au black = same (this is the URSSAF "saved" by going au black)
+  const urssafAmount = r2((final + dpH) * urssafPct / 100);
+  // Net per hour after matos and URSSAF (and minus dpH which is a real cost):
+  //   declared : (final + dpH) × (1-urssaf%) - matos - dpH
+  //   au black : final × (1-urssaf%) - matos        (no URSSAF actually paid; dpH already invoiced)
   const net = declared
-    ? r2(r2((final + dpH) / urssafCoef) - matos - dpH)
-    : r2(r2(final / urssafCoef) - matos);
+    ? r2(r2((final + dpH) * urssafFactor) - matos - dpH)
+    : r2(r2(final * urssafFactor) - matos);
   return { net, matos, deplPerHour: dpH, urssafAmount, tarifApplique, declared, hasDepl: dpH > 0 };
 }
 
@@ -4116,6 +4133,18 @@ function rMS() {
         </div>
       </div>
     </div>
+    ${declare ? `
+    <div class="row">
+      <div class="field"><!-- spacer to align under "Statut" --></div>
+      <div class="field"><label>Marge sur frais avancés (%)</label>
+        <input type="number" step="0.1" min="0" value="${esc((d.paiement || {}).margeAvance ?? "0")}" oninput="upd('mission.paiement.margeAvance', this.value)" placeholder="0">
+      </div>
+    </div>
+    ` : `
+    <div class="black-warning" role="alert">
+      <strong>⚠ Mode au black</strong> — pas de débours, pas d'URSSAF, pas de marge sur avance applicable. <strong>Ne pas avancer de frais</strong> : il n'y a aucun mécanisme de compensation. Tous les matériels et déplacements sont au prix brut, payés via l'acompte.
+    </div>
+    `}
 
     <h4>Heures</h4>
     <div class="lg-list">
@@ -4132,40 +4161,6 @@ function rMS() {
     <div class="lg-add">
       <button class="btn ghost" onclick="ligneAdd('materiel')">+ Ajouter du matériel</button>
     </div>
-
-    ${(() => {
-      const p = d.paiement || {};
-      const ts = totals();
-      const hintAvance = ts.totalAvance > 0
-        ? `Frais avancés détectés : <strong>${fmt(ts.totalAvance)}</strong> · Marge appliquée : <strong>${fmt(ts.margeAvanceAmount)}</strong>`
-        : `Aucun matériel/déplacement marqué « Avance ». Marque-en pour appliquer la marge.`;
-      const hintUrssaf = ts.totalPrincipalBase > 0
-        ? `Items Principal détectés : <strong>${fmt(ts.totalPrincipalBase)}</strong> · Compensation URSSAF : <strong>${fmt(ts.margeUrssafAmount)}</strong> (calcul inverse : montant ÷ (1 − ${num(ts.margeUrssafPct).toString().replace(".", ",")} %))`
-        : `Aucun matériel/déplacement en mode « Principal ». La compensation URSSAF s'applique à tous les items Principal (Acompte + Avance).`;
-      return `
-      <div class="marges-block">
-        <h5 class="marges-title">Marges et compensations</h5>
-        <div class="marges-row">
-          <div class="field narrow">
-            <label>Compensation URSSAF sur acompte (%)</label>
-            <input type="number" step="0.1" min="0" value="${esc(p.margeUrssaf ?? "22")}" oninput="upd('mission.paiement.margeUrssaf', this.value)" placeholder="22">
-          </div>
-          <div class="field marges-hint">
-            <div class="hint">${hintUrssaf}</div>
-          </div>
-        </div>
-        <div class="marges-row">
-          <div class="field narrow">
-            <label>Marge sur frais avancés (%)</label>
-            <input type="number" step="0.1" min="0" value="${esc(p.margeAvance ?? "0")}" oninput="upd('mission.paiement.margeAvance', this.value)" placeholder="0">
-          </div>
-          <div class="field marges-hint">
-            <div class="hint">${hintAvance}</div>
-          </div>
-        </div>
-      </div>
-    `;
-    })()}
 
     <h3>Déplacement</h3>
     <div class="row"><div class="field lg"><label>Inclure dans</label>
@@ -6490,10 +6485,11 @@ function rTR() {
   // Compute taux matos
   const tm = tauxMatos();
   const urssafPct = num(S.mission && S.mission.urssafPct) || 22;
-  const urssafCoef = 1 + urssafPct / 100;
+  const urssafFactor = 1 - urssafPct / 100; // e.g., 0.78 for 22%
   const tarifRows3col = cat.map((c, idx) => {
     const final = num(c.p);
-    const sansUrssaf = final > 0 ? r2(final / urssafCoef) : 0;
+    // URSSAF correctly applied: net before matos = gross × (1 - URSSAF%)
+    const sansUrssaf = final > 0 ? r2(final * urssafFactor) : 0;
     const net = final > 0 ? r2(sansUrssaf - tm.tauxRetenu) : 0;
     return `
     <tr ${final === 0 ? 'class="row-empty"' : ''}>
@@ -6708,6 +6704,19 @@ function rTR() {
 // Most recent version FIRST.
 // =============================================================
 const CHANGELOG = [
+  {
+    version: "v1.34",
+    date: "2026-04-29",
+    title: "Marge avance déplacée dans Prestation · Au black sécurisé · Calcul URSSAF corrigé",
+    items: [
+      "🔥 Bloc « Marges et compensations » supprimé du bas de la section Matériel (le taux URSSAF y était dupliqué). La marge sur frais avancés est désormais à côté du Taux URSSAF dans la section Prestation, juste sous le sélecteur Statut/URSSAF, même style et même charte graphique.",
+      "🔥 Source unique de vérité pour le taux URSSAF : `mission.urssafPct` (le champ déjà saisi en haut du formulaire). Plus de doublon `paiement.margeUrssaf`. Toutes les fonctions (ligneDisplayInfo, totals, paiementInfoFor, tooltip) lisent désormais depuis `mission.urssafPct`. Modifie le taux en haut → tout le reste suit instantanément.",
+      "🔥 Au black sécurisé : quand Statut = « Au black » est sélectionné, encart d'avertissement rouge affiché à la place du champ Marge avance, qui rappelle « Ne pas avancer de frais — il n'y a aucun mécanisme de compensation. Tous les matériels et déplacements sont au prix brut, payés via l'acompte. ». Toutes les marges (URSSAF + avance) sont automatiquement mises à zéro tant que le mode au black est actif.",
+      "🔥 Correction du calcul du taux horaire net (« Frais & Tarifs » + tooltip Décomposition tarif) : la formule précédente `tarif/(1+URSSAF%)` (logique TVA) sous-estimait le prélèvement URSSAF. Corrigée en `tarif × (1−URSSAF%)` (logique auto-entrepreneur où URSSAF = X% du CA). Pour 60 € à 22 % : avant, URSSAF affichée 10,82 € (taux réel 18,03 % ≠ 22 % saisi) · après, URSSAF affichée 13,20 € (taux réel 22 % ✓). Le tarif net après matos baisse en conséquence (44,18 € → 41,80 €) : c'est la valeur correcte selon le régime auto-entrepreneur.",
+      "🔥 Slot du coût final inline en Matériel toujours rendu, même quand pas de majoration (Débours, Fact.Direct). Espace réservé en CSS (`min-width: 110px`) avec bordure transparente quand vide, pour que les boutons Principal/Débours/Acompte/Avance/(i) s'alignent verticalement entre toutes les lignes matériel quel que soit le mode choisi.",
+      "Nettoyage : variable `paiement.margeUrssaf` rendue obsolète (lecture désactivée). Les anciennes données ont la valeur conservée mais ignorée. Migration silencieuse, aucune action requise."
+    ]
+  },
   {
     version: "v1.33",
     date: "2026-04-29",
