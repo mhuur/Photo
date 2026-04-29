@@ -1371,6 +1371,14 @@
   .lg-toggle button{flex:1;padding:0 10px;font-size:13px;justify-content:center}
   .lg-toggle-pmt{min-width:auto;flex-shrink:0}
   .lg-toggle-pmt button{padding:0 10px;font-size:12px;font-weight:500}
+  .lg-toggle-pmt button:disabled{opacity:.35;cursor:not-allowed;pointer-events:none}
+  /* Paiement info card — explains consequences of the chosen combination */
+  .lg-info{margin:6px 0 0;padding:10px 14px;background:var(--surface-2);border-left:3px solid var(--primary);border-radius:0 6px 6px 0;font-size:12px;color:var(--text-muted);line-height:1.5}
+  .lg-info.warn{border-color:var(--danger,#e74c3c);background:rgba(231,76,60,.08);color:var(--text)}
+  .lg-info-title{font-weight:600;color:var(--text);margin-bottom:6px;font-size:12.5px}
+  .lg-info-grid{display:grid;grid-template-columns:max-content 1fr;gap:3px 12px;align-items:start}
+  .lg-info-lbl{font-weight:600;color:var(--text-muted);font-size:11px;text-transform:uppercase;letter-spacing:.04em;padding-top:1px}
+  .lg-info-grid > span:not(.lg-info-lbl){color:var(--text);font-size:12px}
   .lg-expand{background:transparent;border:0;color:var(--text-dim);font-size:14px;line-height:1;cursor:pointer;height:var(--input-h);width:30px;display:flex;align-items:center;justify-content:center;padding:0;border-radius:4px;flex-shrink:0;transition:transform .15s,color .12s,background .12s}
   .lg-expand:hover{background:rgba(255,255,255,.06);color:var(--text)}
   .lg-expand.open{transform:rotate(90deg);color:var(--primary)}
@@ -1719,6 +1727,10 @@ window.updMissionMode = updMissionMode;
 
 function updDeplDevis(val) {
   S.mission.deplacement.devis = val;
+  // Auto-clear "avance" if switching to débours (illegal combination)
+  if (val === "debours" && S.mission.deplacement.paiementType === "avance") {
+    S.mission.deplacement.paiementType = "";
+  }
   save();
   render();
 }
@@ -2674,6 +2686,10 @@ function ligneSetDevis(id, devis) {
   const l = S.mission.lignes.find(x => x.id === id);
   if (!l) return;
   l.devis = devis;
+  // Auto-clear "avance" if switching to débours (illegal combination)
+  if (devis === "debours" && l.paiementType === "avance") {
+    l.paiementType = "";
+  }
   save();
   render();
 }
@@ -2682,6 +2698,8 @@ window.ligneSetDevis = ligneSetDevis;
 function ligneSetPaiement(id, val) {
   const l = S.mission.lignes.find(x => x.id === id);
   if (!l) return;
+  // Forbid avance on débours (art. 267 II CGI: pas de marge sur débours)
+  if (val === "avance" && l.devis === "debours") return;
   // Toggle off if same value clicked
   l.paiementType = (l.paiementType === val) ? "" : val;
   save();
@@ -2691,11 +2709,89 @@ window.ligneSetPaiement = ligneSetPaiement;
 
 function updDeplPaiementType(val) {
   if (!S.mission.deplacement) S.mission.deplacement = {};
+  // Forbid avance on débours (art. 267 II CGI)
+  if (val === "avance" && S.mission.deplacement.devis === "debours") return;
   S.mission.deplacement.paiementType = (S.mission.deplacement.paiementType === val) ? "" : val;
   save();
   render();
 }
 window.updDeplPaiementType = updDeplPaiementType;
+
+// ============ PAIEMENT INFO HELPER ============
+// Given a (devis, paiementType, marge%, amount), return a structured explanation
+// of what this combination means: who invoices, marge possibility, URSSAF impact, when to use it.
+function paiementInfoFor(devis, paiementType, margeAvancePct, lineAmount) {
+  const isDebours = devis === "debours";
+  const isAcompte = paiementType === "acompte";
+  const isAvance = paiementType === "avance";
+  // Default state (Principal seul, sans acompte/avance) → pas d'info à montrer
+  if (!isDebours && !isAcompte && !isAvance) return null;
+
+  if (!isDebours && isAcompte) {
+    return {
+      title: "Principal + Acompte",
+      facture: "Le fournisseur te facture à ton nom.",
+      marge: "Non — pas de marge spécifique.",
+      urssaf: `Inclus dans ton CA : ${fmt(lineAmount)} soumis à l'URSSAF (~${fmt(r2(lineAmount * 0.22))} à 22 %).`,
+      quand: "Tu veux que le client paie cette dépense via l'acompte à la commande, pour ne pas avancer ta trésorerie."
+    };
+  }
+  if (!isDebours && isAvance) {
+    const m = margeAvancePct > 0
+      ? `Oui — ${num(margeAvancePct).toString().replace(".",",")} % sur ${fmt(lineAmount)} = ${fmt(r2(lineAmount * margeAvancePct / 100))} ajoutés au devis.`
+      : `Non définie. Saisir un % dans Paiement → « Marge sur frais avancés » pour activer la marge.`;
+    return {
+      title: "Principal + Avance",
+      facture: "Le fournisseur te facture à ton nom.",
+      marge: m,
+      urssaf: "Sur le total y compris la marge — augmente ton CA et tes cotisations.",
+      quand: "Tu avances ta trésorerie. La marge te rémunère pour le service rendu et le risque pris."
+    };
+  }
+  if (isDebours && !isAcompte && !isAvance) {
+    return {
+      title: "Débours",
+      facture: "Le fournisseur doit facturer ton client final (pas toi). Mandat de débours signé requis avant la dépense.",
+      marge: "Interdite — refacturation au centime près (art. 267 II du CGI).",
+      urssaf: `Hors CA — ${fmt(lineAmount)} pas soumis à l'URSSAF (économie ~${fmt(r2(lineAmount * 0.22))} à 22 %).`,
+      quand: "Le fournisseur accepte de facturer ton client. Maximum d'optimisation fiscale, mais zéro marge."
+    };
+  }
+  if (isDebours && isAcompte) {
+    return {
+      title: "Débours + Acompte",
+      facture: "Le fournisseur facture ton client (mandat requis).",
+      marge: "Interdite — refacturation au centime près.",
+      urssaf: `Hors CA — ${fmt(lineAmount)} pas soumis à l'URSSAF.`,
+      quand: "Optimal : le client paie via l'acompte à la commande, tu transmets au fournisseur. Pas d'avance de trésorerie, pas d'URSSAF."
+    };
+  }
+  // Should not happen with the UI restriction, but safe fallback
+  if (isDebours && isAvance) {
+    return {
+      title: "Combinaison illégale",
+      facture: "—",
+      marge: "Interdite : un débours ne peut pas porter de marge (art. 267 II CGI).",
+      urssaf: "—",
+      quand: "Bascule sur « Principal + Avance » pour avoir une marge, OU sur « Débours » seul pour économiser l'URSSAF.",
+      warn: true
+    };
+  }
+  return null;
+}
+
+function renderPaiementInfo(info) {
+  if (!info) return "";
+  return `<div class="lg-info${info.warn ? ' warn' : ''}">
+    <div class="lg-info-title">${info.warn ? '⚠ ' : '📋 '}${esc(info.title)}</div>
+    <div class="lg-info-grid">
+      <span class="lg-info-lbl">Facture</span><span>${esc(info.facture)}</span>
+      <span class="lg-info-lbl">Marge</span><span>${esc(info.marge)}</span>
+      <span class="lg-info-lbl">URSSAF</span><span>${esc(info.urssaf)}</span>
+      <span class="lg-info-lbl">Quand l'utiliser</span><span>${esc(info.quand)}</span>
+    </div>
+  </div>`;
+}
 
 function rLigne(l) {
   const isExpanded = expandedLignes.has(l.id);
@@ -2720,6 +2816,10 @@ function rLigne(l) {
     </div>`;
   } else {
     const pmt = l.paiementType || "";
+    const isDebours = l.devis === "debours";
+    const margePct = num((S.mission.paiement || {}).margeAvance ?? 0);
+    const lineAmount = r2(num(l.prix));
+    const info = paiementInfoFor(l.devis, pmt, margePct, lineAmount);
     return `<div class="lg-row-wrap">
       <div class="lg-row">
         <input class="lg-title" placeholder="Intitulé (ex : Pellicule, Location studio…)" value="${esc(l.intitule)}" oninput="ligneUpd('${l.id}','intitule',this.value)">
@@ -2733,12 +2833,13 @@ function rLigne(l) {
         </div>
         <div class="seg lg-toggle lg-toggle-pmt" title="Mode de paiement (optionnel)">
           <button class="${pmt==='acompte'?'on':''}" onclick="ligneSetPaiement('${l.id}','acompte')" title="Inclus dans l'acompte à la commande">Acompte</button>
-          <button class="${pmt==='avance'?'on':''}" onclick="ligneSetPaiement('${l.id}','avance')" title="Frais avancé : marge appliquée">Avance</button>
+          <button class="${pmt==='avance'?'on':''}" ${isDebours ? 'disabled' : ''} onclick="ligneSetPaiement('${l.id}','avance')" title="${isDebours ? 'Indisponible : un débours ne peut pas porter de marge (art. 267 II CGI)' : 'Frais avancé : marge appliquée'}">Avance</button>
         </div>
         ${expandBtn}
         <button class="lg-del" onclick="ligneDel('${l.id}')" title="Supprimer">×</button>
       </div>
       ${desc}
+      ${renderPaiementInfo(info)}
     </div>`;
   }
 }
@@ -3846,15 +3947,22 @@ function rMS() {
     <div class="row"><div class="field narrow"><label>Distance (km)</label><input type="number" step="0.1" value="${esc(d.deplacement.km)}" oninput="upd('mission.deplacement.km', this.value)"></div></div>
     <div class="row"><div class="field narrow"><label>Péages (€)</label><input type="number" step="0.01" value="${esc(d.deplacement.peages)}" oninput="upd('mission.deplacement.peages', this.value)"></div></div>
     <div class="row"><div class="field narrow"><label>Indemnité kilométrique (€/km)</label><input type="number" step="0.01" value="${esc(d.deplacement.tauxKm ?? "0.40")}" oninput="upd('mission.deplacement.tauxKm', this.value)"></div></div>
-    ` : `
-    <div class="row"><div class="field narrow"><label>Prix des billets (€)</label><input type="number" step="0.01" value="${esc(d.deplacement.ticket)}" oninput="upd('mission.deplacement.ticket', this.value)"></div></div>
-    <div class="row"><div class="field"><label>Mode de paiement <span class="hint" style="font-weight:400;color:var(--text-dim);font-size:11px">(optionnel)</span></label>
-      <div class="seg">
-        <button class="${d.deplacement.paiementType==='acompte'?'on':''}" onclick="updDeplPaiementType('acompte')" title="Inclus dans l'acompte à la commande">Acompte</button>
-        <button class="${d.deplacement.paiementType==='avance'?'on':''}" onclick="updDeplPaiementType('avance')" title="Frais avancé : marge appliquée">Avance</button>
-      </div>
-    </div></div>
-    `}
+    ` : (() => {
+      const ts = totals();
+      const isDebours = d.deplacement.devis === "debours";
+      const margePct = num((d.paiement || {}).margeAvance ?? 0);
+      const info = paiementInfoFor(d.deplacement.devis, d.deplacement.paiementType, margePct, ts.depl);
+      return `
+      <div class="row"><div class="field narrow"><label>Prix des billets (€)</label><input type="number" step="0.01" value="${esc(d.deplacement.ticket)}" oninput="upd('mission.deplacement.ticket', this.value)"></div></div>
+      <div class="row"><div class="field"><label>Mode de paiement <span class="hint" style="font-weight:400;color:var(--text-dim);font-size:11px">(optionnel)</span></label>
+        <div class="seg">
+          <button class="${d.deplacement.paiementType==='acompte'?'on':''}" onclick="updDeplPaiementType('acompte')" title="Inclus dans l'acompte à la commande">Acompte</button>
+          <button class="${d.deplacement.paiementType==='avance'?'on':''}" ${isDebours ? 'disabled' : ''} onclick="updDeplPaiementType('avance')" title="${isDebours ? 'Indisponible : un débours ne peut pas porter de marge (art. 267 II CGI)' : 'Frais avancé : marge appliquée'}">Avance</button>
+        </div>
+      </div></div>
+      ${renderPaiementInfo(info)}
+    `;
+    })()}
     <div class="row"><div class="field narrow"><label>Temps de trajet (h)</label><input type="number" step="0.25" value="${esc(d.deplacement.trajetH)}" oninput="upd('mission.deplacement.trajetH', this.value)"></div></div>
 
     <div id="tauxBreakdownWrap">${rTauxBreakdown()}</div>
@@ -6357,6 +6465,18 @@ function rTR() {
 // Most recent version FIRST.
 // =============================================================
 const CHANGELOG = [
+  {
+    version: "v1.28",
+    date: "2026-04-29",
+    title: "Acompte/Avance : garde-fou Débours+Avance interdit + encart pédagogique des conséquences",
+    items: [
+      "🔥 Verrouillage logique « Débours + Avance » (combinaison illégale selon l'article 267 II du CGI : un débours ne peut pas porter de marge). Quand « Débours » est sélectionné sur un matériel ou un déplacement transport, le bouton « Avance » devient grisé et non-cliquable, avec un tooltip explicatif. À l'inverse, basculer un matériel marqué « Avance » sur « Débours » nettoie automatiquement le mode de paiement (sécurité côté handler).",
+      "🔥 Encart d'information contextuel sous chaque ligne matériel et sous le déplacement transport, dès qu'une option Acompte/Avance/Débours est active. L'encart explique en 4 points les conséquences exactes de la combinaison choisie : « Facture » (à qui le fournisseur facture), « Marge » (oui/non avec montant calculé), « URSSAF » (impact sur le CA et estimation du % de cotisations), « Quand l'utiliser » (cas d'usage typique).",
+      "Calculs en temps réel : l'encart « Marge » affiche le montant exact en euros (ex: « 10 % sur 1500 € = 150 € ajoutés au devis ») dès que la marge globale est définie. L'encart « URSSAF » affiche l'estimation à 22 % (ex: « hors CA — 1500 € pas soumis, économie ~330 € »). Tu vois immédiatement l'impact financier de chaque option.",
+      "Couvre les 5 combinaisons légales : (1) Principal seul = défaut, pas d'encart ; (2) Principal + Acompte ; (3) Principal + Avance ; (4) Débours seul ; (5) Débours + Acompte. La 6ᵉ combinaison (Débours + Avance) est rendue impossible par l'UI.",
+      "Bordure colorée à gauche de l'encart (bleu primary par défaut, rouge si avertissement) pour bien distinguer la zone d'info de la saisie. Mise en forme en grille uppercase/contenu pour une lecture rapide type fiche pratique."
+    ]
+  },
   {
     version: "v1.27",
     date: "2026-04-29",
