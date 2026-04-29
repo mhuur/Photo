@@ -1375,7 +1375,7 @@
   .lg-info-icon{background:transparent;border:1px solid var(--border-light);color:var(--text-muted);width:24px;height:24px;border-radius:50%;cursor:help;font-size:11px;font-weight:700;font-style:italic;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .15s;padding:0;line-height:1}
   .lg-info-icon:hover,.lg-info-icon:focus{border-color:var(--primary);color:var(--primary);background:var(--primary-soft);outline:none}
   /* Tooltip element appended to body, positioned via JS */
-  .paiement-tooltip-wrap{background:var(--surface);border:1px solid var(--border);border-radius:8px;box-shadow:0 12px 32px rgba(0,0,0,.45);padding:0;width:380px;max-width:calc(100vw - 24px);font-size:12px}
+  .paiement-tooltip-wrap{position:fixed;z-index:9999;background:var(--surface);border:1px solid var(--border);border-radius:8px;box-shadow:0 12px 32px rgba(0,0,0,.45);padding:0;width:380px;max-width:calc(100vw - 24px);font-size:12px;pointer-events:none}
   .paiement-info-card{padding:12px 16px;font-size:12px;color:var(--text-muted);line-height:1.5}
   .paiement-info-card.warn{background:rgba(231,76,60,.08);color:var(--text);border-radius:8px}
   .paiement-info-title{font-weight:700;color:var(--text);margin-bottom:8px;font-size:13px;letter-spacing:.02em;border-bottom:1px solid var(--border-soft);padding-bottom:6px}
@@ -2783,15 +2783,24 @@ function paiementInfoFor(devis, paiementType, margeAvancePct, margeUrssafPct, li
     };
   }
   if (!isDebours && isAvance) {
-    const m = num(margeAvancePct) > 0
-      ? `Oui — ${num(margeAvancePct).toString().replace(".",",")} % sur ${fmt(lineAmount)} = ${fmt(r2(lineAmount * num(margeAvancePct) / 100))} ajoutés au devis.`
-      : "Non définie. Saisir un % dans Matériel → « Marge sur frais avancés ».";
+    const compUrssaf = r2(lineAmount * num(margeUrssafPct) / 100);
+    const margeAvMontant = r2(lineAmount * num(margeAvancePct) / 100);
+    const totalMarges = r2(compUrssaf + margeAvMontant);
+    let m;
+    if (num(margeAvancePct) === 0 && num(margeUrssafPct) === 0) {
+      m = "Aucune marge ni compensation définie. Saisir des % dans Matériel.";
+    } else {
+      const parts = [];
+      if (num(margeAvancePct) > 0) parts.push(`Marge avance ${num(margeAvancePct).toString().replace(".",",")} % = ${fmt(margeAvMontant)}`);
+      if (num(margeUrssafPct) > 0) parts.push(`Compensation URSSAF ${num(margeUrssafPct).toString().replace(".",",")} % = ${fmt(compUrssaf)}`);
+      m = `${parts.join(" · ")} → total ${fmt(totalMarges)} ajoutés sur ${fmt(lineAmount)}.`;
+    }
     return {
       title: "Principal + Avance",
-      facture: "Le fournisseur te facture à ton nom.",
+      facture: "Le fournisseur te facture à ton nom. Tu avances la dépense.",
       marge: m,
-      urssaf: "Sur le total y compris la marge — augmente ton CA et tes cotisations.",
-      quand: "Tu avances ta trésorerie. La marge te rémunère pour le service rendu et le risque pris."
+      urssaf: `Inclus dans ton CA : ${fmt(lineAmount)} + marges soumis à l'URSSAF.`,
+      quand: "Tu avances ta trésorerie. La marge avance te rémunère pour le risque, la compensation URSSAF couvre les cotisations sur cette ligne."
     };
   }
   if (isDebours && isAcompte) {
@@ -3053,19 +3062,20 @@ function totals() {
   // Marge avance: % applied to all "Avance"-flagged Principal items (materiel + transport)
   const margeAvancePct = num(d.paiement?.margeAvance ?? 0);
   const margeAvanceAmount = r2(totalAvance * margeAvancePct / 100);
-  // Marge URSSAF compensation: % applied to all Principal+Acompte items to compensate for URSSAF
-  // Only Principal items (not débours which are hors-CA) are eligible for URSSAF compensation.
-  let totalAcomptePrincipal = 0;
+  // Compensation URSSAF: applies to ALL Principal items (acompte + avance) since URSSAF
+  // applies on the entire CA. Items in Débours are hors-CA and thus not eligible.
+  // Heures are not included — URSSAF on hours is typically baked into the hourly rate.
+  let totalPrincipalUrssafEligible = 0;
   for (const l of d.lignes || []) {
-    if (l.type === "materiel" && l.devis !== "debours" && l.paiementType === "acompte") {
-      totalAcomptePrincipal = r2(totalAcomptePrincipal + r2(num(l.prix)));
+    if (l.type === "materiel" && l.devis !== "debours") {
+      totalPrincipalUrssafEligible = r2(totalPrincipalUrssafEligible + r2(num(l.prix)));
     }
   }
-  if (mode === "transports" && depl > 0 && d.deplacement.paiementType === "acompte" && deplMode !== "debours") {
-    totalAcomptePrincipal = r2(totalAcomptePrincipal + depl);
+  if (mode === "transports" && depl > 0 && deplMode !== "debours") {
+    totalPrincipalUrssafEligible = r2(totalPrincipalUrssafEligible + depl);
   }
   const margeUrssafPct = num(d.paiement?.margeUrssaf ?? 22);
-  const margeUrssafAmount = r2(totalAcomptePrincipal * margeUrssafPct / 100);
+  const margeUrssafAmount = r2(totalPrincipalUrssafEligible * margeUrssafPct / 100);
   // Subtotal: lignes (heures + matériel principal) + déplacement (if mode is principal, OR if taux mode but no hours to spread it across)
   const deplInSubtotal = deplGoesToPrincipal || (deplGoesToTaux && totalHeures === 0);
   const effectiveDeplMode = (deplGoesToTaux && totalHeures === 0) ? "principal" : deplMode;
@@ -3088,7 +3098,7 @@ function totals() {
     tarifH, tarifHEff, deplPerHour, deplMode, effectiveDeplMode,
     acompte: r2(total * 0.30), reste: r2(total * 0.70),
     echeances, echeancesTotal,
-    totalAcompteMateriel, totalAcomptePrincipal, totalAvance,
+    totalAcompteMateriel, totalPrincipalUrssafEligible, totalAvance,
     margeAvancePct, margeAvanceAmount, margeUrssafPct, margeUrssafAmount,
     acompteSuggestedPct,
     prep: 0, prod: lignesAmount, post: 0
@@ -4049,9 +4059,9 @@ function rMS() {
       const hintAvance = ts.totalAvance > 0
         ? `Frais avancés détectés : <strong>${fmt(ts.totalAvance)}</strong> · Marge actuelle : <strong>${fmt(ts.margeAvanceAmount)}</strong>`
         : `Aucun matériel/déplacement marqué « Avance ». Marque-en pour appliquer la marge.`;
-      const hintUrssaf = ts.totalAcompteMateriel > 0
-        ? `Acomptes Principal détectés : <strong>${fmt(ts.totalAcompteMateriel)}</strong> · Compensation actuelle : <strong>${fmt(ts.margeUrssafAmount)}</strong>`
-        : `Aucun matériel/déplacement « Principal + Acompte ». Marque-en pour appliquer la compensation URSSAF.`;
+      const hintUrssaf = ts.totalPrincipalUrssafEligible > 0
+        ? `Items Principal détectés (Acompte + Avance) : <strong>${fmt(ts.totalPrincipalUrssafEligible)}</strong> · Compensation actuelle : <strong>${fmt(ts.margeUrssafAmount)}</strong>`
+        : `Aucun matériel/déplacement en mode « Principal ». La compensation URSSAF s'applique à tous les items Principal (Acompte + Avance).`;
       return `
       <div class="marges-block">
         <h5 class="marges-title">Marges et compensations</h5>
@@ -6618,6 +6628,19 @@ function rTR() {
 // Most recent version FIRST.
 // =============================================================
 const CHANGELOG = [
+  {
+    version: "v1.30",
+    date: "2026-04-29",
+    title: "Fix tooltip non visible · URSSAF appliquée sur tous Principal (acompte + avance)",
+    items: [
+      "🐛 Fix : tooltip au survol du (i) ne s'affichait pas. Cause : la classe CSS `.paiement-tooltip-wrap` n'avait pas de `position: fixed` ni de `z-index`. Sans `position`, les coordonnées `top`/`left` calculées en JS n'étaient pas appliquées. Ajouté `position: fixed; z-index: 9999; pointer-events: none`.",
+      "🔥 Logique URSSAF corrigée : avant, la « Compensation URSSAF sur acompte » s'appliquait uniquement aux items Principal+Acompte. Or l'URSSAF s'applique sur la totalité du CA, donc sur tous les items Principal (Acompte ET Avance). Désormais la compensation URSSAF s'applique à TOUS les matériels et déplacements en mode Principal, indépendamment de leur paiementType (acompte ou avance).",
+      "Variable interne `totalAcomptePrincipal` renommée en `totalPrincipalUrssafEligible` pour refléter sa portée élargie. Les items en Débours restent exclus (hors CA = pas d'URSSAF dessus).",
+      "Cas Principal+Avance : désormais 2 marges cumulatives sont ajoutées au prix de la ligne. Marge avance (rémunère le risque d'avancer la trésorerie) + Compensation URSSAF (couvre les cotisations sur cette ligne). Exemple studio 1500 € : +20% marge avance (300 €) + 22% compensation URSSAF (330 €) = 2130 € facturés.",
+      "Tooltip Principal+Avance refondu : la ligne « Marge » liste maintenant les 2 composants (avance + URSSAF) avec montants détaillés, et le total ajouté à la ligne (ex : « Marge avance 20 % = 300 € · Compensation URSSAF 22 % = 330 € → total 630 € ajoutés sur 1500 € »).",
+      "Hint mis à jour dans le bloc Marges : « Items Principal détectés (Acompte + Avance) : X € » au lieu de l'ancien « Acomptes Principal détectés ». Reflète la nouvelle portée."
+    ]
+  },
   {
     version: "v1.29",
     date: "2026-04-29",
