@@ -162,7 +162,74 @@
   .paid-toggle input[type=checkbox]{display:none}
   .paid-toggle:hover{background:var(--surface);color:var(--text);border-color:var(--border-light)}
   .paid-toggle.on{background:var(--success-soft);border-color:var(--success);color:var(--success)}
-  .btn.btn-vert{background:var(--success);color:#fff}.btn.btn-vert:hover{background:var(--success-dark);box-shadow:0 2px 8px rgba(34,197,94,.3)}
+
+  /* ========================================================================
+     SUIVI v2 — palette violette pour "En cours", badge attente paiement,
+     divider de filtres, timeline modale.
+     ======================================================================== */
+  :root{
+    --violet:#a78bfa; --violet-dark:#8b5cf6;
+    --violet-soft:rgba(167,139,250,.14);
+  }
+  /* Pill « en cours » (mix accepté/livré/payé sur les lignes du devis) */
+  .pst[data-s="en_cours"]{background:var(--violet);box-shadow:0 0 6px rgba(167,139,250,.5)}
+
+  /* Badge orange transversal « Paiement en attente » */
+  .pmt-badge{display:inline-flex;align-items:center;gap:5px;padding:2px 9px;border-radius:11px;
+    background:var(--warning-soft);border:1px solid var(--warning);color:var(--warning);
+    font-size:11px;font-weight:600;line-height:1.4;white-space:nowrap;letter-spacing:.01em}
+
+  /* Filter bar : chip orange séparé visuellement par un divider vertical */
+  .suv-chip-divider{display:inline-block;width:1px;height:20px;background:var(--border-light);margin:0 8px;align-self:center}
+  .suv-chip-attente{color:var(--warning);border-color:rgba(245,158,11,.35)}
+  .suv-chip-attente:hover{color:var(--warning);border-color:var(--warning);background:rgba(245,158,11,.06)}
+  .suv-chip-attente.on{background:var(--warning-soft);border-color:var(--warning);color:var(--warning);
+    box-shadow:0 0 0 1px var(--warning) inset}
+
+  /* Quick print actions, toujours visibles à droite de chaque ligne */
+  .suv-quick-actions{display:inline-flex;gap:4px;align-items:center}
+  .suv-quick-actions .qa-btn{background:transparent;border:1px solid transparent;color:var(--text-muted);
+    padding:5px 9px;border-radius:6px;cursor:pointer;font:inherit;font-size:11px;font-weight:500;
+    display:inline-flex;align-items:center;gap:4px;transition:all .12s;line-height:1.2}
+  .suv-quick-actions .qa-btn:hover{background:var(--surface-hi);color:var(--text);border-color:var(--border-light)}
+  .suv-quick-actions .qa-btn .qa-ico{font-size:13px}
+
+  /* Timeline modal */
+  .modal-card.modal-card-timeline{max-width:680px}
+  .suv-tl-header{display:flex;flex-direction:column;gap:4px;padding-bottom:14px;border-bottom:1px solid var(--border);margin-bottom:6px}
+  .suv-tl-header-top{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+  .suv-tl-ref{font-size:13px;font-weight:700;color:var(--text);font-variant-numeric:tabular-nums;letter-spacing:.01em}
+  .suv-tl-meta{display:flex;gap:14px;font-size:12px;color:var(--text-muted);flex-wrap:wrap;margin-top:4px}
+  .suv-tl-meta strong{color:var(--text);font-weight:600;font-variant-numeric:tabular-nums}
+  .suv-tl{display:flex;flex-direction:column;padding:10px 4px 6px;position:relative}
+  .suv-tl::before{content:"";position:absolute;left:18px;top:24px;bottom:24px;width:2px;background:var(--border-soft);z-index:0}
+  .suv-tl-step{display:grid;grid-template-columns:36px 1fr auto;gap:14px;align-items:center;padding:10px 0;position:relative;z-index:1}
+  .suv-tl-dot{width:36px;height:36px;border-radius:50%;background:var(--surface-2);border:2px solid var(--border-light);
+    display:flex;align-items:center;justify-content:center;font-size:14px;color:var(--text-dim);
+    transition:all .2s;flex-shrink:0}
+  .suv-tl-dot.done{background:var(--success-soft);border-color:var(--success);color:var(--success)}
+  .suv-tl-dot.waiting{background:var(--warning-soft);border-color:var(--warning);color:var(--warning)}
+  .suv-tl-dot.refused{background:var(--danger-soft);border-color:var(--danger);color:var(--danger)}
+  .suv-tl-body{display:flex;flex-direction:column;gap:4px;min-width:0}
+  .suv-tl-title{font-size:13px;font-weight:600;color:var(--text)}
+  .suv-tl-flags{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+  .suv-tl-flag{display:inline-flex;align-items:center;gap:4px;padding:1px 7px;border-radius:8px;
+    font-size:10px;font-weight:600;letter-spacing:.02em;text-transform:uppercase;line-height:1.5;
+    border:1px solid;background:transparent}
+  .suv-tl-flag.delivered{color:var(--success);border-color:rgba(34,197,94,.35);background:var(--success-soft)}
+  .suv-tl-flag.paid{color:var(--success-dark);border-color:var(--success);background:var(--success-soft)}
+  .suv-tl-flag.pending{color:var(--warning);border-color:var(--warning);background:var(--warning-soft)}
+  .suv-tl-flag.idle{color:var(--text-dim);border-color:var(--border);background:transparent}
+  .suv-tl-amount{font-weight:700;font-variant-numeric:tabular-nums;color:var(--text);font-size:13px;text-align:right;white-space:nowrap}
+  .suv-tl-actions{grid-column:2 / 4;display:flex;gap:6px;flex-wrap:wrap;margin-top:4px}
+  .suv-tl-empty{padding:24px;text-align:center;color:var(--text-dim);font-size:13px}
+  .suv-tl-footer{display:flex;justify-content:space-between;align-items:center;gap:10px;
+    padding-top:12px;margin-top:6px;border-top:1px solid var(--border);flex-wrap:wrap}
+  .suv-tl-footer .left{display:flex;gap:6px;flex-wrap:wrap}
+
+  /* État vide spécifique au filtre attente paiement */
+  .empty-attente{border-color:var(--warning);background:rgba(245,158,11,.04);color:var(--text-muted)}
+
   .btn.btn-rouge{background:var(--danger);color:#fff}.btn.btn-rouge:hover{background:var(--danger-dark);box-shadow:0 2px 8px rgba(239,68,68,.3)}
   .btn.btn-gris{background:var(--text-dim);color:#fff}.btn.btn-gris:hover{background:var(--text-muted)}
   .btn.btn-bleu{background:var(--primary);color:#fff}.btn.btn-bleu:hover{background:var(--primary-dark)}
@@ -3485,7 +3552,8 @@ function render() {
     ${rTextEditorModal()}
     ${rViewDevisModal()}
     ${rViewFactureModal()}
-    ${rPrintTipModal()}`;
+    ${rPrintTipModal()}
+    ${rSuiviTimelineModal()}`;
 }
 
 // State: track if picker is force-opened (e.g. after user clicks "Changer de contact")
@@ -4682,31 +4750,79 @@ function rMS() {
 
 function rDV() { return ""; }
 
+// ============================================================================
+// SUIVI v2 — Modèle de statuts à deux niveaux
+// ----------------------------------------------------------------------------
+// STATUTS_PRIN  : statut principal du devis (4 valeurs visibles + refusé)
+//                 dérivé à la volée depuis les statuts de ligne existants
+// attentePaiement : flag transversal superposable, dérivé sur la même base
+// ============================================================================
+
 const STATUTS = [
-  ["envoye",  "Envoyé"],
-  ["accepte", "Accepté"],
-  ["attente", "Attente paiement"],
-  ["termine", "Terminé"],
-  ["refuse",  "Refusé / Annulé"]
+  ["envoye",   "Envoyé"],
+  ["accepte",  "Accepté"],
+  ["en_cours", "En cours"],
+  ["termine",  "Terminé"],
+  ["refuse",   "Refusé / Annulé"]
 ];
+// Mapping legacy : un statut de ligne "attente" est interne (= livré non payé).
+// Il n'apparaît plus comme statut principal — il alimente le flag attentePaiement.
 const STATUT_LEGACY = { paye: "termine", annule: "refuse" };
+
 function entryStatut(e) { const s = e && e.statut; return STATUT_LEGACY[s] || s || "envoye"; }
+function statutLabel(k) { const s = STATUTS.find(x => x[0] === k); return s ? s[1] : k; }
+
 function pastille(statut) {
   const k = STATUT_LEGACY[statut] || statut || "envoye";
   return `<span class="pst" data-s="${esc(k)}" title="${esc(statutLabel(k))}"></span>`;
 }
+
+// Dérive le statut principal d'un devis à partir des statuts de ses lignes.
+// "en_cours" = au moins une ligne déjà touchée (accepté/livré/payé) mais pas toutes terminées.
+function devisPrincipal(lignes) {
+  if (!lignes.length) return "envoye";
+  const ss = lignes.map(entryStatut);
+  if (ss.some(s => s === "refuse"))         return "refuse";
+  if (ss.every(s => s === "termine"))       return "termine";
+  if (ss.every(s => s === "envoye"))        return "envoye";
+  if (ss.every(s => s === "accepte"))       return "accepte";
+  return "en_cours";
+}
+
+// Flag transversal : le devis a-t-il une ligne livrée non payée ?
+function devisAttentePaiement(lignes) {
+  return lignes.some(e => entryStatut(e) === "attente");
+}
+
+// ---- Filter bar (single-select principal + boolean attente) ----
 function suiviLegendHtml() {
-  const noFilter = suiviFilterStatuts.size === 0;
+  const f = suiviFilterPrincipal;
+  const chips = [
+    ["all",     "Tous",     "●", "var(--text-muted)"],
+    ["envoye",  "Envoyé",   null, null],
+    ["accepte", "Accepté",  null, null],
+    ["en_cours","En cours", null, null],
+    ["termine", "Terminé",  null, null]
+  ];
+  const refusedCount = suiviGroupsAll().filter(g => g.statutPrin === "refuse").length;
+  const attenteCount = suiviGroupsAll().filter(g => g.attentePaiement).length;
+
   return `<div class="suv-chip-bar">
-    <button type="button" class="suv-chip suv-chip-all ${noFilter ? 'on' : ''}" onclick="suiviToggleFilterStatut('all')" title="Réinitialiser les filtres (afficher tout)">
-      <span class="suv-chip-icon">●</span>Tous
-    </button>
-    ${STATUTS.map(([k,l]) => {
-      const active = suiviFilterStatuts.has(k);
-      return `<button type="button" class="suv-chip ${active ? 'on' : ''}" data-statut="${k}" onclick="suiviToggleFilterStatut('${k}')" aria-pressed="${active}">
-        <span class="pst" data-s="${k}"></span>${esc(l)}
-      </button>`;
+    ${chips.map(([k, l, ico]) => {
+      const on = f === k;
+      const dot = ico ? `<span class="suv-chip-icon">${ico}</span>` : `<span class="pst" data-s="${k}"></span>`;
+      const cls = `suv-chip ${on ? 'on' : ''} ${k === 'all' ? 'suv-chip-all' : ''}`;
+      return `<button type="button" class="${cls}" onclick="suiviSetFilterPrincipal('${k}')" aria-pressed="${on}">${dot}${esc(l)}</button>`;
     }).join("")}
+    ${refusedCount > 0 ? `<button type="button" class="suv-chip ${f === 'refuse' ? 'on' : ''}"
+        onclick="suiviSetFilterPrincipal('refuse')" aria-pressed="${f === 'refuse'}"
+        title="Voir les devis refusés ou annulés"><span class="pst" data-s="refuse"></span>Refusé (${refusedCount})</button>` : ''}
+    <span class="suv-chip-divider" aria-hidden="true"></span>
+    <button type="button" class="suv-chip suv-chip-attente ${suiviFilterAttente ? 'on' : ''}"
+      onclick="suiviToggleFilterAttente()" aria-pressed="${suiviFilterAttente}"
+      title="Filtrer uniquement les devis avec un paiement en attente">
+      <span>💰</span>En attente de paiement${attenteCount > 0 ? ` (${attenteCount})` : ''}
+    </button>
   </div>`;
 }
 
@@ -5369,10 +5485,13 @@ function suiviGroupLigne(devisId) {
   return S.suivi.entries.filter(e => e.devisId === devisId);
 }
 
+// À l'acceptation d'un devis : les lignes "acompte" passent en "attente" (paiement attendu),
+// les autres lignes passent en "accepte". Cela matche la règle métier :
+// « Accepté → Si acompte requis : passe à 'En attente de paiement' ; sinon : En cours ».
 function suiviDevisAccepter(devisId) {
   for (const e of suiviGroupLigne(devisId)) {
     delete e.statutAvantRefus;
-    e.statut = "accepte";
+    e.statut = suiviClassifyEcheance(e.echeance) === "acompte" ? "attente" : "accepte";
   }
   save();
   render();
@@ -5492,15 +5611,8 @@ function suiviActionsHtml(e, opts) {
   return "";
 }
 
-function devisStatutGlobal(lignes) {
-  if (!lignes.length) return "envoye";
-  const ss = lignes.map(entryStatut);
-  if (ss.every(s => s === "termine")) return "termine";
-  if (ss.some(s => s === "refuse")) return "refuse";
-  if (ss.some(s => s === "attente")) return "attente";
-  if (ss.every(s => s === "envoye")) return "envoye";
-  return "accepte";
-}
+// Compatibilité avec l'ancien renderer si appelé ailleurs (alias vers devisPrincipal)
+function devisStatutGlobal(lignes) { return devisPrincipal(lignes); }
 
 function suiviStats(groups) {
   const by = { envoye: 0, accepte: 0, attente: 0, termine: 0, refuse: 0 };
@@ -5513,35 +5625,52 @@ function suiviStats(groups) {
 }
 
 function suiviStatsHtml(s) {
+  const all = suiviGroupsAll();
+  const attente = all.filter(g => g.attentePaiement).length;
   return `
     <div class="stat">Devis<strong>${s.count}</strong></div>
-    <div class="stat">Envoyé<strong>${s.by.envoye}</strong></div>
-    <div class="stat">Accepté<strong>${s.by.accepte}</strong></div>
-    <div class="stat">Attente paiement<strong>${s.by.attente}</strong></div>
-    <div class="stat">Terminé<strong>${s.by.termine}</strong></div>
-    <div class="stat">Refusé / Annulé<strong>${s.by.refuse}</strong></div>
+    <div class="stat">Envoyé<strong>${s.by.envoye || 0}</strong></div>
+    <div class="stat">Accepté<strong>${s.by.accepte || 0}</strong></div>
+    <div class="stat">En cours<strong>${s.by.en_cours || 0}</strong></div>
+    <div class="stat">Terminé<strong>${s.by.termine || 0}</strong></div>
+    <div class="stat" style="border-color:var(--warning);background:rgba(245,158,11,.06)">
+      💰 Attente paiement<strong style="color:var(--warning)">${attente}</strong>
+    </div>
     <div class="stat">Total facturé<strong>${fmt(s.total)}</strong></div>
   `;
 }
 
-let suiviExpanded = null;
-let suiviGroupExpanded = null;
+let suiviExpanded = null;        // id de la ligne dont l'éditeur avancé est ouvert
+let suiviGroupExpanded = null;   // id du devis dont l'éditeur avancé est ouvert
 let suiviGroupRefEdit = null;
 let suiviSort = { field: "date", dir: "desc" };
-// Multi-select status filter, persisted across sessions.
-// Empty set = all visible. Otherwise: only entries whose statut is in the set.
-let suiviFilterStatuts = (() => {
-  try {
-    const raw = localStorage.getItem("suiviFilterStatuts");
-    if (raw) {
-      const arr = JSON.parse(raw);
-      if (Array.isArray(arr)) return new Set(arr);
-    }
-  } catch (e) { /* ignore */ }
-  return new Set(); // empty = "all"
+
+// === SUIVI v2 — filtres
+// suiviFilterPrincipal : "all" | "envoye" | "accepte" | "en_cours" | "termine" | "refuse"
+let suiviFilterPrincipal = (() => {
+  try { return localStorage.getItem("suiviFilterPrincipal") || "all"; }
+  catch (e) { return "all"; }
+})();
+// suiviFilterAttente : flag transversal indépendant, persistant
+let suiviFilterAttente = (() => {
+  try { return localStorage.getItem("suiviFilterAttente") === "1"; }
+  catch (e) { return false; }
 })();
 let suiviFilterYear = "all";
 let suiviSelected = new Set();
+
+function suiviSetFilterPrincipal(k) {
+  suiviFilterPrincipal = k;
+  try { localStorage.setItem("suiviFilterPrincipal", k); } catch (e) {}
+  render();
+}
+function suiviToggleFilterAttente() {
+  suiviFilterAttente = !suiviFilterAttente;
+  try { localStorage.setItem("suiviFilterAttente", suiviFilterAttente ? "1" : "0"); } catch (e) {}
+  render();
+}
+window.suiviSetFilterPrincipal = suiviSetFilterPrincipal;
+window.suiviToggleFilterAttente = suiviToggleFilterAttente;
 
 function suiviToggleOne(devisId, checked, ev) {
   if (ev) ev.stopPropagation();
@@ -5662,20 +5791,6 @@ function suiviSortKey(field) {
 }
 window.suiviSortKey = suiviSortKey;
 
-function suiviToggleFilterStatut(v) {
-  if (v === "all") {
-    // "Tous" = clear the set (show everything)
-    suiviFilterStatuts.clear();
-  } else {
-    if (suiviFilterStatuts.has(v)) suiviFilterStatuts.delete(v);
-    else suiviFilterStatuts.add(v);
-  }
-  // Persist
-  try { localStorage.setItem("suiviFilterStatuts", JSON.stringify([...suiviFilterStatuts])); } catch (e) {}
-  render();
-}
-window.suiviToggleFilterStatut = suiviToggleFilterStatut;
-
 function suiviSetFilterYear(v) { suiviFilterYear = v; render(); }
 window.suiviSetFilterYear = suiviSetFilterYear;
 
@@ -5688,7 +5803,22 @@ function suiviYears() {
   return [...ys].sort().reverse();
 }
 
-const STATUT_ORDER = { envoye: 0, accepte: 1, attente: 2, termine: 3, refuse: 4 };
+const STATUT_ORDER = { envoye: 0, accepte: 1, en_cours: 2, termine: 3, refuse: 4 };
+
+// Liste TOUS les groupes (sans filtre) — utile pour les compteurs des chips
+function suiviGroupsAll() {
+  const m = new Map();
+  for (const e of S.suivi.entries) {
+    const did = e.devisId || ("__orphan_" + e.id);
+    if (!m.has(did)) m.set(did, []);
+    m.get(did).push(e);
+  }
+  return [...m.entries()].map(([devisId, lignes]) => ({
+    devisId, lignes,
+    statutPrin: devisPrincipal(lignes),
+    attentePaiement: devisAttentePaiement(lignes)
+  }));
+}
 
 function suiviGroups() {
   const groups = new Map();
@@ -5700,30 +5830,38 @@ function suiviGroups() {
   let list = [];
   for (const [devisId, lignes] of groups) {
     lignes.sort((a, b) => (a.date || "").localeCompare(b.date || ""));
-    const statutGlobal = devisStatutGlobal(lignes);
+    const statutPrin = devisPrincipal(lignes);
+    const attentePaiement = devisAttentePaiement(lignes);
     const total = lignes.reduce((s, e) => s + num(e.montant), 0);
     const dates = lignes.map(e => e.date || "").filter(Boolean);
-    const dateMin = dates[0] || "";
-    const dateMax = dates[dates.length - 1] || "";
     const ref = (S.suivi.devis && S.suivi.devis[devisId] && S.suivi.devis[devisId].ref) || "";
     const lead = lignes[0] || {};
     list.push({
-      devisId, ref, lignes, statutGlobal, total,
-      dateMin, dateMax,
+      devisId, ref, lignes,
+      statutPrin, attentePaiement,
+      statutGlobal: statutPrin,            // alias pour suiviStats hérité
+      total,
+      dateMin: dates[0] || "",
+      dateMax: dates[dates.length - 1] || "",
       client: lead.client || "",
       prestation: lead.prestation || ""
     });
   }
-  if (suiviFilterStatuts.size > 0) list = list.filter(g => suiviFilterStatuts.has(g.statutGlobal));
-  if (suiviFilterYear   !== "all") list = list.filter(g => g.lignes.some(e => (e.date || "").startsWith(suiviFilterYear)));
+  // Filtre principal (single-select, exclusif)
+  if (suiviFilterPrincipal !== "all") list = list.filter(g => g.statutPrin === suiviFilterPrincipal);
+  // Filtre année (existant)
+  if (suiviFilterYear !== "all") list = list.filter(g => g.lignes.some(e => (e.date || "").startsWith(suiviFilterYear)));
+  // Filtre transversal attente paiement (peut se combiner)
+  if (suiviFilterAttente) list = list.filter(g => g.attentePaiement);
+
+  // Tri
   const dir = suiviSort.dir === "asc" ? 1 : -1;
   const f = suiviSort.field;
   list.sort((a, b) => {
-    if (f === "statut")     return ((STATUT_ORDER[a.statutGlobal] ?? 99) - (STATUT_ORDER[b.statutGlobal] ?? 99)) * dir;
-    if (f === "date")       return (a.dateMax || "").localeCompare(b.dateMax || "") * dir;
-    if (f === "ref")        return a.ref.localeCompare(b.ref, "fr", { numeric: true }) * dir;
-    if (f === "montant")    return (a.total - b.total) * dir;
-    if (f === "prestation") return a.prestation.localeCompare(b.prestation, "fr") * dir;
+    if (f === "statut")  return ((STATUT_ORDER[a.statutPrin] ?? 99) - (STATUT_ORDER[b.statutPrin] ?? 99)) * dir;
+    if (f === "date")    return (a.dateMax || "").localeCompare(b.dateMax || "") * dir;
+    if (f === "ref")     return a.ref.localeCompare(b.ref, "fr", { numeric: true }) * dir;
+    if (f === "montant") return (a.total - b.total) * dir;
     return a.client.localeCompare(b.client, "fr") * dir;
   });
   return list;
@@ -5790,6 +5928,160 @@ function suiviDetailPanelHtml(e) {
       </tr>`;
 }
 
+// ============================================================================
+// SUIVI v2 — Modale Timeline (détail d'un devis avec étapes + actions contextuelles)
+// ============================================================================
+let suiviTimelineModal = null; // { devisId }
+
+window.suiviTimelineOpen = function(devisId) {
+  suiviTimelineModal = { devisId };
+  render();
+};
+window.suiviTimelineClose = function() {
+  suiviTimelineModal = null;
+  render();
+};
+
+// Génère le bouton contextuel d'une étape selon son statut courant
+function suiviTimelineStepAction(e, isAcompte) {
+  const s = entryStatut(e);
+  const stop = "event.stopPropagation();";
+  if (s === "envoye") {
+    // Le devis n'est pas encore accepté — actions au niveau devis, pas étape
+    return `<span style="color:var(--text-dim);font-size:11px">En attente d'acceptation du devis</span>`;
+  }
+  if (s === "accepte") {
+    // Étape acceptée mais pas livrée
+    if (isAcompte) {
+      return `<button class="btn btn-vert" onclick="${stop}suiviLignePaye('${e.id}')">✓ Acompte reçu</button>`;
+    }
+    return `<button class="btn btn-bleu" onclick="${stop}suiviLigneRealise('${e.id}')">→ Marquer étape livrée</button>`;
+  }
+  if (s === "attente") {
+    return `<button class="btn btn-vert" onclick="${stop}suiviLignePaye('${e.id}')">€ Marquer paiement reçu</button>
+            <button class="btn ghost btn-icon" title="Annuler la livraison" onclick="${stop}suiviRevert('${e.id}')">↩</button>`;
+  }
+  if (s === "termine") {
+    return `<button class="btn ghost btn-icon" title="Annuler le paiement (revenir à Attente)" onclick="${stop}suiviRevert('${e.id}')">↩</button>`;
+  }
+  if (s === "refuse") {
+    return ``;
+  }
+  return ``;
+}
+
+// Représente une étape dans la timeline
+function suiviTimelineStepHtml(e) {
+  const s = entryStatut(e);
+  const isAcompte = suiviClassifyEcheance(e.echeance) === "acompte";
+
+  // Calcule l'état visuel des deux flags livré / payé
+  let dotClass = "";
+  let icon = "○";
+  let flagsHtml = "";
+
+  if (s === "refuse") {
+    dotClass = "refused"; icon = "✗";
+    flagsHtml = `<span class="suv-tl-flag idle">Refusé</span>`;
+  } else if (s === "termine") {
+    dotClass = "done"; icon = "✓";
+    flagsHtml = `<span class="suv-tl-flag delivered">📦 Livré</span><span class="suv-tl-flag paid">💰 Payé</span>`;
+  } else if (s === "attente") {
+    dotClass = "waiting"; icon = "⏳";
+    const livreLabel = isAcompte ? "Dû" : "Livré";
+    flagsHtml = `<span class="suv-tl-flag delivered">📦 ${livreLabel}</span><span class="suv-tl-flag pending">💰 Paiement attendu</span>`;
+  } else if (s === "accepte") {
+    dotClass = ""; icon = "○";
+    flagsHtml = `<span class="suv-tl-flag idle">Acceptée — non livrée</span>`;
+  } else { // envoye
+    dotClass = ""; icon = "○";
+    flagsHtml = `<span class="suv-tl-flag idle">En attente d'acceptation</span>`;
+  }
+
+  return `
+    <div class="suv-tl-step">
+      <div class="suv-tl-dot ${dotClass}">${icon}</div>
+      <div class="suv-tl-body">
+        <div class="suv-tl-title">${esc(e.echeance || "Étape")}</div>
+        <div class="suv-tl-flags">${flagsHtml}</div>
+      </div>
+      <div class="suv-tl-amount">${fmt(e.montant)}</div>
+      ${suiviTimelineStepAction(e, isAcompte) ? `<div class="suv-tl-actions">${suiviTimelineStepAction(e, isAcompte)}</div>` : ''}
+    </div>`;
+}
+
+function rSuiviTimelineModal() {
+  if (!suiviTimelineModal) return "";
+  const devisId = suiviTimelineModal.devisId;
+  const lignes = S.suivi.entries.filter(e => e.devisId === devisId)
+    .sort((a, b) => (a.date || "").localeCompare(b.date || ""));
+  if (!lignes.length) {
+    suiviTimelineModal = null;
+    return "";
+  }
+  const dv = S.suivi.devis && S.suivi.devis[devisId];
+  const ref = (dv && dv.ref) || "(sans référence)";
+  const total = lignes.reduce((s, e) => s + num(e.montant), 0);
+  const dates = lignes.map(e => e.date).filter(Boolean).sort();
+  const dateMin = dates[0] || "";
+  const dateMax = dates[dates.length - 1] || "";
+  const dateLabel = dateMin === dateMax ? dateFR(dateMin) : `${dateFR(dateMin)} → ${dateFR(dateMax)}`;
+  const statutPrin = devisPrincipal(lignes);
+  const attente = devisAttentePaiement(lignes);
+  const client = cleanClientLabel(lignes[0].client) || "—";
+
+  // Actions au niveau devis (acceptation, refus, revert)
+  const stop = "event.stopPropagation();";
+  let devisLevelAction = "";
+  if (statutPrin === "envoye") {
+    devisLevelAction = `
+      <button class="btn-act act-vert" onclick="${stop}suiviDevisAccepter('${devisId}')"><span class="ico">✓</span> Accepté</button>
+      <button class="btn-act act-rouge" onclick="${stop}suiviDevisRefuser('${devisId}')"><span class="ico">✗</span> Refusé</button>`;
+  } else if (statutPrin === "refuse") {
+    devisLevelAction = `<button class="btn ghost" onclick="${stop}suiviDevisRevertRefus('${devisId}')">↩ Annuler le refus</button>`;
+  }
+
+  return `<div class="modal-overlay" onclick="if(event.target===this)suiviTimelineClose()">
+    <div class="modal-card modal-card-timeline">
+      <div class="suv-tl-header">
+        <div class="suv-tl-header-top">
+          ${pastille(statutPrin)}
+          <span class="suv-tl-ref">${esc(ref)}</span>
+          <span style="flex:1"></span>
+          ${attente ? `<span class="pmt-badge">💰 Paiement en attente</span>` : ''}
+        </div>
+        <div class="suv-tl-meta">
+          <span>Client : <strong>${esc(client)}</strong></span>
+          <span>Total : <strong>${fmt(total)}</strong></span>
+          <span>Date : <strong>${esc(dateLabel)}</strong></span>
+          <span>${lignes.length} étape${lignes.length > 1 ? 's' : ''}</span>
+        </div>
+        ${devisLevelAction ? `<div style="display:flex;gap:6px;margin-top:8px">${devisLevelAction}</div>` : ''}
+      </div>
+
+      <div class="suv-tl">
+        ${lignes.map(suiviTimelineStepHtml).join("")}
+      </div>
+
+      <div class="suv-tl-footer">
+        <div class="left">
+          <button class="btn ghost" onclick="viewDevisOpen('${devisId}')">🖨 Devis</button>
+          <button class="btn ghost" onclick="viewDeboursOpen('${devisId}')">🖨 Débours</button>
+          <button class="btn ghost" onclick="viewFactureOpen('${devisId}')">🖨 Facture</button>
+          <button class="btn ghost btn-icon" title="Édition détaillée (heures, taux, ursaf, frais...)"
+            onclick="suiviTimelineClose();suiviGroupToggle('${devisId}');">✏ Édition détaillée</button>
+        </div>
+        <button class="btn" onclick="suiviTimelineClose()">Fermer</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+// ============================================================================
+// rSV — vue Suivi v2
+// Une ligne par devis. Click ligne → modale timeline. Édition avancée
+// toujours accessible via la modale ou via "⋮" qui ouvre le panneau hérité.
+// ============================================================================
 function rSV() {
   const list = suiviGroups();
   const stats = suiviStats(list);
@@ -5800,118 +6092,53 @@ function rSV() {
 
   const rowsHtml = list.map(g => {
     const selected = suiviSelected.has(g.devisId);
-    const cardOpen = suiviGroupExpanded === g.devisId;
-    if (g.lignes.length === 1) {
-      const e = g.lignes[0];
-      const editing = suiviExpanded === e.id;
-      const cls = ["devis-grp"];
-      if (selected) cls.push("sel");
-      if (cardOpen) cls.push("expanded");
-      if (editing) cls.push("editing");
-      const summary = `
-        <tr class="suv-row clickable" onclick="suiviToggle('${e.id}')">
-          <td class="cb" onclick="${stop}"><input type="checkbox" ${selected ? "checked" : ""} onclick="suiviToggleOne('${g.devisId}', this.checked, event)"></td>
-          <td class="statut">${pastille(g.statutGlobal)}</td>
-          <td>${esc(dateFR(e.date))}</td>
-          <td class="ref-cell suv-nowrap">${esc(g.ref) || `<span class="muted">—</span>`}</td>
-          <td class="suv-nowrap"><strong>${esc(cleanClientLabel(e.client)) || "—"}</strong></td>
-          <td class="amt">${fmt(e.montant)}</td>
-          <td class="actions" onclick="${stop}">
-            <div class="actions-cell">
-              <label class="paid-toggle ${e.paid?'on':''}" title="Marquer cette échéance comme payée">
-                <input type="checkbox" ${e.paid?'checked':''} onclick="suiviTogglePaid('${e.id}')">
-                <span>${e.paid?'✓ Payée':'Payée ?'}</span>
-              </label>
-              <div class="suv-row-actions">
-                ${suiviActionsHtml(e)}
-                <button class="ico-btn" title="Voir le devis émis" onclick="viewDevisOpen('${g.devisId}')">👁</button>
-                <button class="ico-btn" title="Voir / générer la facture" onclick="viewFactureOpen('${g.devisId}')">🧾</button>
-                <button class="ico-btn" title="Modifier les détails de la ligne" onclick="suiviToggle('${e.id}')">⋮</button>
-                <button class="ico-btn" title="Supprimer le devis" onclick="if(confirm('Supprimer ce devis ?'))suiviDelDevis('${g.devisId}')">×</button>
-              </div>
-            </div>
-          </td>
-        </tr>`;
-      const inner = editing ? summary + suiviDetailPanelHtml(e) : summary;
-      return `<tbody class="${cls.join(" ")}">${inner}</tbody>`;
-    }
-
-    const showSubRows = cardOpen && g.statutGlobal !== "envoye";
     const dateLabel = g.dateMin === g.dateMax
       ? esc(dateFR(g.dateMin))
       : `${esc(dateFR(g.dateMin))} → ${esc(dateFR(g.dateMax))}`;
-    const cls = ["devis-grp", "is-multi"];
-    if (selected) cls.push("sel");
-    if (cardOpen) cls.push("expanded");
-    const summary = `
-      <tr class="suv-row suv-multi clickable" onclick="suiviGroupToggle('${g.devisId}')">
-        <td class="cb" onclick="${stop}"><input type="checkbox" ${selected ? "checked" : ""} onclick="suiviToggleOne('${g.devisId}', this.checked, event)"></td>
-        <td class="statut">${pastille(g.statutGlobal)}</td>
-        <td>${dateLabel}</td>
-        <td class="ref-cell suv-nowrap">${esc(g.ref) || `<span class="muted">—</span>`}</td>
-        <td class="suv-nowrap"><strong>${esc(cleanClientLabel(g.client)) || "—"}</strong></td>
-        <td class="amt">${fmt(g.total)}</td>
-        <td class="actions" onclick="${stop}">
-          <div class="suv-row-actions">
-            ${devisActionsHtml(g)}
-            <button class="ico-btn" title="Voir le devis émis" onclick="viewDevisOpen('${g.devisId}')">👁</button>
-            <button class="ico-btn" title="Voir / générer la facture" onclick="viewFactureOpen('${g.devisId}')">🧾</button>
-            <button class="ico-btn" title="Modifier la référence du devis" onclick="suiviGroupEditRef('${g.devisId}')">⋮</button>
-            <button class="ico-btn" title="Supprimer le devis" onclick="if(confirm('Supprimer ce devis et toutes ses lignes ?'))suiviDelDevis('${g.devisId}')">×</button>
-          </div>
-        </td>
-      </tr>`;
-    if (!cardOpen) return `<tbody class="${cls.join(" ")}">${summary}</tbody>`;
 
-    const refEditOpen = suiviGroupRefEdit === g.devisId;
-    const refEditRow = refEditOpen ? `
-      <tr class="suv-detail">
-        <td colspan="7">
-          <div class="suv-panel">
-            <div class="suv-compact-row">
-              <label class="lib"><span>Référence du devis</span><input value="${esc(g.ref)}" oninput="suiviDevisRefUpd('${g.devisId}', this.value)" placeholder="DEVIS-…" autofocus></label>
-            </div>
-            <div class="suv-actions">
-              <span style="flex:1"></span>
-              <button class="btn ghost" onclick="suiviGroupEditRef('${g.devisId}')">Fermer</button>
-            </div>
-          </div>
-        </td>
-      </tr>` : "";
-
-    const subRows = !showSubRows ? "" : g.lignes.map(e => {
-      const ligneExpanded = suiviExpanded === e.id;
-      const lib = esc(e.echeance || "Paiement");
-      const sub = `
-        <tr class="suv-sub">
-          <td></td>
-          <td class="statut">${pastille(entryStatut(e))}</td>
-          <td colspan="3" class="sub-lib">${lib}</td>
-          <td class="amt">${fmt(e.montant)}</td>
-          <td class="actions">
-            <div class="actions-cell">
-              <label class="paid-toggle ${e.paid?'on':''}" title="Marquer cette échéance comme payée">
-                <input type="checkbox" ${e.paid?'checked':''} onclick="suiviTogglePaid('${e.id}')">
-                <span>${e.paid?'✓ Payée':'Payée ?'}</span>
-              </label>
-              <div class="suv-row-actions">
-                ${suiviActionsHtml(e, { hidePhase1: true })}
-                <button class="ico-btn" title="Modifier les détails de la ligne" onclick="suiviToggle('${e.id}')">⋮</button>
-                <button class="ico-btn" title="Supprimer cette ligne" onclick="if(confirm('Supprimer cette ligne du devis ?'))suiviDel('${e.id}')">×</button>
-              </div>
+    return `
+      <tbody class="devis-grp${selected ? ' sel' : ''}">
+        <tr class="suv-row clickable" onclick="suiviTimelineOpen('${g.devisId}')">
+          <td class="cb" onclick="${stop}">
+            <input type="checkbox" ${selected ? 'checked' : ''}
+              onclick="suiviToggleOne('${g.devisId}', this.checked, event)">
+          </td>
+          <td class="statut">${pastille(g.statutPrin)}</td>
+          <td>${dateLabel}</td>
+          <td class="ref-cell suv-nowrap">${esc(g.ref) || `<span class="muted">—</span>`}</td>
+          <td class="suv-nowrap">
+            <strong>${esc(cleanClientLabel(g.client)) || "—"}</strong>
+            ${g.attentePaiement ? `<span class="pmt-badge" style="margin-left:8px" title="Au moins une étape est livrée et attend son règlement">💰 Paiement en attente</span>` : ''}
+          </td>
+          <td class="amt">${fmt(g.total)}</td>
+          <td class="actions" onclick="${stop}">
+            <div class="suv-quick-actions">
+              <button class="qa-btn" title="Voir / imprimer le devis émis"
+                onclick="viewDevisOpen('${g.devisId}')"><span class="qa-ico">🖨</span>Devis</button>
+              <button class="qa-btn" title="Voir / imprimer la note de débours"
+                onclick="viewDeboursOpen('${g.devisId}')"><span class="qa-ico">🖨</span>Débours</button>
+              <button class="qa-btn" title="Voir / imprimer la facture"
+                onclick="viewFactureOpen('${g.devisId}')"><span class="qa-ico">🖨</span>Facture</button>
             </div>
           </td>
-        </tr>`;
-      return ligneExpanded ? sub + suiviDetailPanelHtml(e) : sub;
-    }).join("");
-
-    return `<tbody class="${cls.join(" ")}">${summary}${refEditRow}${subRows}</tbody>`;
+        </tr>
+      </tbody>`;
   }).join("");
 
-  const yearOpts = [`<option value="all" ${suiviFilterYear==="all"?"selected":""}>Toutes les années</option>`]
-    .concat(years.map(y => `<option value="${esc(y)}" ${suiviFilterYear===y?"selected":""}>${esc(y)}</option>`)).join("");
+  const yearOpts = [`<option value="all" ${suiviFilterYear === "all" ? "selected" : ""}>Toutes les années</option>`]
+    .concat(years.map(y => `<option value="${esc(y)}" ${suiviFilterYear === y ? "selected" : ""}>${esc(y)}</option>`)).join("");
 
-  const filteredEmpty = totalEntries > 0 && list.length === 0;
+  // États vides spécialisés
+  let emptyHtml = "";
+  if (totalEntries === 0) {
+    emptyHtml = `<div class="empty">Aucun devis enregistré. Depuis l'onglet Devis, clique sur « + Enregistrer dans Suivi ».</div>`;
+  } else if (list.length === 0) {
+    if (suiviFilterAttente && suiviFilterPrincipal === "all") {
+      emptyHtml = `<div class="empty empty-attente">Aucun devis en attente de paiement. ✨</div>`;
+    } else {
+      emptyHtml = `<div class="empty">Aucun devis ne correspond aux filtres sélectionnés.</div>`;
+    }
+  }
 
   return `
     <h2>Suivi <span id="savedFlash" class="saved"></span></h2>
@@ -5928,24 +6155,41 @@ function rSV() {
       </div>
     </div>
 
-    ${totalEntries === 0 ? `<div class="empty">Aucune prestation enregistrée. Cliquez sur « + Ajouter une prestation » pour commencer.</div>` :
-      filteredEmpty ? `<div class="empty">Aucune prestation ne correspond aux filtres sélectionnés.</div>` : `
+    ${emptyHtml || `
     <table class="hist">
       <thead>
         <tr>
-          <th style="width:34px;text-align:center" title="Tout sélectionner / désélectionner"><input type="checkbox" id="suiviSelectAll" ${list.length > 0 && list.every(g => suiviSelected.has(g.devisId)) ? "checked" : ""} onclick="suiviSelectAll(this.checked)"></th>
+          <th style="width:34px;text-align:center" title="Tout sélectionner / désélectionner">
+            <input type="checkbox" id="suiviSelectAll"
+              ${list.length > 0 && list.every(g => suiviSelected.has(g.devisId)) ? "checked" : ""}
+              onclick="suiviSelectAll(this.checked)">
+          </th>
           <th class="sortable" style="width:80px;text-align:center" onclick="suiviSortKey('statut')">Statut${arr('statut')}</th>
           <th class="sortable" style="width:160px" onclick="suiviSortKey('date')">Date${arr('date')}</th>
-          <th class="sortable" style="width:160px" onclick="suiviSortKey('ref')">Référence${arr('ref')}</th>
+          <th class="sortable" style="width:170px" onclick="suiviSortKey('ref')">Numéro${arr('ref')}</th>
           <th class="sortable" onclick="suiviSortKey('client')">Client${arr('client')}</th>
           <th class="sortable" style="width:120px;text-align:right" onclick="suiviSortKey('montant')">Montant${arr('montant')}</th>
-          <th style="width:170px;text-align:right">Actions</th>
+          <th style="width:240px;text-align:right">Actions</th>
         </tr>
       </thead>
       ${rowsHtml}
     </table>`}
   `;
 }
+
+// Stub : ouverture du débours. Si tu n'as pas de snapshot débours dédié,
+// on peut soit (a) réutiliser le snapshot devis (les frais y figurent),
+// soit (b) afficher un message explicatif. Choix : (a) avec un fallback (b).
+window.viewDeboursOpen = function(devisId) {
+  const dv = S.suivi.devis && S.suivi.devis[devisId];
+  if (!dv || !dv.snapshotHtml) {
+    alert("La note de débours sera disponible après réémission du devis depuis Mission.\n\nAstuce : depuis l'onglet Devis, ouvre la mission de ce devis et clique sur « 🖨 Imprimer le débours ».");
+    return;
+  }
+  // Tant que tu n'as pas un snapshot dédié débours, on réutilise viewDevisOpen
+  // (la section Débours est dans le même DOM, le CSS d'impression filtrera plus tard si besoin).
+  viewDevisOpen(devisId);
+};
 
 let clientsExpanded = null;
 let clientsEditing = null;
