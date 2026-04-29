@@ -1229,6 +1229,9 @@
   .remise-tooltip{position:absolute;top:calc(100% + 8px);left:0;background:var(--surface);border:1px solid var(--border);border-radius:8px;box-shadow:0 12px 32px rgba(0,0,0,.45);padding:14px 16px;width:340px;font-size:12px;font-style:normal;font-weight:400;text-align:left;color:var(--text-muted);line-height:1.5;letter-spacing:normal;display:none;z-index:1000;pointer-events:none}
   .ech-info-icon:hover .remise-tooltip,.ech-info-icon:focus .remise-tooltip{display:block}
   .ech-info-icon{position:relative}
+  .remise-tt-marge-actuelle{font-size:14px;font-weight:600;text-align:center;padding:8px 0;margin-bottom:10px;border-bottom:1px solid var(--border-soft);letter-spacing:.02em}
+  .remise-tt-marge-actuelle strong{font-size:18px;font-weight:800}
+  .remise-tt-marge-amt{font-size:11px;font-weight:400;opacity:.8;margin-left:6px}
   .remise-tt-title{font-size:13px;font-weight:600;color:var(--text);margin-bottom:8px;border-bottom:1px solid var(--border-soft);padding-bottom:6px}
   .remise-tt-table{width:100%;border-collapse:collapse;margin-bottom:8px;font-variant-numeric:tabular-nums}
   .remise-tt-table:last-of-type{margin-bottom:0}
@@ -4186,24 +4189,18 @@ function computeRemiseInfo() {
   const urssafActuelle = r2(totalSansRemise * (1 - urssafFactor));
   const netActuel = r2(totalSansRemise * urssafFactor);
   // Coûts réels totaux : ce que tu DOIS dépenser (matos + déplacement + sommes avancées)
-  // NB: deplReel est déjà inclus dans totalSansRemise via t.subtotal, mais c'est une dépense
-  // pour toi. Pareil pour avances. matos est un coût implicite (amortissement) non compté
-  // dans le devis, mais qui pèse sur ta marge.
   const coutsReels = r2(matosCost + deplReel + avances);
   const margeBrute = r2(netActuel - coutsReels);
-  // Marge de sécurité 10 % : on veut conserver au moins 10 % du total HT comme marge.
-  const SECURITY = 0.10;
-  const margeMin = r2(totalSansRemise * SECURITY);
-  // Calcul de la remise max:
+  // Marge en % du total HT (= proportion qui te reste après tous les coûts)
+  const margeBrutePct = totalSansRemise > 0 ? r2(margeBrute / totalSansRemise * 100) : 0;
+  // Calcul de la remise max (point mort exact, marge = 0):
   //   netApresRemise = totalSansRemise × (1-r) × urssafFactor
-  //   margeApresRemise = netApresRemise - coutsReels
-  //   On veut margeApresRemise >= margeMin (= 10% du HT initial)
-  //   ⟹ totalSansRemise × (1-r) × urssafFactor - coutsReels >= margeMin
-  //   ⟹ (1-r) >= (margeMin + coutsReels) / (totalSansRemise × urssafFactor)
-  //   ⟹ r <= 1 - (margeMin + coutsReels) / (totalSansRemise × urssafFactor)
+  //   margeApresRemise = netApresRemise - coutsReels >= 0
+  //   ⟹ (1-r) >= coutsReels / (totalSansRemise × urssafFactor)
+  //   ⟹ r <= 1 - coutsReels / (totalSansRemise × urssafFactor)
   let remiseMaxPct = 0;
   if (totalSansRemise > 0 && urssafFactor > 0) {
-    const seuil = (margeMin + coutsReels) / (totalSansRemise * urssafFactor);
+    const seuil = coutsReels / (totalSansRemise * urssafFactor);
     remiseMaxPct = Math.max(0, Math.floor((1 - seuil) * 100));
   }
   // Calculs au taux de remise actuel
@@ -4219,14 +4216,13 @@ function computeRemiseInfo() {
     netActuel,
     coutsReels: { matos: matosCost, deplReel, avances, total: coutsReels },
     margeBrute,
-    margeMin,
+    margeBrutePct,
     remiseMaxPct,
     currentRemisePct,
     currentRemiseAmount,
     currentNet,
     currentMargeApresRemise,
     isOverMax,
-    securityPct: SECURITY * 100,
     totalHeures: t.totalHeures
   };
 }
@@ -4515,7 +4511,16 @@ function rMS() {
 
     ${(() => {
       const ri = computeRemiseInfo();
+      // Compute the live "marge actuelle" %: based on currentRemise, in real time.
+      const liveMargePct = ri.totalSansRemise > 0
+        ? r2(ri.currentMargeApresRemise / ri.totalSansRemise * 100)
+        : 0;
+      const margeColor = liveMargePct < 0 ? "#e74c3c" : (liveMargePct < 10 ? "#f59e0b" : "#22c55e");
       const tooltipHtml = `
+        <div class="remise-tt-marge-actuelle" style="color:${margeColor}">
+          Marge actuelle : <strong>${liveMargePct.toString().replace(".", ",")} %</strong>
+          <span class="remise-tt-marge-amt">(${fmt(ri.currentMargeApresRemise)})</span>
+        </div>
         <div class="remise-tt-title">💰 Décomposition de la marge</div>
         <table class="remise-tt-table">
           <tr><td>Total HT (avant remise)</td><td>${fmt(ri.totalSansRemise)}</td></tr>
@@ -4532,15 +4537,14 @@ function rMS() {
           <tr><td>Total coûts</td><td>${fmt(ri.coutsReels.total)}</td></tr>
         </table>
         <table class="remise-tt-table">
-          <tr><td>Marge brute actuelle</td><td><strong>${fmt(ri.margeBrute)}</strong></td></tr>
-          <tr class="muted"><td>Marge à conserver (${ri.securityPct} %)</td><td>${fmt(ri.margeMin)}</td></tr>
+          <tr><td>Marge brute (sans remise)</td><td><strong>${fmt(ri.margeBrute)}</strong></td></tr>
           ${ri.currentRemisePct > 0 ? `
           <tr class="${ri.isOverMax ? 'danger' : ''}"><td>Marge après remise actuelle</td><td><strong>${fmt(ri.currentMargeApresRemise)}</strong></td></tr>
           ` : ''}
         </table>
         <div class="remise-tt-summary">
-          <strong>Remise max recommandée : ${ri.remiseMaxPct} %</strong><br>
-          Au-delà tu rognes ta marge de sécurité.
+          <strong>Remise max : ${ri.remiseMaxPct} %</strong> (point mort)<br>
+          Au-delà tu paies de ta poche.
         </div>`;
       return `<div class="row row-section-break">
         <div class="field tiny">
