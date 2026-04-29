@@ -1223,6 +1223,23 @@
   .ech-row.ech-total .del-spacer{width:31px}
   .ech-row.ech-total.ok .pct-total{color:var(--success)}
   .ech-row.ech-total.warn .pct-total{color:var(--warning)}
+  /* Remise input with (i) info button */
+  .remise-input-wrap{display:flex;align-items:center;gap:8px}
+  .remise-input-wrap input{flex:1}
+  .remise-tooltip{position:absolute;top:calc(100% + 8px);left:0;background:var(--surface);border:1px solid var(--border);border-radius:8px;box-shadow:0 12px 32px rgba(0,0,0,.45);padding:14px 16px;width:340px;font-size:12px;font-style:normal;font-weight:400;text-align:left;color:var(--text-muted);line-height:1.5;letter-spacing:normal;display:none;z-index:1000;pointer-events:none}
+  .ech-info-icon:hover .remise-tooltip,.ech-info-icon:focus .remise-tooltip{display:block}
+  .ech-info-icon{position:relative}
+  .remise-tt-title{font-size:13px;font-weight:600;color:var(--text);margin-bottom:8px;border-bottom:1px solid var(--border-soft);padding-bottom:6px}
+  .remise-tt-table{width:100%;border-collapse:collapse;margin-bottom:8px;font-variant-numeric:tabular-nums}
+  .remise-tt-table:last-of-type{margin-bottom:0}
+  .remise-tt-table tr td{padding:2px 0;color:var(--text);font-size:12px}
+  .remise-tt-table tr td:last-child{text-align:right}
+  .remise-tt-table tr.muted td{color:var(--text-muted);font-size:11.5px;padding-left:6px}
+  .remise-tt-table tr.section-title td{font-size:10.5px;font-weight:600;color:var(--text-dim);text-transform:uppercase;letter-spacing:.06em;padding-top:8px;padding-bottom:4px}
+  .remise-tt-table tr.danger td{color:var(--danger,#e74c3c)}
+  .remise-tt-table tr.danger td strong{color:var(--danger,#e74c3c)}
+  .remise-tt-summary{margin-top:10px;padding-top:8px;border-top:1px solid var(--border-soft);font-size:12px;color:var(--text);line-height:1.5}
+  .remise-tt-summary strong{color:var(--primary)}
   .ech-warn{margin-top:6px;font-size:13px;color:var(--warning);max-width:380px}
   .ech-actions{display:flex;gap:8px;margin-top:10px;max-width:380px}
   .ech-actions .btn:last-child{margin-left:auto}
@@ -1780,6 +1797,23 @@ function upd(path, val) {
   }
 }
 window.upd = upd;
+
+// Clamp remise input to [0, max]. Called by the Remise input.
+// If user types over max, force it back to max immediately.
+function updRemise(val, max) {
+  let n = num(val);
+  if (n < 0) n = 0;
+  if (max !== undefined && n > max) n = max;
+  S.mission.remisePct = String(n);
+  save();
+  // Re-render the remise field area so the input reflects the clamped value visually
+  // (otherwise the input stays at the typed value until next render).
+  refreshTotals();
+  // If clamping happened (typed > max), force-update the input element
+  const inp = document.querySelector('.remise-input-wrap input');
+  if (inp && num(inp.value) !== n) inp.value = String(n);
+}
+window.updRemise = updRemise;
 
 function refreshRefDisplay() {
   // The reference now appears in the devis preview; refresh it
@@ -4115,6 +4149,88 @@ function rViewFactureModal() {
   </div>`;
 }
 
+// ============ REMISE COMPUTATION ============
+// Compute remise max recommandée (with 10% safety margin) + détail des coûts.
+// Returns { totalSansRemise, urssafActuelle, coutsReels: {matos, deplReel, avances, total},
+//           margeBrute, margeAvecSecurite, remiseMaxPct, currentRemiseAmount, currentNet,
+//           currentMargeApresRemise, isOverMax, declared }
+function computeRemiseInfo() {
+  const d = S.mission;
+  const t = totals();
+  const declared = d.declare !== false;
+  const urssafFactor = declared ? (1 - num(d.urssafPct ?? 22) / 100) : 1; // au black: pas d'URSSAF
+  // Coût matos horaire (depuis Frais & Tarifs) × heures totales
+  let matosCost = 0;
+  try {
+    const tm = tauxMatos();
+    matosCost = r2((tm.tauxAvecSecurite || 0) * t.totalHeures);
+  } catch (e) { matosCost = 0; }
+  // Déplacement réel (toujours le coût brut, jamais avec URSSAF/marge)
+  // C'est ce que tu paies vraiment (essence, billets) indépendamment du mode
+  const deplReel = t.depl || 0;
+  // Sommes avancées (matériel + transport en mode Avance) — incompressible
+  let avances = 0;
+  for (const l of (d.lignes || [])) {
+    if (l.type === "materiel" && l.devis !== "debours" && l.paiementType === "avance") {
+      avances = r2(avances + r2(num(l.prix)));
+    }
+    if (l.type === "materiel" && l.devis !== "debours" && l.paiementType === "acompte") {
+      // Aussi incompressible : tu dois le payer au fournisseur
+      avances = r2(avances + r2(num(l.prix)));
+    }
+  }
+  if ((d.deplacement.mode === "transports") && t.depl > 0 && (d.deplacement.devis || "principal") === "principal") {
+    // Le déplacement réel est déjà compté dans deplReel ci-dessus, on ne double-compte pas
+  }
+  const totalSansRemise = t.subtotal; // total HT avant remise
+  const urssafActuelle = r2(totalSansRemise * (1 - urssafFactor));
+  const netActuel = r2(totalSansRemise * urssafFactor);
+  // Coûts réels totaux : ce que tu DOIS dépenser (matos + déplacement + sommes avancées)
+  // NB: deplReel est déjà inclus dans totalSansRemise via t.subtotal, mais c'est une dépense
+  // pour toi. Pareil pour avances. matos est un coût implicite (amortissement) non compté
+  // dans le devis, mais qui pèse sur ta marge.
+  const coutsReels = r2(matosCost + deplReel + avances);
+  const margeBrute = r2(netActuel - coutsReels);
+  // Marge de sécurité 10 % : on veut conserver au moins 10 % du total HT comme marge.
+  const SECURITY = 0.10;
+  const margeMin = r2(totalSansRemise * SECURITY);
+  // Calcul de la remise max:
+  //   netApresRemise = totalSansRemise × (1-r) × urssafFactor
+  //   margeApresRemise = netApresRemise - coutsReels
+  //   On veut margeApresRemise >= margeMin (= 10% du HT initial)
+  //   ⟹ totalSansRemise × (1-r) × urssafFactor - coutsReels >= margeMin
+  //   ⟹ (1-r) >= (margeMin + coutsReels) / (totalSansRemise × urssafFactor)
+  //   ⟹ r <= 1 - (margeMin + coutsReels) / (totalSansRemise × urssafFactor)
+  let remiseMaxPct = 0;
+  if (totalSansRemise > 0 && urssafFactor > 0) {
+    const seuil = (margeMin + coutsReels) / (totalSansRemise * urssafFactor);
+    remiseMaxPct = Math.max(0, Math.floor((1 - seuil) * 100));
+  }
+  // Calculs au taux de remise actuel
+  const currentRemisePct = num(d.remisePct);
+  const currentRemiseAmount = r2(totalSansRemise * currentRemisePct / 100);
+  const currentNet = r2((totalSansRemise - currentRemiseAmount) * urssafFactor);
+  const currentMargeApresRemise = r2(currentNet - coutsReels);
+  const isOverMax = currentRemisePct > remiseMaxPct;
+  return {
+    declared,
+    totalSansRemise,
+    urssafActuelle,
+    netActuel,
+    coutsReels: { matos: matosCost, deplReel, avances, total: coutsReels },
+    margeBrute,
+    margeMin,
+    remiseMaxPct,
+    currentRemisePct,
+    currentRemiseAmount,
+    currentNet,
+    currentMargeApresRemise,
+    isOverMax,
+    securityPct: SECURITY * 100,
+    totalHeures: t.totalHeures
+  };
+}
+
 function tarifBreakdown(includeDepl) {
   // Compute per-hour breakdown: Net / +Déplacement / +Matériel / +URSSAF / =Tarif facturé
   // includeDepl=true → also include deplacement spread (only effective if mode is "taux")
@@ -4397,7 +4513,45 @@ function rMS() {
       </div>`;
     })()}
 
-    <div class="row row-section-break"><div class="field tiny"><label>Remise (%)</label><input type="number" step="1" min="0" max="100" value="${esc(d.remisePct)}" oninput="upd('mission.remisePct', this.value)"></div></div>
+    ${(() => {
+      const ri = computeRemiseInfo();
+      const tooltipHtml = `
+        <div class="remise-tt-title">💰 Décomposition de la marge</div>
+        <table class="remise-tt-table">
+          <tr><td>Total HT (avant remise)</td><td>${fmt(ri.totalSansRemise)}</td></tr>
+          ${ri.declared
+            ? `<tr class="muted"><td>− URSSAF (${num(S.mission.urssafPct ?? 22).toString().replace(".",",")} %)</td><td>−${fmt(ri.urssafActuelle)}</td></tr>`
+            : `<tr class="muted"><td>− URSSAF</td><td>au black</td></tr>`}
+          <tr><td>= Net encaissé</td><td>${fmt(ri.netActuel)}</td></tr>
+        </table>
+        <table class="remise-tt-table">
+          <tr class="section-title"><td colspan="2">Coûts réels</td></tr>
+          <tr class="muted"><td>· Matériel amorti (${ri.totalHeures.toFixed(1).replace(".",",")} h)</td><td>${fmt(ri.coutsReels.matos)}</td></tr>
+          <tr class="muted"><td>· Déplacement réel</td><td>${fmt(ri.coutsReels.deplReel)}</td></tr>
+          <tr class="muted"><td>· Sommes avancées</td><td>${fmt(ri.coutsReels.avances)}</td></tr>
+          <tr><td>Total coûts</td><td>${fmt(ri.coutsReels.total)}</td></tr>
+        </table>
+        <table class="remise-tt-table">
+          <tr><td>Marge brute actuelle</td><td><strong>${fmt(ri.margeBrute)}</strong></td></tr>
+          <tr class="muted"><td>Marge à conserver (${ri.securityPct} %)</td><td>${fmt(ri.margeMin)}</td></tr>
+          ${ri.currentRemisePct > 0 ? `
+          <tr class="${ri.isOverMax ? 'danger' : ''}"><td>Marge après remise actuelle</td><td><strong>${fmt(ri.currentMargeApresRemise)}</strong></td></tr>
+          ` : ''}
+        </table>
+        <div class="remise-tt-summary">
+          <strong>Remise max recommandée : ${ri.remiseMaxPct} %</strong><br>
+          Au-delà tu rognes ta marge de sécurité.
+        </div>`;
+      return `<div class="row row-section-break">
+        <div class="field tiny">
+          <label>Remise (%)</label>
+          <div class="remise-input-wrap">
+            <input type="number" step="1" min="0" max="${ri.remiseMaxPct}" value="${esc(d.remisePct)}" oninput="updRemise(this.value, ${ri.remiseMaxPct})">
+            <button type="button" class="ech-info-icon" tabindex="0" aria-label="Voir le détail du calcul de remise">i<span class="remise-tooltip" role="tooltip">${tooltipHtml}</span></button>
+          </div>
+        </div>
+      </div>`;
+    })()}
 
     <h3>Édition du devis</h3>
     <div class="edit-accordion-list">
