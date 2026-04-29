@@ -1385,6 +1385,9 @@
   /* Au black mode warning banner */
   .black-warning{margin:8px 0 14px;padding:12px 16px;background:rgba(231,76,60,.08);border-left:3px solid var(--danger,#e74c3c);border-radius:0 6px 6px 0;font-size:13px;color:var(--text);line-height:1.5;max-width:880px}
   .black-warning strong{color:var(--danger,#e74c3c)}
+  /* Invisible right-edge spacer used by depl-row to match the expand+del button widths
+     of materiel rows above, so toggles align vertically across rows. */
+  .lg-btn-spacer{width:30px;height:var(--input-h);flex-shrink:0;display:block}
   /* Déplacement: mêmes positions que les lignes matériel pour aligner les toggles
      verticalement. depl-mode-cell remplace lg-title (flex 1), lg-prix-spacer remplace
      lg-prix (90px), ensuite final-cost + toggles tombent dans les mêmes colonnes. */
@@ -4346,6 +4349,8 @@ function rMS() {
             <button class="${pmt===secondVal?'on':''}" onclick="updDeplPaiementType('${secondVal}')" title="${secondTitle}">${secondLabel}</button>
           </div>
           <button class="lg-info-icon" onmouseenter="showPaiementInfo(event, 'depl')" onmouseleave="hidePaiementInfo()" onfocus="showPaiementInfo(event, 'depl')" onblur="hidePaiementInfo()" tabindex="0" aria-label="Voir les conséquences fiscales de ce choix">i</button>
+          <span class="lg-btn-spacer" aria-hidden="true"></span>
+          <span class="lg-btn-spacer" aria-hidden="true"></span>
         </div>
         ${devis === 'principal' ? `
         <div class="depl-subtoggle-row">
