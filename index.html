@@ -386,11 +386,9 @@
   .devis-preview .dp-totals .dp-line.grand{font-size:17px;font-weight:700;padding:10px 0 6px;margin-top:4px;border-top:1px solid var(--border)}
   .devis-preview .dp-totals .dp-line.grand .lbl,.devis-preview .dp-totals .dp-line.grand .amt{color:var(--text)}
   .devis-preview .dp-totals .dp-line.debours{color:var(--text-muted);font-style:italic;font-size:12px;margin-top:6px;padding-top:4px}
-  .devis-preview .dp-paiement{margin-top:24px;padding-top:14px;border-top:1px solid var(--border-soft)}
-  .devis-preview .dp-paiement h4{margin:0 0 10px}
-  .devis-preview .dp-paiement-line{display:flex;justify-content:space-between;align-items:baseline;padding:5px 0;font-size:13px;color:var(--text)}
+  .devis-preview .dp-paiement-line{display:flex;justify-content:space-between;align-items:baseline;padding:4px 0;font-size:12px;color:var(--text)}
   .devis-preview .dp-paiement-line .lbl{color:var(--text)}
-  .devis-preview .dp-paiement-line .pct{color:var(--text-muted);font-size:12px;margin-left:2px}
+  .devis-preview .dp-paiement-line .pct{color:var(--text-muted);font-size:11px;margin-left:2px}
   .devis-preview .dp-paiement-line .amt{font-variant-numeric:tabular-nums;font-weight:500}
   .devis-preview .dp-objet{font-size:13px;color:var(--text);margin:0 0 22px 0;padding:0;line-height:1.5}
   .devis-preview .dp-objet strong{font-weight:600}
@@ -485,18 +483,22 @@
     .devis-preview .dp-meta-block,.devis-preview .dp-client-block{text-align:left}
   }
 
-  .devis-preview .dp-conditions{margin-top:18px;padding:14px 0 0;border-top:1px solid var(--border-soft);font-size:13px;color:var(--text);line-height:1.7;white-space:pre-wrap}
+  .devis-preview .dp-conditions{margin-top:0;padding:14px 0 0;border-top:1px solid var(--border-soft);font-size:13px;color:var(--text);line-height:1.7;white-space:pre-wrap}
   .devis-preview .dp-conditions h4{margin:0 0 8px;border:0;padding:0;font-size:13px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em}
-  .devis-preview .dp-conditions.signature{padding:14px 0 0;border:0;border-top:1px solid var(--border-soft);border-radius:0;margin-top:18px}
-  .devis-preview .dp-conditions.signature h4{color:var(--text-muted)}
+  .devis-preview .dp-conditions.signature{padding:0;border:0;border-radius:0;margin-top:0}
+  .devis-preview .dp-conditions.signature h4{display:none}
   .devis-preview .dp-conditions.cgv h4{color:var(--text-muted)}
-  /* 2-column layout: Conditions de paiement (left) + Bon pour accord (right) */
-  .devis-preview .dp-paiement-conditions{margin-top:0}
-  .devis-preview .dp-paiement-conditions.has-conditions{display:grid;grid-template-columns:1fr 1fr;gap:32px;align-items:start}
-  .devis-preview .dp-paiement-conditions.has-conditions .dp-conditions{margin-top:24px}
-  .devis-preview .dp-paiement-conditions.has-conditions .dp-conditions.signature{margin-top:24px}
+  /* Bottom 2-column grid: signature (left) + totals+payment-info (right) */
+  .devis-preview .dp-bottom-grid{display:grid;grid-template-columns:1fr 340px;gap:40px;align-items:start;margin-top:24px;padding-top:14px;border-top:1px solid var(--border-light)}
+  .devis-preview .dp-bottom-left{padding-top:14px}
+  .devis-preview .dp-bottom-right{display:flex;flex-direction:column;gap:18px}
+  .devis-preview .dp-bottom-right .dp-totals{margin-top:0;padding-top:0;border-top:0;max-width:none}
+  /* Payment info merged block (Modalités + Conditions de paiement) */
+  .devis-preview .dp-payment-info{padding-top:14px;border-top:1px solid var(--border-soft)}
+  .devis-preview .dp-payment-info h4{margin:0 0 10px;border:0;padding:0;font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.08em}
+  .devis-preview .dp-payment-text{margin-top:12px;padding-top:10px;border-top:1px dashed var(--border-soft);font-size:12px;color:var(--text);line-height:1.6;white-space:pre-wrap}
   @media (max-width:680px){
-    .devis-preview .dp-paiement-conditions.has-conditions{grid-template-columns:1fr;gap:0}
+    .devis-preview .dp-bottom-grid{grid-template-columns:1fr;gap:24px}
   }
 
   /* Page break before CGV (page 2 when printed) */
@@ -758,18 +760,52 @@
       margin-top: 4pt !important;
     }
 
-    /* === MODALITÉS DE PAIEMENT === */
-    .devis-preview .dp-paiement, .view-devis-snapshot .dp-paiement {
+    /* === BOTTOM 2-COLUMN GRID: signature (left) + totals+payment (right) === */
+    .devis-preview .dp-bottom-grid, .view-devis-snapshot .dp-bottom-grid {
+      display: grid !important;
+      grid-template-columns: 1fr 200pt !important;
+      gap: 28pt !important;
+      align-items: start !important;
       margin-top: 14pt !important;
-      padding-top: 8pt !important;
+      padding-top: 10pt !important;
       border-top: 0.5pt solid #ddd !important;
       page-break-inside: avoid !important;
+    }
+    .devis-preview .dp-bottom-left, .view-devis-snapshot .dp-bottom-left {
+      padding-top: 8pt !important;
+    }
+    .devis-preview .dp-bottom-right, .view-devis-snapshot .dp-bottom-right {
+      display: flex !important;
+      flex-direction: column !important;
+      gap: 12pt !important;
+    }
+    .devis-preview .dp-bottom-right .dp-totals, .view-devis-snapshot .dp-bottom-right .dp-totals {
+      margin-top: 0 !important;
+      padding-top: 0 !important;
+      border-top: 0 !important;
+      max-width: none !important;
+    }
+
+    /* Payment info merged block (Modalités + Conditions) */
+    .devis-preview .dp-payment-info, .view-devis-snapshot .dp-payment-info {
+      padding-top: 10pt !important;
+      border-top: 0.5pt solid #ddd !important;
+    }
+    .devis-preview .dp-payment-info h4, .view-devis-snapshot .dp-payment-info h4 {
+      margin: 0 0 6pt !important;
+      border: 0 !important;
+      padding: 0 !important;
+      font-size: 7.5pt !important;
+      font-weight: 700 !important;
+      color: #666 !important;
+      text-transform: uppercase !important;
+      letter-spacing: .08em !important;
     }
     .devis-preview .dp-paiement-line, .view-devis-snapshot .dp-paiement-line {
       display: flex !important;
       justify-content: space-between !important;
       padding: 2pt 0 !important;
-      font-size: 8.5pt !important;
+      font-size: 8pt !important;
       color: #333 !important;
     }
     .devis-preview .dp-paiement-line .lbl, .view-devis-snapshot .dp-paiement-line .lbl {
@@ -777,43 +813,40 @@
     }
     .devis-preview .dp-paiement-line .pct, .view-devis-snapshot .dp-paiement-line .pct {
       color: #888 !important;
-      font-size: 7.5pt !important;
+      font-size: 7pt !important;
     }
     .devis-preview .dp-paiement-line .amt, .view-devis-snapshot .dp-paiement-line .amt {
       font-variant-numeric: tabular-nums !important;
       font-weight: 600 !important;
       color: #1a1a1a !important;
     }
+    .devis-preview .dp-payment-text, .view-devis-snapshot .dp-payment-text {
+      margin-top: 8pt !important;
+      padding-top: 6pt !important;
+      border-top: 0.4pt dashed #ccc !important;
+      font-size: 7.5pt !important;
+      line-height: 1.45 !important;
+      color: #333 !important;
+      white-space: pre-wrap !important;
+    }
 
     /* === CONDITIONS / SIGNATURE === */
-    .devis-preview .dp-paiement-conditions.has-conditions, .view-devis-snapshot .dp-paiement-conditions.has-conditions {
-      display: grid !important;
-      grid-template-columns: 1fr 1fr !important;
-      gap: 24pt !important;
-      align-items: start !important;
-      margin-top: 0 !important;
-      page-break-inside: avoid !important;
-    }
-    .devis-preview .dp-paiement-conditions.has-conditions .dp-conditions, .view-devis-snapshot .dp-paiement-conditions.has-conditions .dp-conditions {
-      margin-top: 14pt !important;
-    }
-    .devis-preview .dp-paiement-conditions.has-conditions .dp-conditions.signature, .view-devis-snapshot .dp-paiement-conditions.has-conditions .dp-conditions.signature {
-      margin-top: 14pt !important;
-    }
     .devis-preview .dp-conditions, .view-devis-snapshot .dp-conditions {
-      margin-top: 12pt !important;
-      padding-top: 8pt !important;
-      border-top: 0.5pt solid #ddd !important;
-      font-size: 8.5pt !important;
+      margin-top: 0 !important;
+      padding-top: 0 !important;
+      border-top: 0 !important;
+      font-size: 9pt !important;
       line-height: 1.5 !important;
       color: #333 !important;
       page-break-inside: avoid !important;
     }
     .devis-preview .dp-conditions.signature, .view-devis-snapshot .dp-conditions.signature {
-      margin-top: 18pt !important;
+      margin-top: 0 !important;
       border: 0 !important;
-      border-top: 0.5pt solid #ddd !important;
-      padding: 8pt 0 0 !important;
+      padding: 0 !important;
+    }
+    .devis-preview .dp-conditions.signature h4, .view-devis-snapshot .dp-conditions.signature h4 {
+      display: none !important;
     }
     .devis-preview .dp-sig-default, .view-devis-snapshot .dp-sig-default {
       font-size: 9pt !important;
@@ -893,12 +926,7 @@
 
     /* CGV: ALWAYS on its own page === */
     .devis-page-break {
-      page-break-before: always !important;
-      page-break-after: avoid !important;
-      border: 0 !important;
-      height: 0 !important;
-      margin: 0 !important;
-      visibility: hidden !important;
+      display: none !important;
     }
     .devis-page-break::before { display: none !important; }
     .devis-preview .dp-conditions.cgv, .view-devis-snapshot .dp-conditions.cgv {
@@ -1712,36 +1740,35 @@ function rDevisPreview() {
       ${linesHtml || `<div class="dp-empty" style="padding:14px">Aucune ligne pour l'instant.</div>`}
     </div>
 
-    <div class="dp-totals">
-      ${t.remise > 0 ? `
-      <div class="dp-line"><span class="lbl">Sous-total</span><span class="amt">${fmt(t.subtotal)}</span></div>
-      <div class="dp-line"><span class="lbl">Remise (${num(d.remisePct).toString().replace(".",",")} %)</span><span class="amt">−${fmt(t.remise)}</span></div>` : ""}
-      <div class="dp-line grand"><span class="lbl">Total HT</span><span class="amt">${fmt(t.total)}</span></div>
-      ${t.debours > 0 ? `<div class="dp-line debours"><span class="lbl">+ Frais de débours (à rembourser sur justificatifs, voir document séparé)</span><span class="amt">${fmt(t.debours)}</span></div>` : ""}
-    </div>
-
-    ${(t.echeances || []).length > 0 ? `<div class="dp-paiement">
-      <h4>Modalités de paiement</h4>
-      ${(t.echeances || []).map(e => `<div class="dp-paiement-line">
-        <span class="lbl">${esc(e.label)} <span class="pct">(${num(e.pct).toString().replace(".",",")} %)</span></span>
-        <span class="amt">${fmt(e.amount)}</span>
-      </div>`).join("")}
-    </div>` : ""}
-
-    <div class="dp-paiement-conditions ${(d.conditionsPaiement || '').trim() ? 'has-conditions' : ''}">
-      ${(d.conditionsPaiement || "").trim() ? `<div class="dp-conditions">
-        <h4>Conditions de paiement</h4>${richDisplayHtml(d.conditionsPaiement)}
-      </div>` : ""}
-
-      <div class="dp-conditions signature">
-        <h4>Bon pour accord</h4>
-        ${(d.signatureBlock || "").trim()
-          ? richDisplayHtml(d.signatureBlock)
-          : `<div class="dp-sig-default">
-              <div class="dp-sig-row"><span>Date :</span><span class="dp-sig-line"></span></div>
-              <div class="dp-sig-row"><span>Signature précédée de la mention « Bon pour accord » :</span></div>
-              <div class="dp-sig-box"></div>
-            </div>`}
+    <div class="dp-bottom-grid">
+      <div class="dp-bottom-left">
+        <div class="dp-conditions signature">
+          ${(d.signatureBlock || "").trim()
+            ? richDisplayHtml(d.signatureBlock)
+            : `<div class="dp-sig-default">
+                <div class="dp-sig-row"><span>Date :</span><span class="dp-sig-line"></span></div>
+                <div class="dp-sig-row"><span>Signature précédée de la mention « Bon pour accord » :</span></div>
+                <div class="dp-sig-box"></div>
+              </div>`}
+        </div>
+      </div>
+      <div class="dp-bottom-right">
+        <div class="dp-totals">
+          ${t.remise > 0 ? `
+          <div class="dp-line"><span class="lbl">Sous-total</span><span class="amt">${fmt(t.subtotal)}</span></div>
+          <div class="dp-line"><span class="lbl">Remise (${num(d.remisePct).toString().replace(".",",")} %)</span><span class="amt">−${fmt(t.remise)}</span></div>` : ""}
+          <div class="dp-line grand"><span class="lbl">Total HT</span><span class="amt">${fmt(t.total)}</span></div>
+          ${t.debours > 0 ? `<div class="dp-line debours"><span class="lbl">+ Frais de débours (à rembourser sur justificatifs, voir document séparé)</span><span class="amt">${fmt(t.debours)}</span></div>` : ""}
+        </div>
+        ${(t.echeances || []).length > 0 || (d.conditionsPaiement || "").trim() ? `
+        <div class="dp-payment-info">
+          <h4>Modalités de paiement</h4>
+          ${(t.echeances || []).map(e => `<div class="dp-paiement-line">
+            <span class="lbl">${esc(e.label)} <span class="pct">(${num(e.pct).toString().replace(".",",")} %)</span></span>
+            <span class="amt">${fmt(e.amount)}</span>
+          </div>`).join("")}
+          ${(d.conditionsPaiement || "").trim() ? `<div class="dp-payment-text">${richDisplayHtml(d.conditionsPaiement)}</div>` : ""}
+        </div>` : ""}
       </div>
     </div>
 
@@ -2598,7 +2625,8 @@ function render() {
     <main>${view}</main>
     ${rTextEditorModal()}
     ${rViewDevisModal()}
-    ${rViewFactureModal()}`;
+    ${rViewFactureModal()}
+    ${rPrintTipModal()}`;
 }
 
 // State: track if picker is force-opened (e.g. after user clicks "Changer de contact")
@@ -2894,6 +2922,24 @@ window.viewDevisPrint = function() {
   window.print();
 };
 
+// Show a one-time print tip, then trigger print
+let printTipShown = false;
+window.printWithTip = function() {
+  if (printTipShown) {
+    setTimeout(() => window.print(), 50);
+    return;
+  }
+  printTipShown = true;
+  printTipModalOpen = true;
+  render();
+};
+window.printTipDismiss = function(proceed) {
+  printTipModalOpen = false;
+  render();
+  if (proceed) setTimeout(() => window.print(), 100);
+};
+let printTipModalOpen = false;
+
 // ===== Static label map for encadrés du devis =====
 const ENCADRE_LABELS = {
   photographe: "Photographe (en-tête du devis)",
@@ -2902,12 +2948,41 @@ const ENCADRE_LABELS = {
   cgv: "Conditions générales de vente (CGV)"
 };
 
+function rPrintTipModal() {
+  if (!printTipModalOpen) return "";
+  return `<div class="modal-overlay" onclick="if(event.target===this)printTipDismiss(false)">
+    <div class="modal-card" style="max-width:480px">
+      <div class="modal-title">🖨️ Préparation de l'impression</div>
+      <div style="padding:8px 0 4px;font-size:13px;line-height:1.6;color:var(--text)">
+        Pour un PDF propre, sans bandeau « date · titre du site » en haut de chaque page :
+        <ol style="margin:14px 0 0;padding-left:22px;line-height:1.7">
+          <li>Dans la boîte de dialogue d'impression, ouvre <strong>« Plus de paramètres »</strong> (ou <em>« Options supplémentaires »</em>)</li>
+          <li>Décoche <strong>« En-têtes et pieds de page »</strong></li>
+          <li>(Optionnel) <strong>Marges : par défaut</strong></li>
+        </ol>
+        <div style="margin-top:14px;padding:10px 12px;background:var(--surface-2);border-radius:6px;font-size:12px;color:var(--text-muted)">
+          💡 Cette astuce ne sera affichée qu'une fois par session.
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button class="btn ghost" onclick="printTipDismiss(false)">Annuler</button>
+        <button class="btn" onclick="printTipDismiss(true)">Continuer vers l'impression</button>
+      </div>
+    </div>
+  </div>`;
+}
+
 function rViewDevisModal() {
   if (!viewDevisModal) return "";
   const dv = S.suivi.devis && S.suivi.devis[viewDevisModal.devisId];
   if (!dv) return "";
   const ref = dv.ref || viewDevisModal.devisId;
-  const snapshot = dv.snapshotHtml || "";
+  let snapshot = dv.snapshotHtml || "";
+  // Inject current logo if absent from older snapshots
+  const currentLogo = (S.mission && S.mission.logoUrl) || "";
+  if (snapshot && currentLogo && !snapshot.includes('class="dp-logo"')) {
+    snapshot = `<div class="dp-logo-wrap"><img src="${esc(currentLogo)}" alt="Logo" class="dp-logo"></div>${snapshot}`;
+  }
   const when = dv.snapshotAt ? new Date(dv.snapshotAt).toLocaleString("fr-FR") : null;
   return `<div class="modal-overlay" onclick="if(event.target===this)viewDevisClose()">
     <div class="modal-card modal-card-lg">
@@ -2919,7 +2994,7 @@ function rViewDevisModal() {
             Aucun snapshot disponible pour ce devis.<br><span style="font-size:13px;color:var(--text-dim)">Les snapshots sont créés à partir de l'émission depuis l'onglet Mission « + Enregistrer dans Suivi ».</span>
            </div>`}
       <div class="modal-actions">
-        ${snapshot ? `<button class="btn ghost" onclick="viewDevisPrint()">🖨️ Imprimer</button>` : ""}
+        ${snapshot ? `<button class="btn ghost" onclick="printWithTip()">🖨️ Imprimer</button>` : ""}
         <button class="btn" onclick="viewDevisClose()">Fermer</button>
       </div>
     </div>
@@ -2939,7 +3014,12 @@ function rViewFactureModal() {
   const totalPaid = paidLines.reduce((s, e) => s + num(e.montant), 0);
   const restant = r2(totalDevis - totalPaid);
   const fullyPaid = restant <= 0.01 && totalPaid > 0;
-  const snapshot = (dv && dv.snapshotHtml) || "";
+  let snapshot = (dv && dv.snapshotHtml) || "";
+  // Inject current logo if absent from older snapshots
+  const currentLogo = (S.mission && S.mission.logoUrl) || "";
+  if (snapshot && currentLogo && !snapshot.includes('class="dp-logo"')) {
+    snapshot = `<div class="dp-logo-wrap"><img src="${esc(currentLogo)}" alt="Logo" class="dp-logo"></div>${snapshot}`;
+  }
   const client = (dv && dv.snapshotClient) || (lignes[0] && lignes[0].client) || "—";
   const when = (dv && dv.snapshotAt) ? new Date(dv.snapshotAt).toLocaleString("fr-FR") : null;
 
@@ -2980,7 +3060,7 @@ function rViewFactureModal() {
       ${when ? `<div class="modal-sub">Devis émis le ${esc(when)} · ${paidLines.length}/${lignes.length} échéance${lignes.length > 1 ? "s" : ""} payée${paidLines.length > 1 ? "s" : ""}</div>` : ""}
       ${body}
       <div class="modal-actions">
-        ${snapshot ? `<button class="btn ghost" onclick="viewFacturePrint()">🖨️ Imprimer</button>` : ""}
+        ${snapshot ? `<button class="btn ghost" onclick="printWithTip()">🖨️ Imprimer</button>` : ""}
         <button class="btn" onclick="viewFactureClose()">Fermer</button>
       </div>
     </div>
@@ -5624,6 +5704,19 @@ function rTR() {
 // Most recent version FIRST.
 // =============================================================
 const CHANGELOG = [
+  {
+    version: "v1.16",
+    date: "2026-04-29",
+    title: "Fix logo + page blanche + restructuration : Modalités/Conditions à droite, Signature à gauche, astuce d'impression",
+    items: [
+      "🔥 Fix : le logo n'apparaissait pas dans les devis émis avant son upload (le snapshot était figé sans logo). Désormais, à l'ouverture des modales 👁 (Voir devis) et 🧾 (Voir facture), le logo actuel est injecté automatiquement si l'ancien snapshot ne le contient pas. Tu n'as plus besoin de réémettre le devis pour que le logo apparaisse.",
+      "🔥 Fix : page blanche entre le devis et les CGV. Cause = double `page-break-before: always` (sur `.devis-page-break` ET sur `.dp-conditions.cgv`). Le séparateur visible est désormais simplement masqué à l'impression (`display: none`), seule la règle sur la CGV elle-même force le saut de page. Plus de page vide.",
+      "Astuce d'impression : un petit modal s'affiche au premier clic sur 🖨️ Imprimer pendant la session, expliquant comment décocher « En-têtes et pieds de page » dans la boîte de dialogue d'impression du navigateur (cause du « 29/04/2026 08:25 🌊 Devis Photo » en haut de chaque page). L'astuce ne s'affiche qu'une fois par session.",
+      "Restructuration majeure du bas du devis : disposition en 2 colonnes côte à côte. À gauche, plus large : la zone de signature (Date, Bon pour accord, signature) sans titre — on ne met plus « BON POUR ACCORD » en h4, c'est explicite avec la mention dans la phrase. À droite, plus étroite (200 pt papier / 340 px écran) : Total HT en haut, suivi d'un bloc unique « Modalités de paiement » qui fusionne les % d'échéances ET le texte des conditions de paiement (IBAN/BIC/T.V.A./acompte). Plus rationnel et plus dense.",
+      "Disparition du h4 « Bon pour accord » dans la signature : le titre était redondant avec la mention « Signature précédée de la mention Bon pour accord » dans le placeholder. Plus propre.",
+      "Le séparateur en haut du bottom-grid sépare clairement les totaux/signature du reste du devis."
+    ]
+  },
   {
     version: "v1.15",
     date: "2026-04-29",
