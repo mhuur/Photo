@@ -103,6 +103,17 @@
   .legend-btn:hover{background:var(--surface-2);color:var(--text)}
   .legend-btn.on{background:var(--surface-hi);color:var(--text);border-color:var(--primary);box-shadow:0 0 0 2px var(--primary-soft)}
   .legend-btn .all-icon{color:var(--primary);font-size:13px}
+  /* Suivi: filter chips bar (multi-select pastilles, persisted) */
+  .suv-chip-bar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:6px 0 14px}
+  .suv-chip{background:var(--surface-2);border:1px solid var(--border-soft);color:var(--text-muted);padding:5px 12px;border-radius:999px;cursor:pointer;font:inherit;font-size:12.5px;font-weight:500;transition:all .15s;display:inline-flex;align-items:center;gap:7px;line-height:1.2;letter-spacing:.01em}
+  .suv-chip:hover{border-color:var(--border-light);color:var(--text);background:var(--surface)}
+  .suv-chip.on{background:var(--primary-soft);border-color:var(--primary);color:var(--text);box-shadow:0 0 0 1px var(--primary) inset}
+  .suv-chip-all{padding-left:12px}
+  .suv-chip-all.on{background:var(--surface-hi);box-shadow:0 0 0 1px var(--text-muted) inset}
+  .suv-chip-icon{color:var(--primary);font-size:11px;line-height:1}
+  .suv-chip .pst{flex-shrink:0}
+  /* Suivi: nowrap on ref + client cells */
+  td.suv-nowrap{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:280px}
   table.hist th.sortable{cursor:pointer;user-select:none;white-space:nowrap}
   table.hist th.sortable:hover{background:var(--surface-hi)}
   table.hist th .arr{font-size:13px;opacity:.3;margin-left:4px}
@@ -4613,10 +4624,17 @@ function pastille(statut) {
   return `<span class="pst" data-s="${esc(k)}" title="${esc(statutLabel(k))}"></span>`;
 }
 function suiviLegendHtml() {
-  const f = (typeof suiviFilterStatut !== "undefined") ? suiviFilterStatut : "all";
-  return `<div class="legend">
-    <button class="item legend-btn ${f === 'all' ? 'on' : ''}" onclick="suiviSetFilterStatut('all')"><span class="all-icon">●</span>Tous</button>
-    ${STATUTS.map(([k,l]) => `<button class="item legend-btn ${f === k ? 'on' : ''}" onclick="suiviSetFilterStatut('${k}')"><span class="pst" data-s="${k}"></span>${esc(l)}</button>`).join("")}
+  const noFilter = suiviFilterStatuts.size === 0;
+  return `<div class="suv-chip-bar">
+    <button type="button" class="suv-chip suv-chip-all ${noFilter ? 'on' : ''}" onclick="suiviToggleFilterStatut('all')" title="Réinitialiser les filtres (afficher tout)">
+      <span class="suv-chip-icon">●</span>Tous
+    </button>
+    ${STATUTS.map(([k,l]) => {
+      const active = suiviFilterStatuts.has(k);
+      return `<button type="button" class="suv-chip ${active ? 'on' : ''}" data-statut="${k}" onclick="suiviToggleFilterStatut('${k}')" aria-pressed="${active}">
+        <span class="pst" data-s="${k}"></span>${esc(l)}
+      </button>`;
+    }).join("")}
   </div>`;
 }
 
@@ -4631,6 +4649,37 @@ function entryRefSet(e, val) {
   if (!e.devisId) e.devisId = uid();
   if (!S.suivi.devis[e.devisId]) S.suivi.devis[e.devisId] = { ref: "" };
   S.suivi.devis[e.devisId].ref = val;
+}
+
+// Cleans a raw client string from Suivi entries. Excel-imported names look like "#116 Euphorbia"
+// or "#114 Influenci". This strips the "#NUM " prefix and tries to match an existing client
+// fiche by num or name. Returns the canonical client name (from S.clients.entries) when
+// matched, or the cleaned raw name as a fallback.
+function cleanClientLabel(rawClient) {
+  if (!rawClient) return "";
+  const raw = String(rawClient).trim();
+  // Match leading "#NUM" pattern (with optional space after)
+  const m = raw.match(/^#(\d+)\s*(.*)$/);
+  let num = "";
+  let name = raw;
+  if (m) {
+    num = m[1];
+    name = m[2].trim() || raw;
+  }
+  // Try to find a matching client fiche
+  if (S.clients && Array.isArray(S.clients.entries)) {
+    let found = null;
+    if (num) {
+      found = S.clients.entries.find(c => (c.num || "").trim() === num);
+    }
+    if (!found && name) {
+      const lower = name.toLowerCase();
+      found = S.clients.entries.find(c => (c.name || "").trim().toLowerCase() === lower);
+    }
+    if (found && found.name) return found.name.trim();
+  }
+  // Fallback: return cleaned name (without #NUM prefix)
+  return name;
 }
 
 function suiviClassifyEcheance(s) {
@@ -5355,7 +5404,18 @@ let suiviExpanded = null;
 let suiviGroupExpanded = null;
 let suiviGroupRefEdit = null;
 let suiviSort = { field: "date", dir: "desc" };
-let suiviFilterStatut = "all";
+// Multi-select status filter, persisted across sessions.
+// Empty set = all visible. Otherwise: only entries whose statut is in the set.
+let suiviFilterStatuts = (() => {
+  try {
+    const raw = localStorage.getItem("suiviFilterStatuts");
+    if (raw) {
+      const arr = JSON.parse(raw);
+      if (Array.isArray(arr)) return new Set(arr);
+    }
+  } catch (e) { /* ignore */ }
+  return new Set(); // empty = "all"
+})();
 let suiviFilterYear = "all";
 let suiviSelected = new Set();
 
@@ -5478,8 +5538,19 @@ function suiviSortKey(field) {
 }
 window.suiviSortKey = suiviSortKey;
 
-function suiviSetFilterStatut(v) { suiviFilterStatut = v; render(); }
-window.suiviSetFilterStatut = suiviSetFilterStatut;
+function suiviToggleFilterStatut(v) {
+  if (v === "all") {
+    // "Tous" = clear the set (show everything)
+    suiviFilterStatuts.clear();
+  } else {
+    if (suiviFilterStatuts.has(v)) suiviFilterStatuts.delete(v);
+    else suiviFilterStatuts.add(v);
+  }
+  // Persist
+  try { localStorage.setItem("suiviFilterStatuts", JSON.stringify([...suiviFilterStatuts])); } catch (e) {}
+  render();
+}
+window.suiviToggleFilterStatut = suiviToggleFilterStatut;
 
 function suiviSetFilterYear(v) { suiviFilterYear = v; render(); }
 window.suiviSetFilterYear = suiviSetFilterYear;
@@ -5519,7 +5590,7 @@ function suiviGroups() {
       prestation: lead.prestation || ""
     });
   }
-  if (suiviFilterStatut !== "all") list = list.filter(g => g.statutGlobal === suiviFilterStatut);
+  if (suiviFilterStatuts.size > 0) list = list.filter(g => suiviFilterStatuts.has(g.statutGlobal));
   if (suiviFilterYear   !== "all") list = list.filter(g => g.lignes.some(e => (e.date || "").startsWith(suiviFilterYear)));
   const dir = suiviSort.dir === "asc" ? 1 : -1;
   const f = suiviSort.field;
@@ -5600,7 +5671,6 @@ function rSV() {
   const stats = suiviStats(list);
   const years = suiviYears();
   const totalEntries = S.suivi.entries.length;
-  const missing = suiviMissingCount();
 
   const stop = "event.stopPropagation();";
 
@@ -5619,8 +5689,8 @@ function rSV() {
           <td class="cb" onclick="${stop}"><input type="checkbox" ${selected ? "checked" : ""} onclick="suiviToggleOne('${g.devisId}', this.checked, event)"></td>
           <td class="statut">${pastille(g.statutGlobal)}</td>
           <td>${esc(dateFR(e.date))}</td>
-          <td class="ref-cell">${esc(g.ref) || `<span class="muted">—</span>`}</td>
-          <td><strong>${esc(e.client) || "—"}</strong></td>
+          <td class="ref-cell suv-nowrap">${esc(g.ref) || `<span class="muted">—</span>`}</td>
+          <td class="suv-nowrap"><strong>${esc(cleanClientLabel(e.client)) || "—"}</strong></td>
           <td class="amt">${fmt(e.montant)}</td>
           <td class="actions" onclick="${stop}">
             <div class="actions-cell">
@@ -5654,8 +5724,8 @@ function rSV() {
         <td class="cb" onclick="${stop}"><input type="checkbox" ${selected ? "checked" : ""} onclick="suiviToggleOne('${g.devisId}', this.checked, event)"></td>
         <td class="statut">${pastille(g.statutGlobal)}</td>
         <td>${dateLabel}</td>
-        <td class="ref-cell">${esc(g.ref) || `<span class="muted">—</span>`}</td>
-        <td><span class="suv-caret">${cardOpen ? "▾" : "▸"}</span> <strong>${esc(g.client) || "—"}</strong></td>
+        <td class="ref-cell suv-nowrap">${esc(g.ref) || `<span class="muted">—</span>`}</td>
+        <td class="suv-nowrap"><span class="suv-caret">${cardOpen ? "▾" : "▸"}</span> <strong>${esc(cleanClientLabel(g.client)) || "—"}</strong></td>
         <td class="amt">${fmt(g.total)}</td>
         <td class="actions" onclick="${stop}">
           <div class="suv-row-actions">
@@ -5716,8 +5786,6 @@ function rSV() {
 
   const yearOpts = [`<option value="all" ${suiviFilterYear==="all"?"selected":""}>Toutes les années</option>`]
     .concat(years.map(y => `<option value="${esc(y)}" ${suiviFilterYear===y?"selected":""}>${esc(y)}</option>`)).join("");
-  const statutOpts = [`<option value="all" ${suiviFilterStatut==="all"?"selected":""}>Tous les statuts</option>`]
-    .concat(STATUTS.map(([k,l]) => `<option value="${k}" ${suiviFilterStatut===k?"selected":""}>${esc(l)}</option>`)).join("");
 
   const filteredEmpty = totalEntries > 0 && list.length === 0;
 
@@ -5729,7 +5797,6 @@ function rSV() {
     <div class="stats">${suiviStatsHtml(stats)}</div>
 
     <div class="toolbar">
-      <button class="btn ghost" onclick="suiviImport()">${missing > 0 ? `Importer ${missing} prestation${missing > 1 ? "s" : ""} manquante${missing > 1 ? "s" : ""} (Excel : ${SUIVI_SEED.length})` : `Importer depuis l'Excel (${SUIVI_SEED.length})`}</button>
       <span id="suiviSelInfo">${suiviSelInfoHtml()}</span>
       <span class="spacer"></span>
       <div class="filter-group"><label>Année</label>
@@ -5737,7 +5804,7 @@ function rSV() {
       </div>
     </div>
 
-    ${totalEntries === 0 ? `<div class="empty">Aucune prestation enregistrée. Cliquez sur « Importer depuis l'Excel » ou « + Ajouter une prestation » pour commencer.</div>` :
+    ${totalEntries === 0 ? `<div class="empty">Aucune prestation enregistrée. Cliquez sur « + Ajouter une prestation » pour commencer.</div>` :
       filteredEmpty ? `<div class="empty">Aucune prestation ne correspond aux filtres sélectionnés.</div>` : `
     <table class="hist">
       <thead>
