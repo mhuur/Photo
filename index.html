@@ -357,6 +357,13 @@
   /* Devis preview (in-page, at the bottom of Mission) */
   /* Devis preview (in-page, at the bottom of Mission) */
   .devis-preview{margin-top:0;background:var(--surface);border:1px solid var(--border-light);border-radius:10px;padding:32px 36px;max-width:880px;box-shadow:0 6px 18px rgba(0,0,0,.18)}
+  .devis-preview .dp-logo-wrap{display:flex;justify-content:flex-start;margin-bottom:20px}
+  .devis-preview .dp-logo{max-width:180px;max-height:60px;width:auto;height:auto;object-fit:contain;display:block}
+  /* Logo field in form */
+  .logo-field{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:14px;max-width:520px}
+  .logo-field.has-logo{align-items:flex-start}
+  .logo-field .logo-preview{max-width:160px;max-height:60px;width:auto;height:auto;object-fit:contain;background:var(--surface-2);border:1px solid var(--border-light);border-radius:6px;padding:8px}
+  .logo-field .logo-actions{display:flex;gap:8px;flex-wrap:wrap}
   .devis-preview .dp-head{display:flex;justify-content:space-between;align-items:flex-start;gap:20px;padding-bottom:16px;border-bottom:1px solid var(--border-light);margin-bottom:18px;flex-wrap:wrap}
   .devis-preview .dp-title{font-size:22px;font-weight:700;color:var(--text);margin:0}
   .devis-preview .dp-ref{color:var(--text-muted);font-size:13px;font-variant-numeric:tabular-nums;margin-top:4px}
@@ -367,14 +374,15 @@
   .devis-preview .dp-client{font-size:13px;color:var(--text);line-height:1.6}
   .devis-preview .dp-client .name{font-weight:600;font-size:13px}
   .devis-preview .dp-client .num{color:var(--text-muted);font-variant-numeric:tabular-nums;margin-right:8px}
-  .devis-preview .dp-line{display:flex;justify-content:space-between;align-items:flex-start;gap:14px;padding:8px 0;font-size:13px}
+  .devis-preview .dp-line{display:grid;grid-template-columns:24px 1fr auto 90px;gap:14px;align-items:flex-start;padding:8px 0;font-size:13px}
   .devis-preview .dp-line:last-child{border-bottom:0}
-  .devis-preview .dp-line .lbl{color:var(--text);flex:1}
+  .devis-preview .dp-line .num{color:var(--text-muted);font-size:13px;font-variant-numeric:tabular-nums;font-weight:500;padding-top:1px}
+  .devis-preview .dp-line .lbl{color:var(--text);min-width:0}
   .devis-preview .dp-line .lbl .desc{color:var(--text-dim);font-size:12px;margin-top:2px;font-weight:400}
   .devis-preview .dp-line .qty{color:var(--text-muted);font-size:12px;font-variant-numeric:tabular-nums;white-space:nowrap}
   .devis-preview .dp-line .amt{color:var(--text);font-weight:500;font-variant-numeric:tabular-nums;white-space:nowrap;min-width:90px;text-align:right}
   .devis-preview .dp-totals{margin-top:18px;padding-top:14px;border-top:1px solid var(--border-light);max-width:340px;margin-left:auto}
-  .devis-preview .dp-totals .dp-line{padding:5px 0;border-bottom:0;color:var(--text-muted)}
+  .devis-preview .dp-totals .dp-line{display:flex;justify-content:space-between;grid-template-columns:none;padding:5px 0;border-bottom:0;color:var(--text-muted)}
   .devis-preview .dp-totals .dp-line.grand{font-size:17px;font-weight:700;padding:10px 0 6px;margin-top:4px;border-top:1px solid var(--border)}
   .devis-preview .dp-totals .dp-line.grand .lbl,.devis-preview .dp-totals .dp-line.grand .amt{color:var(--text)}
   .devis-preview .dp-totals .dp-line.debours{color:var(--text-muted);font-style:italic;font-size:12px;margin-top:6px;padding-top:4px}
@@ -466,6 +474,7 @@
   .devis-preview .dp-header-right{display:flex;flex-direction:column;align-items:flex-end;gap:0}
   .devis-preview .dp-meta-block{text-align:right;font-size:13px;color:var(--text-muted);line-height:1.6;margin-bottom:0}
   .devis-preview .dp-meta-block .ref{color:var(--text);font-weight:700;font-size:16px;font-variant-numeric:tabular-nums;margin-bottom:10px;letter-spacing:.01em}
+  .devis-preview .dp-validity-mention{font-style:italic;font-size:11px;color:var(--text-dim);margin-top:6px;line-height:1.4;max-width:240px;margin-left:auto}
   .devis-preview .dp-meta-block strong{color:var(--text);font-weight:600}
   .devis-preview .dp-client-block{text-align:right;font-size:13px;color:var(--text);line-height:1.6;padding:0;min-width:220px;margin-top:0}
   .devis-preview .dp-client-block .name{font-weight:600;font-size:13px;color:var(--text);display:block}
@@ -481,28 +490,71 @@
   .devis-preview .dp-conditions.signature{padding:14px 0 0;border:0;border-top:1px solid var(--border-soft);border-radius:0;margin-top:18px}
   .devis-preview .dp-conditions.signature h4{color:var(--text-muted)}
   .devis-preview .dp-conditions.cgv h4{color:var(--text-muted)}
+  /* 2-column layout: Conditions de paiement (left) + Bon pour accord (right) */
+  .devis-preview .dp-paiement-conditions{margin-top:0}
+  .devis-preview .dp-paiement-conditions.has-conditions{display:grid;grid-template-columns:1fr 1fr;gap:32px;align-items:start}
+  .devis-preview .dp-paiement-conditions.has-conditions .dp-conditions{margin-top:24px}
+  .devis-preview .dp-paiement-conditions.has-conditions .dp-conditions.signature{margin-top:24px}
+  @media (max-width:680px){
+    .devis-preview .dp-paiement-conditions.has-conditions{grid-template-columns:1fr;gap:0}
+  }
 
   /* Page break before CGV (page 2 when printed) */
 
   .devis-page-break{display:block;height:1px;margin:40px 0 30px;border-top:1px solid var(--border-light);position:relative}
   .devis-page-break::before{content:"page 2";position:absolute;top:-9px;left:50%;transform:translateX(-50%);background:var(--surface-2);padding:0 14px;font-size:11px;color:var(--text-dim);letter-spacing:.12em;text-transform:uppercase}
   @media print {
-    /* === ISOLATION === */
-    body * { visibility: hidden !important; }
-    .devis-preview, .devis-preview *,
-    .view-devis-snapshot, .view-devis-snapshot * { visibility: visible !important; }
+    @page { size: A4; margin: 12mm 14mm 16mm 14mm; }
+    @page :first { @bottom-right { content: "Page " counter(page) " / " counter(pages); font-family: -apple-system, "Segoe UI", "Helvetica Neue", Helvetica, Arial, sans-serif; font-size: 8pt; color: #888; } }
+    @page :left { @bottom-right { content: "Page " counter(page) " / " counter(pages); font-family: -apple-system, "Segoe UI", "Helvetica Neue", Helvetica, Arial, sans-serif; font-size: 8pt; color: #888; } }
+    @page :right { @bottom-right { content: "Page " counter(page) " / " counter(pages); font-family: -apple-system, "Segoe UI", "Helvetica Neue", Helvetica, Arial, sans-serif; font-size: 8pt; color: #888; } }
+    html, body { background: #fff !important; margin: 0 !important; padding: 0 !important; }
 
-    @page {
-      size: A4;
-      margin: 12mm 14mm 12mm 14mm;
+    /* === ISOLATION via display === */
+    /* Hide app chrome */
+    .sb { display: none !important; }
+    /* Hide non-printable modal-overlays (text editor doesn't contain a devis-preview) */
+    .modal-overlay:not(:has(.devis-preview)):not(:has(.view-devis-snapshot)) { display: none !important; }
+    /* Hide main when a printable modal IS open (avoid printing twice) */
+    body:has(.modal-overlay .view-devis-snapshot) main,
+    body:has(.modal-overlay .devis-preview) main { display: none !important; }
+    /* When printing from Mission tab (no modal): hide everything in main except the preview */
+    main > * { display: none !important; }
+    main > .preview-tabs-wrap { display: block !important; }
+    main > .preview-tabs-wrap > * { display: none !important; }
+    main > .preview-tabs-wrap > .preview-tabs-body { display: block !important; }
+
+    /* Neutralize the modal wrapper of printable modals */
+    .modal-overlay {
+      position: static !important;
+      background: #fff !important;
+      inset: auto !important;
+      padding: 0 !important;
+      margin: 0 !important;
+      backdrop-filter: none !important;
+      z-index: auto !important;
+      display: block !important;
     }
-
-    body, html { background: #fff !important; margin: 0 !important; padding: 0 !important; }
+    .modal-card {
+      position: static !important;
+      background: #fff !important;
+      box-shadow: none !important;
+      padding: 0 !important;
+      margin: 0 !important;
+      max-height: none !important;
+      max-width: none !important;
+      width: auto !important;
+      overflow: visible !important;
+      border: 0 !important;
+    }
+    /* Inside modal-card, hide title/sub/actions; only the snapshot content remains */
+    .modal-title, .modal-sub, .modal-actions { display: none !important; }
+    /* Hide actions inside the printable content */
+    .devis-preview .dp-actions, .view-devis-snapshot .dp-actions { display: none !important; }
+    .devis-preview button, .view-devis-snapshot button { display: none !important; }
 
     /* === DOCUMENT CONTAINER === */
     .devis-preview, .view-devis-snapshot {
-      position: absolute !important;
-      left: 0; top: 0; right: 0;
       width: 100% !important;
       max-width: none !important;
       padding: 0 !important;
@@ -517,21 +569,6 @@
       letter-spacing: -0.005em !important;
     }
 
-    /* Modal wrapper neutralization */
-    .modal-overlay, .modal-card {
-      position: static !important;
-      background: #fff !important;
-      border: 0 !important;
-      box-shadow: none !important;
-      padding: 0 !important;
-      max-height: none !important;
-      overflow: visible !important;
-      display: block !important;
-    }
-    .modal-title, .modal-sub, .modal-actions { display: none !important; }
-    .devis-preview .dp-actions, .devis-preview button,
-    .view-devis-snapshot .dp-actions, .view-devis-snapshot button { display: none !important; }
-
     /* === COLORS: B&W only === */
     .devis-preview *, .view-devis-snapshot * {
       color: #1a1a1a !important;
@@ -542,6 +579,18 @@
     }
 
     /* === HEADER === */
+    .devis-preview .dp-logo-wrap, .view-devis-snapshot .dp-logo-wrap {
+      display: flex !important;
+      justify-content: flex-start !important;
+      margin-bottom: 12pt !important;
+    }
+    .devis-preview .dp-logo, .view-devis-snapshot .dp-logo {
+      max-width: 110pt !important;
+      max-height: 44pt !important;
+      width: auto !important;
+      height: auto !important;
+      object-fit: contain !important;
+    }
     .devis-preview .dp-header-grid, .view-devis-snapshot .dp-header-grid {
       display: grid !important;
       grid-template-columns: 1fr 1fr !important;
@@ -583,6 +632,14 @@
       color: #1a1a1a !important;
       font-weight: 600 !important;
     }
+    .devis-preview .dp-validity-mention, .view-devis-snapshot .dp-validity-mention {
+      font-style: italic !important;
+      font-size: 7.5pt !important;
+      color: #666 !important;
+      margin-top: 4pt !important;
+      max-width: 180pt !important;
+      margin-left: auto !important;
+    }
     .devis-preview .dp-client-block, .view-devis-snapshot .dp-client-block {
       margin-top: 0 !important;
       color: #1a1a1a !important;
@@ -623,12 +680,18 @@
     }
     .devis-preview .dp-line, .view-devis-snapshot .dp-line {
       display: grid !important;
-      grid-template-columns: 1fr auto 80pt !important;
-      gap: 12pt !important;
+      grid-template-columns: 18pt 1fr auto 80pt !important;
+      gap: 10pt !important;
       padding: 5pt 0 !important;
       border-bottom: 0 !important;
       page-break-inside: avoid !important;
       align-items: baseline !important;
+    }
+    .devis-preview .dp-line .num, .view-devis-snapshot .dp-line .num {
+      font-size: 9pt !important;
+      color: #666 !important;
+      font-variant-numeric: tabular-nums !important;
+      font-weight: 500 !important;
     }
     .devis-preview .dp-line .lbl, .view-devis-snapshot .dp-line .lbl {
       font-weight: 500 !important;
@@ -723,6 +786,20 @@
     }
 
     /* === CONDITIONS / SIGNATURE === */
+    .devis-preview .dp-paiement-conditions.has-conditions, .view-devis-snapshot .dp-paiement-conditions.has-conditions {
+      display: grid !important;
+      grid-template-columns: 1fr 1fr !important;
+      gap: 24pt !important;
+      align-items: start !important;
+      margin-top: 0 !important;
+      page-break-inside: avoid !important;
+    }
+    .devis-preview .dp-paiement-conditions.has-conditions .dp-conditions, .view-devis-snapshot .dp-paiement-conditions.has-conditions .dp-conditions {
+      margin-top: 14pt !important;
+    }
+    .devis-preview .dp-paiement-conditions.has-conditions .dp-conditions.signature, .view-devis-snapshot .dp-paiement-conditions.has-conditions .dp-conditions.signature {
+      margin-top: 14pt !important;
+    }
     .devis-preview .dp-conditions, .view-devis-snapshot .dp-conditions {
       margin-top: 12pt !important;
       padding-top: 8pt !important;
@@ -1533,19 +1610,24 @@ function rDevisPreview() {
   const sel = d.client.id ? S.clients.entries.find(x => x.id === d.client.id) : null;
   const cli = sel || d.client;
 
-  // Build line items HTML
+  // Build line items HTML — with numbering (1., 2., 3., …)
   let linesHtml = "";
+  let lineNum = 0;
   for (const l of (d.lignes || [])) {
     if (l.type === "heures") {
       const h = num(l.duree) * (l.unit === "j" ? HOURS_PER_DAY : 1);
       const amount = h * tarifH;
+      lineNum++;
       linesHtml += `<div class="dp-line">
+        <div class="num">${lineNum}.</div>
         <div class="lbl">${esc(l.intitule || "(Sans intitulé)")}${l.description ? `<div class="desc">${esc(l.description)}</div>` : ""}</div>
         <div class="qty">${num(l.duree).toFixed(2).replace(".",",")} ${l.unit === "j" ? "jour(s) × 8h" : "h"} × ${tarifH.toFixed(2).replace(".",",")} €/h</div>
         <div class="amt">${fmt(amount)}</div>
       </div>`;
     } else if (l.type === "materiel" && l.devis !== "debours") {
+      lineNum++;
       linesHtml += `<div class="dp-line">
+        <div class="num">${lineNum}.</div>
         <div class="lbl">${esc(l.intitule || "(Sans intitulé)")}<div class="desc">${l.description ? esc(l.description) : "Matériel"}</div></div>
         <div class="qty"></div>
         <div class="amt">${fmt(num(l.prix))}</div>
@@ -1561,7 +1643,9 @@ function rDevisPreview() {
     ? `${num(d.deplacement.km).toFixed(1).replace(".",",")} km × ${tauxKm.toFixed(2).replace(".",",")} €/km${num(d.deplacement.peages) > 0 ? ` + ${fmt(num(d.deplacement.peages))} péages` : ""}${trajet > 0 ? ` + ${num(d.deplacement.trajetH)} h trajet` : ""}`
     : `Billets : ${fmt(num(d.deplacement.ticket))}${trajet > 0 ? ` + ${num(d.deplacement.trajetH)} h trajet` : ""}`;
   const deplDevisMode = t.effectiveDeplMode || "principal";
+  const deplLineNum = (deplDevisMode === "principal" && t.depl > 0) ? ++lineNum : null;
   const deplLineHtml = t.depl > 0 ? `<div class="dp-line">
+    ${deplLineNum !== null ? `<div class="num">${deplLineNum}.</div>` : `<div class="num"></div>`}
     <div class="lbl">Déplacement<div class="desc">${esc(deplDetail)}</div></div>
     <div class="qty"></div>
     <div class="amt">${fmt(t.depl)}</div>
@@ -1587,13 +1671,14 @@ function rDevisPreview() {
   }
 
   return `<div class="devis-preview" id="devisPreview">
+    ${d.logoUrl ? `<div class="dp-logo-wrap"><img src="${esc(d.logoUrl)}" alt="Logo" class="dp-logo"></div>` : ""}
     <div class="dp-header-grid">
       <div class="dp-header-left ${(d.photographe || "").trim() ? "" : "empty"}">${(d.photographe || "").trim() ? richDisplayHtml(d.photographe) : "Renseigner vos coordonnées dans la section « Photographe » de l'onglet Mission."}</div>
       <div class="dp-header-right">
         <div class="dp-meta-block">
           <div class="ref">${esc(formatRef(d.ref, "devis"))}</div>
           <div>Émission : <strong>${dateFR(d.dateEmission) || "—"}</strong></div>
-          <div>Validité : <strong>${dateFR(d.dateValidite) || "—"}</strong></div>
+          <div class="dp-validity-mention">Devis valable 30 jours à compter de la date d'émission.</div>
         </div>
         <div class="dp-client-block">
           <span class="name">${esc(cli.name || "(Sélectionner un client)")}</span>
@@ -1643,19 +1728,21 @@ function rDevisPreview() {
       </div>`).join("")}
     </div>` : ""}
 
-    ${(d.conditionsPaiement || "").trim() ? `<div class="dp-conditions">
-      <h4>Conditions de paiement</h4>${richDisplayHtml(d.conditionsPaiement)}
-    </div>` : ""}
+    <div class="dp-paiement-conditions ${(d.conditionsPaiement || '').trim() ? 'has-conditions' : ''}">
+      ${(d.conditionsPaiement || "").trim() ? `<div class="dp-conditions">
+        <h4>Conditions de paiement</h4>${richDisplayHtml(d.conditionsPaiement)}
+      </div>` : ""}
 
-    <div class="dp-conditions signature">
-      <h4>Bon pour accord</h4>
-      ${(d.signatureBlock || "").trim()
-        ? richDisplayHtml(d.signatureBlock)
-        : `<div class="dp-sig-default">
-            <div class="dp-sig-row"><span>Date :</span><span class="dp-sig-line"></span></div>
-            <div class="dp-sig-row"><span>Signature précédée de la mention « Bon pour accord » :</span></div>
-            <div class="dp-sig-box"></div>
-          </div>`}
+      <div class="dp-conditions signature">
+        <h4>Bon pour accord</h4>
+        ${(d.signatureBlock || "").trim()
+          ? richDisplayHtml(d.signatureBlock)
+          : `<div class="dp-sig-default">
+              <div class="dp-sig-row"><span>Date :</span><span class="dp-sig-line"></span></div>
+              <div class="dp-sig-row"><span>Signature précédée de la mention « Bon pour accord » :</span></div>
+              <div class="dp-sig-box"></div>
+            </div>`}
+      </div>
     </div>
 
     <div class="dp-footer">
@@ -2735,6 +2822,46 @@ function rTextEditorModal() {
   </div>`;
 }
 
+function rLogoField() {
+  const url = (S.mission && S.mission.logoUrl) || "";
+  if (url) {
+    return `<div class="logo-field has-logo">
+      <img src="${esc(url)}" alt="Logo" class="logo-preview">
+      <div class="logo-actions">
+        <label class="btn ghost">📷 Remplacer<input type="file" accept="image/*" onchange="logoUpload(this)" hidden></label>
+        <button class="btn ghost" onclick="logoRemove()">× Retirer</button>
+      </div>
+    </div>`;
+  }
+  return `<div class="logo-field">
+    <label class="btn ghost">📷 Choisir un logo<input type="file" accept="image/*" onchange="logoUpload(this)" hidden></label>
+    <span class="hint" style="margin:0">PNG/JPG/SVG · transparent recommandé · max ~500 KB</span>
+  </div>`;
+}
+
+window.logoUpload = function(input) {
+  const file = input.files && input.files[0];
+  if (!file) return;
+  if (file.size > 800 * 1024) {
+    alert("Logo trop volumineux (max ~800 KB). Réduis la taille avant d'uploader.");
+    return;
+  }
+  const reader = new FileReader();
+  reader.onload = e => {
+    S.mission.logoUrl = e.target.result;
+    save();
+    render();
+  };
+  reader.readAsDataURL(file);
+};
+
+window.logoRemove = function() {
+  if (!confirm("Retirer le logo du devis ?")) return;
+  S.mission.logoUrl = "";
+  save();
+  render();
+};
+
 function renderLockedTextarea(field, value, label, placeholder) {
   // Multi-line preview (4-5 lines visible). The HTML content is rendered with formatting preserved;
   // overflow scrolls vertically. Click anywhere on the preview to open the rich editor.
@@ -2922,7 +3049,6 @@ function rMS() {
     <h3>Informations</h3>
     <div class="row">
       <div class="field narrow"><label>Date d'émission</label><input type="date" value="${esc(d.dateEmission)}" oninput="upd('mission.dateEmission', this.value)"></div>
-      <div class="field narrow"><label>Validité</label><input type="date" value="${esc(d.dateValidite)}" oninput="upd('mission.dateValidite', this.value)"></div>
     </div>
 
     <h4>Client</h4>
@@ -3046,6 +3172,9 @@ function rMS() {
     <div class="row row-section-break"><div class="field tiny"><label>Remise (%)</label><input type="number" step="1" min="0" max="100" value="${esc(d.remisePct)}" oninput="upd('mission.remisePct', this.value)"></div></div>
 
     <h3>Encadrés du devis</h3>
+
+    <h4>Logo (optionnel)</h4>
+    ${rLogoField()}
 
     <h4>Photographe (en-tête du devis)</h4>
     ${renderLockedTextarea("photographe", d.photographe || "", "", "Vos coordonnées en haut à gauche du devis…")}
@@ -5495,6 +5624,21 @@ function rTR() {
 // Most recent version FIRST.
 // =============================================================
 const CHANGELOG = [
+  {
+    version: "v1.15",
+    date: "2026-04-29",
+    title: "Fix impression + logo + numérotation + 2 colonnes Conditions/Signature + suppression date validité",
+    items: [
+      "🔥 Bug critique d'impression corrigé : la stratégie d'isolation par visibility:hidden + position:absolute ne fonctionnait pas systématiquement (pages blanches dans le PDF). Refonte complète sur une stratégie display:none + sélecteur :has() — beaucoup plus robuste. Désormais l'impression depuis Suivi → 👁 ou 🧾 → 🖨️ Imprimer produit bien le devis/facture sans page blanche, et masque proprement la sidebar et le formulaire.",
+      "Numéro de page en pied de chaque page imprimée : « Page X / Y » en bas à droite, en petit gris. Pratique dès que les CGV passent en page 2.",
+      "Numérotation des lignes du détail (1., 2., 3., …) — comme sur un devis pro classique. Apparaît à gauche de chaque ligne de prestation, alignée tabular.",
+      "Logo optionnel : nouveau champ dans Encadrés du devis (juste avant Photographe). Cliquer sur « 📷 Choisir un logo » pour uploader une image (PNG/JPG/SVG, max ~800 KB). Affiché en haut à gauche du devis (au-dessus du bloc photographe), max 180 × 60 px sur écran, 110 × 44 pt à l'impression. Bouton « × Retirer » pour le supprimer.",
+      "Date de validité supprimée : le champ « Validité » dans le formulaire et la ligne « Validité : XX/XX/XXXX » dans le devis sont retirés. Remplacés par une mention discrète sous la référence : « Devis valable 30 jours à compter de la date d'émission. ».",
+      "Conditions de paiement + Bon pour accord : disposés en 2 colonnes côte à côte (au lieu d'empilés verticalement) quand les conditions sont remplies. Le grand espace vide à gauche/à droite disparaît. Si pas de conditions de paiement remplies, le Bon pour accord prend toute la largeur comme avant.",
+      "Mention légale de pénalités (issue de v1.14) toujours présente en pied de page.",
+      "Modale d'impression : la zone autour du devis (modale grise sombre, titre, boutons) est correctement masquée à l'impression."
+    ]
+  },
   {
     version: "v1.14",
     date: "2026-04-29",
