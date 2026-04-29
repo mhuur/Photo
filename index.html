@@ -1389,25 +1389,22 @@
   /* Au black mode warning banner */
   .black-warning{margin:8px 0 14px;padding:12px 16px;background:rgba(231,76,60,.08);border-left:3px solid var(--danger,#e74c3c);border-radius:0 6px 6px 0;font-size:13px;color:var(--text);line-height:1.5;max-width:880px}
   .black-warning strong{color:var(--danger,#e74c3c)}
-  /* Invisible right-edge spacer used by depl-row to match the expand+del button widths
+  /* Invisible right-edge spacer used by depl row to match the expand+del button widths
      of materiel rows above, so toggles align vertically across rows. */
   .lg-btn-spacer{width:30px;height:var(--input-h);flex-shrink:0;display:block}
   /* Déplacement: same max-width as .lg-list (780px) so the row has the same effective
      width as materiel rows. Without this, depl row spans wider than materiel and the
      toggles get pushed further right. */
   .depl-wrap{max-width:780px}
-  .depl-row{flex-wrap:wrap}
-  .depl-row .lg-toggle{flex-shrink:0}
-  .depl-mode-cell{flex:1 1 0;min-width:160px;display:flex;align-items:center}
-  .lg-prix-spacer{width:90px;flex-shrink:0}
   .depl-subtoggle-row{display:flex;align-items:center;gap:10px;margin-top:8px}
   .depl-subtoggle-row .lg-toggle{min-width:auto}
   .depl-subtoggle-row .lg-toggle button{font-size:12px;padding:0 12px}
-  .depl-pmt-wrap{display:flex;align-items:center;gap:10px}
-  /* Final client-facing cost shown inline in the row, after the price input.
-     Always reserve a min-width slot so adjacent buttons don't shift between materiel rows. */
-  .lg-final-cost-inline{font-size:13px;color:var(--primary);font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap;flex-shrink:0;padding:0 8px;border-left:2px solid var(--primary-soft);height:var(--input-h);display:flex;align-items:center;min-width:110px;justify-content:flex-start}
-  .lg-final-cost-inline.empty{border-left-color:transparent;color:transparent}
+  /* Déplacement: structure miroir EXACTE des lignes matériel pour aligner les toggles
+     verticalement. depl-title-slot mimétise .lg-title (flex:1, min-width:160px) et
+     contient le toggle Voiture/Transports. lg-prix-spacer mimétise .lg-prix (90px).
+     Ensuite les toggles tombent dans les mêmes colonnes. */
+  .depl-title-slot{flex:1 1 0;min-width:160px;height:var(--input-h);display:flex;align-items:center}
+  .lg-prix-spacer{width:90px;flex-shrink:0}
   .lg-expand{background:transparent;border:0;color:var(--text-dim);font-size:14px;line-height:1;cursor:pointer;height:var(--input-h);width:30px;display:flex;align-items:center;justify-content:center;padding:0;border-radius:4px;flex-shrink:0;transition:transform .15s,color .12s,background .12s}
   .lg-expand:hover{background:rgba(255,255,255,.06);color:var(--text)}
   .lg-expand.open{transform:rotate(90deg);color:var(--primary)}
@@ -3041,19 +3038,9 @@ function rLigne(l) {
   } else {
     const pmt = l.paiementType || "acompte";
     const isDebours = l.devis === "debours";
-    // Contextual paiement mode UI:
+    // Paiement mode UI:
     //   - Principal → toggle [Acompte | Avance]
     //   - Débours   → static "Fact. Direct" pill (only valid combo, no Débours+Acompte anymore)
-    // Compute client-facing displayed amount (with URSSAF + avance markup if applicable).
-    // Au black: no markups (URSSAF=0, avance=0).
-    const _declared = S.mission.declare !== false;
-    const ma = _declared ? num((S.mission.paiement || {}).margeAvance ?? 0) : 0;
-    const mu = _declared ? num(S.mission.urssafPct ?? 22) : 0;
-    const dispInfo = ligneDisplayInfo(l.devis, pmt, l.prix, ma, mu, false);
-    // Slot always rendered empty — no visible cost estimate inline (per user pref).
-    // Kept as placeholder so toggles align vertically across materiel rows AND between
-    // materiel and déplacement (which has the same .lg-final-cost-inline slot).
-    const finalCostInline = `<div class="lg-final-cost-inline empty" aria-hidden="true"></div>`;
     const paiementModeHtml = isDebours
       ? `<div class="seg lg-toggle lg-toggle-pmt static" title="Le fournisseur facture directement le client final"><button class="on" disabled>Fact. Direct</button></div>`
       : `<div class="seg lg-toggle lg-toggle-pmt" title="Mode de paiement (obligatoire)">
@@ -3067,7 +3054,6 @@ function rLigne(l) {
           <input type="number" step="0.01" placeholder="0,00" value="${esc(l.prix)}" oninput="ligneUpd('${l.id}','prix',this.value)">
           <span class="unit">€</span>
         </div>
-        ${finalCostInline}
         <div class="seg lg-toggle">
           <button class="${(l.devis||'principal')==='principal'?'on':''}" onclick="ligneSetDevis('${l.id}','principal')">Principal</button>
           <button class="${l.devis==='debours'?'on warn':''}" onclick="ligneSetDevis('${l.id}','debours')">Débours</button>
@@ -4274,8 +4260,6 @@ function rMS() {
       const isDebours = devis === "debours";
       const pmt = d.deplacement.paiementType || "acompte";
       const afficheMode = d.deplacement.afficheMode || "afficher";
-      // Final cost slot — always rendered empty (per user pref).
-      const finalCostInline = `<div class="lg-final-cost-inline empty" aria-hidden="true"></div>`;
       // Paiement mode UI:
       //   - Principal → toggle [Acompte | Avance]
       //   - Débours   → static "Fact. Direct" pill (only valid combo, no Débours+Acompte anymore)
@@ -4285,17 +4269,24 @@ function rMS() {
             <button class="${pmt==='acompte'?'on':''}" onclick="updDeplPaiementType('acompte')" title="Inclus dans l'acompte à la commande">Acompte</button>
             <button class="${pmt==='avance'?'on':''}" onclick="updDeplPaiementType('avance')" title="Tu avances la dépense, marge appliquée">Avance</button>
           </div>`;
+      // Mirror materiel row structure EXACTLY:
+      //   .lg-title (flex:1, min-width:160px)  →  .depl-title-slot wrapping the Voiture/Transports toggle
+      //   .lg-prix  (90px fixed)               →  .lg-prix-spacer (transparent 90px)
+      //   .seg lg-toggle (Principal/Débours)
+      //   .seg lg-toggle.lg-toggle-pmt (Acompte/Avance OR static Fact.Direct)
+      //   .lg-info-icon (i)
+      //   .lg-expand spacer (30px)             →  .lg-btn-spacer
+      //   .lg-del spacer (30px)                →  .lg-btn-spacer
       return `
       <div class="lg-row-wrap depl-wrap" data-id="deplacement">
-        <div class="lg-row depl-row">
-          <div class="depl-mode-cell">
+        <div class="lg-row">
+          <div class="depl-title-slot">
             <div class="seg lg-toggle">
               <button class="${mode==='voiture'?'on':''}" onclick="updMissionMode('voiture')">Voiture</button>
               <button class="${mode==='transports'?'on':''}" onclick="updMissionMode('transports')">Transports</button>
             </div>
           </div>
           <div class="lg-prix-spacer" aria-hidden="true"></div>
-          ${finalCostInline}
           <div class="seg lg-toggle">
             <button class="${devis==='principal'?'on':''}" onclick="updDeplDevis('principal')">Principal</button>
             <button class="${devis==='debours'?'on warn':''}" onclick="updDeplDevis('debours')">Débours</button>
