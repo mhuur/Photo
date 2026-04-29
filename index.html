@@ -1391,9 +1391,8 @@
   .marges-row .field.marges-hint{flex:1;padding-bottom:10px}
   .marges-row .hint{font-size:12px;color:var(--text-muted);line-height:1.5}
   .depl-pmt-wrap{display:flex;align-items:center;gap:10px}
-  /* Final client-facing cost shown under each materiel row */
-  .lg-final-cost{margin:4px 0 0;padding:4px 12px;background:var(--surface-2);border-radius:0 6px 6px 0;border-left:3px solid var(--primary);font-size:12px;color:var(--text-muted);font-variant-numeric:tabular-nums;display:inline-block}
-  .lg-final-cost-detail{color:var(--text-dim);font-size:11px;font-style:italic;font-variant-numeric:normal}
+  /* Final client-facing cost shown inline in the row, after the price input */
+  .lg-final-cost-inline{font-size:13px;color:var(--primary);font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap;flex-shrink:0;padding:0 8px;border-left:2px solid var(--primary-soft);height:var(--input-h);display:flex;align-items:center}
   .lg-expand{background:transparent;border:0;color:var(--text-dim);font-size:14px;line-height:1;cursor:pointer;height:var(--input-h);width:30px;display:flex;align-items:center;justify-content:center;padding:0;border-radius:4px;flex-shrink:0;transition:transform .15s,color .12s,background .12s}
   .lg-expand:hover{background:rgba(255,255,255,.06);color:var(--text)}
   .lg-expand.open{transform:rotate(90deg);color:var(--primary)}
@@ -1957,7 +1956,7 @@ function rDevisPreview() {
       </div>`;
     } else if (l.type === "materiel" && l.devis !== "debours") {
       lineNum++;
-      const info = ligneDisplayInfo(l.devis, l.paiementType, l.prix, ma, mu);
+      const info = ligneDisplayInfo(l.devis, l.paiementType, l.prix, ma, mu, true);
       linesHtml += `<div class="dp-line">
         <div class="num">${lineNum}.</div>
         <div class="lbl">${esc(l.intitule || "(Sans intitulé)")}<div class="desc">${l.description ? esc(l.description) : "Matériel"}</div></div>
@@ -1979,7 +1978,7 @@ function rDevisPreview() {
   // Apply URSSAF/avance markup ONLY for transport in Principal mode
   // (voiture has no paiementType axis; débours/taux use the raw amount)
   const deplInfo = (mode === "transports" && deplDevisMode === "principal")
-    ? ligneDisplayInfo(d.deplacement.devis, d.deplacement.paiementType, t.depl, ma, mu)
+    ? ligneDisplayInfo(d.deplacement.devis, d.deplacement.paiementType, t.depl, ma, mu, true)
     : { amount: t.depl, breakdown: deplDetail, hasMarkup: false };
   const deplFinalAmount = deplInfo.amount;
   // For transport with markup: show base detail + markup detail combined
@@ -2779,7 +2778,7 @@ window.updDeplPaiementType = updDeplPaiementType;
 // Compute the "displayed amount" for a materiel ligne (or transport amount), with URSSAF
 // compensation and marge avance baked in when applicable. Also returns a breakdown string
 // for inline display ("1500 € + 22 % URSSAF + 20 % avance").
-function ligneDisplayInfo(devis, paiementType, basePrix, margeAvancePct, margeUrssafPct) {
+function ligneDisplayInfo(devis, paiementType, basePrix, margeAvancePct, margeUrssafPct, clientFacing) {
   const base = r2(num(basePrix));
   const isDebours = devis === "debours";
   // Débours items: no markup
@@ -2791,12 +2790,23 @@ function ligneDisplayInfo(devis, paiementType, basePrix, margeAvancePct, margeUr
   const isAvance = paiementType === "avance";
   const avanceAmt = isAvance ? r2(base * num(margeAvancePct) / 100) : 0;
   const total = r2(base + urssafAmt + avanceAmt);
-  // Build breakdown string only if there's a markup
-  const parts = [`${num(base).toFixed(2).replace(".", ",")} €`];
-  if (urssafAmt > 0) parts.push(`+ ${num(margeUrssafPct).toString().replace(".", ",")} % URSSAF`);
-  if (avanceAmt > 0) parts.push(`+ ${num(margeAvancePct).toString().replace(".", ",")} % avance`);
-  const breakdown = (urssafAmt > 0 || avanceAmt > 0) ? parts.join(" ") : "";
-  return { amount: total, breakdown, hasMarkup: (urssafAmt > 0 || avanceAmt > 0) };
+  const hasMarkup = (urssafAmt > 0 || avanceAmt > 0);
+  // Build breakdown:
+  //   - clientFacing=true (devis preview): hide avance margin (private to photographer).
+  //     For Avance items, omit breakdown entirely to avoid math gap (final amount > base + URSSAF).
+  //   - clientFacing=false (form): show full breakdown (URSSAF + avance) for the photographer.
+  let breakdown = "";
+  if (hasMarkup) {
+    if (clientFacing && isAvance) {
+      breakdown = ""; // Hide entirely for Avance items in devis (don't reveal margin)
+    } else {
+      const parts = [`${num(base).toFixed(2).replace(".", ",")} €`];
+      if (urssafAmt > 0) parts.push(`+ ${num(margeUrssafPct).toString().replace(".", ",")} % URSSAF`);
+      if (avanceAmt > 0) parts.push(`+ ${num(margeAvancePct).toString().replace(".", ",")} % avance`);
+      breakdown = parts.join(" ");
+    }
+  }
+  return { amount: total, breakdown, hasMarkup };
 }
 
 function paiementInfoFor(devis, paiementType, margeAvancePct, margeUrssafPct, lineAmount) {
@@ -2964,11 +2974,12 @@ function rLigne(l) {
       ? "Le fournisseur facture directement ton client final"
       : "Tu avances la dépense, marge appliquée";
     // Compute client-facing displayed amount (with URSSAF + avance markup if applicable)
+    // Form view shows full breakdown for the photographer.
     const ma = num((S.mission.paiement || {}).margeAvance ?? 0);
     const mu = num((S.mission.paiement || {}).margeUrssaf ?? 22);
-    const dispInfo = ligneDisplayInfo(l.devis, pmt, l.prix, ma, mu);
-    const finalCostHtml = dispInfo.hasMarkup
-      ? `<div class="lg-final-cost" title="Coût final pour le client">→ ${fmt(dispInfo.amount)} <span class="lg-final-cost-detail">(${esc(dispInfo.breakdown)})</span></div>`
+    const dispInfo = ligneDisplayInfo(l.devis, pmt, l.prix, ma, mu, false);
+    const finalCostInline = dispInfo.hasMarkup
+      ? `<div class="lg-final-cost-inline" title="Coût final pour le client : ${esc(dispInfo.breakdown)}">→ ${fmt(dispInfo.amount)}</div>`
       : "";
     return `<div class="lg-row-wrap">
       <div class="lg-row">
@@ -2977,6 +2988,7 @@ function rLigne(l) {
           <input type="number" step="0.01" placeholder="0,00" value="${esc(l.prix)}" oninput="ligneUpd('${l.id}','prix',this.value)">
           <span class="unit">€</span>
         </div>
+        ${finalCostInline}
         <div class="seg lg-toggle">
           <button class="${(l.devis||'principal')==='principal'?'on':''}" onclick="ligneSetDevis('${l.id}','principal')">Principal</button>
           <button class="${l.devis==='debours'?'on warn':''}" onclick="ligneSetDevis('${l.id}','debours')">Débours</button>
@@ -2989,7 +3001,6 @@ function rLigne(l) {
         ${expandBtn}
         <button class="lg-del" onclick="ligneDel('${l.id}')" title="Supprimer">×</button>
       </div>
-      ${finalCostHtml}
       ${desc}
     </div>`;
   }
@@ -6670,6 +6681,18 @@ function rTR() {
 // Most recent version FIRST.
 // =============================================================
 const CHANGELOG = [
+  {
+    version: "v1.32",
+    date: "2026-04-29",
+    title: "Coût final inline · Marge avance masquée du devis (client ne voit pas la marge photographe)",
+    items: [
+      "🔥 Coût final pour le client repositionné en INLINE dans la ligne matériel : avant placé en dessous (encart bleu sous la row), maintenant directement à droite du champ Prix, sur la même ligne. Format compact « → 2130,00 € » avec une bordure gauche fine en couleur primary. Vue d'ensemble plus claire, gain vertical.",
+      "🔥 Confidentialité de la marge avance : le breakdown des lignes matériel est désormais différencié entre vue formulaire (photographe) et vue devis (client). Le formulaire affiche tout (URSSAF + avance) pour ton pilotage. Le devis affiche uniquement la part URSSAF (transparent côté client : « 1500 € + 22 % URSSAF → 1830 € ») et masque entièrement la majoration avance (le client ne sait pas que tu prends 20 % de marge sur les frais que tu avances).",
+      "Cas Principal+Avance dans le devis : pas de breakdown affiché (juste le montant final 2130 €), car afficher seulement « + URSSAF » créerait un écart mathématique visible avec le total. Décision : pour ces lignes, la majoration reste opaque côté client, comme c'est usuel pour les biens et services facturés à un prix global.",
+      "Helper interne `ligneDisplayInfo()` reçoit maintenant un 6ᵉ paramètre `clientFacing` (booléen). `false` (défaut) = vue photographe avec breakdown complet · `true` (devis preview) = breakdown URSSAF seul ou caché si Avance.",
+      "Cohérence des vues : tooltip (i) au survol continue de tout afficher pour la transparence interne. Le coût final inline dans le formulaire utilise le breakdown complet (avec avance) en title HTML pour l'info au survol."
+    ]
+  },
   {
     version: "v1.31",
     date: "2026-04-29",
