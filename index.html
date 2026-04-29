@@ -535,18 +535,16 @@
   .devis-preview .dp-totals .dp-line.debours .debours-note{color:var(--text-dim);font-size:11px;font-style:italic;font-weight:400}
   /* CGV header (identity strip) */
   .devis-preview .dp-conditions.cgv{margin-top:18px;padding:14px 0 0;border-top:1px solid var(--border-soft);font-size:13px;color:var(--text);line-height:1.7}
-  .devis-preview .dp-cgv-header{margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid var(--border)}
-  .devis-preview .dp-cgv-header h4{margin:0 0 3px;border:0;padding:0;font-size:14px;font-weight:700;color:var(--text);text-transform:uppercase;letter-spacing:.04em}
-  .devis-preview .dp-cgv-identity{font-size:10px;color:var(--text-muted);font-style:italic;line-height:1.3}
-  /* CGV body — 2 columns, compact typography */
-  .devis-preview .dp-cgv-body{column-count:2;column-gap:18px;column-rule:1px solid var(--border-soft);font-size:10.5px;line-height:1.35;color:var(--text);text-align:justify;hyphens:auto;-webkit-hyphens:auto}
-  .devis-preview .dp-cgv-body .cgv-paragraph{margin:0 0 5px;font-style:italic;color:var(--text-muted);font-size:10px;line-height:1.3;break-inside:avoid;page-break-inside:avoid}
-  .devis-preview .dp-cgv-body .cgv-section{margin:0 0 5px;break-inside:avoid;page-break-inside:avoid}
-  .devis-preview .dp-cgv-body .cgv-section-title{margin:0 0 1px;font-size:10px;font-weight:700;color:var(--text);text-transform:uppercase;letter-spacing:.04em;break-after:avoid;page-break-after:avoid}
-  .devis-preview .dp-cgv-body .cgv-num{color:var(--primary);margin-right:3px;font-variant-numeric:tabular-nums;font-weight:700}
-  .devis-preview .dp-cgv-body .cgv-section-body{margin:0;font-size:10.5px;line-height:1.35;color:var(--text);text-align:justify}
+  .devis-preview .dp-cgv-header{margin-bottom:6px;padding-bottom:4px;border-bottom:1px solid var(--border)}
+  .devis-preview .dp-cgv-header h4{margin:0 0 2px;border:0;padding:0;font-size:13px;font-weight:700;color:var(--text);text-transform:uppercase;letter-spacing:.03em}
+  .devis-preview .dp-cgv-identity{font-size:9.5px;color:var(--text-muted);font-style:italic;line-height:1.3}
+  /* CGV body — 2 columns, dense legal-document typography (no heading detachment, inline titles) */
+  .devis-preview .dp-cgv-body{column-count:2;column-gap:16px;column-rule:1px solid var(--border-soft);font-size:10px;line-height:1.4;color:var(--text);text-align:justify;hyphens:auto;-webkit-hyphens:auto}
+  .devis-preview .dp-cgv-body .cgv-paragraph{margin:0 0 4px;font-style:italic;color:var(--text-muted);font-size:9.5px;line-height:1.4;text-align:justify}
+  .devis-preview .dp-cgv-body .cgv-section{margin:0 0 4px;text-align:justify;break-inside:avoid;page-break-inside:avoid}
+  .devis-preview .dp-cgv-body .cgv-section-title{font-weight:700;color:var(--text)}
   /* CGV mentions footer */
-  .devis-preview .dp-cgv-mentions{margin-top:8px;padding-top:5px;border-top:1px solid var(--border-soft);font-size:9px;color:var(--text-dim);font-style:italic;line-height:1.3;text-align:center}
+  .devis-preview .dp-cgv-mentions{margin-top:6px;padding-top:4px;border-top:1px solid var(--border-soft);font-size:9px;color:var(--text-dim);font-style:italic;line-height:1.3;text-align:center}
   /* Fallback footer mentions (page 1, when no CGV) */
   .devis-preview .dp-footer .dp-footer-mentions-fallback{font-size:9px;color:var(--text-dim);margin-top:2px;line-height:1.3}
 
@@ -1022,76 +1020,59 @@
     /* === CGV PAGE 2: HEADER + 2-COL BODY + FOOTER === */
     /* CGV header (title + identity strip) — full width above the 2-column body */
     .devis-preview .dp-cgv-header, .view-devis-snapshot .dp-cgv-header {
-      margin-bottom: 8pt !important;
-      padding-bottom: 4pt !important;
-      border-bottom: 0.6pt solid #1a1a1a !important;
+      margin-bottom: 6pt !important;
+      padding-bottom: 3pt !important;
+      border-bottom: 0.4pt solid #999 !important;
     }
     .devis-preview .dp-cgv-header h4, .view-devis-snapshot .dp-cgv-header h4 {
-      font-size: 11pt !important;
-      font-weight: 800 !important;
+      font-size: 10pt !important;
+      font-weight: 700 !important;
       color: #1a1a1a !important;
-      margin: 0 0 2pt 0 !important;
+      margin: 0 0 1pt 0 !important;
       padding: 0 !important;
       border: 0 !important;
       text-transform: uppercase !important;
-      letter-spacing: .04em !important;
+      letter-spacing: .03em !important;
     }
     .devis-preview .dp-cgv-identity, .view-devis-snapshot .dp-cgv-identity {
-      font-size: 6.5pt !important;
+      font-size: 6pt !important;
       color: #666 !important;
       font-style: italic !important;
       line-height: 1.3 !important;
+      margin: 0 !important;
     }
-    /* CGV body: 2 columns, justified, very compact */
+    /* CGV body: 2 cols, dense, inline-title legal style */
     .devis-preview .dp-cgv-body, .view-devis-snapshot .dp-cgv-body {
       column-count: 2 !important;
-      column-gap: 16pt !important;
-      column-rule: 0.3pt solid #e8e8e8 !important;
-      font-size: 6.8pt !important;
-      line-height: 1.28 !important;
-      color: #333 !important;
+      column-gap: 14pt !important;
+      column-rule: 0.3pt solid #d8d8d8 !important;
+      font-size: 6.5pt !important;
+      line-height: 1.3 !important;
+      color: #1a1a1a !important;
       text-align: justify !important;
       hyphens: auto !important;
       -webkit-hyphens: auto !important;
     }
     /* Preamble paragraph (before numbered sections) */
     .devis-preview .dp-cgv-body .cgv-paragraph, .view-devis-snapshot .dp-cgv-body .cgv-paragraph {
-      margin: 0 0 3pt !important;
+      margin: 0 0 2.5pt !important;
       font-style: italic !important;
       color: #555 !important;
-      font-size: 6.5pt !important;
-      line-height: 1.28 !important;
+      font-size: 6.3pt !important;
+      line-height: 1.3 !important;
+      text-align: justify !important;
       break-inside: avoid !important;
     }
-    /* Numbered section block */
+    /* Numbered section as a single paragraph (title inline + body) */
     .devis-preview .dp-cgv-body .cgv-section, .view-devis-snapshot .dp-cgv-body .cgv-section {
-      margin: 0 0 3pt !important;
+      margin: 0 0 2.5pt !important;
+      text-align: justify !important;
       break-inside: avoid !important;
       page-break-inside: avoid !important;
     }
     .devis-preview .dp-cgv-body .cgv-section-title, .view-devis-snapshot .dp-cgv-body .cgv-section-title {
-      margin: 0 !important;
-      font-size: 6.8pt !important;
       font-weight: 700 !important;
       color: #1a1a1a !important;
-      text-transform: uppercase !important;
-      letter-spacing: .03em !important;
-      break-after: avoid !important;
-      page-break-after: avoid !important;
-      line-height: 1.28 !important;
-    }
-    .devis-preview .dp-cgv-body .cgv-num, .view-devis-snapshot .dp-cgv-body .cgv-num {
-      color: #1a1a1a !important;
-      margin-right: 3pt !important;
-      font-variant-numeric: tabular-nums !important;
-      font-weight: 700 !important;
-    }
-    .devis-preview .dp-cgv-body .cgv-section-body, .view-devis-snapshot .dp-cgv-body .cgv-section-body {
-      margin: 0 !important;
-      font-size: 6.8pt !important;
-      line-height: 1.28 !important;
-      color: #333 !important;
-      text-align: justify !important;
     }
     /* CGV mentions footer (penalties at bottom of page 2) */
     .devis-preview .dp-cgv-mentions, .view-devis-snapshot .dp-cgv-mentions {
@@ -3017,19 +2998,23 @@ function richDisplayHtml(s) {
 // Each CGV is composed of an optional preamble paragraph + an array of {id, title, body} sections.
 // renderCgvSections() turns this data into the HTML used in the devis preview / printed output.
 function renderCgvSections(preambule, sections) {
-  const safePreamb = (preambule || "").trim();
+  const safePreamb = (preambule || "").trim().replace(/\n+/g, " ");
   const list = Array.isArray(sections) ? sections : [];
   const validSections = list.filter(s => s && (s.title || s.body));
   if (!safePreamb && validSections.length === 0) return "";
   let html = "";
   if (safePreamb) {
-    html += `<p class="cgv-paragraph">${esc(safePreamb).replace(/\n/g, "<br>")}</p>`;
+    html += `<p class="cgv-paragraph">${esc(safePreamb)}</p>`;
   }
   validSections.forEach((s, i) => {
-    html += `<div class="cgv-section">
-      <h5 class="cgv-section-title"><span class="cgv-num">${i + 1}.</span> ${esc(s.title || "")}</h5>
-      ${s.body ? `<p class="cgv-section-body">${esc(s.body).replace(/\n/g, "<br>")}</p>` : ""}
-    </div>`;
+    const title = (s.title || "").trim();
+    const body = (s.body || "").trim().replace(/\n+/g, " ");
+    // Auto-add a period after the title if missing (juridical convention: "1. Title. Body...")
+    const titleDisplay = title && !/[.!?:]$/.test(title) ? title + "." : title;
+    const titlePart = title
+      ? `<strong class="cgv-section-title">${i + 1}. ${esc(titleDisplay)}</strong> `
+      : `<strong class="cgv-section-title">${i + 1}.</strong> `;
+    html += `<p class="cgv-section">${titlePart}${esc(body)}</p>`;
   });
   return html;
 }
@@ -6265,6 +6250,19 @@ function rTR() {
 // Most recent version FIRST.
 // =============================================================
 const CHANGELOG = [
+  {
+    version: "v1.25",
+    date: "2026-04-29",
+    title: "CGV : titres inline dans le paragraphe — rendu juridique sobre",
+    items: [
+      "Refonte du rendu : avant le titre était sur sa propre ligne (« 1. RÉSERVATION ET ACOMPTE » uppercase, puis paragraphe en-dessous avec gap), maintenant le titre est INLINE dans le paragraphe : « **1. Réservation et acompte.** La réservation… » Convention juridique standard, lecture coulante.",
+      "Plus d'uppercase exagéré ni de letter-spacing : les titres inline gardent leur casse normale (capitalisée) avec juste le bold pour le distinguer. Look « contrat » plutôt que « éditorial ».",
+      "Couleur uniforme : le numéro et le titre utilisent la même teinte que le corps du texte (`var(--text)` / `#1a1a1a`). Suppression du `var(--primary)` (bleu) sur le numéro qui faisait moderne plutôt que légal.",
+      "Espacements drastiquement réduits : section margin-bottom 4 px (avant 5 px puis avant ça 14 px), header padding-bottom 3 pt (avant 4 puis 8), header margin-bottom 6 pt (avant 8 puis 12), filet header en gris clair (avant noir). Plus aucun « gap » détaché.",
+      "Ponctuation auto : si le titre n'a pas de point final, il en reçoit un automatiquement (« 1. Réservation et acompte. » au lieu de « 1. Réservation et acompte »). Cohérence avec la convention juridique.",
+      "Body inline : les retours à la ligne simples dans le contenu sont collapsés en espaces (les CGV pro utilisent des paragraphes coulants justifiés, pas des retours-tabs visuels). Si tu veux plusieurs paragraphes dans une même section, fais plusieurs sections."
+    ]
+  },
   {
     version: "v1.24",
     date: "2026-04-29",
