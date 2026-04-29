@@ -2776,37 +2776,50 @@ window.updDeplPaiementType = updDeplPaiementType;
 // of what this combination means: who invoices, marge possibility, URSSAF impact, when to use it.
 // ============ PAIEMENT INFO HELPER ============
 // Compute the "displayed amount" for a materiel ligne (or transport amount), with URSSAF
-// compensation and marge avance baked in when applicable. Also returns a breakdown string
-// for inline display ("1500 € + 22 % URSSAF + 20 % avance").
+// compensation and marge avance baked in when applicable.
+//
+// FORMULA (inverse / true URSSAF compensation):
+//   step 1 — apply avance markup:    baseAvance = base × (1 + avance%)
+//   step 2 — apply URSSAF inverse:   total = baseAvance / (1 - urssaf%)
+//
+// Result: charging `total` to the client, after URSSAF takes its share, the photographer
+// nets exactly `baseAvance` (i.e., the original price + their avance margin).
+//
+// Returns { amount, breakdown, hasMarkup, baseAmount, avanceAmt, urssafAmt }.
 function ligneDisplayInfo(devis, paiementType, basePrix, margeAvancePct, margeUrssafPct, clientFacing) {
   const base = r2(num(basePrix));
   const isDebours = devis === "debours";
-  // Débours items: no markup
+  // Débours items: no markup, no URSSAF (hors CA)
   if (isDebours) {
-    return { amount: base, breakdown: "", hasMarkup: false };
+    return { amount: base, breakdown: "", hasMarkup: false, baseAmount: base, avanceAmt: 0, urssafAmt: 0 };
   }
-  // Principal items: URSSAF compensation always applies
-  const urssafAmt = r2(base * num(margeUrssafPct) / 100);
   const isAvance = paiementType === "avance";
-  const avanceAmt = isAvance ? r2(base * num(margeAvancePct) / 100) : 0;
-  const total = r2(base + urssafAmt + avanceAmt);
+  const avancePct = num(margeAvancePct);
+  const urssafPct = num(margeUrssafPct);
+  // Step 1: avance markup (only for Avance items)
+  const baseAvance = isAvance ? r2(base * (1 + avancePct / 100)) : base;
+  // Step 2: URSSAF inverse compensation (always, on Principal items)
+  const urssafFactor = 1 - urssafPct / 100;
+  const total = (urssafFactor > 0) ? r2(baseAvance / urssafFactor) : baseAvance;
+  const avanceAmt = r2(baseAvance - base);
+  const urssafAmt = r2(total - baseAvance);
   const hasMarkup = (urssafAmt > 0 || avanceAmt > 0);
   // Build breakdown:
   //   - clientFacing=true (devis preview): hide avance margin (private to photographer).
-  //     For Avance items, omit breakdown entirely to avoid math gap (final amount > base + URSSAF).
-  //   - clientFacing=false (form): show full breakdown (URSSAF + avance) for the photographer.
+  //     For Avance items, omit breakdown entirely to avoid revealing internal pricing.
+  //   - clientFacing=false (form): show full breakdown for the photographer.
   let breakdown = "";
   if (hasMarkup) {
     if (clientFacing && isAvance) {
-      breakdown = ""; // Hide entirely for Avance items in devis (don't reveal margin)
+      breakdown = ""; // Hide entirely for Avance items in client-facing devis
     } else {
       const parts = [`${num(base).toFixed(2).replace(".", ",")} €`];
-      if (urssafAmt > 0) parts.push(`+ ${num(margeUrssafPct).toString().replace(".", ",")} % URSSAF`);
-      if (avanceAmt > 0) parts.push(`+ ${num(margeAvancePct).toString().replace(".", ",")} % avance`);
+      if (avanceAmt > 0) parts.push(`+ ${avancePct.toString().replace(".", ",")} % avance`);
+      if (urssafAmt > 0) parts.push(`+ URSSAF ${urssafPct.toString().replace(".", ",")} %`);
       breakdown = parts.join(" ");
     }
   }
-  return { amount: total, breakdown, hasMarkup };
+  return { amount: total, breakdown, hasMarkup, baseAmount: base, avanceAmt, urssafAmt };
 }
 
 function paiementInfoFor(devis, paiementType, margeAvancePct, margeUrssafPct, lineAmount) {
@@ -2816,36 +2829,43 @@ function paiementInfoFor(devis, paiementType, margeAvancePct, margeUrssafPct, li
   const isFactDirect = paiementType === "fact-direct";
 
   if (!isDebours && isAcompte) {
-    const compMontant = r2(lineAmount * num(margeUrssafPct) / 100);
-    const m = num(margeUrssafPct) > 0
-      ? `Compensation URSSAF ${num(margeUrssafPct).toString().replace(".",",")} % sur ${fmt(lineAmount)} = ${fmt(compMontant)} ajoutés au devis.`
+    const urssafPct = num(margeUrssafPct);
+    const urssafFactor = 1 - urssafPct / 100;
+    const final = (urssafFactor > 0) ? r2(lineAmount / urssafFactor) : lineAmount;
+    const urssafAmt = r2(final - lineAmount);
+    const m = urssafPct > 0
+      ? `Compensation URSSAF (calcul inverse) : ${fmt(lineAmount)} ÷ (1 − ${urssafPct.toString().replace(".",",")} %) = ${fmt(final)}. URSSAF prélevée : ${fmt(urssafAmt)}.`
       : "Aucune compensation URSSAF (saisir un % dans Matériel).";
     return {
       title: "Principal + Acompte",
       facture: "Le fournisseur te facture à ton nom.",
       marge: m,
-      urssaf: `Inclus dans ton CA : ${fmt(lineAmount)} soumis à l'URSSAF (~${fmt(r2(lineAmount * 0.22))} à 22 %).`,
+      urssaf: `Inclus dans ton CA : ${fmt(final)}. Après URSSAF (${urssafPct.toString().replace(".",",")} %), tu nets ${fmt(lineAmount)} — exactement la somme que tu dois reverser.`,
       quand: "Tu veux que le client paie cette dépense via l'acompte à la commande, pour ne pas avancer ta trésorerie."
     };
   }
   if (!isDebours && isAvance) {
-    const compUrssaf = r2(lineAmount * num(margeUrssafPct) / 100);
-    const margeAvMontant = r2(lineAmount * num(margeAvancePct) / 100);
-    const totalMarges = r2(compUrssaf + margeAvMontant);
+    const avancePct = num(margeAvancePct);
+    const urssafPct = num(margeUrssafPct);
+    const baseAvance = r2(lineAmount * (1 + avancePct / 100));
+    const urssafFactor = 1 - urssafPct / 100;
+    const final = (urssafFactor > 0) ? r2(baseAvance / urssafFactor) : baseAvance;
+    const avanceAmt = r2(baseAvance - lineAmount);
+    const urssafAmt = r2(final - baseAvance);
     let m;
-    if (num(margeAvancePct) === 0 && num(margeUrssafPct) === 0) {
+    if (avancePct === 0 && urssafPct === 0) {
       m = "Aucune marge ni compensation définie. Saisir des % dans Matériel.";
     } else {
-      const parts = [];
-      if (num(margeAvancePct) > 0) parts.push(`Marge avance ${num(margeAvancePct).toString().replace(".",",")} % = ${fmt(margeAvMontant)}`);
-      if (num(margeUrssafPct) > 0) parts.push(`Compensation URSSAF ${num(margeUrssafPct).toString().replace(".",",")} % = ${fmt(compUrssaf)}`);
-      m = `${parts.join(" · ")} → total ${fmt(totalMarges)} ajoutés sur ${fmt(lineAmount)}.`;
+      const steps = [];
+      if (avancePct > 0) steps.push(`Étape 1 — avance ${avancePct.toString().replace(".",",")} % : ${fmt(lineAmount)} × ${(1 + avancePct/100).toString().replace(".",",")} = ${fmt(baseAvance)}`);
+      if (urssafPct > 0) steps.push(`Étape 2 — URSSAF inverse ${urssafPct.toString().replace(".",",")} % : ${fmt(baseAvance)} ÷ ${urssafFactor.toFixed(2).replace(".",",")} = ${fmt(final)}`);
+      m = steps.join(" · ");
     }
     return {
       title: "Principal + Avance",
       facture: "Le fournisseur te facture à ton nom. Tu avances la dépense.",
       marge: m,
-      urssaf: `Inclus dans ton CA : ${fmt(lineAmount)} + marges soumis à l'URSSAF.`,
+      urssaf: `Tu factures ${fmt(final)}. Après URSSAF (${urssafPct.toString().replace(".",",")} %), tu nets ${fmt(baseAvance)} = ${fmt(lineAmount)} (avance) + ${fmt(avanceAmt)} (marge).`,
       quand: "Tu avances ta trésorerie. La marge avance te rémunère pour le risque, la compensation URSSAF couvre les cotisations sur cette ligne."
     };
   }
@@ -3048,11 +3068,19 @@ function totals() {
   const _urssafCoefTot = 1 + (num(d.urssafPct ?? 22)) / 100;
   const tarifH = _isDecTot ? _baseTotal : (_baseTotal > 0 ? r2(_baseTotal / _urssafCoefTot) : 0);
   const HOURS_PER_DAY = 8;
-  // First pass: walk lignes — collect total hours, materiel split, hour list (for per-line rounding later)
-  let totalHeures = 0, materielPrincipal = 0, debours = 0;
-  // Acompte (Principal+Acompte → URSSAF compensation eligible) and Avance accumulators.
-  // Fact.Direct items go in their own bucket: not in main HT, not in débours, just informational.
-  let totalAcompteMateriel = 0, totalAvance = 0, totalFactDirect = 0;
+  // Marge rates (read first, used by ligneDisplayInfo per-line)
+  const margeAvancePct = num(d.paiement?.margeAvance ?? 0);
+  const margeUrssafPct = num(d.paiement?.margeUrssaf ?? 22);
+  // First pass: walk lignes — accumulate hours and per-line final amounts.
+  // For Principal items, use ligneDisplayInfo() to compute the final (post-URSSAF, post-avance)
+  // amount with the inverse formula. The sum is what the client owes.
+  let totalHeures = 0, materielPrincipalFinal = 0, debours = 0;
+  // totalAcompteMateriel: base-price sum of acompte items (used for acompte suggestion %).
+  // totalAvanceBase: base-price sum of avance items (for hint texts).
+  // totalFactDirect: separate bucket — fact-direct items don't enter HT or débours.
+  // totalAvanceMontant + totalUrssafMontant: derived sums of markup amounts (for hints/tooltips).
+  let totalAcompteMateriel = 0, totalAvanceBase = 0, totalFactDirect = 0;
+  let totalAvanceMontant = 0, totalUrssafMontant = 0, totalPrincipalBase = 0;
   const heuresHList = [];
   for (const l of d.lignes || []) {
     if (l.type === "heures") {
@@ -3061,23 +3089,23 @@ function totals() {
       heuresHList.push(h);
     } else if (l.type === "materiel") {
       const p = r2(num(l.prix));
-      // Principal+Acompte: acompte sum (URSSAF compensation eligible)
-      if (l.devis !== "debours" && l.paiementType === "acompte") totalAcompteMateriel = r2(totalAcompteMateriel + p);
-      // Principal+Avance: avance sum (marge avance eligible)
-      if (l.devis !== "debours" && l.paiementType === "avance") totalAvance = r2(totalAvance + p);
-      // Débours+Acompte: counted as débours, also goes to acompte sum (covered by client's acompte)
-      if (l.devis === "debours" && l.paiementType === "acompte") {
-        totalAcompteMateriel = r2(totalAcompteMateriel + p);
-      }
-      // Débours+Fact.Direct: not in HT, not in débours, separate bucket
-      if (l.devis === "debours" && l.paiementType === "fact-direct") {
-        totalFactDirect = r2(totalFactDirect + p);
-      } else if (l.devis === "debours") {
-        // Other débours (acompte) go to débours bucket
-        debours = r2(debours + p);
+      if (l.devis === "debours") {
+        // Débours: hors CA, no markup. Acompte → débours bucket; Fact.Direct → its own bucket.
+        if (l.paiementType === "fact-direct") {
+          totalFactDirect = r2(totalFactDirect + p);
+        } else {
+          debours = r2(debours + p);
+          if (l.paiementType === "acompte") totalAcompteMateriel = r2(totalAcompteMateriel + p);
+        }
       } else {
-        // Principal goes to materielPrincipal regardless of paiementType
-        materielPrincipal = r2(materielPrincipal + p);
+        // Principal: apply the markup formula (avance first, then URSSAF inverse)
+        const info = ligneDisplayInfo(l.devis, l.paiementType, l.prix, margeAvancePct, margeUrssafPct, false);
+        materielPrincipalFinal = r2(materielPrincipalFinal + info.amount);
+        totalPrincipalBase = r2(totalPrincipalBase + p);
+        totalAvanceMontant = r2(totalAvanceMontant + info.avanceAmt);
+        totalUrssafMontant = r2(totalUrssafMontant + info.urssafAmt);
+        if (l.paiementType === "acompte") totalAcompteMateriel = r2(totalAcompteMateriel + p);
+        if (l.paiementType === "avance") totalAvanceBase = r2(totalAvanceBase + p);
       }
     }
   }
@@ -3088,17 +3116,30 @@ function totals() {
   const depl = mode === "voiture"
     ? r2(r2(num(d.deplacement.km) * tauxKm) + r2(num(d.deplacement.peages)) + trajet)
     : r2(r2(num(d.deplacement.ticket)) + trajet);
-  // Déplacement transport may also have paiementType (Acompte/Avance/Fact.Direct) — include in accumulators
-  if (mode === "transports" && depl > 0) {
-    if (d.deplacement.paiementType === "acompte") totalAcompteMateriel = r2(totalAcompteMateriel + depl);
-    else if (d.deplacement.paiementType === "avance") totalAvance = r2(totalAvance + depl);
-    else if (d.deplacement.paiementType === "fact-direct") totalFactDirect = r2(totalFactDirect + depl);
-  }
   const deplMode = d.deplacement.devis || "principal";
   const deplGoesToDebours = deplMode === "debours";
   const deplGoesToTaux = deplMode === "taux";
   const deplGoesToPrincipal = deplMode === "principal";
-  // Effective hourly rate (with déplacement baked in if "taux" mode)
+  // Apply markup to transport déplacement in Principal mode (voiture has no paiement axis,
+  // taux mode is baked into hourly rate, debours is hors-CA)
+  let deplFinal = depl;
+  if (mode === "transports" && depl > 0 && deplGoesToPrincipal) {
+    const dInfo = ligneDisplayInfo("principal", d.deplacement.paiementType, depl, margeAvancePct, margeUrssafPct, false);
+    deplFinal = dInfo.amount;
+    totalPrincipalBase = r2(totalPrincipalBase + depl);
+    totalAvanceMontant = r2(totalAvanceMontant + dInfo.avanceAmt);
+    totalUrssafMontant = r2(totalUrssafMontant + dInfo.urssafAmt);
+    if (d.deplacement.paiementType === "acompte") totalAcompteMateriel = r2(totalAcompteMateriel + depl);
+    if (d.deplacement.paiementType === "avance") totalAvanceBase = r2(totalAvanceBase + depl);
+  } else if (mode === "transports" && depl > 0) {
+    // Débours / taux / fact-direct cases for transport
+    if (deplGoesToDebours && d.deplacement.paiementType === "fact-direct") {
+      totalFactDirect = r2(totalFactDirect + depl);
+    } else if (deplGoesToDebours && d.deplacement.paiementType === "acompte") {
+      totalAcompteMateriel = r2(totalAcompteMateriel + depl);
+    }
+  }
+  // Effective hourly rate (with déplacement baked in if "taux" mode — uses base depl, no markup)
   let tarifHEff = tarifH;
   let deplPerHour = 0;
   if (deplGoesToTaux && totalHeures > 0 && depl > 0) {
@@ -3110,35 +3151,20 @@ function totals() {
   for (const h of heuresHList) {
     heuresAmount = r2(heuresAmount + r2(h * tarifHEff));
   }
-  const lignesAmount = r2(heuresAmount + materielPrincipal);
-  if (deplGoesToDebours) debours = r2(debours + depl);
-  // Autres : champ retiré de l'UI il y a plusieurs versions. On l'ignore désormais.
+  const lignesAmount = r2(heuresAmount + materielPrincipalFinal);
+  if (deplGoesToDebours && d.deplacement.paiementType !== "fact-direct") debours = r2(debours + depl);
   const autres = 0;
-  // Marge avance: % applied to all "Avance"-flagged Principal items (materiel + transport)
-  const margeAvancePct = num(d.paiement?.margeAvance ?? 0);
-  const margeAvanceAmount = r2(totalAvance * margeAvancePct / 100);
-  // Compensation URSSAF: applies to ALL Principal items (acompte + avance) since URSSAF
-  // applies on the entire CA. Items in Débours are hors-CA and thus not eligible.
-  // Heures are not included — URSSAF on hours is typically baked into the hourly rate.
-  let totalPrincipalUrssafEligible = 0;
-  for (const l of d.lignes || []) {
-    if (l.type === "materiel" && l.devis !== "debours") {
-      totalPrincipalUrssafEligible = r2(totalPrincipalUrssafEligible + r2(num(l.prix)));
-    }
-  }
-  if (mode === "transports" && depl > 0 && deplMode !== "debours") {
-    totalPrincipalUrssafEligible = r2(totalPrincipalUrssafEligible + depl);
-  }
-  const margeUrssafPct = num(d.paiement?.margeUrssaf ?? 22);
-  const margeUrssafAmount = r2(totalPrincipalUrssafEligible * margeUrssafPct / 100);
-  // Subtotal: lignes (heures + matériel principal) + déplacement (if mode is principal, OR if taux mode but no hours to spread it across)
+  // Subtotal: heures + materiel principal (final) + déplacement final (if mode is principal,
+  // or taux mode with no hours to spread it across)
   const deplInSubtotal = deplGoesToPrincipal || (deplGoesToTaux && totalHeures === 0);
   const effectiveDeplMode = (deplGoesToTaux && totalHeures === 0) ? "principal" : deplMode;
-  // Marge avance + Marge URSSAF are billed to client → add to subtotal
-  const subtotal = r2(lignesAmount + (deplInSubtotal ? depl : 0) + margeAvanceAmount + margeUrssafAmount);
+  const deplInSubtotalAmount = deplInSubtotal
+    ? (deplGoesToPrincipal ? deplFinal : depl)
+    : 0;
+  const subtotal = r2(lignesAmount + deplInSubtotalAmount);
   const remise = r2(subtotal * num(d.remisePct) / 100);
   const total = r2(subtotal - remise);
-  // Acompte suggested %: max(30, totalAcompteMateriel/total*100). Floor 30%.
+  // Acompte suggested %: max(30, totalAcompteMateriel/total*100)
   const acompteSuggestedPct = total > 0
     ? Math.max(30, Math.ceil(totalAcompteMateriel / total * 100))
     : 30;
@@ -3153,8 +3179,9 @@ function totals() {
     tarifH, tarifHEff, deplPerHour, deplMode, effectiveDeplMode,
     acompte: r2(total * 0.30), reste: r2(total * 0.70),
     echeances, echeancesTotal,
-    totalAcompteMateriel, totalPrincipalUrssafEligible, totalAvance,
-    margeAvancePct, margeAvanceAmount, margeUrssafPct, margeUrssafAmount,
+    totalAcompteMateriel, totalAvance: totalAvanceBase, totalPrincipalBase,
+    margeAvancePct, margeAvanceAmount: totalAvanceMontant,
+    margeUrssafPct, margeUrssafAmount: totalUrssafMontant,
     acompteSuggestedPct,
     prep: 0, prod: lignesAmount, post: 0
   };
@@ -4110,10 +4137,10 @@ function rMS() {
       const p = d.paiement || {};
       const ts = totals();
       const hintAvance = ts.totalAvance > 0
-        ? `Frais avancés détectés : <strong>${fmt(ts.totalAvance)}</strong> · Marge actuelle : <strong>${fmt(ts.margeAvanceAmount)}</strong>`
+        ? `Frais avancés détectés : <strong>${fmt(ts.totalAvance)}</strong> · Marge appliquée : <strong>${fmt(ts.margeAvanceAmount)}</strong>`
         : `Aucun matériel/déplacement marqué « Avance ». Marque-en pour appliquer la marge.`;
-      const hintUrssaf = ts.totalPrincipalUrssafEligible > 0
-        ? `Items Principal détectés (Acompte + Avance) : <strong>${fmt(ts.totalPrincipalUrssafEligible)}</strong> · Compensation actuelle : <strong>${fmt(ts.margeUrssafAmount)}</strong>`
+      const hintUrssaf = ts.totalPrincipalBase > 0
+        ? `Items Principal détectés : <strong>${fmt(ts.totalPrincipalBase)}</strong> · Compensation URSSAF : <strong>${fmt(ts.margeUrssafAmount)}</strong> (calcul inverse : montant ÷ (1 − ${num(ts.margeUrssafPct).toString().replace(".", ",")} %))`
         : `Aucun matériel/déplacement en mode « Principal ». La compensation URSSAF s'applique à tous les items Principal (Acompte + Avance).`;
       return `
       <div class="marges-block">
@@ -6681,6 +6708,21 @@ function rTR() {
 // Most recent version FIRST.
 // =============================================================
 const CHANGELOG = [
+  {
+    version: "v1.33",
+    date: "2026-04-29",
+    title: "Formule URSSAF inverse · vraie compensation au centime près",
+    items: [
+      "🔥 Refonte complète du calcul de la majoration URSSAF. La formule additive précédente (1500 × 1,42 = 2130 €) ne compensait que partiellement l'URSSAF : sur 2130 €, l'URSSAF prélève 469 €, laissant un net de 1661 € au lieu des 1800 € visés (perte de 139 €). La nouvelle formule inverse compense exactement.",
+      "🔥 Nouvelle formule à deux étapes appliquée séquentiellement : Étape 1 — appliquer la marge avance : `baseAvance = base × (1 + avance%)`. Étape 2 — appliquer l'URSSAF inverse : `total = baseAvance ÷ (1 − URSSAF%)`. Pour 1500 € avancé avec 20 % de marge et 22 % d'URSSAF : 1500 × 1,20 = 1800 €, puis 1800 ÷ 0,78 = 2307,69 €. Vérification : 2307,69 × 22 % = 507,69 € d'URSSAF, net 1800 € exactement.",
+      "🔥 Cas Principal+Acompte (sans avance) recalculé pareil : 1500 € ÷ 0,78 = 1923,08 €. Le photographe nette 1500 € pile après URSSAF, sans perte sèche.",
+      "Refonte de `totals()` pour utiliser `ligneDisplayInfo()` par ligne au lieu d'accumulations additives. Le sous-total est désormais la somme des montants finaux (post-URSSAF, post-avance) de chaque ligne, garantissant la cohérence parfaite entre l'affichage des lignes individuelles et le total HT.",
+      "Wording du breakdown changé : `+ X % URSSAF` (qui suggérait une addition de X% sur la base) devient `+ URSSAF X %` (qui désigne le taux URSSAF appliqué inversement sur le montant final). Cohérent avec la sémantique réelle du calcul.",
+      "Tooltip (i) refondu pour afficher les deux étapes du calcul. Pour Principal+Avance : « Étape 1 — avance 20 % : 1500 € × 1,20 = 1800 € · Étape 2 — URSSAF inverse 22 % : 1800 € ÷ 0,78 = 2307,69 € ». Pour Principal+Acompte : « 1500 € ÷ (1 − 22 %) = 1923,08 €. URSSAF prélevée : 423,08 € ». Maximale transparence sur la mécanique.",
+      "Hint URSSAF dans le bloc Marges mentionne explicitement « calcul inverse : montant ÷ (1 − X %) » pour rappeler la nouvelle formule.",
+      "Variable `totalPrincipalUrssafEligible` retirée (per-line computation rend l'agrégat inutile). Nouvelle variable `totalPrincipalBase` exposée pour les hint texts."
+    ]
+  },
   {
     version: "v1.32",
     date: "2026-04-29",
