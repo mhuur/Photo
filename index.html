@@ -1188,21 +1188,24 @@
   .ech-row input.lbl{flex:1;height:var(--input-h);border:1px solid transparent;background:var(--surface-2);color:var(--text);font:inherit;font-size:13px;padding:0 10px;border-radius:6px;min-width:0;transition:border-color .12s,box-shadow .12s}
   .ech-row input.lbl:hover{border-color:var(--border-light)}
   .ech-row input.lbl:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 3px var(--primary-soft)}
-  .ech-row .pct-wrap{display:flex;align-items:center;gap:3px;height:var(--input-h);background:var(--surface-2);border:1px solid transparent;border-radius:6px;padding:0 8px;width:90px;transition:border-color .12s,box-shadow .12s}
+  .ech-row .pct-wrap{display:flex;align-items:center;gap:3px;height:var(--input-h);background:var(--surface-2);border:1px solid transparent;border-radius:6px;padding:0 8px;width:90px;transition:border-color .12s,box-shadow .12s;flex-shrink:0;box-sizing:border-box}
   .ech-row .pct-wrap:hover{border-color:var(--border-light)}
   .ech-row .pct-wrap:focus-within{border-color:var(--primary);box-shadow:0 0 0 3px var(--primary-soft)}
   .ech-row .pct-wrap input{width:50px;height:100%;border:0;background:transparent;text-align:right;color:var(--text);font:inherit;font-size:13px;font-variant-numeric:tabular-nums;padding:0}
   .ech-row .pct-wrap input:focus{outline:none}
   .ech-row .pct-wrap .unit{color:var(--text-dim);font-size:13px}
-  .ech-row .amt{color:var(--text-muted);font-size:13px;font-variant-numeric:tabular-nums;min-width:90px;text-align:right}
-  .ech-row .ech-suggestion{font-size:11px;color:var(--primary);font-style:italic;font-variant-numeric:tabular-nums;min-width:130px;padding:0 4px}
-  .ech-row .ech-suggestion-spacer{min-width:130px;padding:0 4px}
+  /* (i) info button on échéance rows — tooltip shows acompte suggestion */
+  .ech-info-icon{position:relative;background:transparent;border:1px solid var(--border-light);color:var(--text-muted);width:24px;height:24px;border-radius:50%;cursor:help;font-size:11px;font-weight:700;font-style:italic;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .15s;padding:0;line-height:1}
+  .ech-info-icon:hover,.ech-info-icon:focus{border-color:var(--primary);color:var(--primary);background:var(--primary-soft);outline:none}
+  .ech-info-tooltip{position:absolute;bottom:calc(100% + 8px);left:50%;transform:translateX(-50%);background:var(--surface);border:1px solid var(--border);border-radius:8px;box-shadow:0 12px 32px rgba(0,0,0,.45);padding:10px 14px;width:300px;font-size:12px;font-style:normal;font-weight:400;text-align:left;color:var(--text-muted);line-height:1.5;letter-spacing:normal;display:none;z-index:1000;pointer-events:none;white-space:normal}
+  .ech-info-tooltip strong{color:var(--text);font-weight:600}
+  .ech-info-icon:hover .ech-info-tooltip,.ech-info-icon:focus .ech-info-tooltip{display:block}
+  .ech-info-spacer{width:24px;flex-shrink:0;display:block}
   .ech-row .del{background:transparent;border:0;color:var(--text-dim);cursor:pointer;font-size:15px;padding:4px 8px;border-radius:4px}
   .ech-row .del:hover{background:var(--danger-soft);color:var(--danger)}
   .ech-row.ech-total{padding-top:10px;margin-top:6px;border-top:1px solid var(--border-light);font-weight:600;font-size:13px;align-items:center}
   .ech-row.ech-total .lbl-total{flex:1;color:var(--text);padding:0 10px}
-  .ech-row.ech-total .pct-total{width:90px;padding:0 8px;text-align:right;font-variant-numeric:tabular-nums;color:var(--text)}
-  .ech-row.ech-total .amt-total{min-width:90px;text-align:right;font-variant-numeric:tabular-nums;color:var(--text)}
+  .ech-row.ech-total .pct-total{width:90px;padding:0 8px;text-align:right;font-variant-numeric:tabular-nums;color:var(--text);box-sizing:border-box;flex-shrink:0}
   .ech-row.ech-total .del-spacer{width:31px}
   .ech-row.ech-total.ok .pct-total{color:var(--success)}
   .ech-row.ech-total.warn .pct-total{color:var(--warning)}
@@ -3302,22 +3305,15 @@ function refreshTotals() {
     const hasDebours = t2.debours > 0;
     deboursBtn.innerHTML = `💸 Débours${hasDebours ? ` <span class="badge">${fmt(t2.debours)}</span>` : ""}`;
   }
-  // Re-render the échéances inline amounts (not the inputs themselves to avoid focus loss)
-  (S.mission.echeances || []).forEach(e => {
-    const cell = document.querySelector(`[data-ech-amt="${e.id}"]`);
-    if (cell) cell.textContent = fmt(r2(t2.total * num(e.pct) / 100));
-  });
-  // Update the new "Total" row at the bottom of the échéances list
+  // Update the "Total" row at the bottom of the échéances list (no € value shown anymore)
   const totalRow = document.getElementById("echTotalRow");
   const totalPct = document.getElementById("echTotalPct");
-  const totalAmt = document.getElementById("echTotalAmt");
   const warnEl = document.getElementById("echWarn");
-  if (totalRow && totalPct && totalAmt) {
+  if (totalRow && totalPct) {
     const pctSum = t2.echeancesTotal;
     const ok = pctSum === 100;
     totalRow.className = `ech-row ech-total ${ok ? "ok" : "warn"}`;
     totalPct.textContent = `${pctSum.toString().replace(".",",")} %${ok ? " ✓" : ""}`;
-    totalAmt.textContent = fmt(t2.total);
     if (warnEl) warnEl.style.display = ok ? "none" : "";
   }
   // Refresh per-line final cost indicators (in materiel form rows)
@@ -4325,21 +4321,21 @@ function rMS() {
       const ts = totals();
       const pctSum = ts.echeancesTotal;
       const ok = pctSum === 100;
+      // Round suggested % up to nearest multiple of 5 (always >= 30 floor)
+      const suggestedRounded = Math.max(30, Math.ceil(ts.acompteSuggestedPct / 5) * 5);
       return `
       <div class="ech-list">
         ${(d.echeances || []).map(e => {
           const pct = num(e.pct);
-          const amount = r2(ts.total * pct / 100);
-          // Show suggestion if label looks like an "acompte" line and there are materials marked Acompte
+          // Show suggestion (i) if label looks like an "acompte" line and there are materials marked Acompte
           const isAcompte = /acompte/i.test(e.label || "");
-          const showSuggestion = isAcompte && (ts.totalAcompteMateriel > 0 || ts.acompteSuggestedPct > 30);
+          const showSuggestion = isAcompte && (ts.totalAcompteMateriel > 0 || suggestedRounded > 30);
           const suggestion = showSuggestion
-            ? `<div class="ech-suggestion" title="Calculé sur le total des matériels/frais marqués « Acompte » avec un plancher à 30 %">≥ ${ts.acompteSuggestedPct} % suggéré</div>`
-            : `<div class="ech-suggestion-spacer"></div>`;
+            ? `<button type="button" class="ech-info-icon" tabindex="0" aria-label="Voir la suggestion"><span class="ech-info-tooltip" role="tooltip">Acompte suggéré : <strong>${suggestedRounded} %</strong> minimum (multiple de 5, calculé sur le total des matériels/frais marqués « Acompte » avec un plancher à 30 %).</span>i</button>`
+            : `<div class="ech-info-spacer" aria-hidden="true"></div>`;
           return `<div class="ech-row">
             <input class="lbl" value="${esc(e.label)}" placeholder="Libellé (ex: Acompte, Shooting, Livraison…)" oninput="echeanceUpd('${e.id}','label',this.value)">
             <div class="pct-wrap"><input type="number" step="1" min="0" max="100" value="${esc(e.pct)}" oninput="echeanceUpd('${e.id}','pct',this.value)"><span class="unit">%</span></div>
-            <div class="amt" data-ech-amt="${e.id}">${fmt(amount)}</div>
             ${suggestion}
             <button class="del" onclick="echeanceDel('${e.id}')" title="Supprimer">×</button>
           </div>`;
@@ -4347,7 +4343,7 @@ function rMS() {
         <div class="ech-row ech-total ${ok ? "ok" : "warn"}" id="echTotalRow">
           <span class="lbl-total">Total</span>
           <span class="pct-total" id="echTotalPct">${pctSum.toString().replace(".",",")} %${ok ? " ✓" : ""}</span>
-          <span class="amt-total" id="echTotalAmt">${fmt(ts.total)}</span>
+          <div class="ech-info-spacer" aria-hidden="true"></div>
           <span class="del-spacer"></span>
         </div>
       </div>
