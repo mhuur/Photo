@@ -1385,6 +1385,13 @@
   /* Au black mode warning banner */
   .black-warning{margin:8px 0 14px;padding:12px 16px;background:rgba(231,76,60,.08);border-left:3px solid var(--danger,#e74c3c);border-radius:0 6px 6px 0;font-size:13px;color:var(--text);line-height:1.5;max-width:880px}
   .black-warning strong{color:var(--danger,#e74c3c)}
+  /* Déplacement: same row layout as materiel — Voiture/Transport + Principal/Débours + Acompte/Avance + (i) + final cost */
+  .depl-row{flex-wrap:wrap}
+  .depl-row .lg-toggle{flex-shrink:0}
+  .depl-subtoggle-row{display:flex;align-items:center;gap:10px;margin-top:8px;padding-left:8px}
+  .depl-subtoggle-label{font-size:12px;color:var(--text-muted);font-weight:600;letter-spacing:.04em;text-transform:uppercase}
+  .depl-subtoggle-row .lg-toggle{min-width:auto}
+  .depl-subtoggle-row .lg-toggle button{font-size:12px;padding:0 12px}
   .depl-pmt-wrap{display:flex;align-items:center;gap:10px}
   /* Final client-facing cost shown inline in the row, after the price input.
      Always reserve a min-width slot so adjacent buttons don't shift between materiel rows. */
@@ -1466,7 +1473,7 @@ const DEFAULT_S = {
     prep:        { hours: "0", rate: "" },
     prod:        { hours: "0", rate: "" },
     postprod:    { hours: "0", rate: "" },
-    deplacement: { mode: "voiture", km: "0", peages: "0", tauxKm: "0.40", trajetH: "0", ticket: "0", paiementType: "acompte" },
+    deplacement: { mode: "voiture", km: "0", peages: "0", tauxKm: "0.40", trajetH: "0", ticket: "0", devis: "principal", afficheMode: "afficher", paiementType: "acompte" },
     autres:      { desc: "", montant: "0" },
     declare: true,
     blackMode: "reduit",
@@ -1568,6 +1575,17 @@ if (S.mission && S.mission.deplacement) {
   }
   if (S.mission.deplacement.paiementType === "fact-direct" && S.mission.deplacement.devis !== "debours") {
     S.mission.deplacement.paiementType = "avance";
+  }
+  // v1.36+ : remove deprecated devis="taux" — convert to devis="principal" + afficheMode="lisser"
+  if (S.mission.deplacement.devis === "taux") {
+    S.mission.deplacement.devis = "principal";
+    S.mission.deplacement.afficheMode = "lisser";
+  }
+  if (!S.mission.deplacement.afficheMode) {
+    S.mission.deplacement.afficheMode = "afficher";
+  }
+  if (!S.mission.deplacement.devis) {
+    S.mission.deplacement.devis = "principal";
   }
 }
 
@@ -1978,35 +1996,31 @@ function rDevisPreview() {
     }
   }
 
-  // Déplacement line — goes into either main lines (devis principal) or débours
+  // Déplacement line — goes into either main lines (Principal+Afficher), débours, or invisible (lisser baked into hourly rate)
   const mode = d.deplacement.mode || "voiture";
-  const tauxKm = num(d.deplacement.tauxKm) || 0.40;
-  const trajet = num(d.deplacement.trajetH) * 40;
-  const deplDetail = mode === "voiture"
-    ? `${num(d.deplacement.km).toFixed(1).replace(".",",")} km × ${tauxKm.toFixed(2).replace(".",",")} €/km${num(d.deplacement.peages) > 0 ? ` + ${fmt(num(d.deplacement.peages))} péages` : ""}${trajet > 0 ? ` + ${num(d.deplacement.trajetH)} h trajet` : ""}`
-    : `Billets : ${fmt(num(d.deplacement.ticket))}${trajet > 0 ? ` + ${num(d.deplacement.trajetH)} h trajet` : ""}`;
   const deplDevisMode = t.effectiveDeplMode || "principal";
-  const deplLineNum = (deplDevisMode === "principal" && t.depl > 0) ? ++lineNum : null;
-  // Apply URSSAF/avance markup ONLY for transport in Principal mode
-  // (voiture has no paiementType axis; débours/taux use the raw amount)
-  const deplInfo = (mode === "transports" && deplDevisMode === "principal")
-    ? ligneDisplayInfo(d.deplacement.devis, d.deplacement.paiementType, t.depl, ma, mu, true)
-    : { amount: t.depl, breakdown: deplDetail, hasMarkup: false };
+  // "principal" = shown as separate line (afficher mode), "lisser" = baked into tarifH (invisible),
+  // "debours" = in débours bucket (separate section below)
+  const deplShownAsMainLine = (deplDevisMode === "principal" && t.depl > 0);
+  const deplLineNum = deplShownAsMainLine ? ++lineNum : null;
+  // Apply URSSAF/avance markup for Principal mode (works for BOTH voiture and transport)
+  const isDeplPrincipal = (d.deplacement.devis || "principal") === "principal";
+  const deplInfo = (isDeplPrincipal && t.depl > 0)
+    ? ligneDisplayInfo("principal", d.deplacement.paiementType, t.depl, ma, mu, true)
+    : { amount: t.depl, breakdown: "", hasMarkup: false };
   const deplFinalAmount = deplInfo.amount;
-  // For transport with markup: show base detail + markup detail combined
-  const deplCombinedDetail = (mode === "transports" && deplInfo.hasMarkup)
-    ? `${deplDetail} → ${deplInfo.breakdown}`
-    : deplDetail;
+  // Per user request: NO calculation detail in devis (no "100km × 0,40€/km", no "+péages", etc.)
+  // Only the breakdown (URSSAF/avance) is shown if applicable, in the qty slot like materiel lines.
   const deplLineHtml = t.depl > 0 ? `<div class="dp-line">
     ${deplLineNum !== null ? `<div class="num">${deplLineNum}.</div>` : `<div class="num"></div>`}
-    <div class="lbl">Déplacement<div class="desc">${esc(deplCombinedDetail)}</div></div>
-    <div class="qty"></div>
+    <div class="lbl">Déplacement</div>
+    <div class="qty">${esc(deplInfo.breakdown)}</div>
     <div class="amt">${fmt(deplFinalAmount)}</div>
   </div>` : "";
   if (deplDevisMode === "principal") {
     linesHtml += deplLineHtml;
   }
-  // "taux" mode → no separate déplacement line (already baked into the hourly rate)
+  // "lisser" mode → no separate déplacement line (already baked into the hourly rate)
 
   // Débours items (separately)
   let deboursHtml = "";
@@ -2156,14 +2170,8 @@ function rDeboursPreview() {
   // Build débours items
   let linesHtml = "";
   if ((d.deplacement.devis || "principal") === "debours" && t.depl > 0) {
-    const mode = d.deplacement.mode || "voiture";
-    const tauxKm = num(d.deplacement.tauxKm) || 0.40;
-    const trajet = num(d.deplacement.trajetH) * 40;
-    const deplDetail = mode === "voiture"
-      ? `${num(d.deplacement.km).toFixed(1).replace(".",",")} km × ${tauxKm.toFixed(2).replace(".",",")} €/km${num(d.deplacement.peages) > 0 ? ` + ${fmt(num(d.deplacement.peages))} péages` : ""}${trajet > 0 ? ` + ${num(d.deplacement.trajetH)} h trajet` : ""}`
-      : `Billets : ${fmt(num(d.deplacement.ticket))}${trajet > 0 ? ` + ${num(d.deplacement.trajetH)} h trajet` : ""}`;
     linesHtml += `<div class="dp-line">
-      <div class="lbl">Déplacement<div class="desc">${esc(deplDetail)}</div></div>
+      <div class="lbl">Déplacement</div>
       <div class="qty"></div>
       <div class="amt">${fmt(t.depl)}</div>
     </div>`;
@@ -2252,14 +2260,8 @@ function rFacturePreview(opts) {
   // Déplacement line if mode is "principal"
   const deplDevisMode = t.effectiveDeplMode || "principal";
   if (deplDevisMode === "principal" && t.depl > 0) {
-    const mode = d.deplacement.mode || "voiture";
-    const tauxKm = num(d.deplacement.tauxKm) || 0.40;
-    const trajet = num(d.deplacement.trajetH) * 40;
-    const deplDetail = mode === "voiture"
-      ? `${num(d.deplacement.km).toFixed(1).replace(".",",")} km × ${tauxKm.toFixed(2).replace(".",",")} €/km${num(d.deplacement.peages) > 0 ? ` + ${fmt(num(d.deplacement.peages))} péages` : ""}${trajet > 0 ? ` + ${num(d.deplacement.trajetH)} h trajet` : ""}`
-      : `Billets : ${fmt(num(d.deplacement.ticket))}${trajet > 0 ? ` + ${num(d.deplacement.trajetH)} h trajet` : ""}`;
     linesHtml += `<div class="dp-line">
-      <div class="lbl">Déplacement<div class="desc">${esc(deplDetail)}</div></div>
+      <div class="lbl">Déplacement</div>
       <div class="qty"></div>
       <div class="amt">${fmt(t.depl)}</div>
     </div>`;
@@ -2783,6 +2785,15 @@ function updDeplPaiementType(val) {
 }
 window.updDeplPaiementType = updDeplPaiementType;
 
+function updDeplAfficheMode(val) {
+  if (val !== "afficher" && val !== "lisser") return;
+  if (!S.mission.deplacement) S.mission.deplacement = {};
+  S.mission.deplacement.afficheMode = val;
+  save();
+  render();
+}
+window.updDeplAfficheMode = updDeplAfficheMode;
+
 // ============ PAIEMENT INFO HELPER ============
 // Given a (devis, paiementType, marge%, urssaf%, amount), return a structured explanation
 // of what this combination means: who invoices, marge possibility, URSSAF impact, when to use it.
@@ -3148,13 +3159,14 @@ function totals() {
     ? r2(r2(num(d.deplacement.km) * tauxKm) + r2(num(d.deplacement.peages)) + trajet)
     : r2(r2(num(d.deplacement.ticket)) + trajet);
   const deplMode = d.deplacement.devis || "principal";
+  const deplAfficheMode = d.deplacement.afficheMode || "afficher";
   const deplGoesToDebours = deplMode === "debours";
-  const deplGoesToTaux = deplMode === "taux";
   const deplGoesToPrincipal = deplMode === "principal";
-  // Apply markup to transport déplacement in Principal mode (voiture has no paiement axis,
-  // taux mode is baked into hourly rate, debours is hors-CA)
+  // "Lisser dans taux horaire" mode: bake déplacement into hourly rate (only meaningful when Principal + hours exist)
+  const deplLisser = deplGoesToPrincipal && deplAfficheMode === "lisser" && totalHeures > 0;
+  // Apply markup to déplacement when Principal (works for BOTH voiture and transport)
   let deplFinal = depl;
-  if (mode === "transports" && depl > 0 && deplGoesToPrincipal) {
+  if (depl > 0 && deplGoesToPrincipal) {
     const dInfo = ligneDisplayInfo("principal", d.deplacement.paiementType, depl, margeAvancePct, margeUrssafPct, false);
     deplFinal = dInfo.amount;
     totalPrincipalBase = r2(totalPrincipalBase + depl);
@@ -3162,19 +3174,18 @@ function totals() {
     totalUrssafMontant = r2(totalUrssafMontant + dInfo.urssafAmt);
     if (d.deplacement.paiementType === "acompte") totalAcompteMateriel = r2(totalAcompteMateriel + depl);
     if (d.deplacement.paiementType === "avance") totalAvanceBase = r2(totalAvanceBase + depl);
-  } else if (mode === "transports" && depl > 0) {
-    // Débours / taux / fact-direct cases for transport
-    if (deplGoesToDebours && d.deplacement.paiementType === "fact-direct") {
+  } else if (depl > 0 && deplGoesToDebours) {
+    if (d.deplacement.paiementType === "fact-direct") {
       totalFactDirect = r2(totalFactDirect + depl);
-    } else if (deplGoesToDebours && d.deplacement.paiementType === "acompte") {
+    } else if (d.deplacement.paiementType === "acompte") {
       totalAcompteMateriel = r2(totalAcompteMateriel + depl);
     }
   }
-  // Effective hourly rate (with déplacement baked in if "taux" mode — uses base depl, no markup)
+  // Effective hourly rate (with déplacement baked in if "lisser" mode — uses FINAL amount with markup)
   let tarifHEff = tarifH;
   let deplPerHour = 0;
-  if (deplGoesToTaux && totalHeures > 0 && depl > 0) {
-    deplPerHour = r2(depl / totalHeures);
+  if (deplLisser && deplFinal > 0) {
+    deplPerHour = r2(deplFinal / totalHeures);
     tarifHEff = r2(tarifH + deplPerHour);
   }
   // Heures amount (per-ligne rounding for stable totals)
@@ -3185,14 +3196,14 @@ function totals() {
   const lignesAmount = r2(heuresAmount + materielPrincipalFinal);
   if (deplGoesToDebours && d.deplacement.paiementType !== "fact-direct") debours = r2(debours + depl);
   const autres = 0;
-  // Subtotal: heures + materiel principal (final) + déplacement final (if mode is principal,
-  // or taux mode with no hours to spread it across)
-  const deplInSubtotal = deplGoesToPrincipal || (deplGoesToTaux && totalHeures === 0);
-  const effectiveDeplMode = (deplGoesToTaux && totalHeures === 0) ? "principal" : deplMode;
-  const deplInSubtotalAmount = deplInSubtotal
-    ? (deplGoesToPrincipal ? deplFinal : depl)
-    : 0;
-  const subtotal = r2(lignesAmount + deplInSubtotalAmount);
+  // Subtotal: heures (which includes lisser depl baked into tarifH) + materiel principal (final) +
+  //           déplacement final IF Principal+Afficher (separate line in devis)
+  // - Principal+Afficher: depl shown as separate line, added to subtotal
+  // - Principal+Lisser+hours: depl baked into tarifH, NOT in subtotal separately (heuresAmount already includes it)
+  // - Principal+Lisser+0 hours: degenerate case — show as separate line (otherwise depl disappears)
+  const deplShownAsLine = deplGoesToPrincipal && (deplAfficheMode === "afficher" || (deplAfficheMode === "lisser" && totalHeures === 0));
+  const effectiveDeplMode = deplShownAsLine ? "principal" : (deplLisser ? "lisser" : deplMode);
+  const subtotal = r2(lignesAmount + (deplShownAsLine ? deplFinal : 0));
   const remise = r2(subtotal * num(d.remisePct) / 100);
   const total = r2(subtotal - remise);
   // Acompte suggested %: max(30, totalAcompteMateriel/total*100)
@@ -3219,17 +3230,18 @@ function totals() {
 }
 
 function rTauxBreakdown() {
-  // Inline breakdown shown under "Temps de trajet" when "Dans taux horaire" mode is active.
+  // Inline breakdown shown under "Temps de trajet" when "Lisser dans taux horaire" mode is active.
   const d = S.mission;
-  if (d.deplacement.devis !== "taux") return "";
+  const isLisser = (d.deplacement.devis || "principal") === "principal" && (d.deplacement.afficheMode || "afficher") === "lisser";
+  if (!isLisser) return "";
   const t = totals();
   if (t.totalHeures === 0) {
-    return `<div class="hint" style="margin-top:6px;color:var(--warning)">⚠ Pas d'heures dans le devis : le déplacement est facturé séparément en attendant.</div>`;
+    return `<div class="hint" style="margin-top:6px;color:var(--warning)">⚠ Pas d'heures dans le devis : le déplacement est facturé séparément en attendant (mode « lisser » nécessite des heures).</div>`;
   }
   const b = tarifBreakdown(true);
   if (!b) return `<div class="hint" style="margin-top:6px">Sélectionne un type de prestation pour voir la décomposition.</div>`;
   return `<div class="taux-breakdown">
-    <label class="taux-breakdown-lbl">Tarif horaire mis à jour avec déplacement</label>
+    <label class="taux-breakdown-lbl">Tarif horaire mis à jour avec déplacement (lissé)</label>
     <div class="presta-decomp">${tarifBreakdownHtml(b)}</div>
   </div>`;
 }
@@ -3242,14 +3254,10 @@ function refreshFinalCosts() {
   const isDeclared = m.declare !== false;
   const ma = isDeclared ? num(m.paiement?.margeAvance ?? 0) : 0;
   const mu = isDeclared ? num(m.urssafPct ?? 22) : 0;
-  for (const l of m.lignes || []) {
-    if (l.type !== "materiel") continue;
-    const wrap = document.querySelector(`.lg-row-wrap[data-id="${l.id}"]`);
-    if (!wrap) continue;
-    const el = wrap.querySelector(".lg-final-cost-inline");
-    if (!el) continue;
-    const info = ligneDisplayInfo(l.devis, l.paiementType, l.prix, ma, mu, false);
-    if (info.hasMarkup) {
+  // Helper to update a single .lg-final-cost-inline element from a ligneDisplayInfo result
+  const updateSlot = (el, info) => {
+    if (!el) return;
+    if (info && info.hasMarkup) {
       el.classList.remove("empty");
       el.removeAttribute("aria-hidden");
       el.title = `Coût final pour le client : ${info.breakdown}`;
@@ -3259,6 +3267,26 @@ function refreshFinalCosts() {
       el.setAttribute("aria-hidden", "true");
       el.removeAttribute("title");
       el.textContent = "";
+    }
+  };
+  // Materiel rows
+  for (const l of m.lignes || []) {
+    if (l.type !== "materiel") continue;
+    const wrap = document.querySelector(`.lg-row-wrap[data-id="${l.id}"]`);
+    if (!wrap) continue;
+    const el = wrap.querySelector(".lg-final-cost-inline");
+    if (!el) continue;
+    const info = ligneDisplayInfo(l.devis, l.paiementType, l.prix, ma, mu, false);
+    updateSlot(el, info);
+  }
+  // Déplacement row
+  const deplWrap = document.querySelector('.lg-row-wrap[data-id="deplacement"]');
+  if (deplWrap) {
+    const el = deplWrap.querySelector(".lg-final-cost-inline");
+    if (el) {
+      const t = totals();
+      const info = ligneDisplayInfo(m.deplacement.devis || "principal", m.deplacement.paiementType, t.depl, ma, mu, false);
+      updateSlot(el, info);
     }
   }
 }
@@ -4238,44 +4266,67 @@ function rMS() {
     </div>
 
     <h3>Déplacement</h3>
-    <div class="row"><div class="field lg"><label>Inclure dans</label>
-      <div class="seg seg-3">
-        <button class="${(d.deplacement.devis || 'principal') === 'principal' ? 'on' : ''}" onclick="updDeplDevis('principal')">Devis principal</button>
-        <button class="${d.deplacement.devis === 'taux' ? 'on' : ''}" onclick="updDeplDevis('taux')">Dans taux horaire</button>
-        <button class="${d.deplacement.devis === 'debours' ? 'on' : ''}" onclick="updDeplDevis('debours')">Frais débours</button>
-      </div>
-    </div></div>
-    <div class="row"><div class="field"><label>Mode de transport</label>
-      <div class="seg">
-        <button class="${mode==="voiture"?"on":""}" onclick="updMissionMode('voiture')">🚗 Voiture</button>
-        <button class="${mode==="transports"?"on":""}" onclick="updMissionMode('transports')">🚆 Transports</button>
-      </div>
-    </div></div>
-    ${mode === "voiture" ? `
-    <div class="row"><div class="field narrow"><label>Distance (km)</label><input type="number" step="0.1" value="${esc(d.deplacement.km)}" oninput="upd('mission.deplacement.km', this.value)"></div></div>
-    <div class="row"><div class="field narrow"><label>Péages (€)</label><input type="number" step="0.01" value="${esc(d.deplacement.peages)}" oninput="upd('mission.deplacement.peages', this.value)"></div></div>
-    <div class="row"><div class="field narrow"><label>Indemnité kilométrique (€/km)</label><input type="number" step="0.01" value="${esc(d.deplacement.tauxKm ?? "0.40")}" oninput="upd('mission.deplacement.tauxKm', this.value)"></div></div>
-    ` : (() => {
-      const isDebours = d.deplacement.devis === "debours";
+    ${(() => {
+      const mode = d.deplacement.mode || "voiture";
+      const devis = d.deplacement.devis || "principal";
+      const isDebours = devis === "debours";
       const pmt = d.deplacement.paiementType || "acompte";
+      const afficheMode = d.deplacement.afficheMode || "afficher";
       const secondVal = isDebours ? "fact-direct" : "avance";
       const secondLabel = isDebours ? "Fact. Direct" : "Avance";
       const secondTitle = isDebours
         ? "Le fournisseur facture directement ton client final"
         : "Tu avances la dépense, marge appliquée";
+      // Final cost slot (live-updated by refreshFinalCosts)
+      const _isDeclared = d.declare !== false;
+      const ma = _isDeclared ? num((d.paiement || {}).margeAvance ?? 0) : 0;
+      const mu = _isDeclared ? num(d.urssafPct ?? 22) : 0;
+      const tNow = totals();
+      const dispInfo = ligneDisplayInfo(devis, pmt, tNow.depl, ma, mu, false);
+      const finalCostInline = dispInfo.hasMarkup
+        ? `<div class="lg-final-cost-inline" title="Coût final pour le client : ${esc(dispInfo.breakdown)}">→ ${fmt(dispInfo.amount)}</div>`
+        : `<div class="lg-final-cost-inline empty" aria-hidden="true"></div>`;
       return `
-      <div class="row"><div class="field narrow"><label>Prix des billets (€)</label><input type="number" step="0.01" value="${esc(d.deplacement.ticket)}" oninput="upd('mission.deplacement.ticket', this.value)"></div></div>
-      <div class="row"><div class="field"><label>Mode de paiement <span class="hint" style="font-weight:400;color:var(--text-dim);font-size:11px">(obligatoire)</span></label>
-        <div class="depl-pmt-wrap">
-          <div class="seg">
+      <div class="lg-row-wrap" data-id="deplacement">
+        <div class="lg-row depl-row">
+          <div class="seg lg-toggle">
+            <button class="${mode==='voiture'?'on':''}" onclick="updMissionMode('voiture')">🚗 Voiture</button>
+            <button class="${mode==='transports'?'on':''}" onclick="updMissionMode('transports')">🚆 Transports</button>
+          </div>
+          ${finalCostInline}
+          <div class="seg lg-toggle">
+            <button class="${devis==='principal'?'on':''}" onclick="updDeplDevis('principal')">Principal</button>
+            <button class="${devis==='debours'?'on warn':''}" onclick="updDeplDevis('debours')">Débours</button>
+          </div>
+          <div class="seg lg-toggle lg-toggle-pmt" title="Mode de paiement (obligatoire)">
             <button class="${pmt==='acompte'?'on':''}" onclick="updDeplPaiementType('acompte')" title="Inclus dans l'acompte à la commande">Acompte</button>
             <button class="${pmt===secondVal?'on':''}" onclick="updDeplPaiementType('${secondVal}')" title="${secondTitle}">${secondLabel}</button>
           </div>
           <button class="lg-info-icon" onmouseenter="showPaiementInfo(event, 'depl')" onmouseleave="hidePaiementInfo()" onfocus="showPaiementInfo(event, 'depl')" onblur="hidePaiementInfo()" tabindex="0" aria-label="Voir les conséquences fiscales de ce choix">i</button>
         </div>
-      </div></div>
-    `;
+        ${devis === 'principal' ? `
+        <div class="depl-subtoggle-row">
+          <span class="depl-subtoggle-label">Affichage :</span>
+          <div class="seg lg-toggle">
+            <button class="${afficheMode==='afficher'?'on':''}" onclick="updDeplAfficheMode('afficher')" title="Apparaît comme une ligne séparée dans le devis">Afficher dans devis</button>
+            <button class="${afficheMode==='lisser'?'on':''}" onclick="updDeplAfficheMode('lisser')" title="Inclus dans le tarif horaire (ne ressort pas comme une ligne)">Lisser dans taux horaire</button>
+          </div>
+        </div>
+        ` : ''}
+      </div>
+      `;
     })()}
+    ${mode === "voiture" ? `
+    <div class="row">
+      <div class="field narrow"><label>Distance (km)</label><input type="number" step="0.1" value="${esc(d.deplacement.km)}" oninput="upd('mission.deplacement.km', this.value)"></div>
+      <div class="field narrow"><label>Péages (€)</label><input type="number" step="0.01" value="${esc(d.deplacement.peages)}" oninput="upd('mission.deplacement.peages', this.value)"></div>
+      <div class="field narrow"><label>Indemnité kilométrique (€/km)</label><input type="number" step="0.01" value="${esc(d.deplacement.tauxKm ?? "0.40")}" oninput="upd('mission.deplacement.tauxKm', this.value)"></div>
+    </div>
+    ` : `
+    <div class="row">
+      <div class="field narrow"><label>Prix des billets (€)</label><input type="number" step="0.01" value="${esc(d.deplacement.ticket)}" oninput="upd('mission.deplacement.ticket', this.value)"></div>
+    </div>
+    `}
     <div class="row"><div class="field narrow"><label>Temps de trajet (h)</label><input type="number" step="0.25" value="${esc(d.deplacement.trajetH)}" oninput="upd('mission.deplacement.trajetH', this.value)"></div></div>
 
     <div id="tauxBreakdownWrap">${rTauxBreakdown()}</div>
@@ -6786,6 +6837,22 @@ function rTR() {
 // Most recent version FIRST.
 // =============================================================
 const CHANGELOG = [
+  {
+    version: "v1.36",
+    date: "2026-04-29",
+    title: "Déplacement aligné sur Matériel · Pas de détail calcul dans devis · Afficher/Lisser quand Principal",
+    items: [
+      "🔥 Refonte complète de la section Déplacement : la 1ère ligne reprend les MÊMES boutons que les lignes matériel — `[Voiture / Transports]` · `[Principal / Débours]` · `[Acompte / Avance|Fact.Direct]` · `(i)` · slot coût final → tout sur une seule ligne, dans la même colonne. Le bouton « Voiture / Transports » est remonté à gauche de tous les autres toggles.",
+      "🔥 L'ancien toggle 3-boutons « Devis principal / Dans taux horaire / Frais débours » est supprimé. Le mode `taux` n'existe plus — il est remplacé par un sous-toggle « Afficher dans devis / Lisser dans taux horaire » qui apparaît UNIQUEMENT quand Principal est sélectionné.",
+      "Les deux modes Afficher/Lisser appliquent la majoration URSSAF + avance (comme demandé). Calculé via `ligneDisplayInfo()` exactement comme pour les lignes matériel. La majoration est ainsi appliquée uniformément aux 4 combinaisons (Voiture/Transport × Acompte/Avance) en mode Principal.",
+      "Mode « Lisser » : quand des heures existent, le déplacement final (avec markup) est divisé par le nombre d'heures et ajouté au tarif horaire effectif. La ligne Déplacement disparaît du devis (invisible côté client). Cohérence vérifiée : sous-total identique entre Afficher et Lisser, seule la présentation change.",
+      "🔥 Le détail du calcul (« 100 km × 0,40 €/km + 20 € péages », « Billets 80 € + 1 h trajet ») n'apparaît plus dans le devis. Seuls le label « Déplacement », le breakdown URSSAF (si Acompte) et le montant final sont affichés. Comportement aligné sur les lignes matériel.",
+      "Migration auto : missions existantes avec `deplacement.devis = \"taux\"` sont converties en `devis = \"principal\"` + `afficheMode = \"lisser\"`. Aucune perte de comportement.",
+      "Coût final inline (« → 153,85 € ») affiché en LIVE update quand on tape dans km/péages/ticket/trajet (déclenche `refreshFinalCosts` via le mécanisme existant). `data-id=\"deplacement\"` posé sur le wrapper pour ciblage DOM.",
+      "Tooltip (i) sur Déplacement : continue de fonctionner pour les 4 combinaisons Principal+Acompte / Principal+Avance / Débours+Acompte / Débours+Fact.Direct, comme pour les lignes matériel.",
+      "Cas Voiture+Avance désormais autorisé (avant : seulement Transport pouvait être Avance). Logiquement étrange (« avancer sa propre voiture »), mais pas bloqué — pour la symétrie d'UI avec matériel."
+    ]
+  },
   {
     version: "v1.35",
     date: "2026-04-29",
