@@ -1529,6 +1529,72 @@
   .lg-desc{width:100%;padding:8px 10px;border:1px solid transparent;border-radius:6px;background:var(--surface-2);color:var(--text-muted);font:inherit;font-size:13px;resize:vertical;min-height:60px;transition:border-color .12s,box-shadow .12s;box-sizing:border-box}
   .lg-desc:hover{border-color:var(--border-light)}
   .lg-desc:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 3px var(--primary-soft);color:var(--text)}
+
+  /* ============================================================================
+     DEVIS v2 — Layout 2 colonnes (form + preview live), mobile = tabs
+     ============================================================================ */
+  .devis-layout{display:grid;grid-template-columns:minmax(0,1fr) 460px;gap:24px;align-items:start;margin-top:6px}
+  .devis-edit{min-width:0}
+  .devis-preview-pane{position:sticky;top:18px;max-height:calc(100vh - 36px);display:flex;flex-direction:column;background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden;box-shadow:var(--shadow-sm)}
+  .devis-preview-pane .preview-tabs-wrap{display:flex;flex-direction:column;flex:1;min-height:0;border:0;border-radius:0;background:transparent;box-shadow:none}
+  .devis-preview-pane .preview-tabs-body{flex:1;overflow-y:auto;padding:14px 16px;background:var(--bg-3)}
+  .devis-preview-pane .preview-tabs-nav{flex-shrink:0}
+
+  /* Status banner above the "Enregistrer" CTA — validation + dirty snapshot */
+  .devis-pane-footer{flex-shrink:0;padding:12px 14px;border-top:1px solid var(--border);background:var(--surface);display:flex;flex-direction:column;gap:8px}
+  .devis-banner{font-size:12px;line-height:1.45;padding:8px 10px;border-radius:6px;display:flex;gap:8px;align-items:flex-start}
+  .devis-banner.err{background:var(--danger-soft);border:1px solid var(--danger);color:var(--danger)}
+  .devis-banner.warn{background:var(--warning-soft);border:1px solid var(--warning);color:var(--warning)}
+  .devis-banner.info{background:var(--primary-soft);border:1px solid var(--primary);color:var(--primary)}
+  .devis-banner ul{margin:2px 0 0 16px;padding:0}
+  .devis-banner-ico{flex-shrink:0;font-weight:700}
+  .devis-pane-actions{display:flex;gap:8px;align-items:center}
+  .devis-pane-actions .btn{flex:1}
+  .devis-pane-actions .btn[disabled]{opacity:.5;cursor:not-allowed;box-shadow:none}
+
+  /* Compact summary chip in each accordion header — "3 lignes · 850 €" */
+  .edit-section-summary{margin-left:auto;font-size:12px;color:var(--text-muted);font-weight:500;display:inline-flex;align-items:center;gap:8px;padding-right:8px}
+  .edit-section-summary .dot{width:3px;height:3px;border-radius:50%;background:var(--text-dim)}
+  .edit-section-summary .amt{color:var(--text);font-variant-numeric:tabular-nums}
+  .edit-section-summary .warn{color:var(--warning)}
+  .edit-section-summary .err{color:var(--danger)}
+  .edit-section.open .edit-section-summary{opacity:.5}
+  .edit-section-header:has(.edit-section-action) .edit-section-summary{margin-right:8px}
+
+  /* Drag handle + dragging state */
+  .lg-row-wrap{position:relative;transition:opacity .15s}
+  .lg-row-wrap.dragging{opacity:.4}
+  .lg-row-wrap.drag-over{box-shadow:0 -2px 0 var(--primary)}
+  .lg-drag{cursor:grab;user-select:none;color:var(--text-dim);font-size:14px;padding:0 4px;line-height:1;flex-shrink:0;align-self:center}
+  .lg-drag:hover{color:var(--primary)}
+  .lg-drag:active{cursor:grabbing}
+
+  /* Mobile: stacked tabs (Édition / Aperçu) */
+  .devis-mobile-tabs{display:none;margin:0 0 12px;background:var(--surface-2);border:1px solid var(--border-soft);border-radius:8px;padding:3px;gap:2px}
+  .devis-mobile-tabs button{flex:1;background:transparent;border:0;color:var(--text-muted);padding:8px 10px;font:inherit;font-size:13px;font-weight:500;cursor:pointer;border-radius:5px;transition:all .12s}
+  .devis-mobile-tabs button.on{background:var(--primary);color:#fff;box-shadow:0 1px 3px rgba(74,158,255,.3)}
+
+  @media (max-width:980px){
+    .devis-mobile-tabs{display:flex}
+    .devis-layout{grid-template-columns:1fr;gap:0}
+    .devis-preview-pane{position:static;max-height:none}
+    .devis-preview-pane .preview-tabs-body{max-height:none}
+    .devis-edit[data-mobile-hidden="1"],
+    .devis-preview-pane[data-mobile-hidden="1"]{display:none}
+  }
+
+  /* Sub-headings inside an accordion body (e.g. "Heures" / "Matériel" inside Prestations) */
+  .edit-section-body h5{margin:14px 0 6px;font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;font-weight:600;border:0;padding:0}
+  .edit-section-body h5:first-child{margin-top:6px}
+  .edit-section-body .lg-add{margin-top:6px}
+
+  /* Catalogue à portée: link to Frais & Tarifs */
+  .devis-catalog-hint{font-size:11px;color:var(--text-dim);margin:4px 0 10px}
+  .devis-catalog-hint a{color:var(--primary);text-decoration:none}
+  .devis-catalog-hint a:hover{text-decoration:underline}
+
+  /* Empty state in lignes list */
+  .lg-empty{padding:14px;text-align:center;color:var(--text-dim);font-size:13px;border:1px dashed var(--border-soft);border-radius:6px;margin:4px 0}
 </style>
 </head>
 <body>
@@ -1591,7 +1657,7 @@ const SK = "devis-photo-data-v2";
 const DEFAULT_S = {
   mission: {
     ref: "", dateEmission: "", dateValidite: "",
-    object: "", objectDate: "", objectLieu: "",
+    object: "", objectText: "", objectDate: "", objectLieu: "",
     client: { num: "", name: "", contact: "", contactSelected: "", contactId: "", address: "", phone: "", phoneSelected: "", email: "", emailSelected: "" },
     prep:        { hours: "0", rate: "" },
     prod:        { hours: "0", rate: "" },
@@ -3517,6 +3583,8 @@ function refreshTotals() {
   refreshFinalCosts();
   // Refresh the remise tooltip live (so tooltip reflects current state without re-render)
   refreshRemiseTooltip();
+  // Refresh accordion section summaries + preview pane footer (Devis v2)
+  if (tab === "mission" && typeof refreshDevisHeaders === "function") refreshDevisHeaders();
 }
 
 function totalsHtml(t) {
@@ -4509,48 +4577,478 @@ function tarifBreakdownHtml(b) {
   </table>`;
 }
 
-function rMS() {
+// ============================================================================
+// DEVIS v2 — Helpers : mobile tab, drag-reorder, section summaries, validation,
+//                      snapshot dirty detection. Logique pure sauf event handlers.
+// ============================================================================
+
+// État UI éphémère (volontairement hors S — ne se persiste pas entre sessions)
+let devisMobileTab = "edit"; // "edit" | "preview"
+window.devisSetMobileTab = function(v) {
+  devisMobileTab = v;
+  // Toggle DOM directement, pas de re-render — focus préservé
+  const ed = document.querySelector(".devis-edit");
+  const pv = document.querySelector(".devis-preview-pane");
+  if (ed) ed.dataset.mobileHidden = (v === "preview") ? "1" : "0";
+  if (pv) pv.dataset.mobileHidden = (v === "edit") ? "1" : "0";
+  document.querySelectorAll(".devis-mobile-tabs button").forEach(b => {
+    b.classList.toggle("on", b.dataset.tab === v);
+  });
+};
+
+// ----------------------------------------------------------------------------
+// SECTION SUMMARIES — pures, pas d'accès DOM. Génèrent les chips compacts
+// affichés dans les en-têtes d'accordéon ("3 lignes · 850 €").
+// ----------------------------------------------------------------------------
+function devisSectionSummaries() {
   const d = S.mission;
   const t = totals();
-  const declare = d.declare !== false;
-  const mode = d.deplacement.mode || "voiture";
+
+  // 1. Identification & client
+  const cliName = (d.client && d.client.name) ||
+    (d.client && d.client.id && (S.clients.entries.find(c => c.id === d.client.id) || {}).name) || "";
+  const idSummary = cliName
+    ? `<span class="amt">${esc(cliName)}</span>`
+    : `<span class="warn">Aucun client</span>`;
+
+  // 2. Prestations — compte des lignes facturables (heures + matériel principal)
+  const lignesFact = (d.lignes || []).filter(l =>
+    l.type === "heures" || (l.type === "materiel" && l.devis !== "debours")
+  ).length;
+  const prestaSummary = lignesFact > 0
+    ? `<span>${lignesFact} ligne${lignesFact > 1 ? "s" : ""}</span><span class="dot"></span><span class="amt">${fmt(t.lignes)}</span>`
+    : `<span class="warn">Aucune prestation</span>`;
+
+  // 3. Déplacement & débours
+  const deplDevis = d.deplacement.devis || "principal";
+  const deboursLignes = (d.lignes || []).filter(l => l.type === "materiel" && l.devis === "debours").length;
+  const deplBits = [];
+  if (t.depl > 0) deplBits.push(deplDevis === "debours" ? `Débours ${fmt(t.depl)}` : `Trajet ${fmt(t.depl)}`);
+  if (deboursLignes > 0) deplBits.push(`${deboursLignes} matériel${deboursLignes > 1 ? "s" : ""} débours`);
+  const deplSummary = deplBits.length ? `<span class="amt">${esc(deplBits.join(" · "))}</span>` : `<span>Pas de déplacement</span>`;
+
+  // 4. Ajustements — remise + URSSAF
+  const remisePct = num(d.remisePct);
+  const ri = computeRemiseInfo();
+  const remiseClass = remisePct > ri.remiseMaxPct ? "warn" : (remisePct > 0 ? "amt" : "");
+  const adjBits = [];
+  if (remisePct > 0) adjBits.push(`<span class="${remiseClass}">${remisePct.toString().replace(".",",")}% remise</span>`);
+  if (d.declare !== false) adjBits.push(`<span>URSSAF ${num(d.urssafPct ?? 22).toString().replace(".",",")}%</span>`);
+  const adjSummary = adjBits.length ? adjBits.join('<span class="dot"></span>') : `<span>Par défaut</span>`;
+
+  // 5. Modalités — somme des % + IBAN
+  const pctSum = t.echeancesTotal;
+  const ok100 = pctSum === 100;
+  const echBit = ok100
+    ? `<span class="amt">${(d.echeances || []).length} échéance${(d.echeances || []).length > 1 ? "s" : ""}</span>`
+    : `<span class="err">${pctSum.toString().replace(".",",")}% (≠100)</span>`;
+  const ibanBit = (d.paiement && d.paiement.iban) ? `<span>IBAN ✓</span>` : `<span class="warn">IBAN manquant</span>`;
+  const modSummary = `${echBit}<span class="dot"></span>${ibanBit}`;
+
+  // 6. Conditions & signature — sections CGV
+  const cgvCount = (d.cgvSections || []).filter(s => s && (s.title || s.body)).length;
+  const condSummary = cgvCount > 0
+    ? `<span class="amt">${cgvCount} section${cgvCount > 1 ? "s" : ""} CGV</span>`
+    : `<span class="warn">CGV vides</span>`;
+
+  return {
+    identification: idSummary,
+    prestations:    prestaSummary,
+    deplacement:    deplSummary,
+    ajustements:    adjSummary,
+    modalites:      modSummary,
+    conditions:     condSummary
+  };
+}
+
+// Refresh in place — appelée par refreshTotals() après chaque oninput
+function refreshDevisHeaders() {
+  const sums = devisSectionSummaries();
+  for (const key of Object.keys(sums)) {
+    const el = document.querySelector(`.edit-section[data-edit-section="${key}"] .edit-section-summary`);
+    if (el) el.innerHTML = sums[key];
+  }
+  // Met à jour aussi le footer de la preview pane (validation + dirty)
+  const status = document.querySelector(".devis-pane-footer");
+  if (status) status.innerHTML = rDevisPaneFooterInner();
+}
+
+// ----------------------------------------------------------------------------
+// VALIDATION — pure. Renvoie { errors, warnings, ok } pour le bandeau preview.
+// ----------------------------------------------------------------------------
+function validateDevis() {
+  const d = S.mission;
+  const t = totals();
+  const errors = [];
+  const warnings = [];
+
+  if (!d.ref || d.ref === "DEVIS-…-…") errors.push("Référence du devis manquante");
+  const cliName = (d.client && d.client.name) ||
+    (d.client && d.client.id && (S.clients.entries.find(c => c.id === d.client.id) || {}).name);
+  if (!cliName) errors.push("Aucun client sélectionné");
+
+  const lignesFact = (d.lignes || []).filter(l =>
+    l.type === "heures" || (l.type === "materiel" && l.devis !== "debours")
+  );
+  if (lignesFact.length === 0 && t.depl <= 0) errors.push("Aucune prestation facturable");
+
+  if (t.echeancesTotal !== 100) {
+    errors.push(`Les échéances totalisent ${t.echeancesTotal.toString().replace(".",",")} % (doit être 100 %)`);
+  }
+
+  // Warnings non-bloquants
+  const ri = computeRemiseInfo();
+  if (num(d.remisePct) > ri.remiseMaxPct) {
+    warnings.push(`Remise ${num(d.remisePct)}% > marge max recommandée (${ri.remiseMaxPct}%)`);
+  }
+  if (!d.paiement || !d.paiement.iban) warnings.push("IBAN non renseigné dans Modalités de paiement");
+
+  return { errors, warnings, ok: errors.length === 0 };
+}
+
+// ----------------------------------------------------------------------------
+// SNAPSHOT DIRTY — détecte si le devis a divergé du dernier snapshot Suivi.
+// Hash léger : JSON.stringify(mission). Stocké dans suivi.devis[id].snapshotHash
+// (cf. Patch F dans suiviAdd).
+// ----------------------------------------------------------------------------
+function devisHash() {
+  return JSON.stringify(S.mission);
+}
+function devisCurrentSuiviEntry() {
+  const ref = S.mission.ref;
+  if (!ref || !S.suivi || !S.suivi.devis) return null;
+  for (const [id, snap] of Object.entries(S.suivi.devis)) {
+    if (snap && snap.ref === ref) return { id, snap };
+  }
+  return null;
+}
+function devisIsDirty() {
+  const e = devisCurrentSuiviEntry();
+  if (!e) return false; // pas encore enregistré → pas "dirty", c'est juste neuf
+  return !e.snap.snapshotHash || e.snap.snapshotHash !== devisHash();
+}
+
+window.suiviUpdateSnapshot = function() {
+  const e = devisCurrentSuiviEntry();
+  if (!e) return;
+  if (!confirm("Mettre à jour le snapshot enregistré dans Suivi ? L'ancienne version sera remplacée.")) return;
+  const previewEl = document.getElementById("devisPreview");
+  if (previewEl) {
+    const clone = previewEl.cloneNode(true);
+    clone.querySelectorAll(".dp-actions").forEach(n => n.remove());
+    e.snap.snapshotHtml = clone.innerHTML;
+  }
+  e.snap.snapshotAt = new Date().toISOString();
+  e.snap.snapshotTotal = totals().total;
+  e.snap.snapshotHash = devisHash();
+  save();
+  refreshDevisHeaders();
+};
+
+// ----------------------------------------------------------------------------
+// DRAG-REORDER des lignes (heures + matériel principal séparément).
+// HTML5 natif. Au drop : reorder S.mission.lignes, save, re-render partiel
+// de la liste concernée seulement (focus préservé partout ailleurs).
+// ----------------------------------------------------------------------------
+let _dragLigneId = null;
+window.devisDragStart = function(ev, id) {
+  _dragLigneId = id;
+  ev.dataTransfer.effectAllowed = "move";
+  ev.dataTransfer.setData("text/plain", id); // requis par Firefox
+  const wrap = ev.currentTarget.closest(".lg-row-wrap");
+  if (wrap) wrap.classList.add("dragging");
+};
+window.devisDragEnd = function(ev) {
+  const wrap = ev.currentTarget.closest(".lg-row-wrap");
+  if (wrap) wrap.classList.remove("dragging");
+  document.querySelectorAll(".lg-row-wrap.drag-over").forEach(el => el.classList.remove("drag-over"));
+  _dragLigneId = null;
+};
+window.devisDragOver = function(ev) {
+  if (!_dragLigneId) return;
+  ev.preventDefault();
+  ev.dataTransfer.dropEffect = "move";
+  const wrap = ev.currentTarget.closest(".lg-row-wrap");
+  if (!wrap || wrap.dataset.id === _dragLigneId) return;
+  document.querySelectorAll(".lg-row-wrap.drag-over").forEach(el => el.classList.remove("drag-over"));
+  wrap.classList.add("drag-over");
+};
+window.devisDrop = function(ev, targetId) {
+  ev.preventDefault();
+  const srcId = _dragLigneId;
+  if (!srcId || srcId === targetId) return;
+  const lignes = S.mission.lignes || [];
+  const srcIdx = lignes.findIndex(l => l.id === srcId);
+  const tgtIdx = lignes.findIndex(l => l.id === targetId);
+  if (srcIdx < 0 || tgtIdx < 0) return;
+  // Contrainte : on ne reorder qu'au sein du même type (heures ↔ heures, matériel ↔ matériel)
+  if (lignes[srcIdx].type !== lignes[tgtIdx].type) return;
+  const [moved] = lignes.splice(srcIdx, 1);
+  const newTgtIdx = lignes.findIndex(l => l.id === targetId);
+  lignes.splice(newTgtIdx, 0, moved);
+  save();
+  // Re-render partiel : seule la liste concernée
+  const containerId = moved.type === "heures" ? "lgListHeures" : "lgListMateriel";
+  const container = document.getElementById(containerId);
+  if (container) {
+    const filtered = (S.mission.lignes || []).filter(l =>
+      l.type === moved.type && (moved.type === "heures" ? true : l.devis !== "debours")
+    );
+    container.innerHTML = filtered.length
+      ? filtered.map(l => rLigneDraggable(l)).join("")
+      : `<div class="lg-empty">Aucune ligne</div>`;
+  }
+  refreshTotals();
+};
+
+// rLigne wrapper qui ajoute le handle de drag — sans modifier rLigne() existant.
+// Insère un span .lg-drag juste après l'ouverture de .lg-row, et rend le row draggable.
+function rLigneDraggable(l) {
+  const inner = rLigne(l);
+  return inner.replace(
+    /<div class="lg-row">/,
+    `<div class="lg-row" draggable="true"
+      ondragstart="devisDragStart(event,'${l.id}')"
+      ondragend="devisDragEnd(event)"
+      ondragover="devisDragOver(event)"
+      ondrop="devisDrop(event,'${l.id}')">
+      <span class="lg-drag" title="Glisser pour réordonner">⋮⋮</span>`
+  );
+}
+
+// ============================================================================
+// rMS — shell 2 colonnes (form accordéon | preview live). Le moteur de calcul
+// (totals), la persistance (upd/save), la preview (rDevisPreview/rDeboursPreview)
+// et tous les handlers (ligneAdd/echeanceAdd/...) sont réutilisés tels quels.
+// ============================================================================
+function rMS() {
+  // Au premier rendu après un load, on ouvre les 2 sections les plus utilisées.
+  // Une fois que l'user a touché à n'importe quelle section v2, on respecte son choix.
+  const v2Keys = ["identification","prestations","deplacement","ajustements","modalites","conditions"];
+  const noneTouched = v2Keys.every(k => _editSectionOpen[k] === undefined);
+  if (noneTouched) {
+    _editSectionOpen.identification = true;
+    _editSectionOpen.prestations    = true;
+  }
+
   return `
     <span id="savedFlash" class="saved" style="position:absolute;top:18px;right:18px"></span>
 
-    <h3>Informations</h3>
-    <div class="row">
-      <div class="field narrow"><label>Date d'émission</label><input type="date" value="${esc(d.dateEmission)}" oninput="upd('mission.dateEmission', this.value)"></div>
+    <div class="devis-mobile-tabs" role="tablist">
+      <button data-tab="edit"    class="${devisMobileTab==='edit'?'on':''}"    onclick="devisSetMobileTab('edit')">✏ Édition</button>
+      <button data-tab="preview" class="${devisMobileTab==='preview'?'on':''}" onclick="devisSetMobileTab('preview')">👁 Aperçu</button>
     </div>
 
-    <h4>Client</h4>
+    <div class="devis-layout">
+      <div class="devis-edit" data-mobile-hidden="${devisMobileTab==='preview'?'1':'0'}">
+        ${rDevisAccordion()}
+      </div>
+      <aside class="devis-preview-pane" data-mobile-hidden="${devisMobileTab==='edit'?'1':'0'}">
+        ${rPreviewTabs()}
+        <div class="devis-pane-footer">${rDevisPaneFooterInner()}</div>
+      </aside>
+    </div>
+    ${rContactPickerModal()}
+  `;
+}
+
+function rDV() { return ""; }
+
+// ----------------------------------------------------------------------------
+// Accordéon — 6 sections. Réutilise _editSectionOpen + editSectionToggle existants.
+// Variante rEditSectionRaw : titre passé en HTML brut (déjà esc()-é à la main),
+// pour pouvoir y injecter le span .edit-section-summary refreshable.
+// ----------------------------------------------------------------------------
+function rDevisAccordion() {
+  const sums = devisSectionSummaries();
+  const wrapTitle = (title, key) =>
+    `${esc(title)}<span class="edit-section-summary" data-summary="${key}">${sums[key]}</span>`;
+
+  return `<div class="edit-accordion-list">
+    ${rEditSectionRaw("identification", wrapTitle("Identification & client", "identification"), rDevisSectionIdentification())}
+    ${rEditSectionRaw("prestations",    wrapTitle("Prestations", "prestations"),                rDevisSectionPrestations())}
+    ${rEditSectionRaw("deplacement",    wrapTitle("Déplacement & frais débours", "deplacement"), rDevisSectionDeplacement())}
+    ${rEditSectionRaw("ajustements",    wrapTitle("Ajustements", "ajustements"),                rDevisSectionAjustements())}
+    ${rEditSectionRaw("modalites",      wrapTitle("Modalités de paiement", "modalites"),        rDevisSectionModalites())}
+    ${rEditSectionRaw("conditions",     wrapTitle("Conditions & signature", "conditions"),      rDevisSectionConditions(),
+       `<button class="btn ghost edit-section-action" onclick="event.stopPropagation();cgvLoadTemplate()">📋 Modèle CGV</button>`)}
+  </div>`;
+}
+
+function rEditSectionRaw(key, titleHtml, bodyHtml, headerActionHtml = "") {
+  const open = !!_editSectionOpen[key];
+  return `<div class="edit-section ${open ? 'open' : ''}" data-edit-section="${key}">
+    <button type="button" class="edit-section-header" onclick="editSectionToggle('${key}')" aria-expanded="${open}">
+      <span class="edit-section-chevron" aria-hidden="true">▸</span>
+      <span class="edit-section-title">${titleHtml}</span>
+      ${headerActionHtml}
+    </button>
+    <div class="edit-section-body" ${open ? '' : 'hidden'}>${bodyHtml}</div>
+  </div>`;
+}
+
+// ----------------------------------------------------------------------------
+// SECTION 1 — Identification & client (réf auto, date, picker client + contact)
+// ----------------------------------------------------------------------------
+function rDevisSectionIdentification() {
+  const d = S.mission;
+  return `
+    <div class="row">
+      <div class="field"><label>Référence (auto)</label>
+        <input type="text" value="${esc(d.ref || "")}" disabled style="opacity:.7;font-variant-numeric:tabular-nums">
+      </div>
+      <div class="field narrow"><label>Date d'émission</label>
+        <input type="date" value="${esc(d.dateEmission)}" oninput="upd('mission.dateEmission', this.value)">
+      </div>
+    </div>
+    <h5>Client</h5>
     <div class="client-line">
       <div class="client-line-picker">${rClientPicker()}</div>
       <div class="client-line-contact">${rContactInline()}</div>
     </div>
-    ${rContactPickerModal()}
+  `;
+}
 
-    <h3>Prestation</h3>
+// ----------------------------------------------------------------------------
+// SECTION 2 — Prestations (objet + heures + matériel + drag-reorder)
+// ----------------------------------------------------------------------------
+function rDevisSectionPrestations() {
+  const d = S.mission;
+  const declare = d.declare !== false;
+  const heures   = (d.lignes || []).filter(l => l.type === "heures");
+  const materiel = (d.lignes || []).filter(l => l.type === "materiel" && l.devis !== "debours");
 
-    <div class="row">
-      <div class="field lg"><label>Type de prestation</label>
-        <select onchange="pickObject(this.value)">
-          <option value="">— choisir —</option>
-          ${(S.tarifs.catalog || DEFAULT_CATALOG).map(c => `<option value="${c.k}" ${d.object===c.k?"selected":""}>${esc(c.l)}</option>`).join("")}
-        </select>
+  const objectInput = `<div class="row">
+    <div class="field lg"><label>Type de prestation (catalogue)</label>
+      <select onchange="pickObject(this.value)">
+        <option value="">— choisir —</option>
+        ${(S.tarifs.catalog || DEFAULT_CATALOG).map(c =>
+          `<option value="${c.k}" ${d.object===c.k?"selected":""}>${esc(c.l)}</option>`).join("")}
+      </select>
+    </div>
+    <div class="field"><label>Objet (libre)</label>
+      <input type="text" placeholder="Ex : Shooting éditorial Collection AW26" value="${esc(d.objectText || "")}" oninput="upd('mission.objectText', this.value)">
+    </div>
+  </div>
+  <div class="devis-catalog-hint">Tarif horaire issu du catalogue. <a href="#" onclick="setTab('tarifs');return false">Modifier le catalogue →</a></div>`;
+
+  // Statut + URSSAF/marge avance — proches du choix de prestation, c'est lié.
+  const statusBlock = `<div class="row">
+    <div class="field"><label>Statut</label>
+      <div class="seg-with-info">
+        <div class="seg">
+          <button class="${declare?"on":""}" onclick="updMissionDeclare(true)">✓ Déclaré</button>
+          <button class="${!declare?"on warn":""}" onclick="updMissionDeclare(false)">● Au black</button>
+        </div>
+        ${(() => {
+          const b = tarifBreakdown(true);
+          if (!b) return "";
+          return `<button type="button" class="tarif-info" tabindex="0" aria-label="Voir le détail du tarif horaire">i<div class="tarif-tooltip" role="tooltip"><div class="tt-title">Décomposition du tarif horaire</div>${tarifBreakdownHtml(b)}</div></button>`;
+        })()}
       </div>
     </div>
-    <div class="row">
-      <div class="field"><label>Statut</label>
-        <div class="seg-with-info">
-          <div class="seg">
-            <button class="${declare?"on":""}" onclick="updMissionDeclare(true)">✓ Déclaré</button>
-            <button class="${!declare?"on warn":""}" onclick="updMissionDeclare(false)">● Au black</button>
+  </div>
+  ${!declare ? `<div class="black-warning" role="alert"><strong>⚠ Mode au black</strong> — pas de débours, pas d'URSSAF, pas de marge sur avance applicable. Tous les matériels et déplacements sont au prix brut, payés via l'acompte.</div>` : ""}`;
+
+  return `
+    ${objectInput}
+    ${statusBlock}
+    <h5>Heures</h5>
+    <div class="lg-list" id="lgListHeures">
+      ${heures.length ? heures.map(l => rLigneDraggable(l)).join("") : `<div class="lg-empty">Aucune ligne — ajoute des heures pour démarrer le devis</div>`}
+    </div>
+    <div class="lg-add"><button class="btn ghost" onclick="ligneAdd('heures')">+ Heures</button></div>
+
+    <h5>Matériel (facturé en principal)</h5>
+    <div class="lg-list" id="lgListMateriel">
+      ${materiel.length ? materiel.map(l => rLigneDraggable(l)).join("") : `<div class="lg-empty">Aucun matériel facturé en principal</div>`}
+    </div>
+    <div class="lg-add"><button class="btn ghost" onclick="ligneAdd('materiel')">+ Matériel</button></div>
+  `;
+}
+
+// ----------------------------------------------------------------------------
+// SECTION 3 — Déplacement & frais débours
+// ----------------------------------------------------------------------------
+function rDevisSectionDeplacement() {
+  const d = S.mission;
+  const mode = d.deplacement.mode || "voiture";
+  const devis = d.deplacement.devis || "principal";
+  const isDebours = devis === "debours";
+  const pmt = d.deplacement.paiementType || "acompte";
+  const afficheMode = d.deplacement.afficheMode || "afficher";
+  const debLignes = (d.lignes || []).filter(l => l.type === "materiel" && l.devis === "debours");
+
+  const paiementModeHtml = isDebours
+    ? `<div class="seg lg-toggle lg-toggle-pmt static" title="Le fournisseur facture directement le client final"><button class="on" disabled>Fact. Direct</button></div>`
+    : `<div class="seg lg-toggle lg-toggle-pmt" title="Mode de paiement (obligatoire)">
+        <button class="${pmt==='acompte'?'on':''}" onclick="updDeplPaiementType('acompte')">Acompte</button>
+        <button class="${pmt==='avance'?'on':''}" onclick="updDeplPaiementType('avance')">Avance</button>
+      </div>`;
+
+  return `
+    <h5>Déplacement</h5>
+    <div class="lg-row-wrap depl-wrap" data-id="deplacement">
+      <div class="lg-row">
+        <div class="depl-title-slot">
+          <div class="seg lg-toggle">
+            <button class="${mode==='voiture'?'on':''}" onclick="updMissionMode('voiture')">Voiture</button>
+            <button class="${mode==='transports'?'on':''}" onclick="updMissionMode('transports')">Transports</button>
           </div>
-          ${(() => {
-            const b = tarifBreakdown(true);
-            if (!b) return "";
-            return `<button type="button" class="tarif-info" tabindex="0" aria-label="Voir le détail du tarif horaire">i<div class="tarif-tooltip" role="tooltip"><div class="tt-title">Décomposition du tarif horaire</div>${tarifBreakdownHtml(b)}</div></button>`;
-          })()}
+        </div>
+        <div class="lg-prix-spacer" aria-hidden="true"></div>
+        <div class="seg lg-toggle">
+          <button class="${devis==='principal'?'on':''}" onclick="updDeplDevis('principal')">Principal</button>
+          <button class="${devis==='debours'?'on warn':''}" onclick="updDeplDevis('debours')">Débours</button>
+        </div>
+        ${paiementModeHtml}
+        <button class="lg-info-icon" onmouseenter="showPaiementInfo(event, 'depl')" onmouseleave="hidePaiementInfo()" tabindex="0" aria-label="Voir les conséquences fiscales">i</button>
+        <span class="lg-btn-spacer" aria-hidden="true"></span>
+        <span class="lg-btn-spacer" aria-hidden="true"></span>
+      </div>
+      ${devis === 'principal' ? `
+      <div class="depl-subtoggle-row">
+        <div class="seg lg-toggle">
+          <button class="${afficheMode==='afficher'?'on':''}" onclick="updDeplAfficheMode('afficher')">Afficher dans devis</button>
+          <button class="${afficheMode==='lisser'?'on':''}" onclick="updDeplAfficheMode('lisser')">Lisser dans taux horaire</button>
+        </div>
+      </div>` : ''}
+    </div>
+    ${mode === "voiture" ? `
+    <div class="row">
+      <div class="field narrow"><label>Distance (km)</label><input type="number" step="0.1" value="${esc(d.deplacement.km)}" oninput="upd('mission.deplacement.km', this.value)"></div>
+      <div class="field narrow"><label>Péages (€)</label><input type="number" step="0.01" value="${esc(d.deplacement.peages)}" oninput="upd('mission.deplacement.peages', this.value)"></div>
+      <div class="field narrow"><label>€/km</label><input type="number" step="0.01" value="${esc(d.deplacement.tauxKm ?? "0.40")}" oninput="upd('mission.deplacement.tauxKm', this.value)"></div>
+    </div>
+    ` : `
+    <div class="row"><div class="field narrow"><label>Prix des billets (€)</label><input type="number" step="0.01" value="${esc(d.deplacement.ticket)}" oninput="upd('mission.deplacement.ticket', this.value)"></div></div>
+    `}
+    <div class="row"><div class="field narrow"><label>Temps de trajet (h)</label><input type="number" step="0.25" value="${esc(d.deplacement.trajetH)}" oninput="upd('mission.deplacement.trajetH', this.value)"></div></div>
+    <div id="tauxBreakdownWrap">${rTauxBreakdown()}</div>
+
+    <h5>Lignes matériel en débours</h5>
+    <div class="lg-list" id="lgListDebours">
+      ${debLignes.length ? debLignes.map(l => rLigne(l)).join("") : `<div class="lg-empty">Aucun matériel en débours.<br><span style="font-size:11px">Pour passer un matériel en débours, change son mode dans Prestations.</span></div>`}
+    </div>
+  `;
+}
+
+// ----------------------------------------------------------------------------
+// SECTION 4 — Ajustements (remise + URSSAF + marge avance)
+// ----------------------------------------------------------------------------
+function rDevisSectionAjustements() {
+  const d = S.mission;
+  const declare = d.declare !== false;
+  const ri = computeRemiseInfo();
+  const tooltipHtml = buildRemiseTooltipHtml(ri);
+
+  return `
+    <div class="row">
+      <div class="field tiny">
+        <label>Remise (%)</label>
+        <div class="remise-input-wrap">
+          <input type="number" step="1" min="0" max="${ri.remiseMaxPct}" value="${esc(d.remisePct)}" oninput="updRemise(this.value, ${ri.remiseMaxPct})">
+          <button type="button" class="ech-info-icon" tabindex="0" aria-label="Voir le détail du calcul de remise">i<span class="remise-tooltip" role="tooltip">${tooltipHtml}</span></button>
         </div>
       </div>
       <div class="field"><label>Taux URSSAF (%)</label>
@@ -4559,14 +5057,11 @@ function rMS() {
           <button class="lock-menu-btn" onclick="urssafToggleMenu()" title="Options">⋮</button>
           <div class="lock-popup" id="urssafMenu">
             ${urssafUnlocked
-              ? `<button onclick="urssafResetDefault()">↺ Rétablir 22 % (par défaut)</button>`
-              : `<button onclick="urssafUnlock()">🔓 Modifier le taux</button>`}
+              ? `<button onclick="urssafResetDefault()">↺ Rétablir 22 %</button>`
+              : `<button onclick="urssafUnlock()">🔓 Modifier</button>`}
           </div>
         </div>
       </div>
-    </div>
-    <div class="row">
-      <div class="field"><!-- spacer to align under "Statut" --></div>
       ${declare ? `
       <div class="field"><label>Marge sur frais avancés (%)</label>
         <div class="lock-field">
@@ -4574,181 +5069,115 @@ function rMS() {
           <button class="lock-menu-btn" onclick="margeAvanceToggleMenu()" title="Options">⋮</button>
           <div class="lock-popup" id="margeAvanceMenu">
             ${margeAvanceUnlocked
-              ? `<button onclick="margeAvanceResetDefault()">↺ Rétablir 0 % (par défaut)</button>`
-              : `<button onclick="margeAvanceUnlock()">🔓 Modifier la marge</button>`}
+              ? `<button onclick="margeAvanceResetDefault()">↺ Rétablir 0 %</button>`
+              : `<button onclick="margeAvanceUnlock()">🔓 Modifier</button>`}
           </div>
         </div>
       </div>
       ` : (() => {
         const bm = d.blackMode || "reduit";
-        return `
-        <div class="field"><label>Tarif au black</label>
-          <div class="seg-with-info">
-            <div class="seg">
-              <button class="${bm==='reduit'?'on':''}" onclick="updBlackMode('reduit')" title="Le client paie le tarif net (sans URSSAF). Prix plus compétitif.">Taux réduit</button>
-              <button class="${bm==='fixe'?'on':''}" onclick="updBlackMode('fixe')" title="Le client paie le même tarif que déclaré, tu gardes l'URSSAF. Salaire net plus élevé.">Taux fixe</button>
-            </div>
-            <button type="button" class="tarif-info" tabindex="0" aria-label="Comparer Taux réduit et Taux fixe">i<div class="tarif-tooltip" role="tooltip"><div class="tt-title">Taux réduit vs Taux fixe</div><table><tbody><tr><td><strong>Taux réduit</strong></td><td>Prix plus compétitif. Tu charges le tarif net (équivalent à ce qui resterait après URSSAF si tu déclarais). Le client économise.</td></tr><tr><td><strong>Taux fixe</strong></td><td>Salaire net plus élevé. Tu charges le même prix que déclaré, et tu gardes l'intégralité (le montant qui aurait été URSSAF reste pour toi).</td></tr></tbody></table></div></button>
+        return `<div class="field"><label>Tarif au black</label>
+          <div class="seg">
+            <button class="${bm==='reduit'?'on':''}" onclick="updBlackMode('reduit')">Taux réduit</button>
+            <button class="${bm==='fixe'?'on':''}" onclick="updBlackMode('fixe')">Taux fixe</button>
           </div>
-        </div>
-        `;
+        </div>`;
       })()}
     </div>
-    ${!declare ? `
-    <div class="black-warning" role="alert">
-      <strong>⚠ Mode au black</strong> — pas de débours, pas d'URSSAF, pas de marge sur avance applicable. <strong>Ne pas avancer de frais</strong> : il n'y a aucun mécanisme de compensation. Tous les matériels et déplacements sont au prix brut, payés via l'acompte.
-    </div>
-    ` : ''}
-
-    <h4>Heures</h4>
-    <div class="lg-list">
-      ${(d.lignes || []).filter(l => l.type === "heures").map(l => rLigne(l)).join("")}
-    </div>
-    <div class="lg-add">
-      <button class="btn ghost" onclick="ligneAdd('heures')">+ Ajouter des heures</button>
-    </div>
-
-    <h4 class="lg-section-mat">Matériel</h4>
-    <div class="lg-list">
-      ${(d.lignes || []).filter(l => l.type === "materiel").map(l => rLigne(l)).join("")}
-    </div>
-    <div class="lg-add">
-      <button class="btn ghost" onclick="ligneAdd('materiel')">+ Ajouter du matériel</button>
-    </div>
-
-    <h3>Déplacement</h3>
-    ${(() => {
-      const mode = d.deplacement.mode || "voiture";
-      const devis = d.deplacement.devis || "principal";
-      const isDebours = devis === "debours";
-      const pmt = d.deplacement.paiementType || "acompte";
-      const afficheMode = d.deplacement.afficheMode || "afficher";
-      // Paiement mode UI:
-      //   - Principal → toggle [Acompte | Avance]
-      //   - Débours   → static "Fact. Direct" pill (only valid combo, no Débours+Acompte anymore)
-      const paiementModeHtml = isDebours
-        ? `<div class="seg lg-toggle lg-toggle-pmt static" title="Le fournisseur facture directement le client final"><button class="on" disabled>Fact. Direct</button></div>`
-        : `<div class="seg lg-toggle lg-toggle-pmt" title="Mode de paiement (obligatoire)">
-            <button class="${pmt==='acompte'?'on':''}" onclick="updDeplPaiementType('acompte')" title="Inclus dans l'acompte à la commande">Acompte</button>
-            <button class="${pmt==='avance'?'on':''}" onclick="updDeplPaiementType('avance')" title="Tu avances la dépense, marge appliquée">Avance</button>
-          </div>`;
-      // Mirror materiel row structure EXACTLY:
-      //   .lg-title (flex:1, min-width:160px)  →  .depl-title-slot wrapping the Voiture/Transports toggle
-      //   .lg-prix  (90px fixed)               →  .lg-prix-spacer (transparent 90px)
-      //   .seg lg-toggle (Principal/Débours)
-      //   .seg lg-toggle.lg-toggle-pmt (Acompte/Avance OR static Fact.Direct)
-      //   .lg-info-icon (i)
-      //   .lg-expand spacer (30px)             →  .lg-btn-spacer
-      //   .lg-del spacer (30px)                →  .lg-btn-spacer
-      return `
-      <div class="lg-row-wrap depl-wrap" data-id="deplacement">
-        <div class="lg-row">
-          <div class="depl-title-slot">
-            <div class="seg lg-toggle">
-              <button class="${mode==='voiture'?'on':''}" onclick="updMissionMode('voiture')">Voiture</button>
-              <button class="${mode==='transports'?'on':''}" onclick="updMissionMode('transports')">Transports</button>
-            </div>
-          </div>
-          <div class="lg-prix-spacer" aria-hidden="true"></div>
-          <div class="seg lg-toggle">
-            <button class="${devis==='principal'?'on':''}" onclick="updDeplDevis('principal')">Principal</button>
-            <button class="${devis==='debours'?'on warn':''}" onclick="updDeplDevis('debours')">Débours</button>
-          </div>
-          ${paiementModeHtml}
-          <button class="lg-info-icon" onmouseenter="showPaiementInfo(event, 'depl')" onmouseleave="hidePaiementInfo()" onfocus="showPaiementInfo(event, 'depl')" onblur="hidePaiementInfo()" tabindex="0" aria-label="Voir les conséquences fiscales de ce choix">i</button>
-          <span class="lg-btn-spacer" aria-hidden="true"></span>
-          <span class="lg-btn-spacer" aria-hidden="true"></span>
-        </div>
-        ${devis === 'principal' ? `
-        <div class="depl-subtoggle-row">
-          <div class="seg lg-toggle">
-            <button class="${afficheMode==='afficher'?'on':''}" onclick="updDeplAfficheMode('afficher')" title="Apparaît comme une ligne séparée dans le devis">Afficher dans devis</button>
-            <button class="${afficheMode==='lisser'?'on':''}" onclick="updDeplAfficheMode('lisser')" title="Inclus dans le tarif horaire (ne ressort pas comme une ligne)">Lisser dans taux horaire</button>
-          </div>
-        </div>
-        ` : ''}
-      </div>
-      `;
-    })()}
-    ${mode === "voiture" ? `
-    <div class="row"><div class="field narrow"><label>Distance (km)</label><input type="number" step="0.1" value="${esc(d.deplacement.km)}" oninput="upd('mission.deplacement.km', this.value)"></div></div>
-    <div class="row"><div class="field narrow"><label>Péages (€)</label><input type="number" step="0.01" value="${esc(d.deplacement.peages)}" oninput="upd('mission.deplacement.peages', this.value)"></div></div>
-    <div class="row"><div class="field narrow"><label>Indemnité kilométrique (€/km)</label><input type="number" step="0.01" value="${esc(d.deplacement.tauxKm ?? "0.40")}" oninput="upd('mission.deplacement.tauxKm', this.value)"></div></div>
-    ` : `
-    <div class="row"><div class="field narrow"><label>Prix des billets (€)</label><input type="number" step="0.01" value="${esc(d.deplacement.ticket)}" oninput="upd('mission.deplacement.ticket', this.value)"></div></div>
-    `}
-    <div class="row"><div class="field narrow"><label>Temps de trajet (h)</label><input type="number" step="0.25" value="${esc(d.deplacement.trajetH)}" oninput="upd('mission.deplacement.trajetH', this.value)"></div></div>
-
-    <div id="tauxBreakdownWrap">${rTauxBreakdown()}</div>
-
-    <h3>Paiement</h3>
-
-    <h4>Échéances de paiement</h4>
-    ${(() => {
-      const ts = totals();
-      const pctSum = ts.echeancesTotal;
-      const ok = pctSum === 100;
-      // Round suggested % up to nearest multiple of 5 (always >= 30 floor)
-      const suggestedRounded = Math.max(30, Math.ceil(ts.acompteSuggestedPct / 5) * 5);
-      return `
-      <div class="ech-list">
-        ${(d.echeances || []).map(e => {
-          const pct = num(e.pct);
-          // Show suggestion (i) if label looks like an "acompte" line and there are materials marked Acompte
-          const isAcompte = /acompte/i.test(e.label || "");
-          const showSuggestion = isAcompte && (ts.totalAcompteMateriel > 0 || suggestedRounded > 30);
-          const suggestion = showSuggestion
-            ? `<button type="button" class="ech-info-icon" tabindex="0" aria-label="Voir la suggestion"><span class="ech-info-tooltip" role="tooltip">Acompte suggéré : <strong>${suggestedRounded} %</strong> minimum (multiple de 5, calculé sur le total des matériels/frais marqués « Acompte » avec un plancher à 30 %).</span>i</button>`
-            : `<div class="ech-info-spacer" aria-hidden="true"></div>`;
-          return `<div class="ech-row">
-            <input class="lbl" value="${esc(e.label)}" placeholder="Libellé (ex: Acompte, Shooting, Livraison…)" oninput="echeanceUpd('${e.id}','label',this.value)">
-            <div class="pct-wrap"><input type="number" step="1" min="0" max="100" value="${esc(e.pct)}" oninput="echeanceUpd('${e.id}','pct',this.value)"><span class="unit">%</span></div>
-            ${suggestion}
-            <button class="del" onclick="echeanceDel('${e.id}')" title="Supprimer">×</button>
-          </div>`;
-        }).join("")}
-        <div class="ech-row ech-total ${ok ? "ok" : "warn"}" id="echTotalRow">
-          <span class="lbl-total">Total</span>
-          <span class="pct-total" id="echTotalPct">${pctSum.toString().replace(".",",")} %${ok ? " ✓" : ""}</span>
-          <div class="ech-info-spacer" aria-hidden="true"></div>
-          <span class="del-spacer"></span>
-        </div>
-      </div>
-      <div class="ech-warn" id="echWarn" style="${ok ? "display:none" : ""}">⚠ Les pourcentages doivent totaliser 100 %.</div>
-      <div class="ech-actions">
-        <button class="btn ghost" onclick="echeanceAdd()">+ Ajouter une échéance</button>
-        <button class="btn ghost" onclick="echeanceReset()">↺ Réinitialiser</button>
-      </div>`;
-    })()}
-
-    ${(() => {
-      const ri = computeRemiseInfo();
-      const tooltipHtml = buildRemiseTooltipHtml(ri);
-      return `<div class="row row-section-break">
-        <div class="field tiny">
-          <label>Remise (%)</label>
-          <div class="remise-input-wrap">
-            <input type="number" step="1" min="0" max="${ri.remiseMaxPct}" value="${esc(d.remisePct)}" oninput="updRemise(this.value, ${ri.remiseMaxPct})">
-            <button type="button" class="ech-info-icon" tabindex="0" aria-label="Voir le détail du calcul de remise">i<span class="remise-tooltip" role="tooltip">${tooltipHtml}</span></button>
-          </div>
-        </div>
-      </div>`;
-    })()}
-
-    <h3>Édition du devis</h3>
-    <div class="edit-accordion-list">
-      ${rEditSection("logo", "Logo (optionnel)", rLogoField())}
-      ${rEditSection("photographe", "Photographe (en-tête du devis)", renderLockedTextarea("photographe", d.photographe || "", "", "Vos coordonnées en haut à gauche du devis…"))}
-      ${rEditSection("modalites", "Modalités de paiement", rPaiementFields())}
-      ${rEditSection("signature", "Bon pour accord", renderLockedTextarea("signatureBlock", d.signatureBlock || "", "", "Bloc de signature client…"))}
-      ${rEditSection("cgv", "Conditions générales de vente (CGV)", rCgvEditor(), `<button class="btn ghost edit-section-action" onclick="event.stopPropagation();cgvLoadTemplate()">📋 Charger modèle photographe</button>`)}
-    </div>
-
-    ${rPreviewTabs()}
   `;
 }
 
-function rDV() { return ""; }
+// ----------------------------------------------------------------------------
+// SECTION 5 — Modalités de paiement (échéances + délai + IBAN/BIC/banque/titulaire)
+// ----------------------------------------------------------------------------
+function rDevisSectionModalites() {
+  const d = S.mission;
+  const ts = totals();
+  const pctSum = ts.echeancesTotal;
+  const ok = pctSum === 100;
+  const suggestedRounded = Math.max(30, Math.ceil(ts.acompteSuggestedPct / 5) * 5);
+
+  return `
+    <h5>Échéances</h5>
+    <div class="ech-list">
+      ${(d.echeances || []).map(e => {
+        const isAcompte = /acompte/i.test(e.label || "");
+        const showSuggestion = isAcompte && (ts.totalAcompteMateriel > 0 || suggestedRounded > 30);
+        const suggestion = showSuggestion
+          ? `<button type="button" class="ech-info-icon" tabindex="0"><span class="ech-info-tooltip" role="tooltip">Acompte suggéré : <strong>${suggestedRounded} %</strong> minimum.</span>i</button>`
+          : `<div class="ech-info-spacer" aria-hidden="true"></div>`;
+        return `<div class="ech-row">
+          <input class="lbl" value="${esc(e.label)}" placeholder="Libellé (ex: Acompte, Livraison…)" oninput="echeanceUpd('${e.id}','label',this.value)">
+          <div class="pct-wrap"><input type="number" step="1" min="0" max="100" value="${esc(e.pct)}" oninput="echeanceUpd('${e.id}','pct',this.value)"><span class="unit">%</span></div>
+          ${suggestion}
+          <button class="del" onclick="echeanceDel('${e.id}')" title="Supprimer">×</button>
+        </div>`;
+      }).join("")}
+      <div class="ech-row ech-total ${ok ? "ok" : "warn"}" id="echTotalRow">
+        <span class="lbl-total">Total</span>
+        <span class="pct-total" id="echTotalPct">${pctSum.toString().replace(".",",")} %${ok ? " ✓" : ""}</span>
+        <div class="ech-info-spacer" aria-hidden="true"></div>
+        <span class="del-spacer"></span>
+      </div>
+    </div>
+    <div class="ech-warn" id="echWarn" style="${ok ? "display:none" : ""}">⚠ Les pourcentages doivent totaliser 100 %.</div>
+    <div class="ech-actions">
+      <button class="btn ghost" onclick="echeanceAdd()">+ Ajouter</button>
+      <button class="btn ghost" onclick="echeanceReset()">↺ Réinitialiser</button>
+    </div>
+
+    <h5>Délai &amp; coordonnées bancaires</h5>
+    ${rPaiementFields()}
+  `;
+}
+
+// ----------------------------------------------------------------------------
+// SECTION 6 — Conditions & signature (logo + photographe + paiement-text + CGV + signature)
+// ----------------------------------------------------------------------------
+function rDevisSectionConditions() {
+  const d = S.mission;
+  return `
+    <h5>Logo (optionnel)</h5>
+    ${rLogoField()}
+    <h5>Photographe (en-tête du devis)</h5>
+    ${renderLockedTextarea("photographe", d.photographe || "", "", "Vos coordonnées en haut à gauche du devis…")}
+    <h5>Conditions de paiement (texte libre)</h5>
+    ${renderLockedTextarea("conditionsPaiement", d.conditionsPaiement || "", "", "Conditions de paiement libres…")}
+    <h5>CGV — préambule + sections</h5>
+    ${rCgvEditor()}
+    <h5>Bloc signature</h5>
+    ${renderLockedTextarea("signatureBlock", d.signatureBlock || "", "", "Bloc de signature client…")}
+  `;
+}
+
+// ----------------------------------------------------------------------------
+// PREVIEW PANE FOOTER — bandeau validation/dirty + bouton "Enregistrer"
+// Ré-rendu dynamiquement par refreshDevisHeaders() pour mise à jour live.
+// ----------------------------------------------------------------------------
+function rDevisPaneFooterInner() {
+  const v = validateDevis();
+  const dirty = devisIsDirty();
+  const inSuivi = !!devisCurrentSuiviEntry();
+
+  const bannerErr = v.errors.length
+    ? `<div class="devis-banner err"><span class="devis-banner-ico">⛔</span><div>Émission bloquée :<ul>${v.errors.map(e => `<li>${esc(e)}</li>`).join("")}</ul></div></div>`
+    : "";
+  const bannerWarn = v.warnings.length
+    ? `<div class="devis-banner warn"><span class="devis-banner-ico">⚠</span><div>${v.warnings.map(esc).join(" · ")}</div></div>`
+    : "";
+  const bannerDirty = (inSuivi && dirty)
+    ? `<div class="devis-banner info"><span class="devis-banner-ico">●</span><div>Modifications non enregistrées dans Suivi.</div></div>`
+    : "";
+
+  const mainBtn = inSuivi
+    ? `<button class="btn ghost" onclick="suiviUpdateSnapshot()" ${!dirty?"disabled":""}>Mettre à jour le snapshot Suivi</button>`
+    : `<button class="btn" onclick="suiviAdd()" ${!v.ok?"disabled":""} title="${v.ok?'':'Corrige les erreurs ci-dessus'}">+ Enregistrer dans Suivi</button>`;
+
+  return `
+    ${bannerErr}${bannerWarn}${bannerDirty}
+    <div class="devis-pane-actions">${mainBtn}</div>
+  `;
+}
 
 // ============================================================================
 // SUIVI v2 — Modèle de statuts à deux niveaux
@@ -5024,7 +5453,8 @@ function suiviAdd() {
     snapshotHtml,
     snapshotAt: new Date().toISOString(),
     snapshotTotal: t.total,
-    snapshotClient: client
+    snapshotClient: client,
+    snapshotHash: (typeof devisHash === "function") ? devisHash() : ""
   };
 
   const mkLine = (echeance, montant, heures) => ({
