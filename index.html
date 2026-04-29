@@ -1469,6 +1469,7 @@ const DEFAULT_S = {
     deplacement: { mode: "voiture", km: "0", peages: "0", tauxKm: "0.40", trajetH: "0", ticket: "0", paiementType: "acompte" },
     autres:      { desc: "", montant: "0" },
     declare: true,
+    blackMode: "reduit",
     urssafPct: "22",
     remisePct: "0",
     notes: "",
@@ -1538,6 +1539,10 @@ if (S.mission && S.mission.paiement && !("margeAvance" in S.mission.paiement)) {
 }
 if (S.mission && S.mission.paiement && !("margeUrssaf" in S.mission.paiement)) {
   S.mission.paiement.margeUrssaf = "22";
+}
+// Migrate blackMode (default "reduit" — current behavior pre-v1.35)
+if (S.mission && !("blackMode" in S.mission)) {
+  S.mission.blackMode = "reduit";
 }
 // Migrate paiementType field on materiel lignes — now mandatory, default "acompte" (Principal+Acompte)
 // Old "" or "avance" with debours are remapped to valid combinations.
@@ -1721,7 +1726,7 @@ function upd(path, val) {
     refreshRefDisplay();
   }
   save();
-  if (path.startsWith("mission.prep") || path.startsWith("mission.prod") || path.startsWith("mission.postprod") || path.startsWith("mission.deplacement") || path.startsWith("mission.autres") || path.startsWith("mission.lignes") || path === "mission.remisePct" || path === "mission.object" || path === "mission.paiement.margeAvance" || path === "mission.urssafPct") {
+  if (path.startsWith("mission.prep") || path.startsWith("mission.prod") || path.startsWith("mission.postprod") || path.startsWith("mission.deplacement") || path.startsWith("mission.autres") || path.startsWith("mission.lignes") || path === "mission.remisePct" || path === "mission.object" || path === "mission.paiement.margeAvance" || path === "mission.urssafPct" || path === "mission.blackMode") {
     refreshTotals();
   }
 }
@@ -1747,6 +1752,14 @@ function updMissionDeclare(val) {
   render();
 }
 window.updMissionDeclare = updMissionDeclare;
+
+function updBlackMode(mode) {
+  if (mode !== "reduit" && mode !== "fixe") return;
+  S.mission.blackMode = mode;
+  save();
+  render();
+}
+window.updBlackMode = updBlackMode;
 
 function updMissionMode(mode) {
   S.mission.deplacement.mode = mode;
@@ -2970,7 +2983,7 @@ function rLigne(l) {
     ? `<textarea class="lg-desc" placeholder="Description (apparaîtra sous l'intitulé dans le devis)" oninput="ligneUpd('${l.id}','description',this.value)">${esc(l.description||"")}</textarea>`
     : "";
   if (l.type === "heures") {
-    return `<div class="lg-row-wrap">
+    return `<div class="lg-row-wrap" data-id="${l.id}">
       <div class="lg-row">
         <input class="lg-title" placeholder="Intitulé (ex : Préparation, Shooting, Post-prod…)" value="${esc(l.intitule)}" oninput="ligneUpd('${l.id}','intitule',this.value)">
         <input class="lg-num" type="number" step="0.25" placeholder="0" value="${esc(l.duree)}" oninput="ligneUpd('${l.id}','duree',this.value)">
@@ -3004,7 +3017,7 @@ function rLigne(l) {
     const finalCostInline = dispInfo.hasMarkup
       ? `<div class="lg-final-cost-inline" title="Coût final pour le client : ${esc(dispInfo.breakdown)}">→ ${fmt(dispInfo.amount)}</div>`
       : `<div class="lg-final-cost-inline empty" aria-hidden="true"></div>`;
-    return `<div class="lg-row-wrap">
+    return `<div class="lg-row-wrap" data-id="${l.id}">
       <div class="lg-row">
         <input class="lg-title" placeholder="Intitulé (ex : Pellicule, Location studio…)" value="${esc(l.intitule)}" oninput="ligneUpd('${l.id}','intitule',this.value)">
         <div class="lg-prix">
@@ -3074,7 +3087,16 @@ function totals() {
   const _baseTotal = cat ? num(cat.p) : 0;
   const _isDecTot = d.declare !== false;
   const _urssafFactorTot = 1 - (num(d.urssafPct ?? 22)) / 100; // e.g., 0.78 for 22%
-  const tarifH = _isDecTot ? _baseTotal : (_baseTotal > 0 ? r2(_baseTotal * _urssafFactorTot) : 0);
+  // Tarif horaire :
+  //   - Déclaré : tarif catalogue tel quel (gross facturé)
+  //   - Au black "taux fixe" : même prix que déclaré (photographe garde l'URSSAF)
+  //   - Au black "taux réduit" : prix réduit (= net déclaré, le client économise l'URSSAF)
+  const _blackMode = d.blackMode || "reduit";
+  const tarifH = _isDecTot
+    ? _baseTotal
+    : (_baseTotal > 0
+        ? (_blackMode === "fixe" ? _baseTotal : r2(_baseTotal * _urssafFactorTot))
+        : 0);
   const HOURS_PER_DAY = 8;
   // Marge rates: au black ⇒ no compensation (everything raw).
   // URSSAF rate read from the unique source of truth (mission.urssafPct).
@@ -3212,6 +3234,35 @@ function rTauxBreakdown() {
   </div>`;
 }
 
+// Update each materiel row's inline final cost without re-rendering the whole form
+// (which would lose input focus). Called from refreshTotals after each input change.
+function refreshFinalCosts() {
+  const m = S.mission;
+  if (!m) return;
+  const isDeclared = m.declare !== false;
+  const ma = isDeclared ? num(m.paiement?.margeAvance ?? 0) : 0;
+  const mu = isDeclared ? num(m.urssafPct ?? 22) : 0;
+  for (const l of m.lignes || []) {
+    if (l.type !== "materiel") continue;
+    const wrap = document.querySelector(`.lg-row-wrap[data-id="${l.id}"]`);
+    if (!wrap) continue;
+    const el = wrap.querySelector(".lg-final-cost-inline");
+    if (!el) continue;
+    const info = ligneDisplayInfo(l.devis, l.paiementType, l.prix, ma, mu, false);
+    if (info.hasMarkup) {
+      el.classList.remove("empty");
+      el.removeAttribute("aria-hidden");
+      el.title = `Coût final pour le client : ${info.breakdown}`;
+      el.textContent = `→ ${fmt(info.amount)}`;
+    } else {
+      el.classList.add("empty");
+      el.setAttribute("aria-hidden", "true");
+      el.removeAttribute("title");
+      el.textContent = "";
+    }
+  }
+}
+
 function refreshTotals() {
   // Re-render the active preview tab body (Devis / Débours)
   const previewBody = document.querySelector(".preview-tabs-body");
@@ -3264,6 +3315,8 @@ function refreshTotals() {
     totalAmt.textContent = fmt(t2.total);
     if (warnEl) warnEl.style.display = ok ? "none" : "";
   }
+  // Refresh per-line final cost indicators (in materiel form rows)
+  refreshFinalCosts();
 }
 
 function totalsHtml(t) {
@@ -4036,20 +4089,31 @@ function tarifBreakdown(includeDepl) {
   if (final <= 0) return null;
   const urssafPct = num(d.urssafPct ?? 22);
   const urssafFactor = 1 - urssafPct / 100; // e.g., 0.78 for 22%
+  const blackMode = d.blackMode || "reduit";
   const matos = tm.tauxAvecSecurite;
   const t = totals();
   const dpH = (includeDepl && t.deplMode === "taux" && t.totalHeures > 0) ? t.deplPerHour : 0;
-  // Tarif facturé per hour: declared = catalog gross + déplacement; au black = gross × (1-URSSAF%) + déplacement
-  const tarifApplique = declared ? r2(final + dpH) : r2(r2(final * urssafFactor) + dpH);
-  // URSSAF amount: declared = X% of gross billed; au black = same (this is the URSSAF "saved" by going au black)
+  // Tarif facturé per hour:
+  //   declared      : final + dpH
+  //   black "fixe"  : final + dpH (same as declared, photographer keeps the URSSAF)
+  //   black "reduit": final × (1-urssaf%) + dpH (discount = URSSAF saved)
+  const tarifApplique = declared
+    ? r2(final + dpH)
+    : (blackMode === "fixe"
+        ? r2(final + dpH)
+        : r2(r2(final * urssafFactor) + dpH));
+  // URSSAF amount: declared = X% of (final + dpH); au black = X% of theoretical CA (= what they save)
   const urssafAmount = r2((final + dpH) * urssafPct / 100);
-  // Net per hour after matos and URSSAF (and minus dpH which is a real cost):
-  //   declared : (final + dpH) × (1-urssaf%) - matos - dpH
-  //   au black : final × (1-urssaf%) - matos        (no URSSAF actually paid; dpH already invoiced)
+  // Net per hour after matos (and minus dpH which is a real cost):
+  //   declared      : (final + dpH) × (1-urssaf%) - matos - dpH
+  //   black "fixe"  : final - matos                  (no URSSAF; dpH already invoiced separately)
+  //   black "reduit": final × (1-urssaf%) - matos    (no URSSAF; same net as declared)
   const net = declared
     ? r2(r2((final + dpH) * urssafFactor) - matos - dpH)
-    : r2(r2(final * urssafFactor) - matos);
-  return { net, matos, deplPerHour: dpH, urssafAmount, tarifApplique, declared, hasDepl: dpH > 0 };
+    : (blackMode === "fixe"
+        ? r2(final - matos)
+        : r2(r2(final * urssafFactor) - matos));
+  return { net, matos, deplPerHour: dpH, urssafAmount, tarifApplique, declared, blackMode, hasDepl: dpH > 0 };
 }
 
 function tarifBreakdownHtml(b) {
@@ -4132,19 +4196,30 @@ function rMS() {
           </div>
         </div>
       </div>
-    </div>
-    ${declare ? `
-    <div class="row">
-      <div class="field"><!-- spacer to align under "Statut" --></div>
+      ${declare ? `
       <div class="field"><label>Marge sur frais avancés (%)</label>
         <input type="number" step="0.1" min="0" value="${esc((d.paiement || {}).margeAvance ?? "0")}" oninput="upd('mission.paiement.margeAvance', this.value)" placeholder="0">
       </div>
+      ` : (() => {
+        const bm = d.blackMode || "reduit";
+        return `
+        <div class="field"><label>Tarif au black</label>
+          <div class="seg-with-info">
+            <div class="seg">
+              <button class="${bm==='reduit'?'on':''}" onclick="updBlackMode('reduit')" title="Le client paie le tarif net (sans URSSAF). Prix plus compétitif.">Taux réduit</button>
+              <button class="${bm==='fixe'?'on':''}" onclick="updBlackMode('fixe')" title="Le client paie le même tarif que déclaré, tu gardes l'URSSAF. Salaire net plus élevé.">Taux fixe</button>
+            </div>
+            <button type="button" class="tarif-info" tabindex="0" aria-label="Comparer Taux réduit et Taux fixe">i<div class="tarif-tooltip" role="tooltip"><div class="tt-title">Taux réduit vs Taux fixe</div><table><tbody><tr><td><strong>Taux réduit</strong></td><td>Prix plus compétitif. Tu charges le tarif net (équivalent à ce qui resterait après URSSAF si tu déclarais). Le client économise.</td></tr><tr><td><strong>Taux fixe</strong></td><td>Salaire net plus élevé. Tu charges le même prix que déclaré, et tu gardes l'intégralité (le montant qui aurait été URSSAF reste pour toi).</td></tr></tbody></table></div></button>
+          </div>
+        </div>
+        `;
+      })()}
     </div>
-    ` : `
+    ${!declare ? `
     <div class="black-warning" role="alert">
       <strong>⚠ Mode au black</strong> — pas de débours, pas d'URSSAF, pas de marge sur avance applicable. <strong>Ne pas avancer de frais</strong> : il n'y a aucun mécanisme de compensation. Tous les matériels et déplacements sont au prix brut, payés via l'acompte.
     </div>
-    `}
+    ` : ''}
 
     <h4>Heures</h4>
     <div class="lg-list">
@@ -6486,10 +6561,17 @@ function rTR() {
   const tm = tauxMatos();
   const urssafPct = num(S.mission && S.mission.urssafPct) || 22;
   const urssafFactor = 1 - urssafPct / 100; // e.g., 0.78 for 22%
+  // Catalog table shows what photographer nets per hour. Depends on declared/black mode:
+  //   - declared    : net = gross × (1-URSSAF%) - matos
+  //   - black "fixe" : net = gross - matos             (photographer keeps URSSAF)
+  //   - black "reduit": net = gross × (1-URSSAF%) - matos (charge less, no URSSAF — same net as declared)
+  const _isDeclared = S.mission && S.mission.declare !== false;
+  const _blackMode = (S.mission && S.mission.blackMode) || "reduit";
   const tarifRows3col = cat.map((c, idx) => {
     const final = num(c.p);
-    // URSSAF correctly applied: net before matos = gross × (1 - URSSAF%)
-    const sansUrssaf = final > 0 ? r2(final * urssafFactor) : 0;
+    const sansUrssaf = (final > 0)
+      ? (!_isDeclared && _blackMode === "fixe" ? final : r2(final * urssafFactor))
+      : 0;
     const net = final > 0 ? r2(sansUrssaf - tm.tauxRetenu) : 0;
     return `
     <tr ${final === 0 ? 'class="row-empty"' : ''}>
@@ -6704,6 +6786,21 @@ function rTR() {
 // Most recent version FIRST.
 // =============================================================
 const CHANGELOG = [
+  {
+    version: "v1.35",
+    date: "2026-04-29",
+    title: "Marge avance alignée · Live update du coût final · Au black : Taux réduit / Taux fixe",
+    items: [
+      "🔥 Marge sur frais avancés sur la même ligne que Statut + Taux URSSAF (3 champs côte-à-côte). Plus de spacer cassé en 2ᵉ ligne, plus de différence visuelle de taille — tous les champs sont des `.field` standards et s'alignent identiquement.",
+      "🔥 Coût final inline (« → 2307,69 € ») dans les lignes matériel se met à jour de façon LIVE quand on tape dans le prix, ou quand on modifie la marge avance / le taux URSSAF. Avant : la valeur ne se rafraîchissait qu'au prochain re-render complet (changement d'onglet par exemple). Désormais, chaque `oninput` qui modifie le prix ou un taux déclenche `refreshFinalCosts()` qui met à jour les `.lg-final-cost-inline` de chaque ligne matériel sans toucher au focus de l'input.",
+      "Implémentation : ajout de `data-id` sur chaque `.lg-row-wrap` pour cibler spécifiquement la ligne, et de `refreshFinalCosts()` appelée à la fin de `refreshTotals()`. Mise à jour pure DOM (innerHTML/textContent), aucune ré-render de la ligne entière — donc focus et caret de l'input préservés.",
+      "🔥 Mode au black : nouveau choix « Taux réduit / Taux fixe » qui apparaît à la place du champ Marge avance quand Statut = Au black. Avec un (i) à droite expliquant chaque option dans un tableau au survol.",
+      "Taux réduit (par défaut, comportement historique) : le photographe charge le tarif net (= équivalent post-URSSAF si déclaré). Pour 60 €/h × 0,78 = 46,80 €/h facturé. Net photographe ≈ 41,80 €/h. Le client économise = prix plus compétitif.",
+      "Taux fixe : le photographe charge le même tarif que déclaré (60 €/h). Pas d'URSSAF (au black), donc tout reste pour le photographe. Net = 55 €/h (= 60 − 5 matos). Beaucoup plus avantageux pour le photographe à prix client identique.",
+      "Champ `mission.blackMode` : « reduit » | « fixe ». Migration auto : missions existantes passent à « reduit » (préserve le comportement historique). Switch en haut → tarifH dans le devis ET « Frais & Tarifs » se recalculent instantanément.",
+      "Décomposition tarif horaire (tooltip Statut → ⓘ) gère les 3 modes (déclaré, black réduit, black fixe). Net affiché correctement pour chaque cas, avec URSSAF rayée en mode black."
+    ]
+  },
   {
     version: "v1.34",
     date: "2026-04-29",
