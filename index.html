@@ -1385,9 +1385,13 @@
   /* Au black mode warning banner */
   .black-warning{margin:8px 0 14px;padding:12px 16px;background:rgba(231,76,60,.08);border-left:3px solid var(--danger,#e74c3c);border-radius:0 6px 6px 0;font-size:13px;color:var(--text);line-height:1.5;max-width:880px}
   .black-warning strong{color:var(--danger,#e74c3c)}
-  /* Déplacement: same row layout as materiel — Voiture/Transport + Principal/Débours + Acompte/Avance + (i) + final cost */
+  /* Déplacement: mêmes positions que les lignes matériel pour aligner les toggles
+     verticalement. depl-mode-cell remplace lg-title (flex 1), lg-prix-spacer remplace
+     lg-prix (90px), ensuite final-cost + toggles tombent dans les mêmes colonnes. */
   .depl-row{flex-wrap:wrap}
   .depl-row .lg-toggle{flex-shrink:0}
+  .depl-mode-cell{flex:1 1 auto;min-width:160px;display:flex;align-items:center}
+  .lg-prix-spacer{width:90px;flex-shrink:0}
   .depl-subtoggle-row{display:flex;align-items:center;gap:10px;margin-top:8px;padding-left:8px}
   .depl-subtoggle-label{font-size:12px;color:var(--text-muted);font-weight:600;letter-spacing:.04em;text-transform:uppercase}
   .depl-subtoggle-row .lg-toggle{min-width:auto}
@@ -1837,6 +1841,36 @@ function urssafResetDefault() {
   render();
 }
 window.urssafResetDefault = urssafResetDefault;
+
+// ============ Marge avance lock (mêmes mécanismes qu'URSSAF) ============
+let margeAvanceUnlocked = false;
+function margeAvanceToggleMenu() {
+  const p = document.getElementById("margeAvanceMenu");
+  if (p) p.classList.toggle("open");
+}
+window.margeAvanceToggleMenu = margeAvanceToggleMenu;
+
+function margeAvanceUnlock() {
+  margeAvanceUnlocked = true;
+  const p = document.getElementById("margeAvanceMenu");
+  if (p) p.classList.remove("open");
+  render();
+  requestAnimationFrame(() => {
+    const inp = document.getElementById("margeAvanceInput");
+    if (inp) { inp.focus(); inp.select(); }
+  });
+}
+window.margeAvanceUnlock = margeAvanceUnlock;
+
+function margeAvanceResetDefault() {
+  if (S.mission && S.mission.paiement) S.mission.paiement.margeAvance = "0";
+  margeAvanceUnlocked = false;
+  const p = document.getElementById("margeAvanceMenu");
+  if (p) p.classList.remove("open");
+  save();
+  render();
+}
+window.margeAvanceResetDefault = margeAvanceResetDefault;
 
 // ============ Locked textareas (photographe / conditions / cgv / signature) ============
 let textLockState = { photographe: true, conditionsPaiement: true, cgv: true, signatureBlock: true };
@@ -2828,19 +2862,14 @@ function ligneDisplayInfo(devis, paiementType, basePrix, margeAvancePct, margeUr
   const urssafAmt = r2(total - baseAvance);
   const hasMarkup = (urssafAmt > 0 || avanceAmt > 0);
   // Build breakdown:
-  //   - clientFacing=true (devis preview): hide avance margin (private to photographer).
-  //     For Avance items, omit breakdown entirely to avoid revealing internal pricing.
+  //   - clientFacing=true (devis preview): hide all markup details (URSSAF + avance) — client just sees the final amount.
   //   - clientFacing=false (form): show full breakdown for the photographer.
   let breakdown = "";
-  if (hasMarkup) {
-    if (clientFacing && isAvance) {
-      breakdown = ""; // Hide entirely for Avance items in client-facing devis
-    } else {
-      const parts = [`${num(base).toFixed(2).replace(".", ",")} €`];
-      if (avanceAmt > 0) parts.push(`+ ${avancePct.toString().replace(".", ",")} % avance`);
-      if (urssafAmt > 0) parts.push(`+ URSSAF ${urssafPct.toString().replace(".", ",")} %`);
-      breakdown = parts.join(" ");
-    }
+  if (hasMarkup && !clientFacing) {
+    const parts = [`${num(base).toFixed(2).replace(".", ",")} €`];
+    if (avanceAmt > 0) parts.push(`+ ${avancePct.toString().replace(".", ",")} % avance`);
+    if (urssafAmt > 0) parts.push(`+ URSSAF ${urssafPct.toString().replace(".", ",")} %`);
+    breakdown = parts.join(" ");
   }
   return { amount: total, breakdown, hasMarkup, baseAmount: base, avanceAmt, urssafAmt };
 }
@@ -4224,9 +4253,20 @@ function rMS() {
           </div>
         </div>
       </div>
+    </div>
+    <div class="row">
+      <div class="field"><!-- spacer to align under "Statut" --></div>
       ${declare ? `
       <div class="field"><label>Marge sur frais avancés (%)</label>
-        <input type="number" step="0.1" min="0" value="${esc((d.paiement || {}).margeAvance ?? "0")}" oninput="upd('mission.paiement.margeAvance', this.value)" placeholder="0">
+        <div class="lock-field">
+          <input id="margeAvanceInput" type="number" step="0.1" min="0" value="${esc((d.paiement || {}).margeAvance ?? "0")}" ${margeAvanceUnlocked ? `oninput="upd('mission.paiement.margeAvance', this.value)"` : "disabled"} placeholder="0">
+          <button class="lock-menu-btn" onclick="margeAvanceToggleMenu()" title="Options">⋮</button>
+          <div class="lock-popup" id="margeAvanceMenu">
+            ${margeAvanceUnlocked
+              ? `<button onclick="margeAvanceResetDefault()">↺ Rétablir 0 % (par défaut)</button>`
+              : `<button onclick="margeAvanceUnlock()">🔓 Modifier la marge</button>`}
+          </div>
+        </div>
       </div>
       ` : (() => {
         const bm = d.blackMode || "reduit";
@@ -4289,10 +4329,13 @@ function rMS() {
       return `
       <div class="lg-row-wrap" data-id="deplacement">
         <div class="lg-row depl-row">
-          <div class="seg lg-toggle">
-            <button class="${mode==='voiture'?'on':''}" onclick="updMissionMode('voiture')">🚗 Voiture</button>
-            <button class="${mode==='transports'?'on':''}" onclick="updMissionMode('transports')">🚆 Transports</button>
+          <div class="depl-mode-cell">
+            <div class="seg lg-toggle">
+              <button class="${mode==='voiture'?'on':''}" onclick="updMissionMode('voiture')">🚗 Voiture</button>
+              <button class="${mode==='transports'?'on':''}" onclick="updMissionMode('transports')">🚆 Transports</button>
+            </div>
           </div>
+          <div class="lg-prix-spacer" aria-hidden="true"></div>
           ${finalCostInline}
           <div class="seg lg-toggle">
             <button class="${devis==='principal'?'on':''}" onclick="updDeplDevis('principal')">Principal</button>
@@ -4317,15 +4360,11 @@ function rMS() {
       `;
     })()}
     ${mode === "voiture" ? `
-    <div class="row">
-      <div class="field narrow"><label>Distance (km)</label><input type="number" step="0.1" value="${esc(d.deplacement.km)}" oninput="upd('mission.deplacement.km', this.value)"></div>
-      <div class="field narrow"><label>Péages (€)</label><input type="number" step="0.01" value="${esc(d.deplacement.peages)}" oninput="upd('mission.deplacement.peages', this.value)"></div>
-      <div class="field narrow"><label>Indemnité kilométrique (€/km)</label><input type="number" step="0.01" value="${esc(d.deplacement.tauxKm ?? "0.40")}" oninput="upd('mission.deplacement.tauxKm', this.value)"></div>
-    </div>
+    <div class="row"><div class="field narrow"><label>Distance (km)</label><input type="number" step="0.1" value="${esc(d.deplacement.km)}" oninput="upd('mission.deplacement.km', this.value)"></div></div>
+    <div class="row"><div class="field narrow"><label>Péages (€)</label><input type="number" step="0.01" value="${esc(d.deplacement.peages)}" oninput="upd('mission.deplacement.peages', this.value)"></div></div>
+    <div class="row"><div class="field narrow"><label>Indemnité kilométrique (€/km)</label><input type="number" step="0.01" value="${esc(d.deplacement.tauxKm ?? "0.40")}" oninput="upd('mission.deplacement.tauxKm', this.value)"></div></div>
     ` : `
-    <div class="row">
-      <div class="field narrow"><label>Prix des billets (€)</label><input type="number" step="0.01" value="${esc(d.deplacement.ticket)}" oninput="upd('mission.deplacement.ticket', this.value)"></div>
-    </div>
+    <div class="row"><div class="field narrow"><label>Prix des billets (€)</label><input type="number" step="0.01" value="${esc(d.deplacement.ticket)}" oninput="upd('mission.deplacement.ticket', this.value)"></div></div>
     `}
     <div class="row"><div class="field narrow"><label>Temps de trajet (h)</label><input type="number" step="0.25" value="${esc(d.deplacement.trajetH)}" oninput="upd('mission.deplacement.trajetH', this.value)"></div></div>
 
@@ -6837,6 +6876,19 @@ function rTR() {
 // Most recent version FIRST.
 // =============================================================
 const CHANGELOG = [
+  {
+    version: "v1.37",
+    date: "2026-04-29",
+    title: "Marge avance verrouillable sous URSSAF · Devis sans aucun breakdown · Déplacement aligné en colonne",
+    items: [
+      "🔥 « Marge sur frais avancés » repositionnée sous l'encadré Taux URSSAF, dans la même colonne. Spacer dans la colonne Statut pour aligner. Largeur identique à URSSAF (même `.lock-field` 120px max-width).",
+      "🔥 Champ Marge avance verrouillé par défaut, comme URSSAF. Bouton ⋮ pour ouvrir un mini-menu : « 🔓 Modifier la marge » quand verrouillé · « ↺ Rétablir 0 % (par défaut) » quand déverrouillé. Évite les modifications accidentelles. Mêmes mécanismes (`margeAvanceUnlocked`, `margeAvanceUnlock()`, `margeAvanceResetDefault()`).",
+      "🔥 Devis client : aucun breakdown URSSAF/avance affiché, uniquement le prix final. Avant : Principal+Acompte montrait `1500 € + URSSAF 22 % → 1923,08 €`. Maintenant : juste `1923,08 €`. La majoration reste totalement opaque côté client (cohérent avec la confidentialité de la marge avance).",
+      "🔥 Inputs Distance/Péages/Tauxkm/Ticket/Trajet réinstallés en colonne (1 par ligne) comme avant. La v1.36 les avait regroupés à tort sur une seule ligne.",
+      "🔥 Toggles Déplacement alignés verticalement avec les toggles des lignes matériel : nouveau wrapper `.depl-mode-cell` (flex 1, mimétise `.lg-title`) + spacer `.lg-prix-spacer` (90px, mimétise `.lg-prix`) avant le slot coût final. Résultat : le bouton Voiture/Transports est à gauche, prend l'espace de l'intitulé+prix, puis les toggles Principal/Débours/Acompte/Avance/(i) tombent exactement dans les mêmes colonnes que dans les lignes matériel ci-dessus.",
+      "Le tooltip (i) au survol des lignes matériel et déplacement continue d'afficher le breakdown détaillé (URSSAF + avance), c'est ton outil de pilotage interne — différent du devis client."
+    ]
+  },
   {
     version: "v1.36",
     date: "2026-04-29",
