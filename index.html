@@ -385,15 +385,6 @@
   .devis-preview .dp-line .lbl .desc{color:var(--text-dim);font-size:12px;margin-top:2px;font-weight:400}
   .devis-preview .dp-line .qty{color:var(--text-muted);font-size:12px;font-variant-numeric:tabular-nums;white-space:nowrap}
   .devis-preview .dp-line .amt{color:var(--text);font-weight:500;font-variant-numeric:tabular-nums;white-space:nowrap;min-width:90px;text-align:right}
-  .devis-preview .dp-totals{margin-top:18px;padding-top:14px;border-top:1px solid var(--border-light);max-width:340px;margin-left:auto}
-  .devis-preview .dp-totals .dp-line{display:flex;justify-content:space-between;grid-template-columns:none;padding:5px 0;border-bottom:0;color:var(--text-muted)}
-  .devis-preview .dp-totals .dp-line.grand{font-size:17px;font-weight:700;padding:10px 0 6px;margin-top:4px;border-top:1px solid var(--border)}
-  .devis-preview .dp-totals .dp-line.grand .lbl,.devis-preview .dp-totals .dp-line.grand .amt{color:var(--text)}
-  .devis-preview .dp-totals .dp-line.debours{color:var(--text-muted);font-style:italic;font-size:12px;margin-top:6px;padding-top:4px}
-  .devis-preview .dp-paiement-line{display:flex;justify-content:space-between;align-items:baseline;padding:4px 0;font-size:12px;color:var(--text)}
-  .devis-preview .dp-paiement-line .lbl{color:var(--text)}
-  .devis-preview .dp-paiement-line .pct{color:var(--text-muted);font-size:11px;margin-left:2px}
-  .devis-preview .dp-paiement-line .amt{font-variant-numeric:tabular-nums;font-weight:500}
   .devis-preview .dp-objet{font-size:13px;color:var(--text);margin:0 0 22px 0;padding:0;line-height:1.5}
   .devis-preview .dp-objet strong{font-weight:600}
   .devis-preview .dp-footer{margin-top:24px;padding-top:14px;border-top:1px solid var(--border-soft);text-align:center;line-height:1.5}
@@ -492,21 +483,41 @@
   .devis-preview .dp-conditions.signature{padding:0;border:0;border-radius:0;margin-top:0}
   .devis-preview .dp-conditions.signature h4{display:none}
   .devis-preview .dp-conditions.cgv h4{color:var(--text-muted)}
-  /* Body grid: lines (left, flex) + totals/modalités (right, fixed narrow column) */
-  .devis-preview .dp-body-grid{display:grid;grid-template-columns:1fr 280px;gap:32px;align-items:start;margin-top:8px}
-  .devis-preview .dp-body-left{min-width:0}
-  .devis-preview .dp-body-right{display:flex;flex-direction:column;gap:18px}
-  .devis-preview .dp-body-right .dp-totals{margin-top:0;padding-top:0;border-top:0;max-width:none}
+  /* Totals: right-aligned chunk under detail lines (full-width section, content cadré à droite) */
+  .devis-preview .dp-totals{margin-top:18px;padding-top:14px;border-top:1px solid var(--border-light);max-width:340px;margin-left:auto;width:100%}
+  .devis-preview .dp-totals .dp-line{display:flex;justify-content:space-between;grid-template-columns:none;padding:5px 0;border-bottom:0;color:var(--text-muted)}
+  .devis-preview .dp-totals .dp-line.grand{font-size:17px;font-weight:700;padding:10px 0 6px;margin-top:4px;border-top:1px solid var(--border)}
+  .devis-preview .dp-totals .dp-line.grand .lbl,.devis-preview .dp-totals .dp-line.grand .amt{color:var(--text)}
+  .devis-preview .dp-totals .dp-line.debours{color:var(--text-muted);font-style:italic;font-size:12px;margin-top:6px;padding-top:4px}
+  .devis-preview .dp-totals .dp-line.debours .debours-note{color:var(--text-dim);font-size:11px;font-style:italic;font-weight:400}
+
+  /* Payment info: full-width section under totals, internal 2-col layout (échéances | bank) */
+  .devis-preview .dp-payment-info{margin-top:28px;padding-top:14px;border-top:1px solid var(--border-light)}
+  .devis-preview .dp-payment-info h4{margin:0 0 14px;border:0;padding:0;font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.08em}
+  .devis-preview .dp-payment-grid{display:grid;grid-template-columns:1fr 1fr;gap:32px;align-items:start}
+  .devis-preview .dp-payment-block{font-size:13px;line-height:1.6;color:var(--text)}
+  .devis-preview .dp-paiement-line{display:flex;justify-content:space-between;align-items:baseline;padding:5px 0;font-size:13px;color:var(--text)}
+  .devis-preview .dp-paiement-line .lbl{color:var(--text)}
+  .devis-preview .dp-paiement-line .pct{color:var(--text-muted);font-size:12px;margin-left:2px}
+  .devis-preview .dp-paiement-line .amt{font-variant-numeric:tabular-nums;font-weight:500}
+  .devis-preview .dp-paiement-line.dp-delai{margin-top:8px;padding-top:8px;border-top:1px dashed var(--border-soft);color:var(--text-muted);font-size:12px}
+  .devis-preview .dp-paiement-line.dp-delai .lbl{color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;font-size:11px}
+  .devis-preview .dp-paiement-line.dp-delai .amt{font-weight:500;color:var(--text);font-variant-numeric:normal}
+  .devis-preview .dp-bank{font-size:13px}
+  .devis-preview .dp-bank-line{display:flex;align-items:baseline;gap:10px;padding:3px 0}
+  .devis-preview .dp-bank-line .lbl{color:var(--text-muted);font-size:11px;text-transform:uppercase;letter-spacing:.05em;min-width:64px;flex-shrink:0}
+  .devis-preview .dp-bank-line .val{color:var(--text);font-variant-numeric:tabular-nums}
+  .devis-preview .dp-bank-line.iban .val{font-size:13px;letter-spacing:.02em}
+  .devis-preview .dp-payment-text{font-size:12px;color:var(--text);line-height:1.6;white-space:pre-wrap}
   /* Spacer (pushes signature/footer to bottom on print) */
   .devis-preview .dp-spacer{min-height:32px;flex:1 1 auto}
   /* Signature row at bottom-left */
   .devis-preview .dp-signature-row{padding-top:14px;border-top:1px solid var(--border-soft);font-size:13px;line-height:1.6;color:var(--text)}
   .devis-preview .dp-signature-row .dp-sig-mention{margin-top:8px;color:var(--text-muted);font-size:12px;font-style:italic}
   .devis-preview .dp-sig-line.short{flex:0 0 50px;min-width:50px}
-  /* Payment info merged block (Modalités + Conditions de paiement) */
-  .devis-preview .dp-payment-info{padding-top:14px;border-top:1px solid var(--border-soft)}
-  .devis-preview .dp-payment-info h4{margin:0 0 10px;border:0;padding:0;font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.08em}
-  .devis-preview .dp-payment-text{margin-top:12px;padding-top:10px;border-top:1px dashed var(--border-soft);font-size:12px;color:var(--text);line-height:1.6;white-space:pre-wrap}
+  @media (max-width:680px){
+    .devis-preview .dp-payment-grid{grid-template-columns:1fr;gap:18px}
+  }
   /* Tiny footer (single legal line) */
   .devis-preview .dp-footer{margin-top:18px;padding-top:8px;border-top:1px solid var(--border-soft);font-size:10px;color:var(--text-dim);text-align:center;font-style:italic;line-height:1.4}
   /* Débours line in totals: shorter text */
@@ -517,9 +528,6 @@
   .devis-preview .dp-cgv-body{font-size:12px;line-height:1.55;color:var(--text);text-align:justify;hyphens:auto}
   .devis-preview .dp-cgv-body p{margin:0 0 8px}
   .devis-preview .dp-cgv-body strong,.devis-preview .dp-cgv-body b{display:inline-block;margin-top:8px;font-weight:700;color:var(--text)}
-  @media (max-width:680px){
-    .devis-preview .dp-body-grid{grid-template-columns:1fr;gap:24px}
-  }
 
   /* Page break before CGV (page 2 when printed) */
 
@@ -806,27 +814,16 @@
       margin-top: 4pt !important;
     }
 
-    /* === BODY 2-COLUMN GRID: lines (left) + totals/modalités (right) === */
-    .devis-preview .dp-body-grid, .view-devis-snapshot .dp-body-grid {
-      display: grid !important;
-      grid-template-columns: 1fr 195pt !important;
-      gap: 24pt !important;
-      align-items: start !important;
-      margin-top: 6pt !important;
-    }
-    .devis-preview .dp-body-left, .view-devis-snapshot .dp-body-left {
-      min-width: 0 !important;
-    }
-    .devis-preview .dp-body-right, .view-devis-snapshot .dp-body-right {
-      display: flex !important;
-      flex-direction: column !important;
-      gap: 10pt !important;
-    }
-    .devis-preview .dp-body-right .dp-totals, .view-devis-snapshot .dp-body-right .dp-totals {
-      margin-top: 0 !important;
-      padding-top: 0 !important;
-      border-top: 0 !important;
-      max-width: none !important;
+    /* === BODY 2-COLUMN GRID: lines+totals (left) + modalités+conditions (right) === */
+    /* === TOTALS: full-width section, content right-aligned chunk === */
+    .devis-preview .dp-totals, .view-devis-snapshot .dp-totals {
+      margin-top: 12pt !important;
+      padding-top: 8pt !important;
+      border-top: 0.5pt solid #ccc !important;
+      max-width: 220pt !important;
+      margin-left: auto !important;
+      width: 100% !important;
+      page-break-inside: avoid !important;
     }
 
     /* Spacer pushes signature to bottom of page */
@@ -855,13 +852,15 @@
       min-width: 30pt !important;
     }
 
-    /* Payment info merged block (Modalités + Conditions) */
+    /* Payment info: full-width section under totals, internal 2-col layout */
     .devis-preview .dp-payment-info, .view-devis-snapshot .dp-payment-info {
+      margin-top: 16pt !important;
       padding-top: 10pt !important;
-      border-top: 0.5pt solid #ddd !important;
+      border-top: 0.5pt solid #ccc !important;
+      page-break-inside: avoid !important;
     }
     .devis-preview .dp-payment-info h4, .view-devis-snapshot .dp-payment-info h4 {
-      margin: 0 0 6pt !important;
+      margin: 0 0 8pt !important;
       border: 0 !important;
       padding: 0 !important;
       font-size: 7.5pt !important;
@@ -870,11 +869,17 @@
       text-transform: uppercase !important;
       letter-spacing: .08em !important;
     }
+    .devis-preview .dp-payment-grid, .view-devis-snapshot .dp-payment-grid {
+      display: grid !important;
+      grid-template-columns: 1fr 1fr !important;
+      gap: 24pt !important;
+      align-items: start !important;
+    }
     .devis-preview .dp-paiement-line, .view-devis-snapshot .dp-paiement-line {
       display: flex !important;
       justify-content: space-between !important;
       padding: 2pt 0 !important;
-      font-size: 8pt !important;
+      font-size: 8.5pt !important;
       color: #333 !important;
     }
     .devis-preview .dp-paiement-line .lbl, .view-devis-snapshot .dp-paiement-line .lbl {
@@ -890,13 +895,52 @@
       color: #1a1a1a !important;
     }
     .devis-preview .dp-payment-text, .view-devis-snapshot .dp-payment-text {
-      margin-top: 8pt !important;
-      padding-top: 6pt !important;
-      border-top: 0.4pt dashed #ccc !important;
       font-size: 7.5pt !important;
       line-height: 1.45 !important;
       color: #333 !important;
       white-space: pre-wrap !important;
+    }
+    .devis-preview .dp-paiement-line.dp-delai, .view-devis-snapshot .dp-paiement-line.dp-delai {
+      margin-top: 6pt !important;
+      padding-top: 6pt !important;
+      border-top: 0.3pt dashed #bbb !important;
+      color: #555 !important;
+      font-size: 7.5pt !important;
+    }
+    .devis-preview .dp-paiement-line.dp-delai .lbl, .view-devis-snapshot .dp-paiement-line.dp-delai .lbl {
+      color: #777 !important;
+      text-transform: uppercase !important;
+      letter-spacing: .05em !important;
+      font-size: 7pt !important;
+    }
+    .devis-preview .dp-paiement-line.dp-delai .amt, .view-devis-snapshot .dp-paiement-line.dp-delai .amt {
+      font-weight: 500 !important;
+      color: #1a1a1a !important;
+      font-variant-numeric: normal !important;
+    }
+    .devis-preview .dp-bank, .view-devis-snapshot .dp-bank {
+      font-size: 8pt !important;
+    }
+    .devis-preview .dp-bank-line, .view-devis-snapshot .dp-bank-line {
+      display: flex !important;
+      align-items: baseline !important;
+      gap: 8pt !important;
+      padding: 2pt 0 !important;
+    }
+    .devis-preview .dp-bank-line .lbl, .view-devis-snapshot .dp-bank-line .lbl {
+      color: #777 !important;
+      font-size: 7pt !important;
+      text-transform: uppercase !important;
+      letter-spacing: .05em !important;
+      min-width: 42pt !important;
+      flex-shrink: 0 !important;
+    }
+    .devis-preview .dp-bank-line .val, .view-devis-snapshot .dp-bank-line .val {
+      color: #1a1a1a !important;
+      font-variant-numeric: tabular-nums !important;
+    }
+    .devis-preview .dp-bank-line.iban .val, .view-devis-snapshot .dp-bank-line.iban .val {
+      letter-spacing: .02em !important;
     }
 
     /* === CONDITIONS / SIGNATURE === */
@@ -1334,6 +1378,7 @@ const DEFAULT_S = {
     echeances: [{ id: "ech1", label: "À la livraison", pct: "100" }],
     photographe: "",
     conditionsPaiement: "Acompte de 30 % à la commande, solde de 70 % à la livraison.\nRèglement par virement bancaire.\nEn cas de retard de paiement, des pénalités de 3 fois le taux d'intérêt légal seront appliquées.",
+    paiement: { delai: "30j_fdm", banque: "", titulaire: "", iban: "", bic: "" },
     cgv: "Le présent devis est établi sous réserve d'acceptation par le client.\nLa signature du devis vaut acceptation des conditions générales de vente.\nLes droits d'auteur sur les images restent la propriété du photographe ; toute utilisation commerciale au-delà de l'usage privé du client doit faire l'objet d'un accord préalable.\nLes images livrées ne peuvent être recadrées, retouchées ou modifiées sans l'accord du photographe.\nLe client autorise le photographe à utiliser les images réalisées pour son portfolio et sa communication, sauf mention contraire écrite.",
     signatureBlock: "Fait à __________________________, le ____ / ____ / ________\n\nSignature du client précédée de la mention « Bon pour accord » :"
   },
@@ -1380,6 +1425,11 @@ if (!S.tarifs.heuresAnnuelles) S.tarifs.heuresAnnuelles = "900";
 if (typeof S.tarifs.facteurSecurite === "undefined") S.tarifs.facteurSecurite = "0";
 if (!S.bugs || (!Array.isArray(S.bugs.items) && !Array.isArray(S.bugs.entries) && typeof S.bugs.html !== "string")) S.bugs = { items: [] };
 if (!Array.isArray(S.bugs.items)) S.bugs.items = [];
+
+// Migrate paiement: ensure structured payment object exists
+if (S.mission && !S.mission.paiement) {
+  S.mission.paiement = { delai: "30j_fdm", banque: "", titulaire: "", iban: "", bic: "" };
+}
 // Migrate from old structured entries (title/desc/status)
 if (S.bugs.items.length === 0 && Array.isArray(S.bugs.entries) && S.bugs.entries.length) {
   S.bugs.items = S.bugs.entries.map(e => ({
@@ -1834,31 +1884,48 @@ function rDevisPreview() {
 
     ${cat ? `<div class="dp-objet">Objet : <strong>${esc(cat.l)}</strong></div>` : ""}
 
-    <div class="dp-body-grid">
-      <div class="dp-body-left">
-        <div class="dp-section">
-          ${linesHtml || `<div class="dp-empty" style="padding:14px">Aucune ligne pour l'instant.</div>`}
-        </div>
-      </div>
-      <div class="dp-body-right">
-        <div class="dp-totals">
-          ${t.remise > 0 ? `
-          <div class="dp-line"><span class="lbl">Sous-total</span><span class="amt">${fmt(t.subtotal)}</span></div>
-          <div class="dp-line"><span class="lbl">Remise (${num(d.remisePct).toString().replace(".",",")} %)</span><span class="amt">−${fmt(t.remise)}</span></div>` : ""}
-          <div class="dp-line grand"><span class="lbl">Total HT</span><span class="amt">${fmt(t.total)}</span></div>
-          ${t.debours > 0 ? `<div class="dp-line debours"><span class="lbl">Débours <span class="debours-note">(sur justificatifs)</span></span><span class="amt">${fmt(t.debours)}</span></div>` : ""}
-        </div>
-        ${(t.echeances || []).length > 0 || (d.conditionsPaiement || "").trim() ? `
-        <div class="dp-payment-info">
-          <h4>Modalités de paiement</h4>
-          ${(t.echeances || []).map(e => `<div class="dp-paiement-line">
-            <span class="lbl">${esc(e.label)} <span class="pct">(${num(e.pct).toString().replace(".",",")} %)</span></span>
-            <span class="amt">${fmt(e.amount)}</span>
-          </div>`).join("")}
-          ${(d.conditionsPaiement || "").trim() ? `<div class="dp-payment-text">${richDisplayHtml(d.conditionsPaiement)}</div>` : ""}
-        </div>` : ""}
-      </div>
+    <div class="dp-section">
+      ${linesHtml || `<div class="dp-empty" style="padding:14px">Aucune ligne pour l'instant.</div>`}
     </div>
+
+    <div class="dp-totals">
+      ${t.remise > 0 ? `
+      <div class="dp-line"><span class="lbl">Sous-total</span><span class="amt">${fmt(t.subtotal)}</span></div>
+      <div class="dp-line"><span class="lbl">Remise (${num(d.remisePct).toString().replace(".",",")} %)</span><span class="amt">−${fmt(t.remise)}</span></div>` : ""}
+      <div class="dp-line grand"><span class="lbl">Total HT</span><span class="amt">${fmt(t.total)}</span></div>
+      ${t.debours > 0 ? `<div class="dp-line debours"><span class="lbl">Débours <span class="debours-note">(sur justificatifs)</span></span><span class="amt">${fmt(t.debours)}</span></div>` : ""}
+    </div>
+
+    ${(() => {
+      const p = d.paiement || {};
+      const hasNew = !!(p.banque || p.iban || p.bic || p.titulaire);
+      const legacy = (d.conditionsPaiement || "").trim();
+      const hasEcheances = (t.echeances || []).length > 0;
+      if (!hasNew && !legacy && !hasEcheances) return "";
+      return `<div class="dp-payment-info">
+        <h4>Modalités de paiement</h4>
+        <div class="dp-payment-grid">
+          <div class="dp-payment-left">
+            ${hasEcheances ? `<div class="dp-payment-block">
+              ${(t.echeances || []).map(e => `<div class="dp-paiement-line">
+                <span class="lbl">${esc(e.label)} <span class="pct">(${num(e.pct).toString().replace(".",",")} %)</span></span>
+                <span class="amt">${fmt(e.amount)}</span>
+              </div>`).join("")}
+              ${p.delai ? `<div class="dp-paiement-line dp-delai"><span class="lbl">Délai de paiement</span><span class="amt">${esc(delaiPaiementLabel(p.delai))}</span></div>` : ""}
+            </div>` : ""}
+          </div>
+          <div class="dp-payment-right">
+            ${hasNew ? `<div class="dp-payment-block dp-bank">
+              ${p.banque ? `<div class="dp-bank-line"><span class="lbl">Banque</span><span class="val">${esc(p.banque)}</span></div>` : ""}
+              ${p.titulaire ? `<div class="dp-bank-line"><span class="lbl">Titulaire</span><span class="val">${esc(p.titulaire)}</span></div>` : ""}
+              ${p.iban ? `<div class="dp-bank-line iban"><span class="lbl">IBAN</span><span class="val">${esc(p.iban)}</span></div>` : ""}
+              ${p.bic ? `<div class="dp-bank-line"><span class="lbl">BIC</span><span class="val">${esc(p.bic)}</span></div>` : ""}
+            </div>` : ""}
+            ${legacy && !hasNew ? `<div class="dp-payment-text">${richDisplayHtml(legacy)}</div>` : ""}
+          </div>
+        </div>
+      </div>`;
+    })()}
 
     <div class="dp-spacer"></div>
 
@@ -2558,6 +2625,25 @@ function formatRef(ref, type) {
   return `${label} n° ${stripped}`;
 }
 
+// Standard French payment delays (B2B/B2C). Default for B2B = 30j fin de mois.
+const DELAIS_PAIEMENT = [
+  { k: "reception",   l: "À réception" },
+  { k: "comptant",    l: "Comptant à la prestation" },
+  { k: "15j",         l: "15 jours" },
+  { k: "30j",         l: "30 jours" },
+  { k: "45j",         l: "45 jours" },
+  { k: "60j",         l: "60 jours" },
+  { k: "30j_fdm",     l: "30 jours fin de mois" },
+  { k: "45j_fdm",     l: "45 jours fin de mois" },
+  { k: "60j_fdm",     l: "60 jours fin de mois" },
+  { k: "10_mois_suiv", l: "Le 10 du mois suivant" },
+  { k: "15_mois_suiv", l: "Le 15 du mois suivant" }
+];
+function delaiPaiementLabel(k) {
+  const d = DELAIS_PAIEMENT.find(x => x.k === k);
+  return d ? d.l : "";
+}
+
 function totals() {
   const d = S.mission;
   // Hourly rate: tarif catalogue saisi = prix final TTC. Au black, on enlève l'URSSAF.
@@ -2954,6 +3040,52 @@ function rTextEditorModal() {
     </div>
   </div>`;
 }
+
+function rPaiementFields() {
+  const p = (S.mission && S.mission.paiement) || {};
+  const delaiOptions = DELAIS_PAIEMENT.map(d =>
+    `<option value="${esc(d.k)}" ${p.delai === d.k ? "selected" : ""}>${esc(d.l)}</option>`
+  ).join("");
+  // Migration helper: if legacy text exists in conditionsPaiement, show a small notice
+  const legacy = (S.mission && S.mission.conditionsPaiement || "").trim();
+  const hasNewFields = !!(p.banque || p.iban || p.bic || p.titulaire);
+  const legacyNotice = (legacy && !hasNewFields)
+    ? `<div class="hint" style="margin:6px 0 14px;color:var(--warning);font-size:12px;line-height:1.5;padding:10px 12px;background:var(--warning-soft);border-radius:6px">
+        ⚠ Tu as des « conditions de paiement » dans l'ancien format texte. Remplis les champs structurés ci-dessous puis clique sur « Effacer l'ancien texte » pour finaliser la migration.
+        <button class="btn ghost" style="margin-left:8px;padding:4px 10px;font-size:11px" onclick="paiementClearLegacy()">Effacer l'ancien texte</button>
+      </div>`
+    : "";
+  return `
+    ${legacyNotice}
+    <div class="row">
+      <div class="field"><label>Délai de paiement</label>
+        <select onchange="upd('mission.paiement.delai', this.value)">${delaiOptions}</select>
+      </div>
+    </div>
+    <div class="row">
+      <div class="field"><label>Banque</label>
+        <input type="text" value="${esc(p.banque || "")}" oninput="upd('mission.paiement.banque', this.value)" placeholder="Ex : Banque Populaire Grand Ouest">
+      </div>
+      <div class="field"><label>Titulaire du compte</label>
+        <input type="text" value="${esc(p.titulaire || "")}" oninput="upd('mission.paiement.titulaire', this.value)" placeholder="Ex : MLLE NOEMIE SAINTILAN">
+      </div>
+    </div>
+    <div class="row">
+      <div class="field"><label>IBAN</label>
+        <input type="text" value="${esc(p.iban || "")}" oninput="upd('mission.paiement.iban', this.value)" placeholder="FR76 1234 5678 9012 3456 7890 123" style="font-variant-numeric:tabular-nums">
+      </div>
+      <div class="field narrow"><label>BIC</label>
+        <input type="text" value="${esc(p.bic || "")}" oninput="upd('mission.paiement.bic', this.value)" placeholder="ABCDEFGH" style="font-variant-numeric:tabular-nums;text-transform:uppercase">
+      </div>
+    </div>
+  `;
+}
+window.paiementClearLegacy = function() {
+  if (!confirm("Effacer définitivement l'ancien texte « Conditions de paiement » ? Les champs structurés ci-dessous prendront le relais.")) return;
+  S.mission.conditionsPaiement = "";
+  save();
+  render();
+};
 
 function rLogoField() {
   const url = (S.mission && S.mission.logoUrl) || "";
@@ -3421,8 +3553,8 @@ function rMS() {
     <h4>Photographe (en-tête du devis)</h4>
     ${renderLockedTextarea("photographe", d.photographe || "", "", "Vos coordonnées en haut à gauche du devis…")}
 
-    <h4>Conditions de paiement</h4>
-    ${renderLockedTextarea("conditionsPaiement", d.conditionsPaiement || "", "", "Texte en bas du devis, sous le total…")}
+    <h4>Modalités de paiement</h4>
+    ${rPaiementFields()}
 
     <h4>Bon pour accord</h4>
     ${renderLockedTextarea("signatureBlock", d.signatureBlock || "", "", "Bloc de signature client…")}
@@ -5866,6 +5998,29 @@ function rTR() {
 // Most recent version FIRST.
 // =============================================================
 const CHANGELOG = [
+  {
+    version: "v1.20",
+    date: "2026-04-29",
+    title: "Empilage vertical du devis + champs structurés pour les modalités de paiement",
+    items: [
+      "Devis : empilage strictement vertical full-width. De haut en bas : (1) Lignes de prestation pleine largeur, (2) Total cadré à droite, (3) Modalités de paiement pleine largeur (avec sous-grille interne 2 colonnes : échéances à gauche, coordonnées bancaires à droite), (4) spacer flexible, (5) Bon pour accord en bas. Plus de side-by-side lines/totals — chaque section respire pleinement.",
+      "Modalités de paiement : remplacement du champ texte libre par 5 champs structurés. (1) Délai de paiement : dropdown avec 11 options standards (À réception, Comptant, 15j, 30j, 45j, 60j, 30j fin de mois, 45j fin de mois, 60j fin de mois, le 10 du mois suivant, le 15 du mois suivant). Default : 30 jours fin de mois. (2) Banque (libre). (3) Titulaire du compte (libre). (4) IBAN (libre, formaté tabular-nums). (5) BIC (libre, uppercase auto).",
+      "Affichage propre : les coordonnées bancaires apparaissent en grille avec libellés en majuscules discrètes (BANQUE / TITULAIRE / IBAN / BIC) et valeurs alignées. Le délai de paiement apparaît sous les échéances avec un séparateur tireté discret. Plus de mise en forme rich-text à gérer.",
+      "Migration : si tu as encore du texte dans l'ancien champ « Conditions de paiement », un avertissement s'affiche dans le formulaire t'invitant à remplir les nouveaux champs structurés puis à effacer l'ancien texte (bouton dédié). Tant que tu n'effaces pas l'ancien texte, il continue d'apparaître dans le devis (rétrocompat).",
+      "« TVA non applicable, art. 293 B du CGI » : ne s'affiche plus que dans le pied de page (suppression du double affichage que tu avais à cause du texte legacy dans tes anciennes conditions de paiement). Une fois la migration faite, plus de duplication.",
+      "Champ paiement structuré ajouté à `S.mission.paiement` avec migration auto sur les données existantes (ajoute un objet vide si absent), donc rien ne casse pour les utilisateurs avec un état existant."
+    ]
+  },
+  {
+    version: "v1.19",
+    date: "2026-04-29",
+    title: "Totaux à gauche sous les lignes — modalités seules à droite",
+    items: [
+      "Sous-total, Remise, Total HT, Débours : déplacés du bloc droit vers le bloc gauche, sous les lignes de prestation. Cadrés à droite dans la colonne gauche (max 320 px écran / 220 pt papier), ce qui aligne typographiquement les montants. Convention classique de devis : lignes puis totaux dans la même colonne.",
+      "Modalités de paiement (échéances + IBAN/BIC/conditions) : restent seules dans la colonne de droite. Plus de comparaison visuelle avec les totaux qui créait une asymétrie de largeurs/styles. La section apparaît maintenant comme un bloc cohérent autonome.",
+      "Le séparateur du haut de la section paiement (border-top) a été retiré puisqu'il n'y a plus rien au-dessus à séparer dans la colonne droite. La section est délimitée uniquement par son titre « MODALITÉS DE PAIEMENT »."
+    ]
+  },
   {
     version: "v1.18",
     date: "2026-04-29",
