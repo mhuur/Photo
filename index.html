@@ -1388,15 +1388,15 @@
   /* Invisible right-edge spacer used by depl-row to match the expand+del button widths
      of materiel rows above, so toggles align vertically across rows. */
   .lg-btn-spacer{width:30px;height:var(--input-h);flex-shrink:0;display:block}
-  /* Déplacement: mêmes positions que les lignes matériel pour aligner les toggles
-     verticalement. depl-mode-cell remplace lg-title (flex 1), lg-prix-spacer remplace
-     lg-prix (90px), ensuite final-cost + toggles tombent dans les mêmes colonnes. */
+  /* Déplacement: same max-width as .lg-list (780px) so the row has the same effective
+     width as materiel rows. Without this, depl row spans wider than materiel and the
+     toggles get pushed further right. */
+  .depl-wrap{max-width:780px}
   .depl-row{flex-wrap:wrap}
   .depl-row .lg-toggle{flex-shrink:0}
-  .depl-mode-cell{flex:1 1 auto;min-width:160px;display:flex;align-items:center}
+  .depl-mode-cell{flex:1 1 0;min-width:160px;display:flex;align-items:center}
   .lg-prix-spacer{width:90px;flex-shrink:0}
-  .depl-subtoggle-row{display:flex;align-items:center;gap:10px;margin-top:8px;padding-left:8px}
-  .depl-subtoggle-label{font-size:12px;color:var(--text-muted);font-weight:600;letter-spacing:.04em;text-transform:uppercase}
+  .depl-subtoggle-row{display:flex;align-items:center;gap:10px;margin-top:8px}
   .depl-subtoggle-row .lg-toggle{min-width:auto}
   .depl-subtoggle-row .lg-toggle button{font-size:12px;padding:0 12px}
   .depl-pmt-wrap{display:flex;align-items:center;gap:10px}
@@ -4330,12 +4330,12 @@ function rMS() {
         ? `<div class="lg-final-cost-inline" title="Coût final pour le client : ${esc(dispInfo.breakdown)}">→ ${fmt(dispInfo.amount)}</div>`
         : `<div class="lg-final-cost-inline empty" aria-hidden="true"></div>`;
       return `
-      <div class="lg-row-wrap" data-id="deplacement">
+      <div class="lg-row-wrap depl-wrap" data-id="deplacement">
         <div class="lg-row depl-row">
           <div class="depl-mode-cell">
             <div class="seg lg-toggle">
-              <button class="${mode==='voiture'?'on':''}" onclick="updMissionMode('voiture')">🚗 Voiture</button>
-              <button class="${mode==='transports'?'on':''}" onclick="updMissionMode('transports')">🚆 Transports</button>
+              <button class="${mode==='voiture'?'on':''}" onclick="updMissionMode('voiture')">Voiture</button>
+              <button class="${mode==='transports'?'on':''}" onclick="updMissionMode('transports')">Transports</button>
             </div>
           </div>
           <div class="lg-prix-spacer" aria-hidden="true"></div>
@@ -4354,7 +4354,6 @@ function rMS() {
         </div>
         ${devis === 'principal' ? `
         <div class="depl-subtoggle-row">
-          <span class="depl-subtoggle-label">Affichage :</span>
           <div class="seg lg-toggle">
             <button class="${afficheMode==='afficher'?'on':''}" onclick="updDeplAfficheMode('afficher')" title="Apparaît comme une ligne séparée dans le devis">Afficher dans devis</button>
             <button class="${afficheMode==='lisser'?'on':''}" onclick="updDeplAfficheMode('lisser')" title="Inclus dans le tarif horaire (ne ressort pas comme une ligne)">Lisser dans taux horaire</button>
