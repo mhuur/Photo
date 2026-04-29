@@ -535,18 +535,18 @@
   .devis-preview .dp-totals .dp-line.debours .debours-note{color:var(--text-dim);font-size:11px;font-style:italic;font-weight:400}
   /* CGV header (identity strip) */
   .devis-preview .dp-conditions.cgv{margin-top:18px;padding:14px 0 0;border-top:1px solid var(--border-soft);font-size:13px;color:var(--text);line-height:1.7}
-  .devis-preview .dp-cgv-header{margin-bottom:18px;padding-bottom:12px;border-bottom:1px solid var(--border)}
-  .devis-preview .dp-cgv-header h4{margin:0 0 6px;border:0;padding:0;font-size:15px;font-weight:700;color:var(--text);text-transform:uppercase;letter-spacing:.04em}
-  .devis-preview .dp-cgv-identity{font-size:11px;color:var(--text-muted);font-style:italic;line-height:1.4}
-  /* CGV body — sections styled */
-  .devis-preview .dp-cgv-body{font-size:12px;line-height:1.55;color:var(--text);text-align:justify;hyphens:auto}
-  .devis-preview .dp-cgv-body .cgv-paragraph{margin:0 0 12px;font-style:italic;color:var(--text-muted);font-size:11.5px;line-height:1.5}
-  .devis-preview .dp-cgv-body .cgv-section{margin:14px 0 10px;break-inside:avoid;page-break-inside:avoid}
-  .devis-preview .dp-cgv-body .cgv-section-title{margin:0 0 4px;font-size:11px;font-weight:700;color:var(--text);text-transform:uppercase;letter-spacing:.05em}
-  .devis-preview .dp-cgv-body .cgv-num{color:var(--primary);margin-right:6px;font-variant-numeric:tabular-nums;font-weight:700}
-  .devis-preview .dp-cgv-body .cgv-section-body{margin:0;font-size:12px;line-height:1.55;color:var(--text)}
+  .devis-preview .dp-cgv-header{margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid var(--border)}
+  .devis-preview .dp-cgv-header h4{margin:0 0 3px;border:0;padding:0;font-size:14px;font-weight:700;color:var(--text);text-transform:uppercase;letter-spacing:.04em}
+  .devis-preview .dp-cgv-identity{font-size:10px;color:var(--text-muted);font-style:italic;line-height:1.3}
+  /* CGV body — 2 columns, compact typography */
+  .devis-preview .dp-cgv-body{column-count:2;column-gap:18px;column-rule:1px solid var(--border-soft);font-size:10.5px;line-height:1.35;color:var(--text);text-align:justify;hyphens:auto;-webkit-hyphens:auto}
+  .devis-preview .dp-cgv-body .cgv-paragraph{margin:0 0 5px;font-style:italic;color:var(--text-muted);font-size:10px;line-height:1.3;break-inside:avoid;page-break-inside:avoid}
+  .devis-preview .dp-cgv-body .cgv-section{margin:0 0 5px;break-inside:avoid;page-break-inside:avoid}
+  .devis-preview .dp-cgv-body .cgv-section-title{margin:0 0 1px;font-size:10px;font-weight:700;color:var(--text);text-transform:uppercase;letter-spacing:.04em;break-after:avoid;page-break-after:avoid}
+  .devis-preview .dp-cgv-body .cgv-num{color:var(--primary);margin-right:3px;font-variant-numeric:tabular-nums;font-weight:700}
+  .devis-preview .dp-cgv-body .cgv-section-body{margin:0;font-size:10.5px;line-height:1.35;color:var(--text);text-align:justify}
   /* CGV mentions footer */
-  .devis-preview .dp-cgv-mentions{margin-top:18px;padding-top:10px;border-top:1px solid var(--border-soft);font-size:10px;color:var(--text-dim);font-style:italic;line-height:1.4;text-align:center}
+  .devis-preview .dp-cgv-mentions{margin-top:8px;padding-top:5px;border-top:1px solid var(--border-soft);font-size:9px;color:var(--text-dim);font-style:italic;line-height:1.3;text-align:center}
   /* Fallback footer mentions (page 1, when no CGV) */
   .devis-preview .dp-footer .dp-footer-mentions-fallback{font-size:9px;color:var(--text-dim);margin-top:2px;line-height:1.3}
 
@@ -1022,33 +1022,33 @@
     /* === CGV PAGE 2: HEADER + 2-COL BODY + FOOTER === */
     /* CGV header (title + identity strip) — full width above the 2-column body */
     .devis-preview .dp-cgv-header, .view-devis-snapshot .dp-cgv-header {
-      margin-bottom: 12pt !important;
-      padding-bottom: 8pt !important;
+      margin-bottom: 8pt !important;
+      padding-bottom: 4pt !important;
       border-bottom: 0.6pt solid #1a1a1a !important;
     }
     .devis-preview .dp-cgv-header h4, .view-devis-snapshot .dp-cgv-header h4 {
-      font-size: 13pt !important;
+      font-size: 11pt !important;
       font-weight: 800 !important;
       color: #1a1a1a !important;
-      margin: 0 0 4pt 0 !important;
+      margin: 0 0 2pt 0 !important;
       padding: 0 !important;
       border: 0 !important;
       text-transform: uppercase !important;
       letter-spacing: .04em !important;
     }
     .devis-preview .dp-cgv-identity, .view-devis-snapshot .dp-cgv-identity {
-      font-size: 7.5pt !important;
+      font-size: 6.5pt !important;
       color: #666 !important;
       font-style: italic !important;
-      line-height: 1.4 !important;
+      line-height: 1.3 !important;
     }
-    /* CGV body: 2 columns, justified, smaller text, structured sections */
+    /* CGV body: 2 columns, justified, very compact */
     .devis-preview .dp-cgv-body, .view-devis-snapshot .dp-cgv-body {
       column-count: 2 !important;
-      column-gap: 18pt !important;
+      column-gap: 16pt !important;
       column-rule: 0.3pt solid #e8e8e8 !important;
-      font-size: 7.5pt !important;
-      line-height: 1.45 !important;
+      font-size: 6.8pt !important;
+      line-height: 1.28 !important;
       color: #333 !important;
       text-align: justify !important;
       hyphens: auto !important;
@@ -1056,48 +1056,49 @@
     }
     /* Preamble paragraph (before numbered sections) */
     .devis-preview .dp-cgv-body .cgv-paragraph, .view-devis-snapshot .dp-cgv-body .cgv-paragraph {
-      margin: 0 0 8pt !important;
+      margin: 0 0 3pt !important;
       font-style: italic !important;
       color: #555 !important;
-      font-size: 7pt !important;
-      line-height: 1.4 !important;
+      font-size: 6.5pt !important;
+      line-height: 1.28 !important;
       break-inside: avoid !important;
     }
     /* Numbered section block */
     .devis-preview .dp-cgv-body .cgv-section, .view-devis-snapshot .dp-cgv-body .cgv-section {
-      margin: 0 0 8pt !important;
+      margin: 0 0 3pt !important;
       break-inside: avoid !important;
       page-break-inside: avoid !important;
     }
     .devis-preview .dp-cgv-body .cgv-section-title, .view-devis-snapshot .dp-cgv-body .cgv-section-title {
-      margin: 0 0 2pt !important;
-      font-size: 7.5pt !important;
+      margin: 0 !important;
+      font-size: 6.8pt !important;
       font-weight: 700 !important;
       color: #1a1a1a !important;
       text-transform: uppercase !important;
-      letter-spacing: .04em !important;
+      letter-spacing: .03em !important;
       break-after: avoid !important;
       page-break-after: avoid !important;
+      line-height: 1.28 !important;
     }
     .devis-preview .dp-cgv-body .cgv-num, .view-devis-snapshot .dp-cgv-body .cgv-num {
       color: #1a1a1a !important;
-      margin-right: 4pt !important;
+      margin-right: 3pt !important;
       font-variant-numeric: tabular-nums !important;
       font-weight: 700 !important;
     }
     .devis-preview .dp-cgv-body .cgv-section-body, .view-devis-snapshot .dp-cgv-body .cgv-section-body {
       margin: 0 !important;
-      font-size: 7.5pt !important;
-      line-height: 1.45 !important;
+      font-size: 6.8pt !important;
+      line-height: 1.28 !important;
       color: #333 !important;
       text-align: justify !important;
     }
     /* CGV mentions footer (penalties at bottom of page 2) */
     .devis-preview .dp-cgv-mentions, .view-devis-snapshot .dp-cgv-mentions {
-      margin-top: 12pt !important;
-      padding-top: 6pt !important;
+      margin-top: 6pt !important;
+      padding-top: 3pt !important;
       border-top: 0.4pt solid #ccc !important;
-      font-size: 6.5pt !important;
+      font-size: 6pt !important;
       color: #888 !important;
       font-style: italic !important;
       line-height: 1.4 !important;
@@ -6264,6 +6265,18 @@ function rTR() {
 // Most recent version FIRST.
 // =============================================================
 const CHANGELOG = [
+  {
+    version: "v1.24",
+    date: "2026-04-29",
+    title: "CGV ultra-compactes : 2 colonnes à l'écran et à l'impression",
+    items: [
+      "Écran : ajout de `column-count: 2` sur le bloc CGV (avant : single-column en preview écran, 2 colonnes seulement à l'impression). Désormais l'aperçu écran reflète exactement le rendu papier.",
+      "Typographie compacte à l'écran : font-size 10,5 px (avant 12 px), line-height 1,35 (avant 1,55), section margin-bottom 5 px (avant 14 px), title margin-bottom 1 px (avant 4 px). Préambule en italique 10 px line-height 1,3.",
+      "Typographie compacte à l'impression : font-size 6,8 pt (avant 7,5 pt), line-height 1,28 (avant 1,45), section gap 3 pt (avant 8 pt), title margin 0 pt (avant 2 pt), header padding-bottom 4 pt (avant 8 pt). Cible : tenir 8 sections + préambule + mentions sur une seule page A4.",
+      "Header CGV plus serré : titre 11 pt (avant 13 pt) avec marge 2 pt sous (avant 4 pt), bandeau identité 6,5 pt (avant 7,5 pt). Footer mentions pénalités à 6 pt (avant 6,5 pt) avec margin-top 6 pt (avant 12 pt).",
+      "Section breaks préservés : `break-inside: avoid` sur chaque section pour qu'aucune ne soit coupée entre 2 colonnes. `break-after: avoid` sur les titres pour qu'un titre ne reste jamais orphelin en bas de colonne. Le texte reste justifié avec hyphenation pour bien remplir les colonnes étroites."
+    ]
+  },
   {
     version: "v1.23",
     date: "2026-04-29",
