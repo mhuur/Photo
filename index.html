@@ -1371,6 +1371,10 @@
   .lg-toggle button{flex:1;padding:0 10px;font-size:13px;justify-content:center}
   .lg-toggle-pmt{min-width:auto;flex-shrink:0}
   .lg-toggle-pmt button{padding:0 10px;font-size:12px;font-weight:500}
+  /* Static pill version: single non-clickable button shown when only one valid mode (Débours → Fact. Direct) */
+  .lg-toggle-pmt.static{cursor:default}
+  .lg-toggle-pmt.static button{cursor:default;opacity:.85}
+  .lg-toggle-pmt.static button:disabled{background:var(--primary-soft);color:var(--primary);border-color:var(--primary-soft)}
   /* Info icon (i) — opens a tooltip on hover/focus */
   .lg-info-icon{background:transparent;border:1px solid var(--border-light);color:var(--text-muted);width:24px;height:24px;border-radius:50%;cursor:help;font-size:11px;font-weight:700;font-style:italic;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .15s;padding:0;line-height:1}
   .lg-info-icon:hover,.lg-info-icon:focus{border-color:var(--primary);color:var(--primary);background:var(--primary-soft);outline:none}
@@ -1570,6 +1574,8 @@ if (S.mission && Array.isArray(S.mission.lignes)) {
     if (l.paiementType === "avance" && l.devis === "debours") l.paiementType = "fact-direct";
     // If currently "fact-direct" but devis is "principal" → switch to "avance"
     if (l.paiementType === "fact-direct" && l.devis !== "debours") l.paiementType = "avance";
+    // v1.39+ : Débours+Acompte supprimé → forcé en Débours+Fact.Direct
+    if (l.paiementType === "acompte" && l.devis === "debours") l.paiementType = "fact-direct";
   }
 }
 // Migrate paiementType field on déplacement (default "acompte")
@@ -1582,6 +1588,10 @@ if (S.mission && S.mission.deplacement) {
   }
   if (S.mission.deplacement.paiementType === "fact-direct" && S.mission.deplacement.devis !== "debours") {
     S.mission.deplacement.paiementType = "avance";
+  }
+  // v1.39+ : Débours+Acompte supprimé → forcé en Débours+Fact.Direct
+  if (S.mission.deplacement.paiementType === "acompte" && S.mission.deplacement.devis === "debours") {
+    S.mission.deplacement.paiementType = "fact-direct";
   }
   // v1.36+ : remove deprecated devis="taux" — convert to devis="principal" + afficheMode="lisser"
   if (S.mission.deplacement.devis === "taux") {
@@ -1795,11 +1805,15 @@ window.updMissionMode = updMissionMode;
 
 function updDeplDevis(val) {
   S.mission.deplacement.devis = val;
-  // Remap paiementType across devis modes
-  if (val === "debours" && S.mission.deplacement.paiementType === "avance") S.mission.deplacement.paiementType = "fact-direct";
-  if (val !== "debours" && S.mission.deplacement.paiementType === "fact-direct") S.mission.deplacement.paiementType = "avance";
-  if (S.mission.deplacement.paiementType !== "acompte" && S.mission.deplacement.paiementType !== "avance" && S.mission.deplacement.paiementType !== "fact-direct") {
-    S.mission.deplacement.paiementType = "acompte";
+  // v1.39+ : Débours+Acompte supprimé. En Débours, paiementType est forcé à "fact-direct".
+  if (val === "debours") {
+    S.mission.deplacement.paiementType = "fact-direct";
+  } else {
+    // Switching to principal: "fact-direct" can't apply, default to "acompte"
+    if (S.mission.deplacement.paiementType === "fact-direct" ||
+        (S.mission.deplacement.paiementType !== "acompte" && S.mission.deplacement.paiementType !== "avance")) {
+      S.mission.deplacement.paiementType = "acompte";
+    }
   }
   save();
   render();
@@ -2785,13 +2799,15 @@ function ligneSetDevis(id, devis) {
   if (!l) return;
   l.devis = devis;
   // Remap paiementType to keep a valid combination:
-  //   principal → "acompte" or "avance" (never "fact-direct")
-  //   debours   → "acompte" or "fact-direct" (never "avance")
-  if (devis === "debours" && l.paiementType === "avance") l.paiementType = "fact-direct";
-  if (devis !== "debours" && l.paiementType === "fact-direct") l.paiementType = "avance";
-  // Always ensure a valid choice (acompte by default)
-  if (l.paiementType !== "acompte" && l.paiementType !== "avance" && l.paiementType !== "fact-direct") {
-    l.paiementType = "acompte";
+  //   principal → "acompte" or "avance" (preserve current if valid, else "acompte")
+  //   debours   → ALWAYS "fact-direct" (Acompte for Débours has been removed — see v1.39)
+  if (devis === "debours") {
+    l.paiementType = "fact-direct";
+  } else {
+    // Switching to principal: "fact-direct" can't apply, default to "acompte"
+    if (l.paiementType === "fact-direct" || (l.paiementType !== "acompte" && l.paiementType !== "avance")) {
+      l.paiementType = "acompte";
+    }
   }
   save();
   render();
@@ -2804,9 +2820,11 @@ function ligneSetPaiement(id, val) {
   // Forbid invalid combos:
   //   - "avance" requires devis !== "debours"
   //   - "fact-direct" requires devis === "debours"
+  //   - "acompte" requires devis !== "debours" (no Débours+Acompte anymore)
   if (val === "avance" && l.devis === "debours") return;
   if (val === "fact-direct" && l.devis !== "debours") return;
-  l.paiementType = val; // forced choice — no toggle off
+  if (val === "acompte" && l.devis === "debours") return;
+  l.paiementType = val;
   save();
   render();
 }
@@ -2816,6 +2834,7 @@ function updDeplPaiementType(val) {
   if (!S.mission.deplacement) S.mission.deplacement = {};
   if (val === "avance" && S.mission.deplacement.devis === "debours") return;
   if (val === "fact-direct" && S.mission.deplacement.devis !== "debours") return;
+  if (val === "acompte" && S.mission.deplacement.devis === "debours") return;
   S.mission.deplacement.paiementType = val;
   save();
   render();
@@ -2888,14 +2907,11 @@ function paiementInfoFor(devis, paiementType, margeAvancePct, margeUrssafPct, li
     const urssafFactor = 1 - urssafPct / 100;
     const final = (urssafFactor > 0) ? r2(lineAmount / urssafFactor) : lineAmount;
     const urssafAmt = r2(final - lineAmount);
-    const m = urssafPct > 0
-      ? `Compensation URSSAF (calcul inverse) : ${fmt(lineAmount)} ÷ (1 − ${urssafPct.toString().replace(".",",")} %) = ${fmt(final)}. URSSAF prélevée : ${fmt(urssafAmt)}.`
-      : "Aucune compensation URSSAF (saisir un % dans Matériel).";
     return {
       title: "Principal + Acompte",
       facture: "Le fournisseur te facture à ton nom.",
-      marge: m,
-      urssaf: `Inclus dans ton CA : ${fmt(final)}. Après URSSAF (${urssafPct.toString().replace(".",",")} %), tu nets ${fmt(lineAmount)} — exactement la somme que tu dois reverser.`,
+      marge: "0 % · 0,00 €",
+      urssaf: `${urssafPct.toString().replace(".", ",")} % · ${fmt(urssafAmt)}`,
       quand: "Tu veux que le client paie cette dépense via l'acompte à la commande, pour ne pas avancer ta trésorerie."
     };
   }
@@ -2907,39 +2923,22 @@ function paiementInfoFor(devis, paiementType, margeAvancePct, margeUrssafPct, li
     const final = (urssafFactor > 0) ? r2(baseAvance / urssafFactor) : baseAvance;
     const avanceAmt = r2(baseAvance - lineAmount);
     const urssafAmt = r2(final - baseAvance);
-    let m;
-    if (avancePct === 0 && urssafPct === 0) {
-      m = "Aucune marge ni compensation définie. Saisir des % dans Matériel.";
-    } else {
-      const steps = [];
-      if (avancePct > 0) steps.push(`Étape 1 — avance ${avancePct.toString().replace(".",",")} % : ${fmt(lineAmount)} × ${(1 + avancePct/100).toString().replace(".",",")} = ${fmt(baseAvance)}`);
-      if (urssafPct > 0) steps.push(`Étape 2 — URSSAF inverse ${urssafPct.toString().replace(".",",")} % : ${fmt(baseAvance)} ÷ ${urssafFactor.toFixed(2).replace(".",",")} = ${fmt(final)}`);
-      m = steps.join(" · ");
-    }
     return {
       title: "Principal + Avance",
       facture: "Le fournisseur te facture à ton nom. Tu avances la dépense.",
-      marge: m,
-      urssaf: `Tu factures ${fmt(final)}. Après URSSAF (${urssafPct.toString().replace(".",",")} %), tu nets ${fmt(baseAvance)} = ${fmt(lineAmount)} (avance) + ${fmt(avanceAmt)} (marge).`,
+      marge: `${avancePct.toString().replace(".", ",")} % · ${fmt(avanceAmt)}`,
+      urssaf: `${urssafPct.toString().replace(".", ",")} % · ${fmt(urssafAmt)}`,
       quand: "Tu avances ta trésorerie. La marge avance te rémunère pour le risque, la compensation URSSAF couvre les cotisations sur cette ligne."
     };
   }
-  if (isDebours && isAcompte) {
+  if (isDebours) {
+    // v1.39+ : seul Débours+Fact.Direct subsiste (Acompte supprimé)
     return {
-      title: "Débours + Acompte",
-      facture: "Le fournisseur facture ton client final (mandat de débours requis).",
-      marge: "Interdite — refacturation au centime près (art. 267 II CGI).",
-      urssaf: `Hors CA — ${fmt(lineAmount)} pas soumis à l'URSSAF (économie ~${fmt(r2(lineAmount * 0.22))} à 22 %).`,
-      quand: "Le fournisseur accepte de facturer ton client. Le client paie via l'acompte, tu transmets au fournisseur. Pas d'avance de trésorerie, pas d'URSSAF."
-    };
-  }
-  if (isDebours && isFactDirect) {
-    return {
-      title: "Débours + Fact. Direct",
-      facture: "Le fournisseur facture directement ton client final, tu n'interviens pas dans le paiement.",
-      marge: "Aucune — tu ne touches pas la somme, tu n'avances rien.",
-      urssaf: `Hors CA — ${fmt(lineAmount)} pas dans ton chiffre d'affaires.`,
-      quand: "Le fournisseur facture directement le client. Aucun risque ni démarche financière côté photographe — la ligne est juste indicative sur le devis."
+      title: "Débours",
+      facture: "Le fournisseur facture directement ton client final (mandat de débours requis, art. 267 II CGI). Tu n'interviens pas dans le paiement.",
+      marge: "0 % · 0,00 €",
+      urssaf: `0 % · 0,00 € (hors CA, hors URSSAF)`,
+      quand: "Le client paie le fournisseur en direct. La ligne est juste indicative sur le devis. Idéal quand le fournisseur accepte de facturer ton client final."
     };
   }
   // Should not happen but safe fallback
@@ -3042,24 +3041,25 @@ function rLigne(l) {
   } else {
     const pmt = l.paiementType || "acompte";
     const isDebours = l.devis === "debours";
-    // Contextual second-choice labels:
-    //   principal → "Acompte" / "Avance"
-    //   debours   → "Acompte" / "Fact. Direct"
-    const secondVal = isDebours ? "fact-direct" : "avance";
-    const secondLabel = isDebours ? "Fact. Direct" : "Avance";
-    const secondTitle = isDebours
-      ? "Le fournisseur facture directement ton client final"
-      : "Tu avances la dépense, marge appliquée";
+    // Contextual paiement mode UI:
+    //   - Principal → toggle [Acompte | Avance]
+    //   - Débours   → static "Fact. Direct" pill (only valid combo, no Débours+Acompte anymore)
     // Compute client-facing displayed amount (with URSSAF + avance markup if applicable).
     // Au black: no markups (URSSAF=0, avance=0).
     const _declared = S.mission.declare !== false;
     const ma = _declared ? num((S.mission.paiement || {}).margeAvance ?? 0) : 0;
     const mu = _declared ? num(S.mission.urssafPct ?? 22) : 0;
     const dispInfo = ligneDisplayInfo(l.devis, pmt, l.prix, ma, mu, false);
-    // Always render the slot (even empty) so adjacent buttons don't shift across rows
-    const finalCostInline = dispInfo.hasMarkup
-      ? `<div class="lg-final-cost-inline" title="Coût final pour le client : ${esc(dispInfo.breakdown)}">→ ${fmt(dispInfo.amount)}</div>`
-      : `<div class="lg-final-cost-inline empty" aria-hidden="true"></div>`;
+    // Slot always rendered empty — no visible cost estimate inline (per user pref).
+    // Kept as placeholder so toggles align vertically across materiel rows AND between
+    // materiel and déplacement (which has the same .lg-final-cost-inline slot).
+    const finalCostInline = `<div class="lg-final-cost-inline empty" aria-hidden="true"></div>`;
+    const paiementModeHtml = isDebours
+      ? `<div class="seg lg-toggle lg-toggle-pmt static" title="Le fournisseur facture directement le client final"><button class="on" disabled>Fact. Direct</button></div>`
+      : `<div class="seg lg-toggle lg-toggle-pmt" title="Mode de paiement (obligatoire)">
+          <button class="${pmt==='acompte'?'on':''}" onclick="ligneSetPaiement('${l.id}','acompte')" title="Inclus dans l'acompte à la commande">Acompte</button>
+          <button class="${pmt==='avance'?'on':''}" onclick="ligneSetPaiement('${l.id}','avance')" title="Tu avances la dépense, marge appliquée">Avance</button>
+        </div>`;
     return `<div class="lg-row-wrap" data-id="${l.id}">
       <div class="lg-row">
         <input class="lg-title" placeholder="Intitulé (ex : Pellicule, Location studio…)" value="${esc(l.intitule)}" oninput="ligneUpd('${l.id}','intitule',this.value)">
@@ -3072,10 +3072,7 @@ function rLigne(l) {
           <button class="${(l.devis||'principal')==='principal'?'on':''}" onclick="ligneSetDevis('${l.id}','principal')">Principal</button>
           <button class="${l.devis==='debours'?'on warn':''}" onclick="ligneSetDevis('${l.id}','debours')">Débours</button>
         </div>
-        <div class="seg lg-toggle lg-toggle-pmt" title="Mode de paiement (obligatoire)">
-          <button class="${pmt==='acompte'?'on':''}" onclick="ligneSetPaiement('${l.id}','acompte')" title="Inclus dans l'acompte à la commande">Acompte</button>
-          <button class="${pmt===secondVal?'on':''}" onclick="ligneSetPaiement('${l.id}','${secondVal}')" title="${secondTitle}">${secondLabel}</button>
-        </div>
+        ${paiementModeHtml}
         <button class="lg-info-icon" onmouseenter="showPaiementInfo(event, 'ligne', '${l.id}')" onmouseleave="hidePaiementInfo()" onfocus="showPaiementInfo(event, 'ligne', '${l.id}')" onblur="hidePaiementInfo()" tabindex="0" aria-label="Voir les conséquences fiscales de ce choix">i</button>
         ${expandBtn}
         <button class="lg-del" onclick="ligneDel('${l.id}')" title="Supprimer">×</button>
@@ -3281,46 +3278,8 @@ function rTauxBreakdown() {
 // Update each materiel row's inline final cost without re-rendering the whole form
 // (which would lose input focus). Called from refreshTotals after each input change.
 function refreshFinalCosts() {
-  const m = S.mission;
-  if (!m) return;
-  const isDeclared = m.declare !== false;
-  const ma = isDeclared ? num(m.paiement?.margeAvance ?? 0) : 0;
-  const mu = isDeclared ? num(m.urssafPct ?? 22) : 0;
-  // Helper to update a single .lg-final-cost-inline element from a ligneDisplayInfo result
-  const updateSlot = (el, info) => {
-    if (!el) return;
-    if (info && info.hasMarkup) {
-      el.classList.remove("empty");
-      el.removeAttribute("aria-hidden");
-      el.title = `Coût final pour le client : ${info.breakdown}`;
-      el.textContent = `→ ${fmt(info.amount)}`;
-    } else {
-      el.classList.add("empty");
-      el.setAttribute("aria-hidden", "true");
-      el.removeAttribute("title");
-      el.textContent = "";
-    }
-  };
-  // Materiel rows
-  for (const l of m.lignes || []) {
-    if (l.type !== "materiel") continue;
-    const wrap = document.querySelector(`.lg-row-wrap[data-id="${l.id}"]`);
-    if (!wrap) continue;
-    const el = wrap.querySelector(".lg-final-cost-inline");
-    if (!el) continue;
-    const info = ligneDisplayInfo(l.devis, l.paiementType, l.prix, ma, mu, false);
-    updateSlot(el, info);
-  }
-  // Déplacement row
-  const deplWrap = document.querySelector('.lg-row-wrap[data-id="deplacement"]');
-  if (deplWrap) {
-    const el = deplWrap.querySelector(".lg-final-cost-inline");
-    if (el) {
-      const t = totals();
-      const info = ligneDisplayInfo(m.deplacement.devis || "principal", m.deplacement.paiementType, t.depl, ma, mu, false);
-      updateSlot(el, info);
-    }
-  }
+  // Disabled: per user pref, no inline cost estimate is shown. Slots are permanent
+  // empty placeholders for layout alignment only.
 }
 
 function refreshTotals() {
@@ -4315,20 +4274,17 @@ function rMS() {
       const isDebours = devis === "debours";
       const pmt = d.deplacement.paiementType || "acompte";
       const afficheMode = d.deplacement.afficheMode || "afficher";
-      const secondVal = isDebours ? "fact-direct" : "avance";
-      const secondLabel = isDebours ? "Fact. Direct" : "Avance";
-      const secondTitle = isDebours
-        ? "Le fournisseur facture directement ton client final"
-        : "Tu avances la dépense, marge appliquée";
-      // Final cost slot (live-updated by refreshFinalCosts)
-      const _isDeclared = d.declare !== false;
-      const ma = _isDeclared ? num((d.paiement || {}).margeAvance ?? 0) : 0;
-      const mu = _isDeclared ? num(d.urssafPct ?? 22) : 0;
-      const tNow = totals();
-      const dispInfo = ligneDisplayInfo(devis, pmt, tNow.depl, ma, mu, false);
-      const finalCostInline = dispInfo.hasMarkup
-        ? `<div class="lg-final-cost-inline" title="Coût final pour le client : ${esc(dispInfo.breakdown)}">→ ${fmt(dispInfo.amount)}</div>`
-        : `<div class="lg-final-cost-inline empty" aria-hidden="true"></div>`;
+      // Final cost slot — always rendered empty (per user pref).
+      const finalCostInline = `<div class="lg-final-cost-inline empty" aria-hidden="true"></div>`;
+      // Paiement mode UI:
+      //   - Principal → toggle [Acompte | Avance]
+      //   - Débours   → static "Fact. Direct" pill (only valid combo, no Débours+Acompte anymore)
+      const paiementModeHtml = isDebours
+        ? `<div class="seg lg-toggle lg-toggle-pmt static" title="Le fournisseur facture directement le client final"><button class="on" disabled>Fact. Direct</button></div>`
+        : `<div class="seg lg-toggle lg-toggle-pmt" title="Mode de paiement (obligatoire)">
+            <button class="${pmt==='acompte'?'on':''}" onclick="updDeplPaiementType('acompte')" title="Inclus dans l'acompte à la commande">Acompte</button>
+            <button class="${pmt==='avance'?'on':''}" onclick="updDeplPaiementType('avance')" title="Tu avances la dépense, marge appliquée">Avance</button>
+          </div>`;
       return `
       <div class="lg-row-wrap depl-wrap" data-id="deplacement">
         <div class="lg-row depl-row">
@@ -4344,10 +4300,7 @@ function rMS() {
             <button class="${devis==='principal'?'on':''}" onclick="updDeplDevis('principal')">Principal</button>
             <button class="${devis==='debours'?'on warn':''}" onclick="updDeplDevis('debours')">Débours</button>
           </div>
-          <div class="seg lg-toggle lg-toggle-pmt" title="Mode de paiement (obligatoire)">
-            <button class="${pmt==='acompte'?'on':''}" onclick="updDeplPaiementType('acompte')" title="Inclus dans l'acompte à la commande">Acompte</button>
-            <button class="${pmt===secondVal?'on':''}" onclick="updDeplPaiementType('${secondVal}')" title="${secondTitle}">${secondLabel}</button>
-          </div>
+          ${paiementModeHtml}
           <button class="lg-info-icon" onmouseenter="showPaiementInfo(event, 'depl')" onmouseleave="hidePaiementInfo()" onfocus="showPaiementInfo(event, 'depl')" onblur="hidePaiementInfo()" tabindex="0" aria-label="Voir les conséquences fiscales de ce choix">i</button>
           <span class="lg-btn-spacer" aria-hidden="true"></span>
           <span class="lg-btn-spacer" aria-hidden="true"></span>
