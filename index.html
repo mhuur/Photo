@@ -357,8 +357,12 @@
   /* Devis preview (in-page, at the bottom of Mission) */
   /* Devis preview (in-page, at the bottom of Mission) */
   .devis-preview{margin-top:0;background:var(--surface);border:1px solid var(--border-light);border-radius:10px;padding:32px 36px;max-width:880px;box-shadow:0 6px 18px rgba(0,0,0,.18);display:flex;flex-direction:column}
-  .devis-preview .dp-logo-wrap{display:flex;justify-content:flex-start;margin-bottom:24px}
+  /* Top row: logo (left) + ref title (right), aligned baseline */
+  .devis-preview .dp-top-row{display:flex;justify-content:space-between;align-items:flex-start;gap:24px;margin-bottom:18px}
+  .devis-preview .dp-logo-wrap{display:flex;justify-content:flex-start;flex-shrink:0}
+  .devis-preview .dp-logo-spacer{flex-shrink:0;height:1px}
   .devis-preview .dp-logo{max-width:240px;max-height:90px;width:auto;height:auto;object-fit:contain;display:block}
+  .devis-preview .dp-doc-ref{color:var(--text);font-weight:700;font-size:18px;font-variant-numeric:tabular-nums;letter-spacing:.01em;text-align:right;flex-shrink:0;align-self:flex-end;line-height:1.2}
   /* Logo field in form */
   .logo-field{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:14px;max-width:520px}
   .logo-field.has-logo{align-items:flex-start}
@@ -600,10 +604,22 @@
     }
 
     /* === HEADER === */
+    .devis-preview .dp-top-row, .view-devis-snapshot .dp-top-row {
+      display: flex !important;
+      justify-content: space-between !important;
+      align-items: flex-end !important;
+      gap: 18pt !important;
+      margin-bottom: 14pt !important;
+    }
     .devis-preview .dp-logo-wrap, .view-devis-snapshot .dp-logo-wrap {
       display: flex !important;
       justify-content: flex-start !important;
-      margin-bottom: 12pt !important;
+      margin-bottom: 0 !important;
+      flex-shrink: 0 !important;
+    }
+    .devis-preview .dp-logo-spacer, .view-devis-snapshot .dp-logo-spacer {
+      flex-shrink: 0 !important;
+      height: 1pt !important;
     }
     .devis-preview .dp-logo, .view-devis-snapshot .dp-logo {
       max-width: 160pt !important;
@@ -611,6 +627,17 @@
       width: auto !important;
       height: auto !important;
       object-fit: contain !important;
+    }
+    .devis-preview .dp-doc-ref, .view-devis-snapshot .dp-doc-ref {
+      font-size: 16pt !important;
+      font-weight: 700 !important;
+      color: #1a1a1a !important;
+      letter-spacing: .005em !important;
+      font-variant-numeric: tabular-nums !important;
+      text-align: right !important;
+      align-self: flex-end !important;
+      flex-shrink: 0 !important;
+      line-height: 1.2 !important;
     }
     .devis-preview .dp-header-grid, .view-devis-snapshot .dp-header-grid {
       display: grid !important;
@@ -1767,12 +1794,14 @@ function rDevisPreview() {
   }
 
   return `<div class="devis-preview" id="devisPreview">
-    ${d.logoUrl ? `<div class="dp-logo-wrap"><img src="${esc(d.logoUrl)}" alt="Logo" class="dp-logo"></div>` : ""}
+    <div class="dp-top-row">
+      ${d.logoUrl ? `<div class="dp-logo-wrap"><img src="${esc(d.logoUrl)}" alt="Logo" class="dp-logo"></div>` : `<div class="dp-logo-spacer"></div>`}
+      <div class="dp-doc-ref">${esc(formatRef(d.ref, "devis"))}</div>
+    </div>
     <div class="dp-header-grid">
       <div class="dp-header-left ${(d.photographe || "").trim() ? "" : "empty"}">${(d.photographe || "").trim() ? richDisplayHtml(d.photographe) : "Renseigner vos coordonnées dans la section « Photographe » de l'onglet Mission."}</div>
       <div class="dp-header-right">
         <div class="dp-meta-block">
-          <div class="ref">${esc(formatRef(d.ref, "devis"))}</div>
           <div>Émission : <strong>${dateFR(d.dateEmission) || "—"}</strong></div>
           <div class="dp-validity-mention">Devis valable 30 jours à compter de la date d'émission.</div>
         </div>
@@ -1794,6 +1823,7 @@ function rDevisPreview() {
             return `
               ${contactName ? `<div>${esc(contactName)}</div>` : ""}
               ${cli.address ? `<div>${esc(cli.address)}</div>` : ""}
+              ${cli.cityPostal ? `<div>${esc(cli.cityPostal)}</div>` : ""}
               ${contactEmail ? `<div>${esc(contactEmail)}</div>` : ""}
               ${contactPhone ? `<div>${esc(contactPhone)}</div>` : ""}
             `;
@@ -1902,15 +1932,20 @@ function rDeboursPreview() {
   }
 
   return `<div class="devis-preview" id="deboursPreview">
+    <div class="dp-top-row">
+      ${d.logoUrl ? `<div class="dp-logo-wrap"><img src="${esc(d.logoUrl)}" alt="Logo" class="dp-logo"></div>` : `<div class="dp-logo-spacer"></div>`}
+      <div class="dp-doc-ref">${esc(ref)}</div>
+    </div>
     <div class="dp-header-grid">
       <div class="dp-header-left ${(d.photographe || "").trim() ? "" : "empty"}">${(d.photographe || "").trim() ? richDisplayHtml(d.photographe) : "Renseigner vos coordonnées dans la section « Photographe »."}</div>
       <div class="dp-header-right">
         <div class="dp-meta-block">
-          <div class="ref">${esc(ref)}</div>
           <div>Émission : <strong>${dateFR(d.dateEmission) || "—"}</strong></div>
         </div>
         <div class="dp-client-block">
           <span class="name">${esc(cli.name || "(Sélectionner un client)")}</span>
+          ${cli.address ? `<div>${esc(cli.address)}</div>` : ""}
+          ${cli.cityPostal ? `<div>${esc(cli.cityPostal)}</div>` : ""}
         </div>
       </div>
     </div>
@@ -1990,15 +2025,20 @@ function rFacturePreview(opts) {
   const fullyPaid = restant <= 0.01;
 
   return `<div class="devis-preview" id="facturePreview">
+    <div class="dp-top-row">
+      ${d.logoUrl ? `<div class="dp-logo-wrap"><img src="${esc(d.logoUrl)}" alt="Logo" class="dp-logo"></div>` : `<div class="dp-logo-spacer"></div>`}
+      <div class="dp-doc-ref" style="color:var(--success)">${esc(ref)}</div>
+    </div>
     <div class="dp-header-grid">
       <div class="dp-header-left ${(d.photographe || "").trim() ? "" : "empty"}">${(d.photographe || "").trim() ? richDisplayHtml(d.photographe) : "Renseigner vos coordonnées dans la section « Photographe »."}</div>
       <div class="dp-header-right">
         <div class="dp-meta-block">
-          <div class="ref" style="color:var(--success)">${esc(ref)}</div>
           <div>Émission : <strong>${dateFR(d.dateEmission) || "—"}</strong></div>
         </div>
         <div class="dp-client-block">
           <span class="name">${esc(cli.name || "(Sélectionner un client)")}</span>
+          ${cli.address ? `<div>${esc(cli.address)}</div>` : ""}
+          ${cli.cityPostal ? `<div>${esc(cli.cityPostal)}</div>` : ""}
         </div>
       </div>
     </div>
@@ -2178,7 +2218,7 @@ function cliPickSelect(id) {
   const onlyContact = validContacts.length === 1 ? validContacts[0] : null;
   S.mission.client = {
     id: e.id, num: e.num || "", name: e.name || "",
-    contact: e.contact || "", address: e.address || "",
+    contact: e.contact || "", address: e.address || "", cityPostal: e.cityPostal || "",
     phone: e.phone || "", email: e.email || "",
     contactId: onlyContact ? onlyContact.id : "",
     contactSelected: onlyContact ? (onlyContact.name || "") : "",
@@ -2235,7 +2275,7 @@ function cliPickSaveCreate() {
   S.mission.client = {
     id, num: entry.num, name: entry.name,
     contact: entry.contact, contactSelected: entry.contact, contactId: contacts[0].id,
-    address: entry.address,
+    address: entry.address, cityPostal: entry.cityPostal || "",
     phone: entry.phone, phoneSelected: entry.phone,
     email: entry.email, emailSelected: entry.email
   };
@@ -5826,6 +5866,17 @@ function rTR() {
 // Most recent version FIRST.
 // =============================================================
 const CHANGELOG = [
+  {
+    version: "v1.18",
+    date: "2026-04-29",
+    title: "Code postal client + alignement référence/photographe",
+    items: [
+      "Code postal et ville du client : maintenant affichés dans le bloc client en en-tête du devis (juste sous l'adresse). Le champ « Code postal / Ville » existait déjà dans la fiche client mais n'était pas propagé dans le devis. Fix sur 2 chemins : `cliPickSelect` (sélection d'un client existant) et `cliPickSaveCreate` (création d'un nouveau client) propagent désormais `cityPostal` dans `S.mission.client`.",
+      "Référence et émission alignées : la référence « Devis n° X-XXXX-XX-XX » a été extraite du bloc droit pour passer dans une rangée du haut séparée, alignée à droite avec le logo à gauche (sur la même ligne de base). En conséquence, dans la grille en-tête juste en-dessous, la première ligne du bloc droit (« Émission : … ») commence au même niveau vertical que la première ligne du bloc gauche (« NOEMIE SAINTILAN »). Plus de décalage visuel.",
+      "Le titre « Devis n° » est légèrement plus grand (18 px écran, 16 pt impression) puisqu'il joue le rôle de titre du document, en haut à droite, au-dessus du séparateur de l'en-tête.",
+      "Mêmes ajustements pour les variantes Débours et Facture : ref en haut à droite avec accent de couleur, alignement avec photographe sur la rangée suivante."
+    ]
+  },
   {
     version: "v1.17",
     date: "2026-04-29",
