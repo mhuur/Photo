@@ -1391,6 +1391,9 @@
   .marges-row .field.marges-hint{flex:1;padding-bottom:10px}
   .marges-row .hint{font-size:12px;color:var(--text-muted);line-height:1.5}
   .depl-pmt-wrap{display:flex;align-items:center;gap:10px}
+  /* Final client-facing cost shown under each materiel row */
+  .lg-final-cost{margin:4px 0 0;padding:4px 12px;background:var(--surface-2);border-radius:0 6px 6px 0;border-left:3px solid var(--primary);font-size:12px;color:var(--text-muted);font-variant-numeric:tabular-nums;display:inline-block}
+  .lg-final-cost-detail{color:var(--text-dim);font-size:11px;font-style:italic;font-variant-numeric:normal}
   .lg-expand{background:transparent;border:0;color:var(--text-dim);font-size:14px;line-height:1;cursor:pointer;height:var(--input-h);width:30px;display:flex;align-items:center;justify-content:center;padding:0;border-radius:4px;flex-shrink:0;transition:transform .15s,color .12s,background .12s}
   .lg-expand:hover{background:rgba(255,255,255,.06);color:var(--text)}
   .lg-expand.open{transform:rotate(90deg);color:var(--primary)}
@@ -1937,6 +1940,8 @@ function rDevisPreview() {
   const cli = sel || d.client;
 
   // Build line items HTML — with numbering (1., 2., 3., …)
+  const ma = num((d.paiement || {}).margeAvance ?? 0);
+  const mu = num((d.paiement || {}).margeUrssaf ?? 22);
   let linesHtml = "";
   let lineNum = 0;
   for (const l of (d.lignes || [])) {
@@ -1952,11 +1957,12 @@ function rDevisPreview() {
       </div>`;
     } else if (l.type === "materiel" && l.devis !== "debours") {
       lineNum++;
+      const info = ligneDisplayInfo(l.devis, l.paiementType, l.prix, ma, mu);
       linesHtml += `<div class="dp-line">
         <div class="num">${lineNum}.</div>
         <div class="lbl">${esc(l.intitule || "(Sans intitulé)")}<div class="desc">${l.description ? esc(l.description) : "Matériel"}</div></div>
-        <div class="qty"></div>
-        <div class="amt">${fmt(num(l.prix))}</div>
+        <div class="qty">${esc(info.breakdown)}</div>
+        <div class="amt">${fmt(info.amount)}</div>
       </div>`;
     }
   }
@@ -1970,11 +1976,21 @@ function rDevisPreview() {
     : `Billets : ${fmt(num(d.deplacement.ticket))}${trajet > 0 ? ` + ${num(d.deplacement.trajetH)} h trajet` : ""}`;
   const deplDevisMode = t.effectiveDeplMode || "principal";
   const deplLineNum = (deplDevisMode === "principal" && t.depl > 0) ? ++lineNum : null;
+  // Apply URSSAF/avance markup ONLY for transport in Principal mode
+  // (voiture has no paiementType axis; débours/taux use the raw amount)
+  const deplInfo = (mode === "transports" && deplDevisMode === "principal")
+    ? ligneDisplayInfo(d.deplacement.devis, d.deplacement.paiementType, t.depl, ma, mu)
+    : { amount: t.depl, breakdown: deplDetail, hasMarkup: false };
+  const deplFinalAmount = deplInfo.amount;
+  // For transport with markup: show base detail + markup detail combined
+  const deplCombinedDetail = (mode === "transports" && deplInfo.hasMarkup)
+    ? `${deplDetail} → ${deplInfo.breakdown}`
+    : deplDetail;
   const deplLineHtml = t.depl > 0 ? `<div class="dp-line">
     ${deplLineNum !== null ? `<div class="num">${deplLineNum}.</div>` : `<div class="num"></div>`}
-    <div class="lbl">Déplacement<div class="desc">${esc(deplDetail)}</div></div>
+    <div class="lbl">Déplacement<div class="desc">${esc(deplCombinedDetail)}</div></div>
     <div class="qty"></div>
-    <div class="amt">${fmt(t.depl)}</div>
+    <div class="amt">${fmt(deplFinalAmount)}</div>
   </div>` : "";
   if (deplDevisMode === "principal") {
     linesHtml += deplLineHtml;
@@ -2042,10 +2058,6 @@ function rDevisPreview() {
     </div>
 
     <div class="dp-totals">
-      ${t.margeUrssafAmount > 0 ? `
-      <div class="dp-line muted"><span class="lbl">Compensation URSSAF sur acomptes (${num(t.margeUrssafPct).toString().replace(".",",")} %)</span><span class="amt">${fmt(t.margeUrssafAmount)}</span></div>` : ""}
-      ${t.margeAvanceAmount > 0 ? `
-      <div class="dp-line muted"><span class="lbl">Marge sur frais avancés (${num(t.margeAvancePct).toString().replace(".",",")} %)</span><span class="amt">${fmt(t.margeAvanceAmount)}</span></div>` : ""}
       ${t.remise > 0 ? `
       <div class="dp-line"><span class="lbl">Sous-total</span><span class="amt">${fmt(t.subtotal)}</span></div>
       <div class="dp-line"><span class="lbl">Remise (${num(d.remisePct).toString().replace(".",",")} %)</span><span class="amt">−${fmt(t.remise)}</span></div>` : ""}
@@ -2763,6 +2775,30 @@ window.updDeplPaiementType = updDeplPaiementType;
 // ============ PAIEMENT INFO HELPER ============
 // Given a (devis, paiementType, marge%, urssaf%, amount), return a structured explanation
 // of what this combination means: who invoices, marge possibility, URSSAF impact, when to use it.
+// ============ PAIEMENT INFO HELPER ============
+// Compute the "displayed amount" for a materiel ligne (or transport amount), with URSSAF
+// compensation and marge avance baked in when applicable. Also returns a breakdown string
+// for inline display ("1500 € + 22 % URSSAF + 20 % avance").
+function ligneDisplayInfo(devis, paiementType, basePrix, margeAvancePct, margeUrssafPct) {
+  const base = r2(num(basePrix));
+  const isDebours = devis === "debours";
+  // Débours items: no markup
+  if (isDebours) {
+    return { amount: base, breakdown: "", hasMarkup: false };
+  }
+  // Principal items: URSSAF compensation always applies
+  const urssafAmt = r2(base * num(margeUrssafPct) / 100);
+  const isAvance = paiementType === "avance";
+  const avanceAmt = isAvance ? r2(base * num(margeAvancePct) / 100) : 0;
+  const total = r2(base + urssafAmt + avanceAmt);
+  // Build breakdown string only if there's a markup
+  const parts = [`${num(base).toFixed(2).replace(".", ",")} €`];
+  if (urssafAmt > 0) parts.push(`+ ${num(margeUrssafPct).toString().replace(".", ",")} % URSSAF`);
+  if (avanceAmt > 0) parts.push(`+ ${num(margeAvancePct).toString().replace(".", ",")} % avance`);
+  const breakdown = (urssafAmt > 0 || avanceAmt > 0) ? parts.join(" ") : "";
+  return { amount: total, breakdown, hasMarkup: (urssafAmt > 0 || avanceAmt > 0) };
+}
+
 function paiementInfoFor(devis, paiementType, margeAvancePct, margeUrssafPct, lineAmount) {
   const isDebours = devis === "debours";
   const isAcompte = paiementType === "acompte";
@@ -2927,6 +2963,13 @@ function rLigne(l) {
     const secondTitle = isDebours
       ? "Le fournisseur facture directement ton client final"
       : "Tu avances la dépense, marge appliquée";
+    // Compute client-facing displayed amount (with URSSAF + avance markup if applicable)
+    const ma = num((S.mission.paiement || {}).margeAvance ?? 0);
+    const mu = num((S.mission.paiement || {}).margeUrssaf ?? 22);
+    const dispInfo = ligneDisplayInfo(l.devis, pmt, l.prix, ma, mu);
+    const finalCostHtml = dispInfo.hasMarkup
+      ? `<div class="lg-final-cost" title="Coût final pour le client">→ ${fmt(dispInfo.amount)} <span class="lg-final-cost-detail">(${esc(dispInfo.breakdown)})</span></div>`
+      : "";
     return `<div class="lg-row-wrap">
       <div class="lg-row">
         <input class="lg-title" placeholder="Intitulé (ex : Pellicule, Location studio…)" value="${esc(l.intitule)}" oninput="ligneUpd('${l.id}','intitule',this.value)">
@@ -2946,6 +2989,7 @@ function rLigne(l) {
         ${expandBtn}
         <button class="lg-del" onclick="ligneDel('${l.id}')" title="Supprimer">×</button>
       </div>
+      ${finalCostHtml}
       ${desc}
     </div>`;
   }
@@ -3180,8 +3224,6 @@ function totalsHtml(t) {
     <div class="line muted"><span>Prestations (${t.totalHeures.toFixed(2).replace(".",",")} h × ${num(t.tarifH).toFixed(2).replace(".",",")} €/h)</span><span>${fmt(t.lignes)}</span></div>
     <div class="line muted"><span>Frais de déplacement</span><span>${fmt(t.depl)}</span></div>
     <div class="line muted"><span>Autres</span><span>${fmt(t.autres)}</span></div>
-    ${t.margeUrssafAmount > 0 ? `<div class="line muted"><span>Compensation URSSAF sur acomptes (${num(t.margeUrssafPct).toString().replace(".",",")} %)</span><span>${fmt(t.margeUrssafAmount)}</span></div>` : ""}
-    ${t.margeAvanceAmount > 0 ? `<div class="line muted"><span>Marge sur frais avancés (${num(t.margeAvancePct).toString().replace(".",",")} %)</span><span>${fmt(t.margeAvanceAmount)}</span></div>` : ""}
     <div class="line"><span>Sous-total</span><span>${fmt(t.subtotal)}</span></div>
     <div class="line muted"><span>Remise (${num(S.mission.remisePct).toString().replace(".",",")} %)</span><span>−${fmt(t.remise)}</span></div>
     <div class="line total"><span>Total HT</span><span>${fmt(t.total)}</span></div>
@@ -6628,6 +6670,20 @@ function rTR() {
 // Most recent version FIRST.
 // =============================================================
 const CHANGELOG = [
+  {
+    version: "v1.31",
+    date: "2026-04-29",
+    title: "Majoration URSSAF/avance intégrée à la ligne matériel · suppression des lignes séparées dans les totaux",
+    items: [
+      "🔥 Refonte du rendu des lignes matériel : la majoration (compensation URSSAF + marge avance) est désormais **intégrée directement au montant affiché** de la ligne, comme la décomposition « 2 h × 60 €/h » est intégrée à la ligne heures. Avant : montant brut sur la ligne + lignes séparées « Compensation URSSAF » et « Marge avance » dans les totaux. Maintenant : montant final sur la ligne avec breakdown inline.",
+      "Format inline : « Studio location · 1500,00 € + 22 % URSSAF + 20 % avance · 2130,00 € ». Le détail apparaît dans la colonne `qty` (à côté de l'intitulé), comme « 2,00 h × 50,00 €/h » pour les heures. Cohérence visuelle parfaite entre les types de lignes.",
+      "Suppression des deux lignes « Compensation URSSAF sur acomptes » et « Marge sur frais avancés » du bloc totaux du devis (page 1) ET du bloc totaux du formulaire. Le sous-total et le total HT incluent automatiquement les majorations puisqu'elles sont baked-in dans les lignes elles-mêmes.",
+      "Aperçu en temps réel dans le formulaire : sous chaque ligne matériel concernée, un petit encart apparaît avec le coût final pour le client (« → 2130,00 € (1500,00 € + 22 % URSSAF + 20 % avance) »). L'utilisateur voit immédiatement combien le client va payer pour cette ligne.",
+      "Le déplacement transport en mode Principal applique aussi la majoration : la ligne Déplacement affiche maintenant le breakdown « Billets : 80 € + 22 % URSSAF · 97,60 € » si applicable.",
+      "Les lignes Débours et Fact. Direct ne sont jamais majorées (hors CA) : pas d'encart de coût final, pas de breakdown.",
+      "Helper interne `ligneDisplayInfo(devis, paiementType, prix, margeAvancePct, margeUrssafPct)` qui retourne `{amount, breakdown, hasMarkup}` — utilisé dans le rendu devis et le formulaire pour garder une seule source de vérité sur le calcul des majorations."
+    ]
+  },
   {
     version: "v1.30",
     date: "2026-04-29",
