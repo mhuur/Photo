@@ -205,6 +205,23 @@
   /* État vide spécifique au filtre attente paiement */
   .empty-attente{border-color:var(--warning);background:rgba(245,158,11,.04);color:var(--text-muted)}
 
+  /* Bloc audit Suivi (Phase 1 refonte) */
+  .audit-block{margin:30px 0 20px;border:1px dashed var(--border-light);border-radius:10px;background:var(--surface);overflow:hidden}
+  .audit-block summary{padding:12px 16px;cursor:pointer;font-weight:600;color:var(--text-muted);user-select:none;display:flex;align-items:center;gap:8px}
+  .audit-block summary:hover{color:var(--text);background:var(--surface-2)}
+  .audit-block[open] summary{border-bottom:1px solid var(--border-light);color:var(--text)}
+  .audit-tag{font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;background:var(--warning-soft);color:var(--warning);border:1px solid var(--warning);letter-spacing:.04em;text-transform:uppercase}
+  .audit-body{padding:18px 22px 22px}
+  .audit-body h3{margin:18px 0 10px;font-size:14px;color:var(--text);font-weight:700;letter-spacing:.02em;text-transform:uppercase}
+  .audit-body h3:first-child{margin-top:0}
+  .audit-body p{margin:6px 0;font-size:13px;color:var(--text-muted);line-height:1.5}
+  .audit-body code{background:var(--surface-2);padding:1px 6px;border-radius:3px;font-size:12px;color:var(--text)}
+  .audit-svg{width:100%;max-width:760px;height:auto;display:block;margin:8px 0 14px;background:var(--surface-2);border-radius:6px;padding:6px}
+  .audit-frictions{margin:8px 0 12px;padding-left:22px;font-size:13px;color:var(--text-muted);line-height:1.55}
+  .audit-frictions li{margin-bottom:6px}
+  .audit-frictions li strong{color:var(--text)}
+  .audit-next{margin-top:14px;padding:8px 12px;background:var(--warning-soft);border-left:3px solid var(--warning);border-radius:4px;color:var(--text);font-size:13px;font-style:italic}
+
   .btn.btn-rouge{background:var(--danger);color:#fff}.btn.btn-rouge:hover{background:var(--danger-dark);box-shadow:0 2px 8px rgba(239,68,68,.3)}
   .btn.btn-gris{background:var(--text-dim);color:#fff}.btn.btn-gris:hover{background:var(--text-muted)}
   .btn.btn-bleu{background:var(--primary);color:#fff}.btn.btn-bleu:hover{background:var(--primary-dark)}
@@ -7272,6 +7289,118 @@ function rSV() {
       </thead>
       ${rowsHtml}
     </table>`}
+
+    ${rSuiviAuditBlock()}
+  `;
+}
+
+// ▼ rSuiviAuditBlock — diagramme d'état + audit (Phase 1 refonte Suivi)
+// Bloc dépliable affiché sous le tableau Suivi pour visualiser le flow actuel.
+function rSuiviAuditBlock() {
+  return `
+  <details class="audit-block">
+    <summary>🔍 Audit du flow de validation / paiement <span class="audit-tag">Phase 1</span></summary>
+
+    <div class="audit-body">
+      <h3>Diagramme d'état actuel</h3>
+      <svg viewBox="0 0 760 320" class="audit-svg" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Diagramme d'état du Suivi">
+        <defs>
+          <marker id="arr-fwd" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+            <path d="M0,0 L10,5 L0,10 z" fill="context-stroke"/>
+          </marker>
+          <marker id="arr-rev" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+            <path d="M0,0 L10,5 L0,10 z" fill="#6b7280"/>
+          </marker>
+        </defs>
+
+        <!-- States -->
+        <g>
+          <rect x="20" y="60" width="120" height="50" rx="8" fill="rgba(107,114,128,.18)" stroke="#9ca3af" stroke-width="2"/>
+          <text x="80" y="83" text-anchor="middle" fill="#fff" font-size="13" font-weight="700">ENVOYÉ</text>
+          <text x="80" y="99" text-anchor="middle" fill="#9ca3af" font-size="10">en attente</text>
+        </g>
+        <g>
+          <rect x="200" y="60" width="120" height="50" rx="8" fill="rgba(59,130,246,.18)" stroke="#3b82f6" stroke-width="2"/>
+          <text x="260" y="83" text-anchor="middle" fill="#fff" font-size="13" font-weight="700">ACCEPTÉ</text>
+          <text x="260" y="99" text-anchor="middle" fill="#9ca3af" font-size="10">non livrée</text>
+        </g>
+        <g>
+          <rect x="380" y="60" width="120" height="50" rx="8" fill="rgba(245,158,11,.18)" stroke="#f59e0b" stroke-width="2"/>
+          <text x="440" y="83" text-anchor="middle" fill="#fff" font-size="13" font-weight="700">ATTENTE</text>
+          <text x="440" y="99" text-anchor="middle" fill="#9ca3af" font-size="10">paiement attendu</text>
+        </g>
+        <g>
+          <rect x="560" y="60" width="120" height="50" rx="8" fill="rgba(34,197,94,.18)" stroke="#22c55e" stroke-width="2"/>
+          <text x="620" y="83" text-anchor="middle" fill="#fff" font-size="13" font-weight="700">TERMINÉ</text>
+          <text x="620" y="99" text-anchor="middle" fill="#9ca3af" font-size="10">payé</text>
+        </g>
+        <g>
+          <rect x="200" y="220" width="120" height="50" rx="8" fill="rgba(239,68,68,.18)" stroke="#ef4444" stroke-width="2"/>
+          <text x="260" y="243" text-anchor="middle" fill="#fff" font-size="13" font-weight="700">REFUSÉ</text>
+          <text x="260" y="259" text-anchor="middle" fill="#9ca3af" font-size="10">/ annulé</text>
+        </g>
+
+        <!-- Forward arrows (happy path) -->
+        <g stroke="#22c55e" stroke-width="1.8" fill="none">
+          <line x1="142" y1="85" x2="196" y2="85" marker-end="url(#arr-fwd)"/>
+        </g>
+        <g stroke="#3b82f6" stroke-width="1.8" fill="none">
+          <line x1="322" y1="85" x2="376" y2="85" marker-end="url(#arr-fwd)"/>
+        </g>
+        <g stroke="#22c55e" stroke-width="1.8" fill="none">
+          <line x1="502" y1="85" x2="556" y2="85" marker-end="url(#arr-fwd)"/>
+        </g>
+        <text x="169" y="79" text-anchor="middle" fill="#22c55e" font-size="11" font-weight="700">✓ Accepté</text>
+        <text x="349" y="79" text-anchor="middle" fill="#3b82f6" font-size="11" font-weight="700">→ Livré</text>
+        <text x="529" y="79" text-anchor="middle" fill="#22c55e" font-size="11" font-weight="700">€ Reçu</text>
+
+        <!-- ENVOYÉ → REFUSÉ -->
+        <g stroke="#ef4444" stroke-width="1.8" fill="none">
+          <path d="M 80 110 L 80 200 Q 80 245 200 245" marker-end="url(#arr-fwd)"/>
+        </g>
+        <text x="92" y="180" fill="#ef4444" font-size="11" font-weight="700">✗ Refusé</text>
+
+        <!-- Acompte shortcut: ENVOYÉ → ATTENTE -->
+        <g stroke="#f59e0b" stroke-width="1.6" fill="none" stroke-dasharray="5,3">
+          <path d="M 80 110 Q 80 175 440 175 Q 440 175 440 113" marker-end="url(#arr-fwd)"/>
+        </g>
+        <text x="260" y="167" text-anchor="middle" fill="#f59e0b" font-size="11" font-weight="700">⚡ ligne « acompte » : saute ACCEPTÉ</text>
+
+        <!-- Revert arrows (small, gray, dashed) -->
+        <g stroke="#6b7280" stroke-width="1" fill="none" stroke-dasharray="3,3">
+          <path d="M 196 105 Q 169 130 142 105" marker-end="url(#arr-rev)"/>
+          <path d="M 376 105 Q 349 130 322 105" marker-end="url(#arr-rev)"/>
+          <path d="M 556 105 Q 529 130 502 105" marker-end="url(#arr-rev)"/>
+        </g>
+        <text x="169" y="138" text-anchor="middle" fill="#6b7280" font-size="10">↩</text>
+        <text x="349" y="138" text-anchor="middle" fill="#6b7280" font-size="10">↩</text>
+        <text x="531" y="138" text-anchor="middle" fill="#6b7280" font-size="10">↩</text>
+
+        <!-- REFUSÉ revert -->
+        <g stroke="#6b7280" stroke-width="1" fill="none" stroke-dasharray="3,3">
+          <path d="M 320 230 Q 480 230 600 115" marker-end="url(#arr-rev)"/>
+        </g>
+        <text x="430" y="225" fill="#6b7280" font-size="10">↩ Annuler refus → état précédent (statutAvantRefus)</text>
+      </svg>
+
+      <h3>Comparaison industrie</h3>
+      <p>Pattern dominant (Pennylane, QuickBooks, Indy, Sage) : <strong>séparation devis / facture</strong>. Devis = cycle court (envoyé → accepté/refusé). Facture = cycle de paiement (émise → partielle/totale → réglée). Ici : un seul concept « entry » mélange livraison et paiement.</p>
+
+      <h3>Frictions identifiées</h3>
+      <ol class="audit-frictions">
+        <li><strong>Acompte = 3 états pour 1 événement réel</strong> : <code>envoyé → attente → terminé</code>. Vraie vie : « le client a payé l'acompte » = 1 clic.</li>
+        <li><strong>Vocabulaire ambigu sur l'acompte</strong> : <code>accepte</code> = « non livrée » mais un acompte n'est pas livrable ; <code>attente</code> recouvre 2 sens (livré OU acompte dû).</li>
+        <li><strong>Distinction livré/payé peu utile</strong> en B2C/freelance photo : 90 % des cas = paiement à la livraison. Une seule transition suffirait.</li>
+        <li><strong>Code mort parallèle</strong> : champs <code>e.paid</code> / <code>e.paidAt</code> + fonction <code>suiviTogglePaid()</code> + classe <code>.paid-toggle</code> jamais câblés. 2<sup>e</sup> source de vérité fantôme.</li>
+        <li><strong>Action paiement enterrée à 4 clics</strong> (Suivi → ligne → modale → bouton). Pas de toggle direct dans le tableau.</li>
+        <li><strong>Statut <code>refuse</code> conflate « refusé client »</strong> (avant acceptation) et « annulé » (après). Perte d'info comptable.</li>
+        <li><strong><code>en_cours</code> sans action devis-level</strong> — uniquement par ligne via la modale. Peu découvrable.</li>
+        <li><strong>Classification d'échéance par regex</strong> sur le label utilisateur : « 30 % à la signature » échappe à la détection acompte. Fragile.</li>
+      </ol>
+
+      <p class="audit-next">→ Phase 2 (proposition) à venir après validation de cet audit.</p>
+    </div>
+  </details>
   `;
 }
 
