@@ -2398,6 +2398,43 @@ function formatSiret(siret) {
   return s;
 }
 
+// Update SIRET in S.identite + refresh status indicator without losing focus.
+window.updSiretWithCheck = function(raw) {
+  const cleaned = String(raw || "").replace(/\s/g, "");
+  upd("identite.siret", cleaned);
+  const status = document.getElementById("siretStatus");
+  if (!status) return;
+  if (cleaned.length === 0) {
+    status.textContent = "Le SIRET est obligatoire sur tout devis (R123-237 C. com.)";
+    status.style.color = "var(--text-dim)";
+  } else if (validSiret(cleaned)) {
+    status.textContent = "✓ SIRET valide (Luhn OK)";
+    status.style.color = "var(--success,#2e7d32)";
+  } else if (cleaned.length < 14) {
+    status.textContent = `${cleaned.length}/14 chiffres`;
+    status.style.color = "var(--text-dim)";
+  } else {
+    status.textContent = "✗ Clé Luhn invalide — vérifie le numéro";
+    status.style.color = "#c0392b";
+  }
+};
+
+// Validate a French SIRET (14 digits + Luhn checksum). Returns true if valid.
+function validSiret(siret) {
+  const s = String(siret || "").replace(/\s/g, "");
+  if (!/^\d{14}$/.test(s)) return false;
+  let sum = 0;
+  for (let i = 0; i < 14; i++) {
+    let n = parseInt(s[i], 10);
+    if (i % 2 === 0) {
+      n *= 2;
+      if (n > 9) n -= 9;
+    }
+    sum += n;
+  }
+  return sum % 10 === 0;
+}
+
 // Build the emitter header HTML from S.identite. Falls back to legacy richtext if no structured field is filled.
 // Returns the inner HTML of the emitter block (caller wraps in .dp-header-emetteur or .dp-header-left).
 function genHeaderEmetteur(identite, photographeRichtext) {
@@ -8913,7 +8950,18 @@ function rPF() {
     </div>
     <div class="row">
       <div class="field"><label>SIRET (14 chiffres)</label>
-        <input type="text" value="${esc(id.siret)}" oninput="upd('identite.siret', this.value.replace(/\\s/g,''))" placeholder="123 456 789 00012" maxlength="14" style="font-variant-numeric:tabular-nums">
+        <input type="text" id="siretInput" value="${esc(id.siret)}" oninput="updSiretWithCheck(this.value)" placeholder="123 456 789 00012" maxlength="17" style="font-variant-numeric:tabular-nums">
+        <div id="siretStatus" style="font-size:11px;margin-top:4px;${(() => {
+          const s = (id.siret || "").replace(/\s/g, "");
+          if (s.length === 0) return "color:var(--text-dim)";
+          return validSiret(s) ? "color:var(--success,#2e7d32)" : "color:#c0392b";
+        })()}">${(() => {
+          const s = (id.siret || "").replace(/\s/g, "");
+          if (s.length === 0) return "Le SIRET est obligatoire sur tout devis (R123-237 C. com.)";
+          if (validSiret(s)) return "✓ SIRET valide (Luhn OK)";
+          if (s.length < 14) return `${s.length}/14 chiffres`;
+          return "✗ Clé Luhn invalide — vérifie le numéro";
+        })()}</div>
       </div>
       <div class="field narrow"><label>Code APE/NAF</label>
         <input type="text" value="${esc(id.ape)}" oninput="upd('identite.ape', this.value)" placeholder="74.20Z">
