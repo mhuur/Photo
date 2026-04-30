@@ -7164,9 +7164,9 @@ function rSuiviTimelineModal() {
 
       <div class="suv-tl-footer">
         <div class="left">
-          <button class="btn ghost" onclick="viewDevisOpen('${devisId}')">🖨 Devis</button>
-          <button class="btn ghost" onclick="viewDeboursOpen('${devisId}')">🖨 Débours</button>
-          <button class="btn ghost" onclick="viewFactureOpen('${devisId}')">🖨 Facture</button>
+          <button class="btn ghost" onclick="suiviTimelineClose();viewDevisOpen('${devisId}')">🖨 Devis</button>
+          <button class="btn ghost" onclick="suiviTimelineClose();viewDeboursOpen('${devisId}')">🖨 Débours</button>
+          <button class="btn ghost" onclick="suiviTimelineClose();viewFactureOpen('${devisId}')">🖨 Facture</button>
         </div>
         <button class="btn" onclick="suiviTimelineClose()">Fermer</button>
       </div>
