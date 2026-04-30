@@ -2913,10 +2913,6 @@ function rDevisPreview() {
       <span class="ctr">Photographe à Nantes — disponible partout en France</span>
       <span class="rgt">Page 1 / N</span>
     </div>
-
-    <div class="dp-actions">
-      <button class="btn" onclick="suiviAdd()">+ Enregistrer dans Suivi</button>
-    </div>
   </div>`;
 }
 
@@ -3107,10 +3103,6 @@ function rDeboursPreview() {
         <div class="dp-cgv-body">${renderCgvSections(d.cgvPreambule, d.cgvSections)}${penaltyArticle}</div>
       </div>`;
     })()}
-
-    <div class="dp-actions">
-      <button class="btn" onclick="suiviAdd()">+ Enregistrer dans Suivi</button>
-    </div>
   </div>`;
 }
 
@@ -5898,9 +5890,22 @@ function rDevisPaneFooterInner() {
     ? `<button class="btn ghost" onclick="suiviUpdateSnapshot()" ${!dirty?"disabled":""}>Mettre à jour le snapshot Suivi</button>`
     : `<button class="btn" onclick="suiviAdd()" ${!v.ok?"disabled":""} title="${v.ok?'':'Corrige les erreurs ci-dessus'}">+ Enregistrer dans Suivi</button>`;
 
+  const infoBtn = `<button type="button" class="tarif-info" tabindex="0" aria-label="Que fait l'enregistrement dans Suivi ?">i<div class="tarif-tooltip" role="tooltip">
+    <div class="tt-title">Enregistrement dans Suivi</div>
+    <p style="margin:0 0 8px;font-size:12px;line-height:1.5">Un seul clic enregistre l'<strong>ensemble du devis</strong> : la version principale (devis HT) <strong>et</strong> la feuille débours s'il y a lieu.</p>
+    <p style="margin:0 0 8px;font-size:12px;line-height:1.5">Une fois archivé dans Suivi, tu peux :</p>
+    <ul style="margin:0 0 8px;padding-left:18px;font-size:12px;line-height:1.5">
+      <li>Imprimer le devis depuis l'onglet Suivi (bouton 🖨 Devis).</li>
+      <li>Imprimer la feuille débours (bouton 🖨 Débours, si applicable).</li>
+      <li>Imprimer la facture quand le devis est payé (bouton 🖨 Facture).</li>
+      <li>Suivre les paiements et les statuts.</li>
+    </ul>
+    <p style="margin:0;font-size:12px;line-height:1.5;color:var(--text-muted)">Pas besoin d'enregistrer séparément le débours — c'est une seule opération pour tout le dossier.</p>
+  </div></button>`;
+
   return `
     ${bannerErr}${bannerWarn}${bannerDirty}
-    <div class="devis-pane-actions">${mainBtn}</div>
+    <div class="devis-pane-actions">${mainBtn}${infoBtn}</div>
   `;
 }
 
