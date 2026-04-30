@@ -7096,10 +7096,43 @@ function suiviDeleteSelected() {
 }
 window.suiviDeleteSelected = suiviDeleteSelected;
 
+// Fusionne les devis sélectionnés en un seul. Le devis dont la première ligne est
+// la plus ancienne devient le "master" — toutes les entries des autres devis sont
+// ré-assignées à son devisId, puis les fiches devis abandonnées sont supprimées.
+function suiviMergeSelected() {
+  if (suiviSelected.size < 2) return;
+  const ids = [...suiviSelected];
+  const groups = ids.map(id => ({
+    id,
+    entries: S.suivi.entries.filter(e => e.devisId === id),
+    firstDate: S.suivi.entries.filter(e => e.devisId === id).map(e => e.date || "").sort()[0] || ""
+  }));
+  groups.sort((a, b) => a.firstDate.localeCompare(b.firstDate));
+  const master = groups[0];
+  const slaveIds = groups.slice(1).map(g => g.id);
+  const masterRef = (S.suivi.devis[master.id] && S.suivi.devis[master.id].ref) || master.id.slice(0, 6);
+
+  if (!confirm(`Fusionner ${ids.length} devis en un seul ?\n\nMaster (le plus ancien) : ${masterRef}\nLes autres lignes vont rejoindre ce devis et leur référence sera abandonnée.`)) return;
+
+  for (const e of S.suivi.entries) {
+    if (slaveIds.includes(e.devisId)) e.devisId = master.id;
+  }
+  for (const id of slaveIds) {
+    if (S.suivi.devis && S.suivi.devis[id]) delete S.suivi.devis[id];
+  }
+  suiviSelected.clear();
+  save();
+  render();
+}
+window.suiviMergeSelected = suiviMergeSelected;
+
 function suiviSelInfoHtml() {
   const n = suiviSelected.size;
   if (n === 0) return "";
-  return `<button class="btn btn-rouge" onclick="suiviDeleteSelected()">Supprimer ${n} devis</button>`;
+  const mergeBtn = n >= 2
+    ? `<button class="btn ghost" onclick="suiviMergeSelected()" title="Regrouper les devis sélectionnés en un seul (utile si une prestation a été splittée en plusieurs lignes par l'import)">⇆ Fusionner ${n} devis</button>`
+    : "";
+  return `${mergeBtn}<button class="btn btn-rouge" onclick="suiviDeleteSelected()">Supprimer ${n} devis</button>`;
 }
 
 const SUIVI_NUMERIC = new Set(["montant","heures","paiement","ca","salaire","ursaf","tresorerie","frais"]);
