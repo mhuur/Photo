@@ -580,6 +580,8 @@
   .devis-preview .dp-mediateur-body{font-style:normal}
   .devis-preview .dp-mediateur.dp-mediateur-empty{border-color:#c0392b;background:#fff5f3;color:#c0392b}
   .devis-preview .dp-mediateur.dp-mediateur-empty strong{color:#c0392b}
+  .devis-preview .dp-retractation{margin-top:14px;padding:8px 12px;border-left:3px solid var(--accent,#3498db);background:rgba(52,152,219,.05);border-radius:0 4px 4px 0;font-size:11.5px;color:var(--text-muted);line-height:1.5}
+  .devis-preview .dp-retractation .dp-mediateur-title{font-weight:600;color:var(--text);text-transform:uppercase;font-size:10px;letter-spacing:.06em;margin-bottom:3px}
   .devis-preview .dp-header-right{display:flex;flex-direction:column;align-items:flex-end;gap:0}
   .devis-preview .dp-meta-block{text-align:right;font-size:13px;color:var(--text-muted);line-height:1.6;margin-bottom:0}
   .devis-preview .dp-meta-block .ref{color:var(--text);font-weight:700;font-size:16px;font-variant-numeric:tabular-nums;margin-bottom:10px;letter-spacing:.01em}
@@ -812,6 +814,12 @@
     }
     .devis-preview .dp-mediateur.dp-mediateur-empty,
     .view-devis-snapshot .dp-mediateur.dp-mediateur-empty { display: none !important; }
+    .devis-preview .dp-retractation, .view-devis-snapshot .dp-retractation {
+      margin-top: 8pt !important; padding: 4pt 8pt !important;
+      border-left: 1pt solid #1a1a1a !important; background: transparent !important;
+      font-size: 7.5pt !important; color: #333 !important; line-height: 1.4 !important;
+      page-break-inside: avoid !important;
+    }
     .devis-preview .dp-header-right, .view-devis-snapshot .dp-header-right {
       text-align: right !important;
       font-size: 9pt !important;
@@ -1687,6 +1695,7 @@ const DEFAULT_S = {
     urssafPct: "22",
     remisePct: "0",
     notes: "",
+    contratHorsEtab: false,
     lignes: [],
     echeances: [
       { id: "ech1", label: "Acompte à la commande", pct: "30" },
@@ -2335,6 +2344,20 @@ function mediateurBlock(identite, clientType) {
   </div>`;
 }
 
+// Returns the rétractation 14 j block HTML (or empty string if not applicable).
+// Applies to B2C contracts signed hors établissement (art. L221-18 C. conso.).
+function retractationBlock(identite, mission) {
+  const id = identite || {};
+  const m = mission || {};
+  const effectiveType = (m.client || {}).type || id.clienteleType || "mixte";
+  if (effectiveType === "b2b") return "";
+  if (!m.contratHorsEtab) return "";
+  return `<div class="dp-retractation">
+    <div class="dp-mediateur-title">Droit de rétractation</div>
+    <div class="dp-mediateur-body">Conformément à l'article L221-18 du Code de la consommation, vous disposez d'un délai de 14 jours à compter de l'acceptation du devis pour exercer votre droit de rétractation, sans avoir à motiver votre décision. La prestation ne pourra commencer qu'après ce délai, sauf demande expresse de votre part.</div>
+  </div>`;
+}
+
 // Compute the validity text (uses dateValidite if set, else dateEmission + 30 days fallback).
 function validityText(dateEmission, dateValidite) {
   if (dateValidite && dateValidite.length >= 10) {
@@ -2549,6 +2572,7 @@ function rDevisPreview() {
           </div>`}
     </div>
 
+    ${retractationBlock(S.identite, d)}
     ${mediateurBlock(S.identite, (d.client || {}).type)}
 
     <div class="dp-footer">${esc(genFooterMentions(S.identite, "devis"))}</div>
@@ -5119,6 +5143,15 @@ function rDevisSectionIdentification() {
       </div>
       <div class="field narrow"><label>Valable jusqu'au</label>
         <input type="date" value="${esc(d.dateValidite || "")}" oninput="upd('mission.dateValidite', this.value)" placeholder="auto +30j">
+      </div>
+    </div>
+    <div class="row">
+      <div class="field" style="justify-content:flex-start">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:normal;font-size:13px">
+          <input type="checkbox" ${d.contratHorsEtab?"checked":""} onchange="upd('mission.contratHorsEtab', this.checked)">
+          Contrat signé hors établissement (mariage, séance chez le client…)
+          <span class="hint" style="margin:0 0 0 4px;font-size:11px">— ajoute la mention rétractation 14 j (B2C uniquement, art. L221-18 C. conso.)</span>
+        </label>
       </div>
     </div>
     <h5>Client</h5>
