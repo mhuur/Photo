@@ -1856,7 +1856,7 @@ const DEFAULT_CATALOG = [
 const SK = "devis-photo-data-v2";
 const DEFAULT_S = {
   mission: {
-    ref: "", dateEmission: "", dateValidite: "",
+    ref: "", dateEmission: "", dureeValidite: 30,
     object: "", objectText: "", objectDate: "", objectLieu: "",
     client: { num: "", name: "", contact: "", contactSelected: "", contactId: "", address: "", phone: "", phoneSelected: "", email: "", emailSelected: "", type: "" },
     prep:        { hours: "0", rate: "" },
@@ -2005,6 +2005,22 @@ if (S.mission && S.mission.deplacement) {
   if (!S.mission.deplacement.devis) {
     S.mission.deplacement.devis = "principal";
   }
+}
+
+// Migrate dateValidite (date) → dureeValidite (number of days).
+// Si l'ancien champ existe, on récupère la durée. Sinon défaut 30 jours.
+if (S.mission && !("dureeValidite" in S.mission)) {
+  let days = 30;
+  if (S.mission.dateValidite && S.mission.dateEmission) {
+    const e = new Date(S.mission.dateEmission + "T00:00:00");
+    const v = new Date(S.mission.dateValidite + "T00:00:00");
+    if (!isNaN(e.getTime()) && !isNaN(v.getTime())) {
+      const delta = Math.round((v.getTime() - e.getTime()) / 86400000);
+      if (delta > 0) days = delta;
+    }
+  }
+  S.mission.dureeValidite = days;
+  delete S.mission.dateValidite;
 }
 
 // Migrate CGV: parse legacy text into structured sections (preamble + sections array)
@@ -2170,7 +2186,7 @@ function upd(path, val) {
     refreshRefDisplay();
   }
   save();
-  if (path.startsWith("mission.prep") || path.startsWith("mission.prod") || path.startsWith("mission.postprod") || path.startsWith("mission.deplacement") || path.startsWith("mission.autres") || path.startsWith("mission.lignes") || path === "mission.remisePct" || path === "mission.object" || path === "mission.paiement.margeAvance" || path === "mission.urssafPct" || path === "mission.blackMode") {
+  if (path.startsWith("mission.prep") || path.startsWith("mission.prod") || path.startsWith("mission.postprod") || path.startsWith("mission.deplacement") || path.startsWith("mission.autres") || path.startsWith("mission.lignes") || path === "mission.remisePct" || path === "mission.object" || path === "mission.paiement.margeAvance" || path === "mission.urssafPct" || path === "mission.blackMode" || path === "mission.dureeValidite") {
     refreshTotals();
   }
 }
@@ -2592,20 +2608,22 @@ function retractationBlock(identite, mission) {
   </div>`;
 }
 
-// Compute the validity text (uses dateValidite if set, else dateEmission + 30 days fallback).
-function validityText(dateEmission, dateValidite) {
-  if (dateValidite && dateValidite.length >= 10) {
-    return `Devis valable jusqu'au ${dateFR(dateValidite)}.`;
-  }
-  if (dateEmission && dateEmission.length >= 10) {
-    const d = new Date(dateEmission + "T00:00:00");
-    if (!isNaN(d.getTime())) {
-      d.setDate(d.getDate() + 30);
-      const iso = d.toISOString().slice(0, 10);
-      return `Devis valable jusqu'au ${dateFR(iso)} (30 jours).`;
-    }
-  }
-  return "Devis valable 30 jours à compter de la date d'émission.";
+// Compute the validity end date (ISO) from emission + duration in days.
+function validityDate(dateEmission, dureeValidite) {
+  if (!dateEmission || dateEmission.length < 10) return "";
+  const d = new Date(dateEmission + "T00:00:00");
+  if (isNaN(d.getTime())) return "";
+  const days = Math.max(1, parseInt(dureeValidite) || 30);
+  d.setDate(d.getDate() + days);
+  return d.toISOString().slice(0, 10);
+}
+
+// Compute the validity text shown on the devis ("Devis valable jusqu'au DD/MM/YYYY (N jours).").
+function validityText(dateEmission, dureeValidite) {
+  const days = Math.max(1, parseInt(dureeValidite) || 30);
+  const endIso = validityDate(dateEmission, days);
+  if (endIso) return `Devis valable jusqu'au ${dateFR(endIso)} (${days} jours).`;
+  return `Devis valable ${days} jours à compter de la date d'émission.`;
 }
 
 // ============ DEVIS PREVIEW (rendered at the bottom of Mission) ============
@@ -2736,12 +2754,14 @@ function rDevisPreview() {
           <div class="dp-meta-ref">${esc(formatRef(d.ref, "devis"))}</div>
           <div class="dp-meta-row"><span class="lbl">Émission</span><strong>${dateFR(d.dateEmission) || "—"}</strong></div>
           ${(() => {
-            // Affiche soit la date concrète (si renseignée), soit la mention "30 jours" en fallback.
-            // Évite le doublon ligne + mention italique.
-            if (d.dateValidite && d.dateValidite.length >= 10) {
-              return `<div class="dp-meta-row"><span class="lbl">Valable jusqu'au</span><strong>${esc(dateFR(d.dateValidite))}</strong></div>`;
+            // La date concrète est calculée à partir de la durée saisie. Si on n'a pas (encore)
+            // de date d'émission, fallback sur la mention "valable N jours".
+            const days = Math.max(1, parseInt(d.dureeValidite) || 30);
+            const endIso = validityDate(d.dateEmission, days);
+            if (endIso) {
+              return `<div class="dp-meta-row"><span class="lbl">Valable jusqu'au</span><strong>${esc(dateFR(endIso))}</strong></div>`;
             }
-            return `<div class="dp-validity-mention">${esc(validityText(d.dateEmission, d.dateValidite))}</div>`;
+            return `<div class="dp-validity-mention">${esc(validityText(d.dateEmission, days))}</div>`;
           })()}
         </div>
         <div class="dp-client-block dp-client-box">
@@ -5432,6 +5452,8 @@ function rEditSectionRaw(key, title, summaryHtml, bodyHtml, headerActionHtml = "
 // ----------------------------------------------------------------------------
 function rDevisSectionIdentification() {
   const d = S.mission;
+  const duree = (typeof d.dureeValidite === "number" && d.dureeValidite > 0) ? d.dureeValidite : 30;
+  const eff = (d.client.type || (S.identite || {}).clienteleType || "mixte");
   return `
     <div class="row">
       <div class="field"><label>Référence (auto)</label>
@@ -5440,17 +5462,27 @@ function rDevisSectionIdentification() {
       <div class="field narrow"><label>Date d'émission</label>
         <input type="date" value="${esc(d.dateEmission)}" oninput="upd('mission.dateEmission', this.value)">
       </div>
-      <div class="field narrow"><label>Valable jusqu'au</label>
-        <input type="date" value="${esc(d.dateValidite || "")}" oninput="upd('mission.dateValidite', this.value)" placeholder="auto +30j">
+      <div class="field narrow"><label>Durée de validité (jours)</label>
+        <input type="number" min="1" max="365" step="1" value="${esc(String(duree))}" oninput="upd('mission.dureeValidite', Math.max(1, parseInt(this.value)||30))">
       </div>
     </div>
     <div class="row">
-      <div class="field" style="justify-content:flex-start">
-        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:normal;font-size:13px">
+      <div class="field" style="justify-content:flex-start;flex-direction:row;align-items:center;gap:8px">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:normal;font-size:13px;margin:0">
           <input type="checkbox" ${d.contratHorsEtab?"checked":""} onchange="upd('mission.contratHorsEtab', this.checked)">
           Contrat signé hors établissement (mariage, séance chez le client…)
-          <span class="hint" style="margin:0 0 0 4px;font-size:11px">— ajoute la mention rétractation 14 j (B2C uniquement, art. L221-18 C. conso.)</span>
         </label>
+        <button type="button" class="tarif-info" tabindex="0" aria-label="Impact de cette case">i<div class="tarif-tooltip" role="tooltip">
+          <div class="tt-title">Contrat signé hors établissement</div>
+          <p style="margin:0 0 8px;font-size:12px;line-height:1.5">Coche cette case si le devis est signé chez le client (mariage, séance à domicile, événement) ou à distance (visio, email) plutôt que dans ton local pro.</p>
+          <p style="margin:0 0 4px;font-size:12px;line-height:1.5;font-weight:600">Effet sur le devis :</p>
+          <ul style="margin:0 0 8px;padding-left:18px;font-size:12px;line-height:1.5">
+            <li><strong>Coché + clientèle Mixte ou Particulier</strong> : ajoute la mention obligatoire <em>Droit de rétractation 14 jours</em> (art. L221-18 C. conso.).</li>
+            <li><strong>Non coché</strong> : pas de mention rétractation sur le devis.</li>
+            <li><strong>Clientèle Entreprise</strong> : aucune mention quel que soit le réglage (rétractation non applicable B2B).</li>
+          </ul>
+          <p style="margin:0;font-size:12px;line-height:1.5;color:var(--text-muted)">Sanction si oubli sur un contrat à domicile : annulation possible du contrat par le client.</p>
+        </div></button>
       </div>
     </div>
     <h5>Client</h5>
@@ -5459,11 +5491,23 @@ function rDevisSectionIdentification() {
       <div class="client-line-contact">${rContactInline()}</div>
     </div>
     <div class="row" style="margin-top:8px">
-      <div class="field"><label style="font-size:11px;color:var(--text-muted)">Type de clientèle pour ce devis</label>
+      <div class="field">
+        <label style="font-size:11px;color:var(--text-muted);display:flex;align-items:center;gap:6px">
+          Type de clientèle pour ce devis
+          <button type="button" class="tarif-info" tabindex="0" aria-label="Impact du type de clientèle">i<div class="tarif-tooltip" role="tooltip">
+            <div class="tt-title">Type de clientèle</div>
+            <p style="margin:0 0 8px;font-size:12px;line-height:1.5">Détermine les mentions légales obligatoires affichées sur le devis et la facture.</p>
+            <ul style="margin:0;padding-left:18px;font-size:12px;line-height:1.55">
+              <li><strong>Mixte</strong> — clientèle mixte particuliers + entreprises. Bloc <em>Médiation de la consommation</em> affiché (obligatoire L612-1 C. conso.). Pénalités B2B + indemnité 40 € présentes.</li>
+              <li><strong>Particulier</strong> (B2C) — bloc <em>Médiation de la consommation</em> affiché. Si "Contrat signé hors établissement" coché, mention <em>rétractation 14 j</em> ajoutée (art. L221-18 C. conso.).</li>
+              <li><strong>Entreprise</strong> (B2B) — pas de bloc Médiation, pas de rétractation. Pénalités de retard 3× taux légal + indemnité forfaitaire 40 € obligatoires (C. com. L441-10).</li>
+            </ul>
+          </div></button>
+        </label>
         <div class="seg" style="max-width:380px">
-          <button class="${(d.client.type||"")===""?"on":""}" onclick="upd('mission.client.type', '');render()" title="Utilise le défaut du Profil">Auto (${esc(({"b2c":"B2C","b2b":"B2B","mixte":"Mixte"})[(S.identite||{}).clienteleType] || "Mixte")})</button>
-          <button class="${d.client.type==="b2c"?"on":""}" onclick="upd('mission.client.type', 'b2c');render()">B2C (particulier)</button>
-          <button class="${d.client.type==="b2b"?"on":""}" onclick="upd('mission.client.type', 'b2b');render()">B2B (entreprise)</button>
+          <button class="${eff==="mixte"?"on":""}" onclick="upd('mission.client.type', 'mixte');render()">Mixte</button>
+          <button class="${eff==="b2c"?"on":""}" onclick="upd('mission.client.type', 'b2c');render()">Particulier</button>
+          <button class="${eff==="b2b"?"on":""}" onclick="upd('mission.client.type', 'b2b');render()">Entreprise</button>
         </div>
       </div>
     </div>
