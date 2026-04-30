@@ -86,8 +86,10 @@ Feuille débours : `rDeboursPreview()`. Bloc dans le devis principal : `.dp-debo
 ## Méthode de travail attendue
 
 - **Découpage en phases** pour toute tâche non triviale : audit / proposition / exécution. Arrêt explicite à la fin de chaque phase, attente de mon "OK" avant de passer à la suivante.
+- **Audit + proposition obligatoires (même en auto mode)** pour toute opération qui : touche la navigation/menu · modifie le schéma de `S` · supprime > 50 lignes · utilise `sed` ou un Edit multi-zones. Pas d'exécution sans "OK" explicite.
 - **Challenger bienvenu** : tu es autorisé — et encouragé — à proposer des améliorations, questions, ou alternatives auxquelles je n'aurais pas pensé. Sépare-les clairement de ce que j'ai demandé. Pour chacune, indique : à faire maintenant / plus tard / juste à noter.
 - **Demander plutôt que deviner** sur les points métier (statut fiscal, conventions, intentions produit). Mieux vaut une question qu'une supposition.
+- **Sanity check après gros édit** : lancer `./check.sh` après tout `sed` ou Edit multi-zones, **avant** `git commit`.
 
 ## Fin de session
 
