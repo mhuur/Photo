@@ -2178,14 +2178,35 @@ function updDeplDevis(val) {
 }
 window.updDeplDevis = updDeplDevis;
 
+// Compute the next chronologically-unique reference for the current mission.
+// Format : DEVIS-YYYY-MM-NNN, NNN reset chaque mois (arrêté 3 déc. 1987).
+// La séquence cherche le NNN max parmi les devis déjà émis (S.suivi.devis) du mois courant
+// et ajoute 1 — sauf si la mission elle-même est déjà dans le suivi (auquel cas on garde son ref).
 function recomputeRef() {
-  let num = S.mission.client.num || "";
-  if (S.mission.client.id) {
-    const c = S.clients.entries.find(x => x.id === S.mission.client.id);
-    if (c) num = c.num || num;
-  }
   const date = S.mission.dateEmission || "";
-  S.mission.ref = (num && date) ? `DEVIS-${num}-${date}` : "";
+  if (!date || date.length < 7) {
+    S.mission.ref = "";
+    return;
+  }
+  // Si la mission est déjà finalisée (dans suivi), ne pas écraser sa référence.
+  const existing = (S.suivi && S.suivi.devis && typeof S.suivi.devis === "object") ? S.suivi.devis : {};
+  for (const k of Object.keys(existing)) {
+    const r = existing[k] && existing[k].ref;
+    if (r && r === S.mission.ref && S.mission.ref) return;
+  }
+  const ym = date.slice(0, 7); // "YYYY-MM"
+  const re = new RegExp("^DEVIS-" + ym.replace("-", "\\-") + "-(\\d+)$");
+  let maxN = 0;
+  for (const k of Object.keys(existing)) {
+    const r = (existing[k] && existing[k].ref) || "";
+    const m = r.match(re);
+    if (m) {
+      const n = parseInt(m[1], 10);
+      if (n > maxN) maxN = n;
+    }
+  }
+  const next = maxN + 1;
+  S.mission.ref = "DEVIS-" + ym + "-" + String(next).padStart(3, "0");
 }
 
 let urssafUnlocked = false;
