@@ -20,6 +20,7 @@ App web personnelle pour générer des devis photographe.
 - **`render()` recompose** `app.innerHTML` au changement d'onglet ou de session. **Jamais `render()` depuis un `oninput`** sur un input texte → perte de focus garantie. OK depuis `onchange` d'un toggle/select et depuis un click button.
 - **`esc()` obligatoire** sur toute valeur dynamique injectée dans du HTML (sécurité XSS).
 - **Identifiants courts** : `S`, helpers `esc()` `save()` `render()` `upd()` `num()` `fmt()` `r2()` `dateFR()` `uid()`. Renderers par onglet : `rMS` (Mission/Devis), `rPF` (Profil), `rTR` (Tarifs), `rSV` (Suivi), `rCL` (Clients), `rCP` (Compta), `rBG` (Notes), `rMAJ` (Mises à jour).
+- **Modèle mental de `S`** : voir `SCHEMA.md` (auto-généré depuis `DEFAULT_S` par `gen-schema.py`). À lire en début de session avant de toucher au schéma.
 - **Tout nouveau champ ajouté à `S`** doit être :
   1. Initialisé dans `DEFAULT_S`
   2. Inclus dans le merge de `loadFromCloud` (sinon non rechargé au login)
@@ -92,6 +93,20 @@ Feuille débours : `rDeboursPreview()`. Bloc dans le devis principal : `.dp-debo
 - **Sanity check après gros édit** : lancer `./check.sh` après tout `sed` ou Edit multi-zones, **avant** `git commit`.
 - **Navigation par ancres** dans `index.html` : pour localiser une fonction, `grep "^// ▼ <nom>"` plutôt que les numéros de ligne du TOC. Lister toutes les ancres : `grep -n "^// ▼ " index.html`. Quand tu ajoutes une fonction-clé (renderer `rXX`, helper exposé, modal), pose une ancre au format `// ▼ <nom> — <description courte>` au-dessus.
 - **Grep avant Edit sur `index.html`** : avant tout `Edit`, vérifier l'unicité de `old_string` (`grep -c` ou `grep -n`). Sur un fichier de 9 000 lignes, beaucoup de patterns courts collisionnent (`esc(...)`, `${...}`, `S.mission.client.name`). Si non unique, élargir le contexte ou cibler via une ancre voisine.
+- **Reads serrés via ancres** : ne pas `Read` 200 lignes par sécurité. Pour bosser sur une fonction, `grep -n "^// ▼ <nom>"` puis `Read offset=<L> limit=80`. Ne charger plus large QUE si la fonction appelle des helpers que je ne connais pas.
+
+## Commandes utiles
+
+À utiliser au lieu de redécouvrir l'incantation à chaque session.
+
+```bash
+./check.sh                                # sanity check (regen SCHEMA.md inclus)
+py gen-schema.py                          # régénère SCHEMA.md depuis DEFAULT_S
+grep -n "^// ▼ " index.html               # liste toutes les ancres (renderers, helpers, modals)
+grep -nE "^function r[A-Z]" index.html    # liste tous les renderers (rXX)
+grep -n "TABLE DES MATIÈRES" index.html   # localise le TOC
+python3 -m http.server 8000               # serveur local pour itérer
+```
 
 ## Fin de session
 

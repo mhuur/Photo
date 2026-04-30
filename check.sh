@@ -107,6 +107,24 @@ if git rev-parse --git-dir >/dev/null 2>&1; then
   fi
 fi
 
+# 6. SCHEMA.md doit être à jour avec DEFAULT_S. Régénère et signale tout écart.
+# Si la regen change le fichier, l'utilisateur doit faire `git add SCHEMA.md`.
+if command -v py >/dev/null 2>&1 && [ -f gen-schema.py ]; then
+  before_hash=""
+  [ -f SCHEMA.md ] && before_hash=$(sha1sum SCHEMA.md | cut -d' ' -f1)
+  if py gen-schema.py >/dev/null 2>&1; then
+    after_hash=$(sha1sum SCHEMA.md | cut -d' ' -f1)
+    if [ "$before_hash" != "$after_hash" ]; then
+      echo "⚠ SCHEMA.md a été régénéré (DEFAULT_S a changé)."
+      echo "  Ajoute-le au commit : git add SCHEMA.md"
+      ERR=1
+    fi
+  else
+    echo "⚠ gen-schema.py a échoué (DEFAULT_S non parsable ?)"
+    ERR=1
+  fi
+fi
+
 if [ "$ERR" -eq 0 ]; then
   echo "✓ Sanity check OK ($(wc -l < "$FILE") lignes, $(wc -c < "$FILE") octets)"
 fi

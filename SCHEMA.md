@@ -1,0 +1,123 @@
+# Schéma de `S` — auto-généré depuis `DEFAULT_S`
+
+_Régénéré par `py gen-schema.py`. **Ne pas éditer à la main** — modifier `DEFAULT_S` dans `index.html` puis relancer le script._
+
+Source : `index.html` (bloc `const DEFAULT_S = { ... };`).
+
+- **mission** _(object)_
+  - **ref**: string _(default `""`)_
+  - **dateEmission**: string _(default `""`)_
+  - **dureeValidite**: number _(default `30`)_
+  - **object**: string _(default `""`)_
+  - **objectText**: string _(default `""`)_
+  - **objectDate**: string _(default `""`)_
+  - **objectLieu**: string _(default `""`)_
+  - **client** _(object)_
+    - **num**: string _(default `""`)_
+    - **name**: string _(default `""`)_
+    - **contact**: string _(default `""`)_
+    - **contactSelected**: string _(default `""`)_
+    - **contactId**: string _(default `""`)_
+    - **address**: string _(default `""`)_
+    - **phone**: string _(default `""`)_
+    - **phoneSelected**: string _(default `""`)_
+    - **email**: string _(default `""`)_
+    - **emailSelected**: string _(default `""`)_
+    - **type**: string _(default `""`)_
+  - **prep** _(object)_
+    - **hours**: string _(default `"0"`)_
+    - **rate**: string _(default `""`)_
+  - **prod** _(object)_
+    - **hours**: string _(default `"0"`)_
+    - **rate**: string _(default `""`)_
+  - **postprod** _(object)_
+    - **hours**: string _(default `"0"`)_
+    - **rate**: string _(default `""`)_
+  - **deplacement** _(object)_
+    - **mode**: string _(default `"voiture"`)_
+    - **km**: string _(default `"0"`)_
+    - **peages**: string _(default `"0"`)_
+    - **tauxKm**: string _(default `"0.40"`)_
+    - **trajetH**: string _(default `"0"`)_
+    - **ticket**: string _(default `"0"`)_
+    - **devis**: string _(default `"principal"`)_
+    - **afficheMode**: string _(default `"afficher"`)_
+    - **paiementType**: string _(default `"acompte"`)_
+  - **autres** _(object)_
+    - **desc**: string _(default `""`)_
+    - **montant**: string _(default `"0"`)_
+  - **declare**: boolean _(default `true`)_
+  - **blackMode**: string _(default `"reduit"`)_
+  - **urssafPct**: string _(default `"22"`)_
+  - **remisePct**: string _(default `"0"`)_
+  - **notes**: string _(default `""`)_
+  - **contratHorsEtab**: boolean _(default `false`)_
+  - **lignes** _(array (empty))_
+  - **echeances** _(array<{ id, label, pct }>)_
+    - id: string _(default `"ech1"`)_
+    - label: string _(default `"Acompte à la commande"`)_
+    - pct: string _(default `"30"`)_
+  - **photographe**: string _(default `""`)_
+  - **conditionsPaiement**: string _(default `"Acompte de 30 % à la commande, solde de 70 % à la livrai…`)_
+  - **paiement** _(object)_
+    - **delai**: string _(default `"30j_fdm"`)_
+    - **banque**: string _(default `""`)_
+    - **titulaire**: string _(default `""`)_
+    - **iban**: string _(default `""`)_
+    - **bic**: string _(default `""`)_
+    - **margeAvance**: string _(default `"0"`)_
+    - **margeUrssaf**: string _(default `"22"`)_
+  - **cgv**: string _(default `""`)_
+  - **cgvPreambule**: string _(default `""`)_
+  - **cgvSections** _(array (empty))_
+  - **signatureBlock**: string _(default `"Fait à __________________________, le ____ / ____ / ____…`)_
+- **identite** _(object)_
+  - **prenom**: string _(default `""`)_
+  - **nom**: string _(default `""`)_
+  - **denomination**: string _(default `""`)_
+  - **profession**: string _(default `"Photographe"`)_
+  - **adresse**: string _(default `""`)_
+  - **cp**: string _(default `""`)_
+  - **ville**: string _(default `""`)_
+  - **email**: string _(default `""`)_
+  - **telephone**: string _(default `""`)_
+  - **siteWeb**: string _(default `""`)_
+  - **formeJuridique**: string _(default `"micro-bnc"`)_
+  - **mentionEI**: boolean _(default `true`)_
+  - **siret**: string _(default `""`)_
+  - **ape**: string _(default `"74.20Z"`)_
+  - **rcs**: string _(default `""`)_
+  - **capitalSocial**: string _(default `""`)_
+  - **regimeTVA**: string _(default `"franchise"`)_
+  - **numTvaIntra**: string _(default `""`)_
+  - **rcPro** _(object)_
+    - **assureur**: string _(default `""`)_
+    - **numero**: string _(default `""`)_
+    - **zone**: string _(default `"France"`)_
+  - **mediateur** _(object)_
+    - **nom**: string _(default `""`)_
+    - **adresse**: string _(default `""`)_
+    - **url**: string _(default `""`)_
+  - **bank** _(object)_
+    - **banque**: string _(default `""`)_
+    - **titulaire**: string _(default `""`)_
+    - **iban**: string _(default `""`)_
+    - **bic**: string _(default `""`)_
+  - **clienteleType**: string _(default `"mixte"`)_
+- **devis** _(object)_
+- **suivi** _(object)_
+  - **entries** _(array (empty))_
+  - **devis** _(object)_
+- **clients** _(object)_
+  - **entries** _(array (empty))_
+- **compta** _(object)_
+- **abonnements** _(object)_
+  - **entries** _(array (empty))_
+- **investissements** _(object)_
+  - **entries** _(array (empty))_
+- **tarifs** _(object)_
+  - **catalog**: string _(default `"<DEFAULT_CATALOG>"`)_
+  - **heuresAnnuelles**: string _(default `"900"`)_
+  - **facteurSecurite**: string _(default `"0"`)_
+- **bugs** _(object)_
+  - **items** _(array (empty))_
