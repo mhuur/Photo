@@ -134,6 +134,18 @@
   table.hist tbody.devis-grp.sel{box-shadow:inset 4px 0 0 var(--warning)}
   table.hist tbody.devis-grp.sel tr.suv-row td{background:var(--warning-soft)}
 
+  /* Suivi : séparateur d'années (n'apparaît que quand le tri est sur Date) */
+  table.hist tbody.suv-year-sep tr td{
+    background:var(--surface-2);
+    color:var(--text-dim);
+    font-weight:700;font-size:11px;letter-spacing:.18em;text-transform:uppercase;
+    padding:8px 14px 6px;
+    border-top:2px solid var(--border);
+    border-bottom:1px solid var(--border-light);
+    text-align:left
+  }
+  table.hist tbody.suv-year-sep:first-child tr td{border-top:0}
+
   /* ========================================================================
      SUIVI v2 — palette violette pour "En cours", badge attente paiement,
      divider de filtres, timeline modale.
@@ -7436,13 +7448,27 @@ function rSV() {
 
   const stop = "event.stopPropagation();";
 
+  // Séparateur d'années visible UNIQUEMENT quand le tri est sur la colonne Date.
+  // Sur tout autre tri (client, montant, ref, statut), un séparateur "par année"
+  // apparaîtrait à des endroits aléatoires → on le désactive.
+  const showYearSep = suiviSort.field === "date";
+  let lastYear = null;
+
   const rowsHtml = list.map(g => {
     const selected = suiviSelected.has(g.devisId);
     const dateLabel = g.dateMin === g.dateMax
       ? esc(dateFR(g.dateMin))
       : `${esc(dateFR(g.dateMin))} → ${esc(dateFR(g.dateMax))}`;
 
-    return `
+    // Année de la ligne — utilise dateMax (clé de tri) puis dateMin en fallback.
+    const rowYear = (g.dateMax || g.dateMin || "").slice(0, 4);
+    let yearSep = "";
+    if (showYearSep && rowYear && rowYear !== lastYear) {
+      yearSep = `<tbody class="suv-year-sep"><tr><td colspan="6">${esc(rowYear)}</td></tr></tbody>`;
+      lastYear = rowYear;
+    }
+
+    return yearSep + `
       <tbody class="devis-grp${selected ? ' sel' : ''}">
         <tr class="suv-row clickable ${suiviExpandedDevis === g.devisId ? 'on' : ''}" onclick="suiviExpandedToggle('${g.devisId}')">
           <td class="cb" onclick="${stop}">
