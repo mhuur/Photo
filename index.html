@@ -2186,7 +2186,7 @@ function upd(path, val) {
     refreshRefDisplay();
   }
   save();
-  if (path.startsWith("mission.prep") || path.startsWith("mission.prod") || path.startsWith("mission.postprod") || path.startsWith("mission.deplacement") || path.startsWith("mission.autres") || path.startsWith("mission.lignes") || path === "mission.remisePct" || path === "mission.object" || path === "mission.paiement.margeAvance" || path === "mission.urssafPct" || path === "mission.blackMode" || path === "mission.dureeValidite") {
+  if (path.startsWith("mission.prep") || path.startsWith("mission.prod") || path.startsWith("mission.postprod") || path.startsWith("mission.deplacement") || path.startsWith("mission.autres") || path.startsWith("mission.lignes") || path === "mission.remisePct" || path === "mission.object" || path === "mission.objectText" || path === "mission.paiement.margeAvance" || path === "mission.urssafPct" || path === "mission.blackMode" || path === "mission.dureeValidite") {
     refreshTotals();
   }
 }
@@ -2792,7 +2792,12 @@ function rDevisPreview() {
       </div>
     </div>
 
-    ${cat ? `<div class="dp-objet">Objet : <strong>${esc(cat.l)}</strong></div>` : ""}
+    ${(() => {
+      // Priorité au texte libre saisi par l'utilisateur ; à défaut, libellé catalogue.
+      const txt = (d.objectText || "").trim();
+      const label = txt || (cat ? cat.l : "");
+      return label ? `<div class="dp-objet">Objet : <strong>${esc(label)}</strong></div>` : "";
+    })()}
 
     <div class="dp-section">
       ${linesHtml || `<div class="dp-empty" style="padding:14px">Aucune ligne pour l'instant.</div>`}
