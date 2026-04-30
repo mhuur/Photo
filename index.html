@@ -167,6 +167,32 @@
     display:inline-flex;align-items:center;gap:4px;transition:all .12s;line-height:1.2}
   .suv-quick-actions .qa-btn:hover{background:var(--surface-hi);color:var(--text);border-color:var(--border-light)}
   .suv-quick-actions .qa-btn .qa-ico{font-size:13px}
+  /* Bouton paiement (compteur N/M ou « Encaisser » / « Soldé ») */
+  .suv-quick-actions .qa-pay{color:var(--warning);border-color:rgba(245,158,11,.35)}
+  .suv-quick-actions .qa-pay:hover{background:var(--warning-soft);color:var(--warning);border-color:var(--warning)}
+  .suv-quick-actions .qa-paid{color:var(--success);border-color:rgba(34,197,94,.30)}
+  .suv-quick-actions .qa-paid:hover{background:var(--success-soft);color:var(--success);border-color:var(--success)}
+  .suv-quick-actions .qa-on{box-shadow:0 0 0 1px currentColor inset}
+
+  /* Popover paiement déplié sous la ligne du devis */
+  table.hist tr.suv-pmt-row td{background:var(--surface-2);padding:0;border-bottom:1px solid var(--border)}
+  .suv-pmt-card{padding:10px 14px 14px}
+  .suv-pmt-title{font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px}
+  .suv-pmt-list{display:flex;flex-direction:column;gap:4px}
+  .suv-pmt-item{display:grid;grid-template-columns:24px 1fr 110px 110px;gap:10px;align-items:center;
+    padding:8px 12px;background:var(--surface);border:1px solid var(--border-light);border-radius:6px;
+    cursor:pointer;font:inherit;font-size:13px;color:var(--text);text-align:left;transition:all .12s}
+  .suv-pmt-item:hover{border-color:var(--text-muted);background:var(--surface-hi)}
+  .suv-pmt-item.pending{border-left:3px solid var(--warning)}
+  .suv-pmt-item.paid{border-left:3px solid var(--success);opacity:.85}
+  .suv-pmt-ico{font-size:14px;text-align:center}
+  .suv-pmt-item.pending .suv-pmt-ico{color:var(--warning)}
+  .suv-pmt-item.paid .suv-pmt-ico{color:var(--success)}
+  .suv-pmt-label{font-weight:500;color:var(--text)}
+  .suv-pmt-amt{font-variant-numeric:tabular-nums;text-align:right;font-weight:600;color:var(--text)}
+  .suv-pmt-state{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;text-align:right}
+  .suv-pmt-item.pending .suv-pmt-state{color:var(--warning)}
+  .suv-pmt-item.paid .suv-pmt-state{color:var(--success)}
 
   /* Timeline modal */
   .modal-card.modal-card-timeline{max-width:680px}
@@ -6754,6 +6780,38 @@ function suiviLignePaye(id) {
 }
 window.suiviLignePaye = suiviLignePaye;
 
+// Toggle d'une ligne entre "attente" et "termine" (utilisé par le popover paiement
+// du tableau Suivi). Sans effet pour les lignes "envoye" / "refuse".
+function suiviLigneTogglePaiement(id) {
+  const e = S.suivi.entries.find(x => x.id === id);
+  if (!e) return;
+  const s = entryStatut(e);
+  if (s === "attente")      e.statut = "termine";
+  else if (s === "termine") e.statut = "attente";
+  else return;
+  save();
+  render();
+}
+window.suiviLigneTogglePaiement = suiviLigneTogglePaiement;
+
+// Toggle direct depuis le tableau pour les devis 1-ligne payable (1 clic).
+// Pour les devis multi-ligne, utiliser suiviPaiementOpenToggle (ouvre un popover).
+function suiviPaiementQuickToggle(devisId) {
+  const lignes = suiviGroupLigne(devisId).filter(e => {
+    const s = entryStatut(e);
+    return s === "attente" || s === "termine";
+  });
+  if (lignes.length !== 1) return;
+  suiviLigneTogglePaiement(lignes[0].id);
+}
+window.suiviPaiementQuickToggle = suiviPaiementQuickToggle;
+
+function suiviPaiementOpenToggle(devisId) {
+  suiviPaiementOpen = (suiviPaiementOpen === devisId) ? null : devisId;
+  render();
+}
+window.suiviPaiementOpenToggle = suiviPaiementOpenToggle;
+
 function suiviRevert(id) {
   const e = S.suivi.entries.find(x => x.id === id);
   if (!e) return;
@@ -6797,6 +6855,63 @@ function devisActionsHtml(g) {
   return "";
 }
 
+// Bouton paiement compact dans la quick-actions row du tableau Suivi.
+// - 1 ligne payable : toggle direct (1 clic).
+// - Multi-ligne : ouvre/ferme un popover détaillant chaque échéance.
+// - Renvoie "" si aucune ligne n'est payable (devis envoyé ou refusé).
+function suiviPaiementButtonHtml(g) {
+  const stop = "event.stopPropagation();";
+  const payables = (g.lignes || []).filter(e => {
+    const s = entryStatut(e);
+    return s === "attente" || s === "termine";
+  });
+  if (payables.length === 0) return "";
+  const paid = payables.filter(e => entryStatut(e) === "termine").length;
+  const total = payables.length;
+  const allPaid = paid === total;
+
+  if (total === 1) {
+    const tooltip = allPaid ? "Soldé — cliquer pour annuler le paiement" : "Marquer comme payé";
+    const label   = allPaid ? "✓ Soldé" : "💰 À encaisser";
+    const cls     = allPaid ? "qa-btn qa-paid" : "qa-btn qa-pay";
+    return `<button class="${cls}" title="${tooltip}" onclick="${stop}suiviPaiementQuickToggle('${g.devisId}')"><span class="qa-ico">${allPaid ? '✓' : '💰'}</span>${allPaid ? 'Soldé' : 'Encaisser'}</button>`;
+  }
+
+  const open = suiviPaiementOpen === g.devisId;
+  const tooltip = `${paid}/${total} échéance${total > 1 ? 's' : ''} payée${paid > 1 ? 's' : ''} — détail`;
+  const cls = `qa-btn ${allPaid ? 'qa-paid' : 'qa-pay'} ${open ? 'qa-on' : ''}`;
+  return `<button class="${cls}" title="${tooltip}" onclick="${stop}suiviPaiementOpenToggle('${g.devisId}')"><span class="qa-ico">${allPaid ? '✓' : '💰'}</span>${paid}/${total}</button>`;
+}
+
+// Ligne <tr> dépliée sous la ligne principale du devis quand le popover est ouvert.
+// Liste les échéances payables avec un toggle individuel.
+function suiviPaiementPopoverRow(g) {
+  if (suiviPaiementOpen !== g.devisId) return "";
+  const stop = "event.stopPropagation();";
+  const lignes = (g.lignes || []).filter(e => {
+    const s = entryStatut(e);
+    return s === "attente" || s === "termine";
+  });
+  if (lignes.length === 0) return "";
+  const items = lignes.map(e => {
+    const isPaid = entryStatut(e) === "termine";
+    return `<button type="button" class="suv-pmt-item ${isPaid ? 'paid' : 'pending'}"
+      onclick="${stop}suiviLigneTogglePaiement('${e.id}')"
+      title="Cliquer pour basculer payé / en attente">
+      <span class="suv-pmt-ico">${isPaid ? '✓' : '💰'}</span>
+      <span class="suv-pmt-label">${esc(e.echeance || 'Étape')}</span>
+      <span class="suv-pmt-amt">${fmt(e.montant)}</span>
+      <span class="suv-pmt-state">${isPaid ? 'Soldée' : 'À encaisser'}</span>
+    </button>`;
+  }).join("");
+  return `<tr class="suv-pmt-row" onclick="${stop}">
+    <td colspan="7"><div class="suv-pmt-card">
+      <div class="suv-pmt-title">Encaissements — ${esc(cleanClientLabel(g.client))}</div>
+      <div class="suv-pmt-list">${items}</div>
+    </div></td>
+  </tr>`;
+}
+
 function suiviStats(groups) {
   const by = { envoye: 0, en_cours: 0, termine: 0, refuse: 0 };
   let total = 0;
@@ -6823,6 +6938,9 @@ function suiviStatsHtml(s) {
 }
 
 let suiviSort = { field: "date", dir: "desc" };
+
+// devisId du devis dont le popover paiement est ouvert, ou null
+let suiviPaiementOpen = null;
 
 // === SUIVI v2 — filtres
 // suiviFilterPrincipal : "all" | "envoye" | "en_cours" | "termine" | "refuse"
@@ -7192,6 +7310,7 @@ function rSV() {
           <td class="amt">${fmt(g.total)}</td>
           <td class="actions" onclick="${stop}">
             <div class="suv-quick-actions">
+              ${suiviPaiementButtonHtml(g)}
               <button class="qa-btn" title="Voir / imprimer le devis émis"
                 onclick="viewDevisOpen('${g.devisId}')"><span class="qa-ico">🖨</span>Devis</button>
               <button class="qa-btn" title="Voir / imprimer la note de débours"
@@ -7201,6 +7320,7 @@ function rSV() {
             </div>
           </td>
         </tr>
+        ${suiviPaiementPopoverRow(g)}
       </tbody>`;
   }).join("");
 
