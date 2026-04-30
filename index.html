@@ -234,10 +234,12 @@
   .ico-btn[title*="Supprimer"]:hover{background:var(--danger-soft);color:var(--danger)}
   td.ref-cell{color:var(--text);font-variant-numeric:tabular-nums}
   td.ref-cell .muted{color:var(--text-dim)}
-  /* Filtre année compact intégré dans l'en-tête de la colonne Date */
-  table.hist th.sortable .th-year-filter{margin-left:8px;padding:2px 6px;border:1px solid var(--border-light);border-radius:4px;font:inherit;font-size:11px;font-weight:500;background:var(--surface-2);color:var(--text-muted);cursor:pointer;text-transform:none;letter-spacing:0;vertical-align:middle}
-  table.hist th.sortable .th-year-filter:hover{background:var(--surface-hi);color:var(--text);border-color:var(--text-muted)}
-  table.hist th.sortable .th-year-filter:focus{outline:none;border-color:var(--primary);color:var(--text)}
+  /* Chip filtre année (select stylé comme un chip à la fin de la barre) */
+  .suv-chip-spacer{flex:1;min-width:8px}
+  .suv-chip-year{padding:0 4px 0 12px;cursor:pointer}
+  .suv-chip-year-ico{font-size:13px;line-height:1}
+  .suv-chip-year select{appearance:none;-webkit-appearance:none;background:transparent;border:0;color:inherit;font:inherit;font-size:12.5px;font-weight:500;padding:5px 22px 5px 6px;cursor:pointer;background-image:linear-gradient(45deg,transparent 50%,currentColor 50%),linear-gradient(135deg,currentColor 50%,transparent 50%);background-position:calc(100% - 11px) 50%,calc(100% - 7px) 50%;background-size:4px 4px,4px 4px;background-repeat:no-repeat}
+  .suv-chip-year select:focus{outline:none}
   .toolbar{display:flex;gap:8px;align-items:center;margin:14px 0 4px;flex-wrap:wrap}
   .toolbar .spacer{flex:1}
   .toolbar .search{flex:1;min-width:200px;max-width:340px;padding:8px 12px;border:1px solid var(--border-light);border-radius:6px;font:inherit;background:var(--surface);color:var(--text)}
@@ -6015,8 +6017,9 @@ function devisPrincipal(lignes) {
   return "en_cours";
 }
 
-// ---- Filter bar (single-select principal) ----
+// ---- Filter bar (single-select principal + filtre année) ----
 // Chaque chip est aussi un compteur : label + nombre de devis concernés.
+// Le filtre année est un select stylé en chip à la fin de la barre.
 function suiviLegendHtml() {
   const f = suiviFilterPrincipal;
   const all = suiviGroupsAll();
@@ -6030,6 +6033,12 @@ function suiviLegendHtml() {
   ];
   const refusedCount = count(g => g.statutPrin === "refuse" || g.statutPrin === "annule");
 
+  // Liste des années extraites des dates des devis (récentes → anciennes)
+  const years = suiviYears();
+  const yearOpts = [`<option value="all" ${suiviFilterYear === "all" ? "selected" : ""}>Toutes les années</option>`]
+    .concat(years.map(y => `<option value="${esc(y)}" ${suiviFilterYear === y ? "selected" : ""}>${esc(y)}</option>`)).join("");
+  const yearActive = suiviFilterYear !== "all";
+
   return `<div class="suv-chip-bar">
     ${chips.map(([k, l, ico, n]) => {
       const on = f === k;
@@ -6040,6 +6049,11 @@ function suiviLegendHtml() {
     ${refusedCount > 0 ? `<button type="button" class="suv-chip ${f === 'refuse' ? 'on' : ''}"
         onclick="suiviSetFilterPrincipal('refuse')" aria-pressed="${f === 'refuse'}"
         title="Voir les devis refusés (avant acceptation) ou annulés (après acceptation)"><span class="pst" data-s="refuse"></span>Refusé / Annulé <span class="suv-chip-count">${refusedCount}</span></button>` : ''}
+    <span class="suv-chip-spacer"></span>
+    <label class="suv-chip suv-chip-year ${yearActive ? 'on' : ''}" title="Filtrer par année">
+      <span class="suv-chip-year-ico">📅</span>
+      <select onchange="suiviSetFilterYear(this.value)">${yearOpts}</select>
+    </label>
   </div>`;
 }
 
@@ -7284,7 +7298,7 @@ function rSV() {
               onclick="suiviSelectAll(this.checked)">
           </th>
           <th class="sortable" style="width:80px;text-align:center" onclick="suiviSortKey('statut')">Statut${arr('statut')}</th>
-          <th class="sortable" style="width:200px" onclick="suiviSortKey('date')">Date${arr('date')}<select class="th-year-filter" title="Filtrer par année" onclick="event.stopPropagation()" onchange="event.stopPropagation();suiviSetFilterYear(this.value)">${yearOpts}</select></th>
+          <th class="sortable" style="width:160px" onclick="suiviSortKey('date')">Date${arr('date')}</th>
           <th class="sortable" style="width:170px" onclick="suiviSortKey('ref')">Numéro${arr('ref')}</th>
           <th class="sortable" onclick="suiviSortKey('client')">Client${arr('client')}</th>
           <th class="sortable" style="width:120px;text-align:right" onclick="suiviSortKey('montant')">Montant${arr('montant')}</th>
