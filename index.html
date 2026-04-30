@@ -582,6 +582,7 @@
   .devis-preview .dp-mediateur.dp-mediateur-empty strong{color:#c0392b}
   .devis-preview .dp-retractation{margin-top:14px;padding:8px 12px;border-left:3px solid var(--accent,#3498db);background:rgba(52,152,219,.05);border-radius:0 4px 4px 0;font-size:11.5px;color:var(--text-muted);line-height:1.5}
   .devis-preview .dp-retractation .dp-mediateur-title{font-weight:600;color:var(--text);text-transform:uppercase;font-size:10px;letter-spacing:.06em;margin-bottom:3px}
+  .devis-preview .dp-cgv-fallback{margin-top:14px;font-style:italic;font-size:11px;color:var(--text-dim);text-align:center}
   .devis-preview .dp-header-right{display:flex;flex-direction:column;align-items:flex-end;gap:0}
   .devis-preview .dp-meta-block{text-align:right;font-size:13px;color:var(--text-muted);line-height:1.6;margin-bottom:0}
   .devis-preview .dp-meta-block .ref{color:var(--text);font-weight:700;font-size:16px;font-variant-numeric:tabular-nums;margin-bottom:10px;letter-spacing:.01em}
@@ -842,6 +843,10 @@
       border-left: 1pt solid #1a1a1a !important; background: transparent !important;
       font-size: 7.5pt !important; color: #333 !important; line-height: 1.4 !important;
       page-break-inside: avoid !important;
+    }
+    .devis-preview .dp-cgv-fallback, .view-devis-snapshot .dp-cgv-fallback {
+      margin-top: 8pt !important; font-style: italic !important;
+      font-size: 7.5pt !important; color: #555 !important; text-align: center !important;
     }
     .devis-preview .dp-header-right, .view-devis-snapshot .dp-header-right {
       text-align: right !important;
@@ -2679,6 +2684,12 @@ function rDevisPreview() {
 
     ${retractationBlock(S.identite, d)}
     ${mediateurBlock(S.identite, (d.client || {}).type)}
+
+    ${(() => {
+      const cgvSections = Array.isArray(d.cgvSections) ? d.cgvSections.filter(s => s && (s.title || s.body)) : [];
+      const hasCgv = cgvSections.length > 0 || (d.cgvPreambule || "").trim().length > 0;
+      return hasCgv ? "" : `<div class="dp-cgv-fallback">Conditions générales de vente disponibles sur simple demande.</div>`;
+    })()}
 
     <div class="dp-footer">${esc(genFooterMentions(S.identite, "devis"))}</div>
 
