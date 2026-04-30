@@ -599,7 +599,6 @@
   .devis-preview .dp-meta-row .lbl{color:var(--text-dim)}
   .devis-preview .dp-meta-row strong{color:var(--text);font-weight:600}
   .devis-preview .dp-meta-block.dp-meta-box .dp-validity-mention{margin-top:6px;text-align:right;max-width:none}
-  .devis-preview .dp-meta-gratuit{font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--text-dim);margin-top:4px;padding-top:4px;border-top:1px dashed var(--border-soft)}
   .devis-preview .dp-client-block.dp-client-box{border:1px solid var(--border);border-radius:6px;padding:10px 12px;background:var(--surface);margin-top:10px}
   .devis-preview .dp-client-label{font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--text-dim);font-weight:600;padding-bottom:4px;margin-bottom:4px;border-bottom:1px solid var(--border-soft)}
   @media (max-width:680px){
@@ -920,11 +919,7 @@
     .devis-preview .dp-meta-block.dp-meta-box .dp-validity-mention,
     .view-devis-snapshot .dp-meta-block.dp-meta-box .dp-validity-mention {
       margin-top: 3pt !important; max-width: none !important; text-align: right !important;
-    }
-    .devis-preview .dp-meta-gratuit, .view-devis-snapshot .dp-meta-gratuit {
-      font-size: 7pt !important; text-transform: uppercase !important; letter-spacing: .06em !important;
-      color: #888 !important; margin-top: 3pt !important; padding-top: 2pt !important;
-      border-top: 0.25pt dashed #888 !important;
+      font-size: 7.5pt !important; font-style: italic !important; color: #555 !important;
     }
     .devis-preview .dp-client-block.dp-client-box, .view-devis-snapshot .dp-client-block.dp-client-box {
       border: 0.5pt solid #1a1a1a !important; border-radius: 2pt !important;
@@ -2700,9 +2695,14 @@ function rDevisPreview() {
         <div class="dp-meta-block dp-meta-box">
           <div class="dp-meta-ref">${esc(formatRef(d.ref, "devis"))}</div>
           <div class="dp-meta-row"><span class="lbl">Émission</span><strong>${dateFR(d.dateEmission) || "—"}</strong></div>
-          ${d.dateValidite ? `<div class="dp-meta-row"><span class="lbl">Valable jusqu'au</span><strong>${esc(dateFR(d.dateValidite))}</strong></div>` : ""}
-          <div class="dp-validity-mention">${esc(validityText(d.dateEmission, d.dateValidite))}</div>
-          <div class="dp-meta-gratuit">Devis gratuit</div>
+          ${(() => {
+            // Affiche soit la date concrète (si renseignée), soit la mention "30 jours" en fallback.
+            // Évite le doublon ligne + mention italique.
+            if (d.dateValidite && d.dateValidite.length >= 10) {
+              return `<div class="dp-meta-row"><span class="lbl">Valable jusqu'au</span><strong>${esc(dateFR(d.dateValidite))}</strong></div>`;
+            }
+            return `<div class="dp-validity-mention">${esc(validityText(d.dateEmission, d.dateValidite))}</div>`;
+          })()}
         </div>
         <div class="dp-client-block dp-client-box">
           <div class="dp-client-label">Destinataire</div>
