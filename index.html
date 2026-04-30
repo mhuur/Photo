@@ -5392,18 +5392,67 @@ function devisIsDirty() {
 window.suiviUpdateSnapshot = function() {
   const e = devisCurrentSuiviEntry();
   if (!e) return;
-  if (!confirm("Mettre à jour le snapshot enregistré dans Suivi ? L'ancienne version sera remplacée.")) return;
+  if (!confirm("Enregistrer les modifications ? L'ancienne version dans Suivi sera remplacée.")) return;
+  const m = S.mission;
+  const t = totals();
+
+  // 1. Mise à jour du snapshot devis
   const previewEl = document.getElementById("devisPreview");
   if (previewEl) {
     const clone = previewEl.cloneNode(true);
     clone.querySelectorAll(".dp-actions").forEach(n => n.remove());
     e.snap.snapshotHtml = clone.innerHTML;
   }
+  // 2. Mise à jour du snapshot débours (rendu à la volée)
+  try {
+    const deboursHtml = rDeboursPreview();
+    if (deboursHtml && !deboursHtml.includes("dp-empty")) {
+      const tmp = document.createElement("div");
+      tmp.innerHTML = deboursHtml;
+      const deboursEl = tmp.querySelector("#deboursPreview") || tmp.firstElementChild;
+      if (deboursEl) {
+        deboursEl.querySelectorAll(".dp-actions").forEach(n => n.remove());
+        e.snap.snapshotDeboursHtml = deboursEl.innerHTML;
+      }
+    } else {
+      e.snap.snapshotDeboursHtml = "";
+    }
+  } catch (err) { console.warn("Snapshot débours failed", err); }
+
   e.snap.snapshotAt = new Date().toISOString();
-  e.snap.snapshotTotal = totals().total;
+  e.snap.snapshotTotal = t.total;
+  e.snap.snapshotDebours = t.debours || 0;
   e.snap.snapshotHash = devisHash();
+
+  // 3. Vérifie qu'il y a bien des entries Suivi pour ce devis. Si tout a été
+  // supprimé manuellement (ou si le devis a été enregistré avec un ancien flux
+  // qui ne créait pas d'entries), on les recrée pour que le devis apparaisse
+  // dans la liste Suivi.
+  const existingEntries = S.suivi.entries.filter(en => en.devisId === e.id);
+  if (existingEntries.length === 0) {
+    const cat = (S.tarifs.catalog || DEFAULT_CATALOG).find(c => c.k === m.object);
+    const hoursTotal = (m.lignes || []).filter(l => l.type === "heures")
+      .reduce((s, l) => s + num(l.duree) * (l.unit === "j" ? HOURS_PER_DAY : 1), 0);
+    const date = m.objectDate || new Date().toISOString().slice(0, 10);
+    const client = m.client.name || "";
+    const prestation = cat ? cat.l : "";
+    const mkLine = (echeance, montant, heures) => ({
+      id: uid(), devisId: e.id, date, client, prestation,
+      montant: montant.toFixed(2),
+      heures:  heures.toFixed(2),
+      echeance,
+      paiement: montant.toFixed(2),
+      ca: montant.toFixed(2),
+      salaire: "0", ursaf: "0", tresorerie: "0", frais: "0",
+      commentaires: "", statut: "envoye"
+    });
+    const acompte = mkLine("Acompte 30 %", t.acompte, hoursTotal * 0.30);
+    const reste   = mkLine("Reste à payer 70 %", t.reste, hoursTotal * 0.70);
+    S.suivi.entries.unshift(acompte, reste);
+  }
+
   save();
-  refreshDevisHeaders();
+  render();
 };
 
 // ----------------------------------------------------------------------------
