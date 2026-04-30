@@ -6083,10 +6083,6 @@ function suiviLegendHtml() {
 
 function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
 
-function entryRef(e) {
-  const d = S.suivi.devis && S.suivi.devis[e.devisId];
-  return (d && d.ref) || e.ref || "";
-}
 function entryRefSet(e, val) {
   if (!S.suivi.devis) S.suivi.devis = {};
   if (!e.devisId) e.devisId = uid();
@@ -6314,8 +6310,6 @@ function suiviAdd() {
   const reste   = mkLine("Reste à payer 70 %", t.reste, hoursTotal * 0.70);
   S.suivi.entries.unshift(acompte, reste);
 
-  suiviGroupExpanded = devisId;
-  suiviExpanded = null;
   save();
   render();
 }
@@ -6708,8 +6702,6 @@ function suiviAddLigne(devisId) {
     commentaires:"",
     statut:      refStatut
   });
-  suiviGroupExpanded = devisId;
-  suiviExpanded = id;
   save();
   render();
 }
@@ -6719,7 +6711,6 @@ function suiviDelDevis(devisId) {
   S.suivi.entries = S.suivi.entries.filter(e => e.devisId !== devisId);
   if (S.suivi.devis) delete S.suivi.devis[devisId];
   suiviSelected.delete(devisId);
-  if (suiviGroupExpanded === devisId) suiviGroupExpanded = null;
   save();
   render();
 }
@@ -6732,14 +6723,6 @@ function suiviUpd(id, field, val) {
   save();
 }
 window.suiviUpd = suiviUpd;
-
-function suiviRefUpd(id, val) {
-  const e = S.suivi.entries.find(x => x.id === id);
-  if (!e) return;
-  entryRefSet(e, val);
-  save();
-}
-window.suiviRefUpd = suiviRefUpd;
 
 function suiviDevisRefUpd(devisId, val) {
   if (!S.suivi.devis[devisId]) S.suivi.devis[devisId] = { ref: "" };
@@ -6853,40 +6836,6 @@ function devisActionsHtml(g) {
   return "";
 }
 
-function suiviActionsHtml(e, opts) {
-  const s = entryStatut(e);
-  const did = e.devisId;
-  const stop = "event.stopPropagation();";
-  const hidePhase1 = opts && opts.hidePhase1;
-  if (s === "envoye") {
-    if (hidePhase1) return "";
-    return `
-      <button class="btn-act act-vert" title="Accepté — le devis est validé. Toutes les lignes passent à « Accepté »." onclick="${stop}suiviDevisAccepter('${did}')"><span class="ico">✓</span> Accepté</button>
-      <button class="btn-act act-rouge" title="Refusé — le client a refusé. Toutes les lignes passent à « Refusé »." onclick="${stop}suiviDevisRefuser('${did}')"><span class="ico">✗</span> Refusé</button>`;
-  }
-  if (s === "accepte") {
-    return `
-      <button class="btn btn-icon btn-bleu" title="Réalisé — la prestation est livrée. Cette ligne passe à « Attente paiement »." onclick="${stop}suiviLigneRealise('${e.id}')">→</button>
-      <button class="btn btn-icon btn-rouge" title="Annulé — annule tout le devis. Toutes les lignes passent à « Refusé »." onclick="${stop}suiviDevisRefuser('${did}')">✗</button>
-      <button class="btn btn-icon ghost" title="Revenir : Accepté → Envoyé (toutes les lignes du devis)" onclick="${stop}suiviRevert('${e.id}')">↩</button>`;
-  }
-  if (s === "attente") {
-    return `
-      <button class="btn btn-icon btn-vert" title="Payé — le paiement est reçu. Cette ligne passe à « Terminé »." onclick="${stop}suiviLignePaye('${e.id}')">€</button>
-      <button class="btn btn-icon ghost" title="Revenir : Attente paiement → Accepté (cette ligne)" onclick="${stop}suiviRevert('${e.id}')">↩</button>`;
-  }
-  if (s === "termine") {
-    return `<button class="btn btn-icon ghost" title="Revenir : Terminé → Attente paiement (cette ligne)" onclick="${stop}suiviRevert('${e.id}')">↩</button>`;
-  }
-  if (s === "refuse") {
-    return `<button class="btn btn-icon ghost" title="Annuler le refus du devis et restaurer l'état précédent" onclick="${stop}suiviRevert('${e.id}')">↩</button>`;
-  }
-  return "";
-}
-
-// Compatibilité avec l'ancien renderer si appelé ailleurs (alias vers devisPrincipal)
-function devisStatutGlobal(lignes) { return devisPrincipal(lignes); }
-
 function suiviStats(groups) {
   const by = { envoye: 0, accepte: 0, attente: 0, termine: 0, refuse: 0 };
   let total = 0;
@@ -6913,9 +6862,6 @@ function suiviStatsHtml(s) {
   `;
 }
 
-let suiviExpanded = null;        // id de la ligne dont l'éditeur avancé est ouvert
-let suiviGroupExpanded = null;   // id du devis dont l'éditeur avancé est ouvert
-let suiviGroupRefEdit = null;
 let suiviSort = { field: "date", dir: "desc" };
 
 // === SUIVI v2 — filtres
@@ -6988,18 +6934,6 @@ function suiviSelInfoHtml() {
 
 const SUIVI_NUMERIC = new Set(["montant","heures","paiement","ca","salaire","ursaf","tresorerie","frais"]);
 
-function suiviToggle(id) {
-  if (suiviExpanded === id) {
-    suiviExpanded = null;
-  } else {
-    suiviExpanded = id;
-    const e = S.suivi.entries.find(x => x.id === id);
-    if (e) suiviGroupExpanded = e.devisId;
-  }
-  render();
-}
-window.suiviToggle = suiviToggle;
-
 // Toggle paid status on a Suivi entry (échéance line)
 function suiviTogglePaid(id) {
   const e = S.suivi.entries.find(x => x.id === id);
@@ -7028,30 +6962,6 @@ window.viewFactureClose = function() {
 window.viewFacturePrint = function() {
   window.print();
 };
-
-function suiviGroupToggle(devisId) {
-  if (suiviGroupExpanded === devisId) {
-    suiviGroupExpanded = null;
-    const lignes = suiviGroupLigne(devisId);
-    if (suiviExpanded && lignes.some(e => e.id === suiviExpanded)) suiviExpanded = null;
-    if (suiviGroupRefEdit === devisId) suiviGroupRefEdit = null;
-  } else {
-    suiviGroupExpanded = devisId;
-  }
-  render();
-}
-window.suiviGroupToggle = suiviGroupToggle;
-
-function suiviGroupEditRef(devisId) {
-  if (suiviGroupRefEdit === devisId) {
-    suiviGroupRefEdit = null;
-  } else {
-    suiviGroupRefEdit = devisId;
-    suiviGroupExpanded = devisId;
-  }
-  render();
-}
-window.suiviGroupEditRef = suiviGroupEditRef;
 
 function suiviSortKey(field) {
   if (suiviSort.field === field) {
@@ -7140,20 +7050,6 @@ function suiviGroups() {
   return list;
 }
 
-function suiviTauxHoraire(e) {
-  const h = num(e.heures);
-  return h > 0 ? num(e.montant) / h : 0;
-}
-
-function suiviRefreshTaux(id) {
-  const e = S.suivi.entries.find(x => x.id === id);
-  const cell = document.getElementById("taux-" + id);
-  if (!e || !cell) return;
-  const t = suiviTauxHoraire(e);
-  cell.textContent = t > 0 ? fmt(t) : "—";
-}
-window.suiviRefreshTaux = suiviRefreshTaux;
-
 function dateFR(iso) {
   if (!iso || iso.length < 10) return "—";
   const [y, m, d] = iso.split("-");
@@ -7166,40 +7062,6 @@ function arr(field) {
 }
 
 function statutLabel(k) { const s = STATUTS.find(x => x[0] === k); return s ? s[1] : k; }
-
-function suiviDetailPanelHtml(e) {
-  const taux = suiviTauxHoraire(e);
-  return `
-      <tr class="suv-detail">
-        <td colspan="7">
-          <div class="suv-panel">
-            <div class="suv-compact-row">
-              <label class="lib"><span>Référence devis</span><input value="${esc(entryRef(e))}" oninput="suiviRefUpd('${e.id}', this.value)" placeholder="DEVIS-…"></label>
-              <label class="lib"><span>Échéance</span><input value="${esc(e.echeance || "")}" oninput="suiviUpd('${e.id}','echeance',this.value)" placeholder="Acompte, Reste à payer, …"></label>
-              <label><span>Date</span><input type="date" value="${esc(e.date)}" oninput="suiviUpd('${e.id}','date',this.value)"></label>
-              <label><span>Heures</span><input type="number" step="0.25" value="${esc(e.heures)}" oninput="suiviUpd('${e.id}','heures',this.value); suiviRefreshTaux('${e.id}')"></label>
-              <label><span>Montant</span><input type="number" step="0.01" value="${esc(e.montant)}" oninput="suiviUpd('${e.id}','montant',this.value); suiviRefreshTaux('${e.id}')"></label>
-              <label><span>Taux/h</span><span id="taux-${e.id}" class="ro">${taux > 0 ? fmt(taux) : "—"}</span></label>
-              <label><span>Paiement</span><input type="number" step="0.01" value="${esc(e.paiement)}" oninput="suiviUpd('${e.id}','paiement',this.value)"></label>
-              <label><span>CA</span><input type="number" step="0.01" value="${esc(e.ca)}" oninput="suiviUpd('${e.id}','ca',this.value)"></label>
-              <label><span>URSAF</span><input type="number" step="0.01" value="${esc(e.ursaf)}" oninput="suiviUpd('${e.id}','ursaf',this.value)"></label>
-              <label><span>Trésor.</span><input type="number" step="0.01" value="${esc(e.tresorerie)}" oninput="suiviUpd('${e.id}','tresorerie',this.value)"></label>
-              <label><span>Frais</span><input type="number" step="0.01" value="${esc(e.frais)}" oninput="suiviUpd('${e.id}','frais',this.value)"></label>
-              <label><span>Salaire</span><input type="number" step="0.01" value="${esc(e.salaire)}" oninput="suiviUpd('${e.id}','salaire',this.value)"></label>
-            </div>
-            <div class="suv-compact-row">
-              <label class="wide"><span>Commentaires</span><textarea oninput="suiviUpd('${e.id}','commentaires',this.value)" placeholder="Notes, contexte, particularités…">${esc(e.commentaires || "")}</textarea></label>
-            </div>
-            <div class="suv-actions">
-              ${suiviActionsHtml(e)}
-              <button class="btn ghost btn-icon" title="Ajouter une ligne de paiement à ce devis" onclick="suiviAddLigne('${e.devisId}')">+</button>
-              <span style="flex:1"></span>
-              <button class="btn ghost" onclick="suiviToggle('${e.id}')">Fermer</button>
-            </div>
-          </div>
-        </td>
-      </tr>`;
-}
 
 // ============================================================================
 // SUIVI v2 — Modale Timeline (détail d'un devis avec étapes + actions contextuelles)
@@ -7342,8 +7204,6 @@ function rSuiviTimelineModal() {
           <button class="btn ghost" onclick="viewDevisOpen('${devisId}')">🖨 Devis</button>
           <button class="btn ghost" onclick="viewDeboursOpen('${devisId}')">🖨 Débours</button>
           <button class="btn ghost" onclick="viewFactureOpen('${devisId}')">🖨 Facture</button>
-          <button class="btn ghost btn-icon" title="Édition détaillée (heures, taux, ursaf, frais...)"
-            onclick="suiviTimelineClose();suiviGroupToggle('${devisId}');">✏ Édition détaillée</button>
         </div>
         <button class="btn" onclick="suiviTimelineClose()">Fermer</button>
       </div>
