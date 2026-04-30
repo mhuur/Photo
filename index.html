@@ -619,6 +619,15 @@
   .devis-preview .dp-totals .dp-line.debours{color:var(--text-muted);font-style:italic;font-size:12px;margin-top:6px;padding-top:4px}
   .devis-preview .dp-totals .dp-line.debours .debours-note{color:var(--text-dim);font-size:11px;font-style:italic;font-weight:400}
 
+  /* Débours block (separated section under totals) */
+  .devis-preview .dp-debours-block{margin-top:20px;padding:10px 0;border-top:1px solid var(--border-light);border-bottom:1px solid var(--border-light)}
+  .devis-preview .dp-debours-head{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin-bottom:6px}
+  .devis-preview .dp-debours-title{font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.08em}
+  .devis-preview .dp-debours-note{font-size:11px;color:var(--text-dim);font-style:italic}
+  .devis-preview .dp-debours-block .dp-line{padding:4px 0}
+  .devis-preview .dp-debours-total{display:flex;justify-content:space-between;padding-top:6px;margin-top:4px;border-top:1px dashed var(--border);font-size:13px;font-weight:600;color:var(--text)}
+  .devis-preview .dp-fact-direct-block{margin-top:10px;font-style:italic;color:var(--text-muted);font-size:12px}
+
   /* Payment info: right-aligned column, same width as totals, all stacked vertically */
   .devis-preview .dp-payment-info{margin-top:24px;padding-top:14px;border-top:1px solid var(--border-light);max-width:340px;margin-left:auto;width:100%}
   .devis-preview .dp-payment-info h4{margin:0 0 12px;border:0;padding:0;font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.08em}
@@ -1015,6 +1024,35 @@
       color: #888 !important;
       font-style: italic !important;
       margin-top: 4pt !important;
+    }
+    /* Débours block (full width, between totals and payment info) */
+    .devis-preview .dp-debours-block, .view-devis-snapshot .dp-debours-block {
+      margin-top: 12pt !important; padding: 6pt 0 !important;
+      border-top: 0.5pt solid #1a1a1a !important; border-bottom: 0.5pt solid #1a1a1a !important;
+      page-break-inside: avoid !important;
+    }
+    .devis-preview .dp-debours-head, .view-devis-snapshot .dp-debours-head {
+      display: flex !important; align-items: baseline !important; gap: 8pt !important; flex-wrap: wrap !important;
+      margin-bottom: 4pt !important;
+    }
+    .devis-preview .dp-debours-title, .view-devis-snapshot .dp-debours-title {
+      font-size: 8pt !important; font-weight: 700 !important; text-transform: uppercase !important;
+      letter-spacing: .06em !important; color: #1a1a1a !important;
+    }
+    .devis-preview .dp-debours-note, .view-devis-snapshot .dp-debours-note {
+      font-size: 7.5pt !important; color: #555 !important; font-style: italic !important;
+    }
+    .devis-preview .dp-debours-block .dp-line, .view-devis-snapshot .dp-debours-block .dp-line {
+      padding: 2pt 0 !important; font-size: 9pt !important; color: #1a1a1a !important;
+    }
+    .devis-preview .dp-debours-total, .view-devis-snapshot .dp-debours-total {
+      display: flex !important; justify-content: space-between !important;
+      padding-top: 4pt !important; margin-top: 3pt !important;
+      border-top: 0.5pt dashed #888 !important;
+      font-size: 9.5pt !important; font-weight: 600 !important; color: #1a1a1a !important;
+    }
+    .devis-preview .dp-fact-direct-block, .view-devis-snapshot .dp-fact-direct-block {
+      margin-top: 6pt !important; font-size: 7.5pt !important; color: #888 !important; font-style: italic !important;
     }
 
     /* === BODY 2-COLUMN GRID: lines+totals (left) + modalités+conditions (right) === */
@@ -2581,9 +2619,20 @@ function rDevisPreview() {
       <div class="dp-line"><span class="lbl">Sous-total</span><span class="amt">${fmt(t.subtotal)}</span></div>
       <div class="dp-line"><span class="lbl">Remise (${num(d.remisePct).toString().replace(".",",")} %)</span><span class="amt">−${fmt(t.remise)}</span></div>` : ""}
       <div class="dp-line grand"><span class="lbl">Total HT</span><span class="amt">${fmt(t.total)}</span></div>
-      ${t.debours > 0 ? `<div class="dp-line debours"><span class="lbl">Débours <span class="debours-note">(sur justificatifs)</span></span><span class="amt">${fmt(t.debours)}</span></div>` : ""}
-      ${t.totalFactDirect > 0 ? `<div class="dp-line debours"><span class="lbl">Facturation directe <span class="debours-note">(à régler par le client au fournisseur)</span></span><span class="amt">${fmt(t.totalFactDirect)}</span></div>` : ""}
     </div>
+
+    ${(deboursHtml || t.debours > 0) ? `<div class="dp-debours-block">
+      <div class="dp-debours-head">
+        <span class="dp-debours-title">Débours</span>
+        <span class="dp-debours-note">refacturés à l'identique sur justificatifs — art. 267-II-2° CGI, hors TVA</span>
+      </div>
+      ${deboursHtml || ""}
+      <div class="dp-debours-total"><span class="lbl">Total débours</span><span class="amt">${fmt(t.debours)}</span></div>
+    </div>` : ""}
+
+    ${t.totalFactDirect > 0 ? `<div class="dp-fact-direct-block">
+      <div class="dp-line debours"><span class="lbl">Facturation directe <span class="debours-note">(à régler par le client au fournisseur)</span></span><span class="amt">${fmt(t.totalFactDirect)}</span></div>
+    </div>` : ""}
 
     ${(() => {
       const p = d.paiement || {};
