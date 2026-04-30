@@ -6777,6 +6777,7 @@ function suiviLignePaye(id) {
   const e = S.suivi.entries.find(x => x.id === id);
   if (!e) return;
   e.statut = "termine";
+  e.pmtTs = Date.now();
   save();
   render();
 }
@@ -6784,13 +6785,21 @@ window.suiviLignePaye = suiviLignePaye;
 
 // Toggle d'une ligne entre "attente" et "termine" (utilisé par le popover paiement
 // du tableau Suivi). Sans effet pour les lignes "envoye" / "refuse".
+// pmtTs = timestamp du dernier paiement, utilisé par l'undo pour revenir
+// sur le paiement le plus récent en cas d'erreur.
 function suiviLigneTogglePaiement(id) {
   const e = S.suivi.entries.find(x => x.id === id);
   if (!e) return;
   const s = entryStatut(e);
-  if (s === "attente")      e.statut = "termine";
-  else if (s === "termine") e.statut = "attente";
-  else return;
+  if (s === "attente") {
+    e.statut = "termine";
+    e.pmtTs = Date.now();
+  } else if (s === "termine") {
+    e.statut = "attente";
+    delete e.pmtTs;
+  } else {
+    return;
+  }
   save();
   render();
 }
@@ -6820,6 +6829,7 @@ function suiviRevert(id) {
   const s = entryStatut(e);
   if (s === "termine") {
     e.statut = "attente";
+    delete e.pmtTs;
   } else if (s === "attente") {
     // Revenir en arrière depuis "attente" annule l'acceptation au niveau devis.
     for (const x of suiviGroupLigne(e.devisId)) x.statut = "envoye";
@@ -6842,7 +6852,6 @@ function suiviDevisRevertRefus(devisId) {
   save();
   render();
 }
-window.suiviDevisRevertRefus = suiviDevisRevertRefus;
 
 // Annulation après acceptation (mission tombée à l'eau, annulation tardive).
 // Distingué de "refuse" qui couvre uniquement le refus client AVANT acceptation.
@@ -6864,7 +6873,56 @@ function suiviDevisRevertAnnul(devisId) {
   save();
   render();
 }
-window.suiviDevisRevertAnnul = suiviDevisRevertAnnul;
+
+// Undo unifié au niveau devis : un seul bouton ↩ qui sait quoi faire selon
+// le contexte. Hiérarchie de priorités :
+//   1. Refus → annule le refus (restaure statutAvantRefus)
+//   2. Annulation → annule l'annulation (restaure statutAvantAnnul)
+//   3. Au moins une ligne soldée → annule le paiement le plus récent
+//      (basé sur pmtTs, fallback : la dernière trouvée)
+//   4. Toutes lignes en attente (post-acceptation, rien soldé) → annule
+//      l'acceptation, toutes lignes reviennent à "envoye"
+//   5. envoye → rien à annuler (no-op)
+function suiviDevisUndo(devisId) {
+  const lignes = suiviGroupLigne(devisId);
+  if (!lignes.length) return;
+  const statut = devisPrincipal(lignes);
+
+  if (statut === "refuse") return suiviDevisRevertRefus(devisId);
+  if (statut === "annule") return suiviDevisRevertAnnul(devisId);
+  if (statut === "envoye") return;
+
+  const paid = lignes.filter(e => entryStatut(e) === "termine");
+  if (paid.length > 0) {
+    paid.sort((a, b) => (num(b.pmtTs) || 0) - (num(a.pmtTs) || 0));
+    const e = paid[0];
+    e.statut = "attente";
+    delete e.pmtTs;
+    save();
+    render();
+    return;
+  }
+  // Toutes lignes attente : annule l'acceptation
+  for (const x of lignes) x.statut = "envoye";
+  save();
+  render();
+}
+window.suiviDevisUndo = suiviDevisUndo;
+
+// Renvoie le label contextuel pour le bouton undo, ou null si aucune action
+// à annuler (devis en envoye sans historique).
+function suiviDevisUndoLabel(g) {
+  const statut = g.statutPrin;
+  if (statut === "envoye") return null;
+  if (statut === "refuse") return "Annuler le refus";
+  if (statut === "annule") return "Annuler l'annulation";
+  const paid = (g.lignes || []).filter(e => entryStatut(e) === "termine");
+  if (paid.length > 0) {
+    paid.sort((a, b) => (num(b.pmtTs) || 0) - (num(a.pmtTs) || 0));
+    return `Annuler le paiement de ${fmt(num(paid[0].montant))}`;
+  }
+  return "Annuler l'acceptation";
+}
 
 function devisActionsHtml(g) {
   const stop = "event.stopPropagation();";
@@ -6873,16 +6931,15 @@ function devisActionsHtml(g) {
       <button class="btn-act act-vert" title="Accepté — toutes les lignes passent en « Paiement en attente »." onclick="${stop}suiviDevisAccepter('${g.devisId}')"><span class="ico">✓</span> Accepté</button>
       <button class="btn-act act-rouge" title="Refusé — le client a refusé avant acceptation. Toutes les lignes passent à « Refusé »." onclick="${stop}suiviDevisRefuser('${g.devisId}')"><span class="ico">✗</span> Refusé</button>`;
   }
+  const parts = [];
   if (g.statutGlobal === "en_cours" || g.statutGlobal === "termine") {
-    return `<button class="btn btn-icon ghost" title="Annuler — la mission est annulée après acceptation (différent de Refusé qui est avant)." onclick="${stop}suiviDevisAnnuler('${g.devisId}')">🚫</button>`;
+    parts.push(`<button class="btn btn-icon ghost" title="Annuler la mission — annulation après acceptation (différent de Refusé qui est avant)." onclick="${stop}suiviDevisAnnuler('${g.devisId}')">🚫</button>`);
   }
-  if (g.statutGlobal === "refuse") {
-    return `<button class="btn btn-icon ghost" title="Annuler le refus du devis et restaurer l'état précédent" onclick="${stop}suiviDevisRevertRefus('${g.devisId}')">↩</button>`;
+  const undoLabel = suiviDevisUndoLabel(g);
+  if (undoLabel) {
+    parts.push(`<button class="btn btn-icon ghost" title="${esc(undoLabel)}" onclick="${stop}suiviDevisUndo('${g.devisId}')">↩</button>`);
   }
-  if (g.statutGlobal === "annule") {
-    return `<button class="btn btn-icon ghost" title="Annuler l'annulation et restaurer l'état précédent" onclick="${stop}suiviDevisRevertAnnul('${g.devisId}')">↩</button>`;
-  }
-  return "";
+  return parts.join("");
 }
 
 // Bouton paiement compact dans la quick-actions row du tableau Suivi.
@@ -7253,19 +7310,23 @@ function rSuiviTimelineModal() {
   const attente = devisAttentePaiement(lignes);
   const client = cleanClientLabel(lignes[0].client) || "—";
 
-  // Actions au niveau devis (acceptation, refus, annulation, revert)
+  // Actions au niveau devis (acceptation/refus puis annulation + undo unifié)
   const stop = "event.stopPropagation();";
+  const gMock = { statutPrin, lignes };  // forme attendue par suiviDevisUndoLabel
+  const undoLabel = suiviDevisUndoLabel(gMock);
+  const undoBtn = undoLabel
+    ? `<button class="btn ghost" title="Revenir en arrière sur la dernière action" onclick="${stop}suiviDevisUndo('${devisId}')">↩ ${esc(undoLabel)}</button>`
+    : "";
   let devisLevelAction = "";
   if (statutPrin === "envoye") {
     devisLevelAction = `
       <button class="btn-act act-vert" onclick="${stop}suiviDevisAccepter('${devisId}')"><span class="ico">✓</span> Accepté</button>
       <button class="btn-act act-rouge" onclick="${stop}suiviDevisRefuser('${devisId}')"><span class="ico">✗</span> Refusé</button>`;
   } else if (statutPrin === "en_cours" || statutPrin === "termine") {
-    devisLevelAction = `<button class="btn ghost" onclick="${stop}suiviDevisAnnuler('${devisId}')">🚫 Annuler la mission</button>`;
-  } else if (statutPrin === "refuse") {
-    devisLevelAction = `<button class="btn ghost" onclick="${stop}suiviDevisRevertRefus('${devisId}')">↩ Annuler le refus</button>`;
-  } else if (statutPrin === "annule") {
-    devisLevelAction = `<button class="btn ghost" onclick="${stop}suiviDevisRevertAnnul('${devisId}')">↩ Restaurer (annuler l'annulation)</button>`;
+    devisLevelAction = `<button class="btn ghost" onclick="${stop}suiviDevisAnnuler('${devisId}')">🚫 Annuler la mission</button>${undoBtn}`;
+  } else {
+    // refuse / annule : seul le bouton undo a du sens
+    devisLevelAction = undoBtn;
   }
 
   return `<div class="modal-overlay" onclick="if(event.target===this)suiviTimelineClose()">
