@@ -574,6 +574,12 @@
   .devis-preview .dp-header-left:has(.dp-emetteur-name){white-space:normal}
   .devis-preview .dp-header-left .dp-emetteur-name{font-weight:600;font-size:14px;color:var(--text);margin-bottom:2px}
   .devis-preview .dp-header-left .dp-emetteur-meta{margin-top:4px;font-size:11.5px;color:var(--text-muted);font-variant-numeric:tabular-nums}
+  /* Mediateur conso block (B2C / mixte) */
+  .devis-preview .dp-mediateur{margin-top:14px;padding:8px 12px;border:1px dashed var(--border);border-radius:6px;font-size:11.5px;color:var(--text-muted);line-height:1.5}
+  .devis-preview .dp-mediateur-title{font-weight:600;color:var(--text);text-transform:uppercase;font-size:10px;letter-spacing:.06em;margin-bottom:3px}
+  .devis-preview .dp-mediateur-body{font-style:normal}
+  .devis-preview .dp-mediateur.dp-mediateur-empty{border-color:#c0392b;background:#fff5f3;color:#c0392b}
+  .devis-preview .dp-mediateur.dp-mediateur-empty strong{color:#c0392b}
   .devis-preview .dp-header-right{display:flex;flex-direction:column;align-items:flex-end;gap:0}
   .devis-preview .dp-meta-block{text-align:right;font-size:13px;color:var(--text-muted);line-height:1.6;margin-bottom:0}
   .devis-preview .dp-meta-block .ref{color:var(--text);font-weight:700;font-size:16px;font-variant-numeric:tabular-nums;margin-bottom:10px;letter-spacing:.01em}
@@ -792,6 +798,20 @@
     .view-devis-snapshot .dp-header-left .dp-emetteur-meta {
       margin-top: 3pt !important; font-size: 8pt !important; color: #555 !important;
     }
+    /* Mediateur conso (print): visible if filled, hidden if empty (don't print warning) */
+    .devis-preview .dp-mediateur, .view-devis-snapshot .dp-mediateur {
+      margin-top: 10pt !important; padding: 4pt 8pt !important;
+      border: 0.5pt dashed #1a1a1a !important; border-radius: 2pt !important;
+      font-size: 7.5pt !important; color: #333 !important; line-height: 1.4 !important;
+      background: transparent !important;
+      page-break-inside: avoid !important;
+    }
+    .devis-preview .dp-mediateur-title, .view-devis-snapshot .dp-mediateur-title {
+      font-weight: 600 !important; font-size: 7.5pt !important;
+      letter-spacing: .05em !important; color: #1a1a1a !important; margin-bottom: 2pt !important;
+    }
+    .devis-preview .dp-mediateur.dp-mediateur-empty,
+    .view-devis-snapshot .dp-mediateur.dp-mediateur-empty { display: none !important; }
     .devis-preview .dp-header-right, .view-devis-snapshot .dp-header-right {
       text-align: right !important;
       font-size: 9pt !important;
@@ -2291,6 +2311,30 @@ function genHeaderEmetteur(identite, photographeRichtext) {
   return lines.join("");
 }
 
+// Returns the mediateur conso block HTML (or empty string if not applicable).
+// Mandatory mention for B2C and mixte sales (C. conso. L612-1).
+// `clientType` (optional, per-mission) overrides identite.clienteleType.
+function mediateurBlock(identite, clientType) {
+  const id = identite || {};
+  const effectiveType = clientType || id.clienteleType || "mixte";
+  if (effectiveType === "b2b") return "";
+  const m = id.mediateur || {};
+  const filled = !!(m.nom || m.adresse || m.url);
+  if (!filled) {
+    return `<div class="dp-mediateur dp-mediateur-empty">
+      <strong>⚠ Médiateur de la consommation non renseigné</strong> — obligatoire pour vente B2C (art. L612-1 C. conso., sanction 3 000 €). Renseigne-le dans l'onglet Profil.
+    </div>`;
+  }
+  const parts = [];
+  if (m.nom) parts.push(esc(m.nom));
+  if (m.adresse) parts.push(esc(m.adresse));
+  if (m.url) parts.push(esc(m.url));
+  return `<div class="dp-mediateur">
+    <div class="dp-mediateur-title">Médiation de la consommation</div>
+    <div class="dp-mediateur-body">En cas de litige non résolu : ${parts.join(" · ")} — saisine sous 1 an (art. L612-1 du Code de la consommation).</div>
+  </div>`;
+}
+
 // Compute the validity text (uses dateValidite if set, else dateEmission + 30 days fallback).
 function validityText(dateEmission, dateValidite) {
   if (dateValidite && dateValidite.length >= 10) {
@@ -2504,6 +2548,8 @@ function rDevisPreview() {
             <div class="dp-sig-mention">Signature précédée de la mention « Bon pour accord »</div>
           </div>`}
     </div>
+
+    ${mediateurBlock(S.identite, (d.client || {}).type)}
 
     <div class="dp-footer">${esc(genFooterMentions(S.identite, "devis"))}</div>
 
