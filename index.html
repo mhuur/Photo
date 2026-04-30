@@ -93,9 +93,8 @@
   td.statut{text-align:center}
   .pst{display:inline-block;width:12px;height:12px;border-radius:50%;vertical-align:middle;flex-shrink:0}
   .pst[data-s="envoye"]{background:var(--primary);box-shadow:0 0 6px rgba(74,158,255,.5)}
-  .pst[data-s="accepte"]{background:var(--success);box-shadow:0 0 6px rgba(34,197,94,.5)}
   .pst[data-s="attente"]{background:var(--warning);box-shadow:0 0 6px rgba(245,158,11,.5)}
-  .pst[data-s="termine"]{background:var(--text-dim)}
+  .pst[data-s="termine"]{background:var(--success);box-shadow:0 0 6px rgba(34,197,94,.5)}
   .pst[data-s="refuse"]{background:var(--danger);box-shadow:0 0 6px rgba(239,68,68,.5)}
   .legend{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin:6px 0 10px;padding:6px;background:var(--surface);border:1px solid var(--border);border-radius:8px;font-size:13px;color:var(--text-muted)}
   .legend .item{display:flex;align-items:center;gap:6px}
@@ -5994,15 +5993,16 @@ function rDevisPaneFooterInner() {
 // ============================================================================
 
 const STATUTS = [
-  ["envoye",   "Envoyé"],
-  ["accepte",  "Accepté"],
+  ["envoye",   "En attente d'acceptation"],
   ["en_cours", "En cours"],
-  ["termine",  "Terminé"],
-  ["refuse",   "Refusé / Annulé"]
+  ["attente",  "Paiement en attente"],
+  ["termine",  "Soldée"],
+  ["refuse",   "Refusé"]
 ];
-// Mapping legacy : un statut de ligne "attente" est interne (= livré non payé).
-// Il n'apparaît plus comme statut principal — il alimente le flag attentePaiement.
-const STATUT_LEGACY = { paye: "termine", annule: "refuse" };
+// Mapping legacy : conversions silencieuses des anciens statuts.
+// - "paye"    → ancien synonyme de "termine"
+// - "accepte" → fusionné avec "attente" (refonte Suivi : un seul état post-acceptation)
+const STATUT_LEGACY = { paye: "termine", accepte: "attente" };
 
 function entryStatut(e) { const s = e && e.statut; return STATUT_LEGACY[s] || s || "envoye"; }
 function statutLabel(k) { const s = STATUTS.find(x => x[0] === k); return s ? s[1] : k; }
@@ -6013,14 +6013,13 @@ function pastille(statut) {
 }
 
 // Dérive le statut principal d'un devis à partir des statuts de ses lignes.
-// "en_cours" = au moins une ligne déjà touchée (accepté/livré/payé) mais pas toutes terminées.
+// "en_cours" = devis accepté avec un mix de lignes en attente et soldées.
 function devisPrincipal(lignes) {
   if (!lignes.length) return "envoye";
   const ss = lignes.map(entryStatut);
   if (ss.some(s => s === "refuse"))         return "refuse";
   if (ss.every(s => s === "termine"))       return "termine";
   if (ss.every(s => s === "envoye"))        return "envoye";
-  if (ss.every(s => s === "accepte"))       return "accepte";
   return "en_cours";
 }
 
@@ -6035,9 +6034,8 @@ function suiviLegendHtml() {
   const chips = [
     ["all",     "Tous",     "●", "var(--text-muted)"],
     ["envoye",  "Envoyé",   null, null],
-    ["accepte", "Accepté",  null, null],
     ["en_cours","En cours", null, null],
-    ["termine", "Terminé",  null, null]
+    ["termine", "Soldé",    null, null]
   ];
   const refusedCount = suiviGroupsAll().filter(g => g.statutPrin === "refuse").length;
   const attenteCount = suiviGroupsAll().filter(g => g.attentePaiement).length;
@@ -6114,6 +6112,9 @@ function suiviMigrate() {
 
   for (const e of S.suivi.entries) {
     if (STATUT_LEGACY[e.statut]) e.statut = STATUT_LEGACY[e.statut];
+    if (e.statutAvantRefus && STATUT_LEGACY[e.statutAvantRefus]) {
+      e.statutAvantRefus = STATUT_LEGACY[e.statutAvantRefus];
+    }
   }
 
   const ungrouped = S.suivi.entries.filter(e => !e.devisId);
@@ -6721,13 +6722,13 @@ function suiviGroupLigne(devisId) {
   return S.suivi.entries.filter(e => e.devisId === devisId);
 }
 
-// À l'acceptation d'un devis : les lignes "acompte" passent en "attente" (paiement attendu),
-// les autres lignes passent en "accepte". Cela matche la règle métier :
-// « Accepté → Si acompte requis : passe à 'En attente de paiement' ; sinon : En cours ».
+// À l'acceptation d'un devis : toutes les lignes passent en "attente" (paiement attendu).
+// Plus de distinction acompte/non-acompte au niveau du state : le label texte des
+// échéances suffit à indiquer l'ordre dans la timeline.
 function suiviDevisAccepter(devisId) {
   for (const e of suiviGroupLigne(devisId)) {
     delete e.statutAvantRefus;
-    e.statut = suiviClassifyEcheance(e.echeance) === "acompte" ? "attente" : "accepte";
+    e.statut = "attente";
   }
   save();
   render();
@@ -6743,15 +6744,6 @@ function suiviDevisRefuser(devisId) {
   render();
 }
 window.suiviDevisRefuser = suiviDevisRefuser;
-
-function suiviLigneRealise(id) {
-  const e = S.suivi.entries.find(x => x.id === id);
-  if (!e) return;
-  e.statut = "attente";
-  save();
-  render();
-}
-window.suiviLigneRealise = suiviLigneRealise;
 
 function suiviLignePaye(id) {
   const e = S.suivi.entries.find(x => x.id === id);
@@ -6769,8 +6761,7 @@ function suiviRevert(id) {
   if (s === "termine") {
     e.statut = "attente";
   } else if (s === "attente") {
-    e.statut = "accepte";
-  } else if (s === "accepte") {
+    // Revenir en arrière depuis "attente" annule l'acceptation au niveau devis.
     for (const x of suiviGroupLigne(e.devisId)) x.statut = "envoye";
   } else if (s === "refuse") {
     for (const x of suiviGroupLigne(e.devisId)) {
@@ -6782,13 +6773,6 @@ function suiviRevert(id) {
   render();
 }
 window.suiviRevert = suiviRevert;
-
-function suiviDevisRevertAccept(devisId) {
-  for (const x of suiviGroupLigne(devisId)) x.statut = "envoye";
-  save();
-  render();
-}
-window.suiviDevisRevertAccept = suiviDevisRevertAccept;
 
 function suiviDevisRevertRefus(devisId) {
   for (const x of suiviGroupLigne(devisId)) {
@@ -6804,11 +6788,8 @@ function devisActionsHtml(g) {
   const stop = "event.stopPropagation();";
   if (g.statutGlobal === "envoye") {
     return `
-      <button class="btn-act act-vert" title="Accepté — le devis est validé. Toutes les lignes passent à « Accepté »." onclick="${stop}suiviDevisAccepter('${g.devisId}')"><span class="ico">✓</span> Accepté</button>
+      <button class="btn-act act-vert" title="Accepté — toutes les lignes passent en « Paiement en attente »." onclick="${stop}suiviDevisAccepter('${g.devisId}')"><span class="ico">✓</span> Accepté</button>
       <button class="btn-act act-rouge" title="Refusé — le client a refusé. Toutes les lignes passent à « Refusé »." onclick="${stop}suiviDevisRefuser('${g.devisId}')"><span class="ico">✗</span> Refusé</button>`;
-  }
-  if (g.statutGlobal === "accepte") {
-    return `<button class="btn btn-icon ghost" title="Revenir : Accepté → Envoyé (toutes les lignes du devis)" onclick="${stop}suiviDevisRevertAccept('${g.devisId}')">↩</button>`;
   }
   if (g.statutGlobal === "refuse") {
     return `<button class="btn btn-icon ghost" title="Annuler le refus du devis et restaurer l'état précédent" onclick="${stop}suiviDevisRevertRefus('${g.devisId}')">↩</button>`;
@@ -6817,7 +6798,7 @@ function devisActionsHtml(g) {
 }
 
 function suiviStats(groups) {
-  const by = { envoye: 0, accepte: 0, attente: 0, termine: 0, refuse: 0 };
+  const by = { envoye: 0, en_cours: 0, termine: 0, refuse: 0 };
   let total = 0;
   for (const g of groups) {
     by[g.statutGlobal] = (by[g.statutGlobal] || 0) + 1;
@@ -6832,9 +6813,8 @@ function suiviStatsHtml(s) {
   return `
     <div class="stat">Devis<strong>${s.count}</strong></div>
     <div class="stat">Envoyé<strong>${s.by.envoye || 0}</strong></div>
-    <div class="stat">Accepté<strong>${s.by.accepte || 0}</strong></div>
     <div class="stat">En cours<strong>${s.by.en_cours || 0}</strong></div>
-    <div class="stat">Terminé<strong>${s.by.termine || 0}</strong></div>
+    <div class="stat">Soldé<strong>${s.by.termine || 0}</strong></div>
     <div class="stat" style="border-color:var(--warning);background:rgba(245,158,11,.06)">
       💰 Attente paiement<strong style="color:var(--warning)">${attente}</strong>
     </div>
@@ -6845,7 +6825,7 @@ function suiviStatsHtml(s) {
 let suiviSort = { field: "date", dir: "desc" };
 
 // === SUIVI v2 — filtres
-// suiviFilterPrincipal : "all" | "envoye" | "accepte" | "en_cours" | "termine" | "refuse"
+// suiviFilterPrincipal : "all" | "envoye" | "en_cours" | "termine" | "refuse"
 let suiviFilterPrincipal = (() => {
   try { return localStorage.getItem("suiviFilterPrincipal") || "all"; }
   catch (e) { return "all"; }
@@ -6966,7 +6946,7 @@ function suiviYears() {
   return [...ys].sort().reverse();
 }
 
-const STATUT_ORDER = { envoye: 0, accepte: 1, en_cours: 2, termine: 3, refuse: 4 };
+const STATUT_ORDER = { envoye: 0, en_cours: 1, attente: 2, termine: 3, refuse: 4 };
 
 // Liste TOUS les groupes (sans filtre) — utile pour les compteurs des chips
 function suiviGroupsAll() {
@@ -7058,29 +7038,18 @@ window.suiviTimelineClose = function() {
 };
 
 // Génère le bouton contextuel d'une étape selon son statut courant
-function suiviTimelineStepAction(e, isAcompte) {
+function suiviTimelineStepAction(e) {
   const s = entryStatut(e);
   const stop = "event.stopPropagation();";
   if (s === "envoye") {
     // Le devis n'est pas encore accepté — actions au niveau devis, pas étape
     return `<span style="color:var(--text-dim);font-size:11px">En attente d'acceptation du devis</span>`;
   }
-  if (s === "accepte") {
-    // Étape acceptée mais pas livrée
-    if (isAcompte) {
-      return `<button class="btn btn-vert" onclick="${stop}suiviLignePaye('${e.id}')">✓ Acompte reçu</button>`;
-    }
-    return `<button class="btn btn-bleu" onclick="${stop}suiviLigneRealise('${e.id}')">→ Marquer étape livrée</button>`;
-  }
   if (s === "attente") {
-    return `<button class="btn btn-vert" onclick="${stop}suiviLignePaye('${e.id}')">€ Marquer paiement reçu</button>
-            <button class="btn ghost btn-icon" title="Annuler la livraison" onclick="${stop}suiviRevert('${e.id}')">↩</button>`;
+    return `<button class="btn btn-vert" onclick="${stop}suiviLignePaye('${e.id}')">€ Marquer paiement reçu</button>`;
   }
   if (s === "termine") {
-    return `<button class="btn ghost btn-icon" title="Annuler le paiement (revenir à Attente)" onclick="${stop}suiviRevert('${e.id}')">↩</button>`;
-  }
-  if (s === "refuse") {
-    return ``;
+    return `<button class="btn ghost btn-icon" title="Annuler le paiement (revenir à Paiement en attente)" onclick="${stop}suiviRevert('${e.id}')">↩</button>`;
   }
   return ``;
 }
@@ -7088,9 +7057,7 @@ function suiviTimelineStepAction(e, isAcompte) {
 // Représente une étape dans la timeline
 function suiviTimelineStepHtml(e) {
   const s = entryStatut(e);
-  const isAcompte = suiviClassifyEcheance(e.echeance) === "acompte";
 
-  // Calcule l'état visuel des deux flags livré / payé
   let dotClass = "";
   let icon = "○";
   let flagsHtml = "";
@@ -7100,19 +7067,16 @@ function suiviTimelineStepHtml(e) {
     flagsHtml = `<span class="suv-tl-flag idle">Refusé</span>`;
   } else if (s === "termine") {
     dotClass = "done"; icon = "✓";
-    flagsHtml = `<span class="suv-tl-flag delivered">📦 Livré</span><span class="suv-tl-flag paid">💰 Payé</span>`;
+    flagsHtml = `<span class="suv-tl-flag paid">💰 Soldée</span>`;
   } else if (s === "attente") {
     dotClass = "waiting"; icon = "⏳";
-    const livreLabel = isAcompte ? "Dû" : "Livré";
-    flagsHtml = `<span class="suv-tl-flag delivered">📦 ${livreLabel}</span><span class="suv-tl-flag pending">💰 Paiement attendu</span>`;
-  } else if (s === "accepte") {
-    dotClass = ""; icon = "○";
-    flagsHtml = `<span class="suv-tl-flag idle">Acceptée — non livrée</span>`;
+    flagsHtml = `<span class="suv-tl-flag pending">💰 Paiement en attente</span>`;
   } else { // envoye
     dotClass = ""; icon = "○";
     flagsHtml = `<span class="suv-tl-flag idle">En attente d'acceptation</span>`;
   }
 
+  const action = suiviTimelineStepAction(e);
   return `
     <div class="suv-tl-step">
       <div class="suv-tl-dot ${dotClass}">${icon}</div>
@@ -7121,7 +7085,7 @@ function suiviTimelineStepHtml(e) {
         <div class="suv-tl-flags">${flagsHtml}</div>
       </div>
       <div class="suv-tl-amount">${fmt(e.montant)}</div>
-      ${suiviTimelineStepAction(e, isAcompte) ? `<div class="suv-tl-actions">${suiviTimelineStepAction(e, isAcompte)}</div>` : ''}
+      ${action ? `<div class="suv-tl-actions">${action}</div>` : ''}
     </div>`;
 }
 
@@ -8158,7 +8122,7 @@ function refreshTauxMatos() {
 function amortizationAnalysis() {
   const CURRENT_YEAR = new Date().getFullYear();
   // Step 1 — group treasury by year (received payments only)
-  const RECEIVED_STATUSES = new Set(["accepte", "attente", "termine"]);
+  const RECEIVED_STATUSES = new Set(["attente", "termine"]);
   const tresorerieByYear = {};
   for (const e of (S.suivi.entries || [])) {
     if (!RECEIVED_STATUSES.has(entryStatut(e))) continue;
