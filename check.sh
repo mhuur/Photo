@@ -1,0 +1,89 @@
+#!/usr/bin/env bash
+# check.sh — sanity check minimal pour index.html.
+# Pas de syntax JS exact (node non dispo), mais détecte les erreurs grossières
+# : déséquilibre d'accolades, fonction-clé manquante, balises HTML non fermées.
+# Sortie 0 si OK, ≠0 si problème.
+
+set -e
+cd "$(dirname "$0")"
+
+FILE="index.html"
+ERR=0
+
+if [ ! -f "$FILE" ]; then
+  echo "✗ $FILE introuvable"; exit 1
+fi
+
+# 1. Tags structurels présents et fermés une seule fois.
+for tag in "<script>" "</script>" "</body>" "</html>"; do
+  count=$(grep -cF "$tag" "$FILE" || true)
+  if [ "$count" -lt 1 ]; then
+    echo "✗ Tag manquant : $tag"
+    ERR=1
+  fi
+done
+
+# 2. Balance des accolades { } dans tout le fichier (incluant CSS et JS).
+# Approximatif (chaînes JS contenant des { faussent le compte) mais détecte
+# une suppression sèche de fermeture comme un sed dépassé.
+open=$(grep -o "{" "$FILE" | wc -l)
+close=$(grep -o "}" "$FILE" | wc -l)
+diff=$((open - close))
+if [ "$diff" -ne 0 ]; then
+  echo "⚠ Balance accolades : $open ouvertes vs $close fermées (diff $diff)"
+  echo "  Note : faux positifs possibles via chaînes JS. Comparer avec HEAD précédent."
+  ERR=1
+fi
+
+# 3. Fonctions clés qui ne doivent jamais disparaître (filet anti-sed).
+KEY_FUNCTIONS=(
+  "function upd"
+  "function render"
+  "function totals"
+  "function rDevisPreview"
+  "function rDeboursPreview"
+  "function rFacturePreview"
+  "function rDevisAccordion"
+  "function rDevisPaneFooterInner"
+  "function rSV"
+  "function rCL"
+  "function rCP"
+  "function rTR"
+  "function rPF"
+  "function rBG"
+  "function suiviAdd"
+  "function validateDevis"
+  "function recomputeRef"
+  "function genHeaderEmetteur"
+  "function genFooterMentions"
+  "function validityDate"
+)
+for fn in "${KEY_FUNCTIONS[@]}"; do
+  if ! grep -qF "$fn" "$FILE"; then
+    echo "✗ Fonction-clé manquante : $fn"
+    ERR=1
+  fi
+done
+
+# 4. Le fichier ne doit pas avoir grossi/rétréci de plus de 30% par rapport
+# au dernier commit (filet anti-suppression massive accidentelle).
+if git rev-parse --git-dir >/dev/null 2>&1; then
+  prev_size=$(git show HEAD:"$FILE" 2>/dev/null | wc -c || echo 0)
+  cur_size=$(wc -c < "$FILE")
+  if [ "$prev_size" -gt 0 ]; then
+    # bash arithmetic: drop 30%
+    threshold=$((prev_size * 30 / 100))
+    delta=$((cur_size - prev_size))
+    abs_delta=${delta#-}
+    if [ "$abs_delta" -gt "$threshold" ]; then
+      echo "⚠ Variation de taille importante : $prev_size → $cur_size octets (Δ $delta)"
+      echo "  Si c'est intentionnel, ignore. Sinon vérifie le diff avant push."
+      ERR=1
+    fi
+  fi
+fi
+
+if [ "$ERR" -eq 0 ]; then
+  echo "✓ Sanity check OK ($(wc -l < "$FILE") lignes, $(wc -c < "$FILE") octets)"
+fi
+exit $ERR
