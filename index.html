@@ -5887,20 +5887,17 @@ function rDevisPaneFooterInner() {
     : "";
 
   const mainBtn = inSuivi
-    ? `<button class="btn ghost" onclick="suiviUpdateSnapshot()" ${!dirty?"disabled":""}>Mettre à jour le snapshot Suivi</button>`
-    : `<button class="btn" onclick="suiviAdd()" ${!v.ok?"disabled":""} title="${v.ok?'':'Corrige les erreurs ci-dessus'}">+ Enregistrer dans Suivi</button>`;
+    ? `<button class="btn" onclick="suiviUpdateSnapshot()" ${!dirty?"disabled":""} title="${dirty?'':'Aucune modification à enregistrer'}">${dirty ? '💾 Enregistrer les modifications' : '✓ À jour dans Suivi'}</button>`
+    : `<button class="btn" onclick="suiviAdd()" ${!v.ok?"disabled":""} title="${v.ok?'':'Corrige les erreurs ci-dessus'}">💾 Enregistrer dans Suivi</button>`;
 
   const infoBtn = `<button type="button" class="tarif-info" tabindex="0" aria-label="Que fait l'enregistrement dans Suivi ?">i<div class="tarif-tooltip" role="tooltip">
     <div class="tt-title">Enregistrement dans Suivi</div>
-    <p style="margin:0 0 8px;font-size:12px;line-height:1.5">Un seul clic enregistre l'<strong>ensemble du devis</strong> : la version principale (devis HT) <strong>et</strong> la feuille débours s'il y a lieu.</p>
-    <p style="margin:0 0 8px;font-size:12px;line-height:1.5">Une fois archivé dans Suivi, tu peux :</p>
-    <ul style="margin:0 0 8px;padding-left:18px;font-size:12px;line-height:1.5">
-      <li>Imprimer le devis depuis l'onglet Suivi (bouton 🖨 Devis).</li>
-      <li>Imprimer la feuille débours (bouton 🖨 Débours, si applicable).</li>
-      <li>Imprimer la facture quand le devis est payé (bouton 🖨 Facture).</li>
-      <li>Suivre les paiements et les statuts.</li>
-    </ul>
-    <p style="margin:0;font-size:12px;line-height:1.5;color:var(--text-muted)">Pas besoin d'enregistrer séparément le débours — c'est une seule opération pour tout le dossier.</p>
+    <p style="margin:0 0 8px;font-size:12px;line-height:1.5">Un seul clic enregistre l'<strong>ensemble du dossier</strong> : devis principal <strong>+</strong> feuille débours s'il y en a une. Pas besoin d'enregistrer séparément.</p>
+    <p style="margin:0 0 4px;font-size:12px;line-height:1.5;font-weight:600">Première fois (devis neuf) :</p>
+    <p style="margin:0 0 8px;font-size:12px;line-height:1.5">Bouton « Enregistrer dans Suivi ». Crée une nouvelle entrée dans l'onglet Suivi avec snapshots figés.</p>
+    <p style="margin:0 0 4px;font-size:12px;line-height:1.5;font-weight:600">Après modifications :</p>
+    <p style="margin:0 0 8px;font-size:12px;line-height:1.5">Bouton « Enregistrer les modifications ». Met à jour les snapshots existants dans Suivi avec la version actuelle.</p>
+    <p style="margin:0;font-size:12px;line-height:1.5;color:var(--text-muted)">Une fois archivé : ouvre l'onglet Suivi → bouton 🖨 pour imprimer le devis, le débours ou la facture.</p>
   </div></button>`;
 
   return `
