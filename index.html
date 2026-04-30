@@ -619,6 +619,7 @@
   .devis-preview .dp-totals .dp-line{display:flex;justify-content:space-between;grid-template-columns:none;padding:5px 0;border-bottom:0;color:var(--text-muted)}
   .devis-preview .dp-totals .dp-line.grand{font-size:17px;font-weight:700;padding:10px 0 6px;margin-top:4px;border-top:1px solid var(--border)}
   .devis-preview .dp-totals .dp-line.grand .lbl,.devis-preview .dp-totals .dp-line.grand .amt{color:var(--text)}
+  .devis-preview .dp-totals-tva{margin-top:4px;text-align:right;font-size:11px;font-style:italic;color:var(--text-dim);line-height:1.4}
   .devis-preview .dp-totals .dp-line.debours{color:var(--text-muted);font-style:italic;font-size:12px;margin-top:6px;padding-top:4px}
   .devis-preview .dp-totals .dp-line.debours .debours-note{color:var(--text-dim);font-size:11px;font-style:italic;font-weight:400}
 
@@ -1054,6 +1055,10 @@
     .devis-preview .dp-totals .dp-line.grand .lbl, .view-devis-snapshot .dp-totals .dp-line.grand .lbl,
     .devis-preview .dp-totals .dp-line.grand .amt, .view-devis-snapshot .dp-totals .dp-line.grand .amt {
       color: #1a1a1a !important;
+    }
+    .devis-preview .dp-totals-tva, .view-devis-snapshot .dp-totals-tva {
+      margin-top: 3pt !important; text-align: right !important;
+      font-size: 7.5pt !important; font-style: italic !important; color: #555 !important; line-height: 1.4 !important;
     }
     .devis-preview .dp-totals .dp-line.debours, .view-devis-snapshot .dp-totals .dp-line.debours {
       font-size: 7.5pt !important;
@@ -2517,7 +2522,7 @@ function genHeaderEmetteur(identite, photographeRichtext) {
   const cityLine = [id.cp, id.ville].filter(Boolean).join(" ").trim();
   const meta = [];
   const isEIish = id.formeJuridique === "ei" || id.formeJuridique === "micro-bnc";
-  if (id.mentionEI && isEIish) meta.push("EI");
+  meta.push(statusLabel(id));            // ex: "Micro-entrepreneur" ou "Micro-entrepreneur · EI"
   if (id.siret) meta.push("SIRET " + formatSiret(id.siret));
   if (id.ape)   meta.push("APE " + id.ape);
   if (id.rcs)   meta.push("RCS " + id.rcs);
@@ -2764,6 +2769,7 @@ function rDevisPreview() {
       <div class="dp-line"><span class="lbl">Sous-total</span><span class="amt">${fmt(t.subtotal)}</span></div>
       <div class="dp-line"><span class="lbl">Remise (${num(d.remisePct).toString().replace(".",",")} %)</span><span class="amt">−${fmt(t.remise)}</span></div>` : ""}
       <div class="dp-line grand"><span class="lbl">Total HT</span><span class="amt">${fmt(t.total)}</span></div>
+      <div class="dp-totals-tva">${esc(tvaMention(S.identite))}</div>
     </div>
 
     ${(deboursHtml || t.debours > 0) ? `<div class="dp-debours-block">
@@ -2828,7 +2834,6 @@ function rDevisPreview() {
       return hasCgv ? "" : `<div class="dp-cgv-fallback">Conditions générales de vente disponibles sur simple demande.</div>`;
     })()}
 
-    <div class="dp-footer">${esc(genFooterMentions(S.identite, "devis"))}</div>
 
     ${(() => {
       const cgvSections = Array.isArray(d.cgvSections) ? d.cgvSections.filter(s => s && (s.title || s.body)) : [];
@@ -2957,6 +2962,7 @@ function rDeboursPreview() {
 
     <div class="dp-totals">
       <div class="dp-line grand" style="color:var(--accent)"><span class="lbl">Total à rembourser</span><span class="amt">${fmt(t.debours)}</span></div>
+      <div class="dp-totals-tva">Refacturation au centime près sur justificatifs · ${esc(tvaMention(S.identite))}</div>
     </div>
 
     ${(() => {
@@ -2985,7 +2991,6 @@ function rDeboursPreview() {
           </div>`}
     </div>
 
-    <div class="dp-footer">${esc(genFooterMentions(S.identite, "debours"))}</div>
 
     ${(() => {
       const cgvSections = Array.isArray(d.cgvSections) ? d.cgvSections.filter(s => s && (s.title || s.body)) : [];
@@ -3102,6 +3107,7 @@ function rFacturePreview(opts) {
       <div class="dp-line"><span class="lbl">Sous-total</span><span class="amt">${fmt(t.subtotal)}</span></div>
       ${t.remise > 0 ? `<div class="dp-line"><span class="lbl">Remise (${num(d.remisePct).toString().replace(".",",")} %)</span><span class="amt">−${fmt(t.remise)}</span></div>` : ""}
       <div class="dp-line grand"><span class="lbl">Total HT</span><span class="amt">${fmt(t.total)}</span></div>
+      <div class="dp-totals-tva">${esc(tvaMention(S.identite))}</div>
     </div>
 
     <div class="dp-receipt">
@@ -3116,7 +3122,6 @@ function rFacturePreview(opts) {
       <div class="dp-receipt-line restant ${fullyPaid ? 'paid' : ''}"><span class="lbl">${fullyPaid ? "✓ Soldée" : "Reste à payer"}</span><span class="amt" style="color:${fullyPaid ? 'var(--success)' : 'var(--warning)'}">${fmt(restant)}</span></div>
     </div>
 
-    <div class="dp-footer">${esc(genFooterMentions(S.identite, "devis"))}</div>
 
     <div class="dp-actions">
       <button class="btn ghost" onclick="window.print()">🖨️ Imprimer</button>
