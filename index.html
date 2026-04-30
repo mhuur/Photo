@@ -3530,14 +3530,13 @@ function refreshTotals() {
       if (fresh) el.parentNode.replaceChild(fresh, el);
     }
   }
-  // Update the inline taux breakdown (under "Temps de trajet")
-  const tauxWrap = document.getElementById("tauxBreakdownWrap");
-  if (tauxWrap) tauxWrap.innerHTML = rTauxBreakdown();
-  // Update the tooltip content (Statut → ⓘ)
-  const tooltip = document.querySelector(".tarif-tooltip");
-  if (tooltip) {
+  // Update the (i) tooltip next to "Cacher taux h" — only one targeted by data-kind.
+  // Les autres tarif-tooltip (ex: comparaison Taux réduit/Fixe en mode au black) ne
+  // sont pas touchés.
+  const lisserTooltip = document.querySelector('.tarif-info[data-kind="depl-lisser"] .tarif-tooltip');
+  if (lisserTooltip) {
     const b = tarifBreakdown(true);
-    if (b) tooltip.innerHTML = `<div class="tt-title">Décomposition du tarif horaire</div>${tarifBreakdownHtml(b)}`;
+    if (b) lisserTooltip.innerHTML = `<div class="tt-title">Tarif horaire mis à jour avec déplacement (lissé)</div>${tarifBreakdownHtml(b)}`;
   }
   // Update the badge on the Débours tab button (total débours amount)
   const t2 = totals();
@@ -4883,19 +4882,13 @@ function rDevisSectionPrestations() {
   </div>
   <div class="devis-catalog-hint">Tarif horaire issu du catalogue. <a href="#" onclick="setTab('tarifs');return false">Modifier le catalogue →</a></div>`;
 
-  // Statut + URSSAF/marge avance — proches du choix de prestation, c'est lié.
+  // Statut Déclaré / Au black (la décomposition tarif horaire est dispo dans
+  // l'encadré « Cacher taux h » du Déplacement, plus pertinent contextuellement).
   const statusBlock = `<div class="row">
     <div class="field"><label>Statut</label>
-      <div class="seg-with-info">
-        <div class="seg">
-          <button class="${declare?"on":""}" onclick="updMissionDeclare(true)">✓ Déclaré</button>
-          <button class="${!declare?"on warn":""}" onclick="updMissionDeclare(false)">● Au black</button>
-        </div>
-        ${(() => {
-          const b = tarifBreakdown(true);
-          if (!b) return "";
-          return `<button type="button" class="tarif-info" tabindex="0" aria-label="Voir le détail du tarif horaire">i<div class="tarif-tooltip" role="tooltip"><div class="tt-title">Décomposition du tarif horaire</div>${tarifBreakdownHtml(b)}</div></button>`;
-        })()}
+      <div class="seg">
+        <button class="${declare?"on":""}" onclick="updMissionDeclare(true)">✓ Déclaré</button>
+        <button class="${!declare?"on warn":""}" onclick="updMissionDeclare(false)">● Au black</button>
       </div>
     </div>
   </div>
@@ -4957,13 +4950,29 @@ function rDevisSectionDeplacement() {
         <span class="lg-btn-spacer" aria-hidden="true"></span>
         <span class="lg-btn-spacer" aria-hidden="true"></span>
       </div>
-      ${devis === 'principal' ? `
-      <div class="depl-subtoggle-row">
-        <div class="seg lg-toggle">
-          <button class="${afficheMode==='afficher'?'on':''}" onclick="updDeplAfficheMode('afficher')">Afficher dans devis</button>
-          <button class="${afficheMode==='lisser'?'on':''}" onclick="updDeplAfficheMode('lisser')">Lisser dans taux horaire</button>
-        </div>
-      </div>` : ''}
+      ${devis === 'principal' ? (() => {
+        // Quand "Cacher taux h" est actif, le déplacement est lissé dans le tarif
+        // horaire (pas affiché en ligne séparée). Un (i) à côté donne la
+        // décomposition. Le tooltip est mis à jour live par refreshTotals().
+        const t = totals();
+        const b = afficheMode === 'lisser' ? tarifBreakdown(true) : null;
+        const infoBtn = (afficheMode === 'lisser' && b)
+          ? `<button type="button" class="tarif-info" data-kind="depl-lisser" tabindex="0" aria-label="Voir l'impact sur le taux horaire">i<div class="tarif-tooltip" role="tooltip"><div class="tt-title">Tarif horaire mis à jour avec déplacement (lissé)</div>${tarifBreakdownHtml(b)}</div></button>`
+          : '';
+        const noHoursWarn = (afficheMode === 'lisser' && t.totalHeures === 0)
+          ? `<div class="hint" style="margin-top:6px;color:var(--warning)">⚠ Pas d'heures dans le devis : le déplacement est facturé séparément en attendant (mode « Cacher taux h » nécessite des heures).</div>`
+          : '';
+        return `<div class="depl-subtoggle-row">
+          <div class="seg-with-info">
+            <div class="seg lg-toggle">
+              <button class="${afficheMode==='afficher'?'on':''}" onclick="updDeplAfficheMode('afficher')">Afficher dans devis</button>
+              <button class="${afficheMode==='lisser'?'on':''}" onclick="updDeplAfficheMode('lisser')" title="Inclus dans le tarif horaire (ne ressort pas comme une ligne)">Cacher taux h</button>
+            </div>
+            ${infoBtn}
+          </div>
+          ${noHoursWarn}
+        </div>`;
+      })() : ''}
     </div>
     ${mode === "voiture" ? `
     <div class="row">
@@ -4975,7 +4984,6 @@ function rDevisSectionDeplacement() {
     <div class="row"><div class="field narrow"><label>Prix des billets (€)</label><input type="number" step="0.01" value="${esc(d.deplacement.ticket)}" oninput="upd('mission.deplacement.ticket', this.value)"></div></div>
     `}
     <div class="row"><div class="field narrow"><label>Temps de trajet (h)</label><input type="number" step="0.25" value="${esc(d.deplacement.trajetH)}" oninput="upd('mission.deplacement.trajetH', this.value)"></div></div>
-    <div id="tauxBreakdownWrap">${rTauxBreakdown()}</div>
 
     <h5>Lignes matériel en débours</h5>
     <div class="lg-list" id="lgListDebours">
