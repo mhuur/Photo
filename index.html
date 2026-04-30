@@ -1484,6 +1484,12 @@
   .lg-section-mat{margin-top:30px}
   .lg-row-wrap{display:flex;flex-direction:column;gap:6px}
   .lg-row{display:flex;align-items:center;gap:10px}
+  .lg-cession-detail{padding:10px 14px;background:var(--surface-2);border-radius:6px;display:flex;flex-direction:column;gap:8px;margin-left:0;margin-top:2px}
+  .lg-cession-detail .row{margin:0;gap:10px}
+  .lg-cession-detail .field label{font-size:11px;color:var(--text-muted);margin-bottom:2px}
+  .lg-cession-detail input[type="text"]{height:var(--input-h);padding:0 10px;border:1px solid transparent;border-radius:6px;background:var(--surface);color:var(--text);font:inherit;font-size:13px}
+  .lg-cession-detail input[type="text"]:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 3px var(--primary-soft)}
+  .lg-cession-detail .lg-desc{margin:0;min-height:32px}
   .lg-title{flex:1;min-width:160px;height:var(--input-h);padding:0 10px;border:1px solid transparent;border-radius:6px;background:var(--surface-2);color:var(--text);font:inherit;font-size:13px;font-weight:500;transition:border-color .12s,box-shadow .12s}
   .lg-title:hover{border-color:var(--border-light)}
   .lg-title:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 3px var(--primary-soft)}
@@ -2346,6 +2352,21 @@ function rDevisPreview() {
         <div class="qty">${esc(info.breakdown)}</div>
         <div class="amt">${fmt(info.amount)}</div>
       </div>`;
+    } else if (l.type === "cession") {
+      lineNum++;
+      const detailParts = [
+        l.duree      ? "Durée : " + l.duree           : "",
+        l.territoire ? "Territoire : " + l.territoire : "",
+        l.supports   ? "Supports : " + l.supports     : "",
+        l.exclusivite ? "Cession exclusive" : "Non exclusive"
+      ].filter(Boolean);
+      const detail = detailParts.join(" · ");
+      linesHtml += `<div class="dp-line">
+        <div class="num">${lineNum}.</div>
+        <div class="lbl">${esc(l.intitule || "Cession de droits")}<div class="desc">${esc(detail)}${l.description ? " — " + esc(l.description) : ""}</div></div>
+        <div class="qty">forfait</div>
+        <div class="amt">${fmt(num(l.prix))}</div>
+      </div>`;
     }
   }
 
@@ -3135,6 +3156,13 @@ function ligneAdd(type) {
     S.mission.lignes.push({ id, type: "heures", intitule: "", duree: "", unit: "h", description: "" });
   } else if (type === "materiel") {
     S.mission.lignes.push({ id, type: "materiel", intitule: "", prix: "", devis: "principal", paiementType: "acompte", description: "" });
+  } else if (type === "cession") {
+    S.mission.lignes.push({
+      id, type: "cession", intitule: "Cession de droits",
+      duree: "5 ans", territoire: "Monde",
+      supports: "Tirages personnels, web personnel",
+      exclusivite: false, prix: "", description: ""
+    });
   }
   save();
   render();
@@ -3420,6 +3448,39 @@ function rLigne(l) {
       </div>
       ${desc}
     </div>`;
+  } else if (l.type === "cession") {
+    return `<div class="lg-row-wrap lg-cession" data-id="${l.id}">
+      <div class="lg-row">
+        <input class="lg-title" placeholder="Cession de droits" value="${esc(l.intitule)}" oninput="ligneUpd('${l.id}','intitule',this.value)">
+        <div class="lg-prix">
+          <input type="number" step="0.01" placeholder="0,00" value="${esc(l.prix)}" oninput="ligneUpd('${l.id}','prix',this.value)">
+          <span class="unit">€</span>
+        </div>
+        <button class="lg-del" onclick="ligneDel('${l.id}')" title="Supprimer">×</button>
+      </div>
+      <div class="lg-cession-detail">
+        <div class="row">
+          <div class="field"><label>Durée</label>
+            <input type="text" value="${esc(l.duree||"")}" oninput="ligneUpd('${l.id}','duree',this.value)" placeholder="Ex : 5 ans, illimitée">
+          </div>
+          <div class="field"><label>Territoire</label>
+            <input type="text" value="${esc(l.territoire||"")}" oninput="ligneUpd('${l.id}','territoire',this.value)" placeholder="Ex : Monde, France">
+          </div>
+        </div>
+        <div class="row">
+          <div class="field"><label>Supports / destination</label>
+            <input type="text" value="${esc(l.supports||"")}" oninput="ligneUpd('${l.id}','supports',this.value)" placeholder="Ex : tirages personnels, site web personnel, presse">
+          </div>
+          <div class="field narrow" style="justify-content:flex-end;align-self:flex-end;padding-bottom:6px">
+            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:normal;font-size:12px">
+              <input type="checkbox" ${l.exclusivite?"checked":""} onchange="ligneUpd('${l.id}','exclusivite',this.checked)">
+              Cession exclusive
+            </label>
+          </div>
+        </div>
+        <textarea class="lg-desc" placeholder="Notes complémentaires (optionnel)" rows="1" oninput="ligneUpd('${l.id}','description',this.value)">${esc(l.description||"")}</textarea>
+      </div>
+    </div>`;
   } else {
     const pmt = l.paiementType || "acompte";
     const isDebours = l.devis === "debours";
@@ -3529,6 +3590,11 @@ function totals() {
       const h = num(l.duree) * (l.unit === "j" ? HOURS_PER_DAY : 1);
       totalHeures = r2(totalHeures + h);
       heuresHList.push(h);
+    } else if (l.type === "cession") {
+      const p = r2(num(l.prix));
+      materielPrincipalFinal = r2(materielPrincipalFinal + p);
+      totalPrincipalBase = r2(totalPrincipalBase + p);
+      totalAcompteMateriel = r2(totalAcompteMateriel + p);
     } else if (l.type === "materiel") {
       const p = r2(num(l.prix));
       if (l.devis === "debours") {
@@ -5025,6 +5091,7 @@ function rDevisSectionPrestations() {
   const declare = d.declare !== false;
   const heures   = (d.lignes || []).filter(l => l.type === "heures");
   const materiel = (d.lignes || []).filter(l => l.type === "materiel" && l.devis !== "debours");
+  const cessions = (d.lignes || []).filter(l => l.type === "cession");
 
   const objectInput = `<div class="row">
     <div class="field lg"><label>Type de prestation (catalogue)</label>
@@ -5066,6 +5133,12 @@ function rDevisSectionPrestations() {
       ${materiel.length ? materiel.map(l => rLigneDraggable(l)).join("") : `<div class="lg-empty">Aucun matériel facturé en principal</div>`}
     </div>
     <div class="lg-add"><button class="btn ghost" onclick="ligneAdd('materiel')">+ Matériel</button></div>
+
+    <h5>Cession de droits <span style="font-weight:normal;color:var(--text-muted);font-size:12px">— étendue, durée, territoire, supports (CPI L131-3)</span></h5>
+    <div class="lg-list" id="lgListCessions">
+      ${cessions.length ? cessions.map(l => rLigneDraggable(l)).join("") : `<div class="lg-empty">Aucune cession de droits — recommandé pour formaliser l'usage des photos par le client.</div>`}
+    </div>
+    <div class="lg-add"><button class="btn ghost" onclick="ligneAdd('cession')">+ Cession de droits</button></div>
   `;
 }
 
