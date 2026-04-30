@@ -1842,31 +1842,29 @@ const DEFAULT_CATALOG = [
 ];
 
 // =============================================================
-// TABLE DES MATIÈRES (line numbers approximatifs, à rafraîchir si gros refactor)
-// Lancer `grep -n "^function " index.html` pour resynchroniser.
+// TABLE DES MATIÈRES — naviguer par ancres (grep "// ▼ <nom>")
+// Les numéros de ligne dérivent ; les ancres voyagent avec le code.
+// Lister toutes les ancres :  grep -n "^// ▼ " index.html
 // =============================================================
-//   STATE & DEFAULTS                  ~1844-1900
-//     SK, DEFAULT_S, DEFAULT_CATALOG (au-dessus à 1820+)
-//   MIGRATIONS au load                ~1900-2080
-//     identité, paiement, blackMode, paiementType, dureeValidite, CGV, bugs
-//   PERSISTANCE                       ~2090-2170
-//     save, saveToCloud, loadFromCloud (Firestore + localStorage)
-//   CORE HELPERS                      ~2170-2700
-//     upd, recomputeRef, genFooterMentions, genHeaderEmetteur,
-//     validSiret, validityDate, mediateurBlock, retractationBlock
-//   PREVIEWS IMPRIMÉES                ~2630-3220
-//     rDevisPreview, rDeboursPreview, rFacturePreview
-//   FORMATAGE & TOTALS                ~3970-4250
-//     formatRef, totals, totalsHtml, refreshTotals
-//   FORMS DEVIS (accordion 6 sections) ~5540-5910
-//     rDevisAccordion, rDevisSection{Identification,Prestations,Deplacement,
-//     Ajustements,Modalites,Conditions}, rDevisPaneFooterInner
-//   SUIVI                             ~5320-7700
-//     validateDevis, suiviAdd, suiviUpdateSnapshot, suiviGroups, rSV
-//   AUTRES TABS                       ~7700-9000
-//     rCL (Clients), rCP (Compta), rTR (Tarifs), rPF (Profil), rBG (Report bug)
-//   DISPATCH & RENDER                 ~4250-4290
-//     renderers map (mission→rMS, profil→rPF, ...), render()
+//   STATE & DEFAULTS         SK, DEFAULT_S, DEFAULT_CATALOG (juste en dessous)
+//   MIGRATIONS au load       identité, paiement, blackMode, paiementType, dureeValidite, CGV, bugs
+//   PERSISTANCE              ▼ save  ▼ saveToCloud  ▼ loadFromCloud
+//   CORE HELPERS             ▼ upd  ▼ recomputeRef  ▼ genFooterMentions  ▼ genHeaderEmetteur
+//   PREVIEWS IMPRIMÉES       ▼ rDevisPreview  ▼ rDeboursPreview  ▼ rFacturePreview  ▼ rPreviewTabs
+//   LIGNES & TOTALS          ▼ rLigne  ▼ totals  ▼ rTauxBreakdown
+//   DISPATCH                 ▼ render  (mission→rMS, suivi→rSV, profil→rPF, ...)
+//   MODALS & SECTIONS        ▼ rContactPickerModal  ▼ rTextEditorModal  ▼ rEditSection
+//                            ▼ rPaiementFields  ▼ rCgvEditor  ▼ rLogoField
+//                            ▼ rPrintTipModal  ▼ rViewDevisModal  ▼ rViewFactureModal
+//                            ▼ computePrintFilename
+//   DEVIS — ACCORDION 6×     ▼ rMS  ▼ rDevisAccordion  ▼ rDevisSectionIdentification
+//                            ▼ rDevisSectionPrestations  ▼ rDevisSectionDeplacement
+//                            ▼ rDevisSectionAjustements  ▼ rDevisSectionModalites
+//                            ▼ rDevisSectionConditions  ▼ rDevisPaneFooterInner
+//   SUIVI                    ▼ validateDevis  ▼ suiviAdd  ▼ suiviAddLigne
+//                            ▼ rSuiviTimelineModal  ▼ rSV
+//   AUTRES TABS              ▼ rCL (Clients)  ▼ rCP (Compta)  ▼ rTR (Tarifs)
+//                            ▼ rPF (Profil)   ▼ rBG (Notes/bugs)
 // =============================================================
 
 const SK = "devis-photo-data-v2";
@@ -2134,12 +2132,14 @@ const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt
 const num = v => { const n = parseFloat(String(v).replace(",", ".")); return isFinite(n) ? n : 0; };
 const fmt = v => num(v).toFixed(2).replace(".", ",") + " €";
 
+// ▼ save() — flush localStorage + déclenche saveToCloud (debounce 800ms)
 function save() {
   localStorage.setItem(SK, JSON.stringify(S));
   clearTimeout(cloudT);
   cloudT = setTimeout(saveToCloud, 800);
 }
 
+// ▼ saveToCloud — Firestore set merge (top-level keys de S)
 async function saveToCloud() {
   if (!user) return;
   try {
@@ -2160,6 +2160,7 @@ async function saveToCloud() {
   } catch (err) { console.error("saveToCloud", err); }
 }
 
+// ▼ loadFromCloud — merge Firestore → S avec DEFAULT_S comme fallback
 async function loadFromCloud() {
   if (!user) return;
   try {
@@ -2201,6 +2202,7 @@ async function loadFromCloud() {
   render();
 }
 
+// ▼ upd — point d'entrée unique pour mutation de S
 function upd(path, val) {
   const keys = path.split(".");
   let o = S;
@@ -2294,6 +2296,7 @@ window.updDeplDevis = updDeplDevis;
 // Format : DEVIS-YYYY-MM-NNN, NNN reset chaque mois (arrêté 3 déc. 1987).
 // La séquence cherche le NNN max parmi les devis déjà émis (S.suivi.devis) du mois courant
 // et ajoute 1 — sauf si la mission elle-même est déjà dans le suivi (auquel cas on garde son ref).
+// ▼ recomputeRef — génère DEVIS-YYYY-MM-NNN
 function recomputeRef() {
   const date = S.mission.dateEmission || "";
   if (!date || date.length < 7) {
@@ -2515,6 +2518,7 @@ function tvaMention(identite) {
   return "TVA selon taux en vigueur";
 }
 
+// ▼ genFooterMentions — pied imprimé (TVA, statut, mentions légales)
 function genFooterMentions(identite, variant) {
   const parts = [statusLabel(identite)];
   if (variant === "debours") parts.push("Refacturation au centime près sur justificatifs");
@@ -2570,6 +2574,7 @@ function validSiret(siret) {
 
 // Build the emitter header HTML from S.identite. Falls back to legacy richtext if no structured field is filled.
 // Returns the inner HTML of the emitter block (caller wraps in .dp-header-emetteur or .dp-header-left).
+// ▼ genHeaderEmetteur — entête imprimé (logo + identité)
 function genHeaderEmetteur(identite, photographeRichtext) {
   const id = identite || {};
   const hasStructured = !!(id.nom || id.prenom || id.denomination || id.siret);
@@ -2655,6 +2660,7 @@ function validityText(dateEmission, dureeValidite) {
 }
 
 // ============ DEVIS PREVIEW (rendered at the bottom of Mission) ============
+// ▼ rDevisPreview — preview imprimée du devis principal
 function rDevisPreview() {
   const d = S.mission;
   const t = totals();
@@ -2939,6 +2945,7 @@ window.setPreviewTab = function(tab) {
 };
 
 // ============ DÉBOURS PREVIEW ============
+// ▼ rDeboursPreview — preview feuille débours
 function rDeboursPreview() {
   const d = S.mission;
   const t = totals();
@@ -3122,6 +3129,7 @@ function rDeboursPreview() {
 }
 
 // ============ FACTURE PREVIEW ============
+// ▼ rFacturePreview — preview facture (opts: acompte/solde)
 function rFacturePreview(opts) {
   // opts: { paidEntries: [{label, amount, date}] } — list of paid échéances. If null, treats as draft (paid=0).
   const d = S.mission;
@@ -3235,6 +3243,7 @@ function rFacturePreview(opts) {
 }
 
 // ============ TABBED PREVIEW WRAPPER ============
+// ▼ rPreviewTabs — onglets Devis/Débours dans la preview live
 function rPreviewTabs() {
   const d = S.mission;
   const t = totals();
@@ -3264,6 +3273,7 @@ let cliPickQuery = "";
 let cliPickCreating = false;
 let cliPickDraft = { num:"", name:"", contact:"", address:"", cityPostal:"", phone:"", email:"", rencontre:"" };
 
+// ▼ rClientPicker — modal de sélection client
 function rClientPicker() {
   const c = S.mission.client || {};
   const sel = c.id ? S.clients.entries.find(x => x.id === c.id) : null;
@@ -3902,6 +3912,7 @@ window.hideRemiseInfo = function() {
   if (_paiementTooltipEl) _paiementTooltipEl.style.display = "none";
 };
 
+// ▼ rLigne — rendu d'une ligne (heures/matériel/cession)
 function rLigne(l) {
   const isExpanded = expandedLignes.has(l.id);
   const hasDesc = (l.description || "").trim().length > 0;
@@ -4029,6 +4040,7 @@ function delaiPaiementLabel(k) {
   return d ? d.l : "";
 }
 
+// ▼ totals — calcul HT/TVA/TTC, brut/net, débours, marge avance
 function totals() {
   const d = S.mission;
   // Hourly rate logic. The catalog price `cat.p` is the photographer's gross billed price
@@ -4177,6 +4189,7 @@ function totals() {
   };
 }
 
+// ▼ rTauxBreakdown — décomposition du taux horaire
 function rTauxBreakdown() {
   // Inline breakdown shown under "Temps de trajet" when "Lisser dans taux horaire" mode is active.
   const d = S.mission;
@@ -4269,6 +4282,7 @@ function totalsHtml(t) {
   `;
 }
 
+// ▼ render — DISPATCHER : recompose app.innerHTML par onglet
 function render() {
   if (!user) {
     app.innerHTML = `<div class="login"><h1>🌊 Devis Photo</h1><button class="btn" onclick="signIn()">Se connecter avec Google</button></div>`;
@@ -4299,6 +4313,7 @@ window.contactPickerToggleOpen = function(open) {
 };
 
 // Modal that overlays the page when picking from multiple contacts
+// ▼ rContactPickerModal — modal contact d'un client
 function rContactPickerModal() {
   if (!contactPickerModalOpen) return "";
   const c = S.mission.client || {};
@@ -4329,6 +4344,7 @@ function rContactPickerModal() {
 }
 
 // Inline display: shown to the right of the Client field — same look as regular field text
+// ▼ rContactInline — affichage inline d'un contact
 function rContactInline() {
   const c = S.mission.client || {};
   if (!c.id) return "";
@@ -4588,6 +4604,7 @@ window.textEditorSize = function(size) {
   textEditorCmd("fontSize", size);
 };
 
+// ▼ rTextEditorModal — éditeur richtext modal
 function rTextEditorModal() {
   if (!textEditorModal) return "";
   const field = textEditorModal.field;
@@ -4652,6 +4669,7 @@ function rTextEditorModal() {
 // Module-scoped state: which sections are open. Default: all closed.
 const _editSectionOpen = { logo: false, photographe: false, modalites: false, signature: false, cgv: false };
 
+// ▼ rEditSection — wrapper accordéon éditable
 function rEditSection(key, title, bodyHtml, headerActionHtml = "") {
   const open = !!_editSectionOpen[key];
   return `<div class="edit-section ${open ? 'open' : ''}" data-edit-section="${key}">
@@ -4677,6 +4695,7 @@ window.editSectionToggle = function(key) {
   if (header) header.setAttribute("aria-expanded", open ? "true" : "false");
 };
 
+// ▼ rPaiementFields — bloc IBAN/BIC/banque dans le devis
 function rPaiementFields() {
   const p = (S.mission && S.mission.paiement) || {};
   const b = (S.identite && S.identite.bank) || {};
@@ -4719,6 +4738,7 @@ window.paiementClearLegacy = function() {
   render();
 };
 
+// ▼ rCgvEditor — éditeur des sections CGV
 function rCgvEditor() {
   const sections = (S.mission.cgvSections || []);
   const preambule = S.mission.cgvPreambule || "";
@@ -4757,6 +4777,7 @@ function rCgvEditor() {
   `;
 }
 
+// ▼ rLogoField — upload/preview du logo Profil
 function rLogoField() {
   const url = (S.mission && S.mission.logoUrl) || "";
   if (url) {
@@ -4835,6 +4856,7 @@ window.viewDevisPrint = function() {
 };
 
 // Compute the suggested PDF filename for the currently open print modal
+// ▼ computePrintFilename — nom de fichier PDF (devis/débours/facture)
 function computePrintFilename() {
   let dv = null, kind = "Devis";
   if (typeof viewDevisModal !== "undefined" && viewDevisModal) {
@@ -4921,6 +4943,7 @@ const ENCADRE_LABELS = {
   cgv: "Conditions générales de vente (CGV)"
 };
 
+// ▼ rPrintTipModal — modale d'aide impression
 function rPrintTipModal() {
   if (!printTipModalOpen) return "";
   return `<div class="modal-overlay" onclick="if(event.target===this)printTipDismiss(false)">
@@ -4945,6 +4968,7 @@ function rPrintTipModal() {
   </div>`;
 }
 
+// ▼ rViewDevisModal — modal Suivi : visu/impression devis archivé
 function rViewDevisModal() {
   if (!viewDevisModal) return "";
   const dv = S.suivi.devis && S.suivi.devis[viewDevisModal.devisId];
@@ -4983,6 +5007,7 @@ function rViewDevisModal() {
   </div>`;
 }
 
+// ▼ rViewFactureModal — modal Suivi : visu/impression facture
 function rViewFactureModal() {
   if (!viewFactureModal) return "";
   const devisId = viewFactureModal.devisId;
@@ -5352,6 +5377,7 @@ function refreshDevisHeaders() {
 // ----------------------------------------------------------------------------
 // VALIDATION — pure. Renvoie { errors, warnings, ok } pour le bandeau preview.
 // ----------------------------------------------------------------------------
+// ▼ validateDevis — règles de validation avant archivage
 function validateDevis() {
   const d = S.mission;
   const t = totals();
@@ -5547,6 +5573,7 @@ function rLigneDraggable(l) {
 // (rDevisPreview/rDeboursPreview) et tous les handlers (ligneAdd/echeanceAdd/...)
 // sont réutilisés tels quels.
 // ============================================================================
+// ▼ rMS — RENDERER onglet Mission/Devis
 function rMS() {
   // Au premier rendu après un load, on ouvre les 2 sections les plus utilisées.
   // Une fois que l'user a touché à n'importe quelle section v2, on respecte son choix.
@@ -5573,6 +5600,7 @@ function rDV() { return ""; }
 // comme frère flex de .edit-section-title (margin-left:auto via CSS) → pas
 // collé au titre.
 // ----------------------------------------------------------------------------
+// ▼ rDevisAccordion — squelette des 6 sections du formulaire devis
 function rDevisAccordion() {
   const sums = devisSectionSummaries();
   return `<div class="edit-accordion-list">
@@ -5601,6 +5629,7 @@ function rEditSectionRaw(key, title, summaryHtml, bodyHtml, headerActionHtml = "
 // ----------------------------------------------------------------------------
 // SECTION 1 — Identification & client (réf auto, date, picker client + contact)
 // ----------------------------------------------------------------------------
+// ▼ rDevisSectionIdentification — § 1/6 (référence + client)
 function rDevisSectionIdentification() {
   const d = S.mission;
   const duree = (typeof d.dureeValidite === "number" && d.dureeValidite > 0) ? d.dureeValidite : 30;
@@ -5668,6 +5697,7 @@ function rDevisSectionIdentification() {
 // ----------------------------------------------------------------------------
 // SECTION 2 — Prestations (objet + heures + matériel + drag-reorder)
 // ----------------------------------------------------------------------------
+// ▼ rDevisSectionPrestations — § 2/6 (lignes heures/matériel/cession)
 function rDevisSectionPrestations() {
   const d = S.mission;
   const declare = d.declare !== false;
@@ -5727,6 +5757,7 @@ function rDevisSectionPrestations() {
 // ----------------------------------------------------------------------------
 // SECTION 3 — Déplacement & frais débours
 // ----------------------------------------------------------------------------
+// ▼ rDevisSectionDeplacement — § 3/6 (déplacement)
 function rDevisSectionDeplacement() {
   const d = S.mission;
   const mode = d.deplacement.mode || "voiture";
@@ -5816,6 +5847,7 @@ function rDevisSectionDeplacement() {
 // ----------------------------------------------------------------------------
 // SECTION 4 — Ajustements (remise + URSSAF + marge avance)
 // ----------------------------------------------------------------------------
+// ▼ rDevisSectionAjustements — § 4/6 (remise, autres)
 function rDevisSectionAjustements() {
   const d = S.mission;
   const declare = d.declare !== false;
@@ -5871,6 +5903,7 @@ function rDevisSectionAjustements() {
 // ----------------------------------------------------------------------------
 // SECTION 5 — Modalités de paiement (échéances + délai + IBAN/BIC/banque/titulaire)
 // ----------------------------------------------------------------------------
+// ▼ rDevisSectionModalites — § 5/6 (paiement, échéances)
 function rDevisSectionModalites() {
   const d = S.mission;
   const ts = totals();
@@ -5915,6 +5948,7 @@ function rDevisSectionModalites() {
 // ----------------------------------------------------------------------------
 // SECTION 6 — Conditions & signature (logo + photographe + paiement-text + CGV + signature)
 // ----------------------------------------------------------------------------
+// ▼ rDevisSectionConditions — § 6/6 (CGV, signature)
 function rDevisSectionConditions() {
   const d = S.mission;
   return `
@@ -5935,6 +5969,7 @@ function rDevisSectionConditions() {
 // PREVIEW PANE FOOTER — bandeau validation/dirty + bouton "Enregistrer"
 // Ré-rendu dynamiquement par refreshDevisHeaders() pour mise à jour live.
 // ----------------------------------------------------------------------------
+// ▼ rDevisPaneFooterInner — barre sticky (bouton archivage)
 function rDevisPaneFooterInner() {
   const v = validateDevis();
   const dirty = devisIsDirty();
@@ -6215,6 +6250,7 @@ function suiviRecomputeRefs() {
   }
 }
 
+// ▼ suiviAdd — archive le devis : 2 entries Suivi + 2 snapshots
 function suiviAdd() {
   const m = S.mission;
   const cat = (S.tarifs.catalog || DEFAULT_CATALOG).find(c => c.k === m.object);
@@ -6648,6 +6684,7 @@ function suiviDel(id) {
 }
 window.suiviDel = suiviDel;
 
+// ▼ suiviAddLigne — ajoute une entry à un devis Suivi existant
 function suiviAddLigne(devisId) {
   if (!S.suivi.devis[devisId]) S.suivi.devis[devisId] = { ref: "" };
   const lignes = suiviGroupLigne(devisId);
@@ -7246,6 +7283,7 @@ function suiviTimelineStepHtml(e) {
     </div>`;
 }
 
+// ▼ rSuiviTimelineModal — modal timeline d'un devis Suivi
 function rSuiviTimelineModal() {
   if (!suiviTimelineModal) return "";
   const devisId = suiviTimelineModal.devisId;
@@ -7318,6 +7356,7 @@ function rSuiviTimelineModal() {
 // Une ligne par devis. Click ligne → modale timeline. Édition avancée
 // toujours accessible via la modale ou via "⋮" qui ouvre le panneau hérité.
 // ============================================================================
+// ▼ rSV — RENDERER onglet Suivi
 function rSV() {
   const list = suiviGroups();
   const stats = suiviStats(list);
@@ -7737,6 +7776,7 @@ function clientContactUpd(clientId, contactId, field, val) {
 }
 window.clientContactUpd = clientContactUpd;
 
+// ▼ rCL — RENDERER onglet Clients
 function rCL() {
   const entries = S.clients.entries;
   const stop = "event.stopPropagation();";
@@ -8402,6 +8442,7 @@ function bilanRender() {
   return { body: rows.join(""), foot };
 }
 
+// ▼ rCP — RENDERER onglet Compta
 function rCP() {
   const bilan = bilanRender();
   return `
@@ -8429,6 +8470,7 @@ function rCP() {
   `;
 }
 
+// ▼ rTR — RENDERER onglet Tarifs
 function rTR() {
   // Prestations editing
   const cat = S.tarifs.catalog || DEFAULT_CATALOG;
@@ -8704,6 +8746,7 @@ function rTR() {
   `;
 }
 
+// ▼ rPF — RENDERER onglet Profil
 function rPF() {
   const id = S.identite || DEFAULT_S.identite;
   const formeOpts = [
@@ -8891,6 +8934,7 @@ function rPF() {
   `;
 }
 
+// ▼ rBG — RENDERER onglet Notes/bugs
 function rBG() {
   if (!S.bugs || !Array.isArray(S.bugs.items)) S.bugs = { items: [] };
   let h = `<h2>Notes <span id="savedFlash" class="saved"></span></h2>`;

@@ -90,6 +90,8 @@ Feuille débours : `rDeboursPreview()`. Bloc dans le devis principal : `.dp-debo
 - **Challenger bienvenu** : tu es autorisé — et encouragé — à proposer des améliorations, questions, ou alternatives auxquelles je n'aurais pas pensé. Sépare-les clairement de ce que j'ai demandé. Pour chacune, indique : à faire maintenant / plus tard / juste à noter.
 - **Demander plutôt que deviner** sur les points métier (statut fiscal, conventions, intentions produit). Mieux vaut une question qu'une supposition.
 - **Sanity check après gros édit** : lancer `./check.sh` après tout `sed` ou Edit multi-zones, **avant** `git commit`.
+- **Navigation par ancres** dans `index.html` : pour localiser une fonction, `grep "^// ▼ <nom>"` plutôt que les numéros de ligne du TOC. Lister toutes les ancres : `grep -n "^// ▼ " index.html`. Quand tu ajoutes une fonction-clé (renderer `rXX`, helper exposé, modal), pose une ancre au format `// ▼ <nom> — <description courte>` au-dessus.
+- **Grep avant Edit sur `index.html`** : avant tout `Edit`, vérifier l'unicité de `old_string` (`grep -c` ou `grep -n`). Sur un fichier de 9 000 lignes, beaucoup de patterns courts collisionnent (`esc(...)`, `${...}`, `S.mission.client.name`). Si non unique, élargir le contexte ou cibler via une ancre voisine.
 
 ## Fin de session
 

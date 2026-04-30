@@ -65,7 +65,31 @@ for fn in "${KEY_FUNCTIONS[@]}"; do
   fi
 done
 
-# 4. Le fichier ne doit pas avoir grossi/rétréci de plus de 30% par rapport
+# 4. Invariant schéma S : chaque clé top-level de DEFAULT_S doit être présente
+# dans saveToCloud (Firestore set) ET dans loadFromCloud (merge fallback).
+# Filet anti-piège récurrent : ajout d'un champ oublié dans la sync cloud.
+keys=$(awk '
+  /^const DEFAULT_S = \{/ { in_block=1; next }
+  in_block && /^};/        { in_block=0 }
+  in_block && /^  [a-zA-Z_]+:/ {
+    sub(/:.*/, ""); sub(/^  */, ""); print
+  }
+' "$FILE")
+
+for k in $keys; do
+  # saveToCloud : la clé apparaît sous forme "<key>: S.<key>" (unique dans ce codebase).
+  if ! grep -qE "^[[:space:]]*${k}: *S\.${k}\b" "$FILE"; then
+    echo "✗ Clé '${k}' présente dans DEFAULT_S mais absente de saveToCloud"
+    ERR=1
+  fi
+  # loadFromCloud : la clé est testée via "if (d.<key>" ou "d.<key>" (toutes les variantes utilisées).
+  if ! grep -qE "if \(d\.${k}\b" "$FILE"; then
+    echo "✗ Clé '${k}' présente dans DEFAULT_S mais absente de loadFromCloud"
+    ERR=1
+  fi
+done
+
+# 5. Le fichier ne doit pas avoir grossi/rétréci de plus de 30% par rapport
 # au dernier commit (filet anti-suppression massive accidentelle).
 if git rev-parse --git-dir >/dev/null 2>&1; then
   prev_size=$(git show HEAD:"$FILE" 2>/dev/null | wc -c || echo 0)
