@@ -243,6 +243,7 @@
     box-shadow:0 4px 16px rgba(0,0,0,.35);padding:6px;display:flex;flex-direction:column;gap:2px;
     font-weight:400;text-transform:none;letter-spacing:0;font-size:13px;color:var(--text)}
   .th-menu-section{font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.04em;padding:6px 10px 4px}
+  .th-menu-divider{height:1px;background:var(--border-soft);margin:4px 0}
   .th-menu-item{display:grid;grid-template-columns:18px 1fr auto;gap:8px;align-items:center;
     padding:6px 10px;background:transparent;border:0;border-radius:5px;cursor:pointer;
     font:inherit;font-size:13px;color:var(--text);text-align:left;transition:background .12s}
@@ -7081,12 +7082,10 @@ function suiviSortKey(field) {
   render();
 }
 
-// Click sur l'en-tête « Date » : tri (toggle asc/desc) + ouverture du menu
-// (filtre année). Re-cliquer toggle le tri et garde le menu ouvert ; pour
-// fermer, l'utilisateur clique sur le backdrop transparent ou choisit une année.
+// Click sur l'en-tête « Date » : ouvre/ferme le menu déroulant. Le tri et le
+// filtre se choisissent ensuite dans le menu (pattern Excel / Google Sheets).
 function suiviHeaderMenuToggleDate() {
-  suiviSortKey("date"); // déclenche déjà render
-  suiviHeaderMenu = "date";
+  suiviHeaderMenu = (suiviHeaderMenu === "date") ? null : "date";
   render();
 }
 window.suiviHeaderMenuToggleDate = suiviHeaderMenuToggleDate;
@@ -7098,6 +7097,15 @@ function suiviHeaderMenuClose() {
 }
 window.suiviHeaderMenuClose = suiviHeaderMenuClose;
 
+// Choix d'un sens de tri depuis le menu : applique + ferme le menu.
+function suiviPickSort(field, dir) {
+  suiviHeaderMenu = null;
+  suiviSort.field = field;
+  suiviSort.dir = dir;
+  render();
+}
+window.suiviPickSort = suiviPickSort;
+
 // Choix d'une année dans le menu : applique le filtre + ferme le menu.
 function suiviPickYear(v) {
   suiviHeaderMenu = null;
@@ -7105,20 +7113,34 @@ function suiviPickYear(v) {
 }
 window.suiviPickYear = suiviPickYear;
 
-// Menu déroulant ancré sous l'en-tête « Date » : liste des années disponibles
-// avec compteur de devis pour chacune. Inclut un backdrop transparent pour
-// fermer au clic en dehors.
+// Menu déroulant ancré sous l'en-tête « Date » : choix de sens de tri puis
+// filtre par année. Backdrop transparent pour fermer au clic en dehors.
 function suiviDateMenuHtml() {
   const years = suiviYears();
   const all = suiviGroupsAll();
   const countYear = (y) => all.filter(g => g.lignes.some(e => (e.date || "").startsWith(y))).length;
   const stop = "event.stopPropagation();";
+  const sortActive = suiviSort.field === "date";
+  const isAsc = sortActive && suiviSort.dir === "asc";
+  const isDesc = sortActive && suiviSort.dir === "desc";
   const items = [
     { value: "all", label: "Toutes les années", n: all.length }
   ].concat(years.map(y => ({ value: y, label: y, n: countYear(y) })));
   return `
     <div class="th-menu-backdrop" onclick="${stop}suiviHeaderMenuClose()"></div>
     <div class="th-menu" onclick="${stop}">
+      <div class="th-menu-section">Trier</div>
+      <button type="button" class="th-menu-item ${isAsc ? 'on' : ''}"
+        onclick="${stop}suiviPickSort('date','asc')">
+        <span class="th-menu-radio">${isAsc ? '●' : '○'}</span>
+        <span class="th-menu-label">↑ Plus ancien d'abord</span>
+      </button>
+      <button type="button" class="th-menu-item ${isDesc ? 'on' : ''}"
+        onclick="${stop}suiviPickSort('date','desc')">
+        <span class="th-menu-radio">${isDesc ? '●' : '○'}</span>
+        <span class="th-menu-label">↓ Plus récent d'abord</span>
+      </button>
+      <div class="th-menu-divider"></div>
       <div class="th-menu-section">Filtrer par année</div>
       ${items.map(it => `<button type="button" class="th-menu-item ${suiviFilterYear === it.value ? 'on' : ''}"
         onclick="${stop}suiviPickYear('${esc(it.value)}')">
