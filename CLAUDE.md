@@ -18,6 +18,16 @@ App web personnelle pour générer des devis photographe.
 - **Échappement** : toute valeur dynamique injectée dans du HTML passe par `esc()`.
 - **Firebase v8** (pas v9 modulaire) — garder l'API `firebase.auth()`, `db.collection(...)`. Pas de `import`.
 
+## Fin de session
+
+Avant un `/clear` ou tout signal de fin de session ("on arrête là", "à demain", "fin de session", etc.), demander proactivement à l'utilisateur :
+
+> Au vu de ce qu'on vient de faire, qu'est-ce qui mériterait d'être ajouté au CLAUDE.md pour qu'une prochaine session démarre mieux ? Propose des ajouts précis avec leur emplacement dans le fichier.
+
+Objectif : capturer les conventions, pièges et contextes nouveaux apparus pendant la session avant que le contexte ne soit perdu. La proposition doit être **précise** (nouveau point de bullet, nouvelle sous-section, modification d'une règle existante) avec **l'emplacement exact** (section + position).
+
+Note technique : la commande `/clear` est interceptée par le runtime — Claude ne la voit pas comme un message. Pour un déclenchement 100 % automatique sur cette commande il faut un hook `Stop` dans `settings.json` (skill `update-config`). À défaut, s'appuyer sur les autres signaux verbaux de fin de session.
+
 ## Persistance
 
 Flux de données sous `S` :
