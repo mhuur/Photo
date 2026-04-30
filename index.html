@@ -583,6 +583,8 @@
   .devis-preview .dp-retractation{margin-top:14px;padding:8px 12px;border-left:3px solid var(--accent,#3498db);background:rgba(52,152,219,.05);border-radius:0 4px 4px 0;font-size:11.5px;color:var(--text-muted);line-height:1.5}
   .devis-preview .dp-retractation .dp-mediateur-title{font-weight:600;color:var(--text);text-transform:uppercase;font-size:10px;letter-spacing:.06em;margin-bottom:3px}
   .devis-preview .dp-cgv-fallback{margin-top:14px;font-style:italic;font-size:11px;color:var(--text-dim);text-align:center}
+  .devis-preview .dp-justif-badge{display:inline-block;font-size:10px;padding:1px 6px;border:1px solid var(--success,#2e7d32);color:var(--success,#2e7d32);border-radius:3px;font-weight:600;letter-spacing:.02em;margin-left:4px}
+  .devis-preview .dp-justif-badge.dp-justif-pending{border-color:var(--warning,#f57c00);color:var(--warning,#f57c00)}
   .devis-preview .dp-header-right{display:flex;flex-direction:column;align-items:flex-end;gap:0}
   .devis-preview .dp-meta-block{text-align:right;font-size:13px;color:var(--text-muted);line-height:1.6;margin-bottom:0}
   .devis-preview .dp-meta-block .ref{color:var(--text);font-weight:700;font-size:16px;font-variant-numeric:tabular-nums;margin-bottom:10px;letter-spacing:.01em}
@@ -847,6 +849,12 @@
     .devis-preview .dp-cgv-fallback, .view-devis-snapshot .dp-cgv-fallback {
       margin-top: 8pt !important; font-style: italic !important;
       font-size: 7.5pt !important; color: #555 !important; text-align: center !important;
+    }
+    .devis-preview .dp-justif-badge, .view-devis-snapshot .dp-justif-badge {
+      display: inline-block !important; font-size: 6.5pt !important;
+      padding: 0pt 3pt !important; border: 0.5pt solid #1a1a1a !important;
+      border-radius: 1pt !important; color: #1a1a1a !important;
+      font-weight: 600 !important; letter-spacing: .03em !important; margin-left: 3pt !important;
     }
     .devis-preview .dp-header-right, .view-devis-snapshot .dp-header-right {
       text-align: right !important;
@@ -1608,6 +1616,9 @@
   .lg-section-mat{margin-top:30px}
   .lg-row-wrap{display:flex;flex-direction:column;gap:6px}
   .lg-row{display:flex;align-items:center;gap:10px}
+  .lg-justif{display:inline-flex;align-items:center;gap:4px;height:var(--input-h);padding:0 8px;border:1px solid var(--border);background:var(--surface-2);color:var(--text-muted);border-radius:6px;font-size:11px;cursor:pointer;flex-shrink:0;font-variant-numeric:tabular-nums;transition:background .12s,color .12s,border-color .12s}
+  .lg-justif:hover{border-color:var(--primary);color:var(--text)}
+  .lg-justif.on{background:var(--success-soft,#e8f5e9);color:var(--success,#2e7d32);border-color:var(--success,#2e7d32);font-weight:600}
   .lg-cession-detail{padding:10px 14px;background:var(--surface-2);border-radius:6px;display:flex;flex-direction:column;gap:8px;margin-left:0;margin-top:2px}
   .lg-cession-detail .row{margin:0;gap:10px}
   .lg-cession-detail .field label{font-size:11px;color:var(--text-muted);margin-bottom:2px}
@@ -2748,9 +2759,12 @@ function rDeboursPreview() {
   for (const l of (d.lignes || [])) {
     if (l.type === "materiel" && l.devis === "debours") {
       lineNum++;
+      const justifBadge = l.justificatifJoint
+        ? `<span class="dp-justif-badge">✓ Justificatif joint</span>`
+        : `<span class="dp-justif-badge dp-justif-pending">Justificatif à fournir</span>`;
       linesHtml += `<div class="dp-line">
         <div class="num">${lineNum}.</div>
-        <div class="lbl">${esc(l.intitule || "(Sans intitulé)")}<div class="desc">${l.description ? esc(l.description) : "Frais débours"}</div></div>
+        <div class="lbl">${esc(l.intitule || "(Sans intitulé)")}<div class="desc">${l.description ? esc(l.description) : "Frais débours"} · ${justifBadge}</div></div>
         <div class="qty"></div>
         <div class="amt">${fmt(num(l.prix))}</div>
       </div>`;
@@ -3679,6 +3693,9 @@ function rLigne(l) {
           <button class="${pmt==='acompte'?'on':''}" onclick="ligneSetPaiement('${l.id}','acompte')" title="Inclus dans l'acompte à la commande">Acompte</button>
           <button class="${pmt==='avance'?'on':''}" onclick="ligneSetPaiement('${l.id}','avance')" title="Tu avances la dépense, marge appliquée">Avance</button>
         </div>`;
+    const justifBtn = isDebours
+      ? `<button class="lg-justif ${l.justificatifJoint?'on':''}" onclick="ligneUpd('${l.id}','justificatifJoint',!${!!l.justificatifJoint});render()" title="${l.justificatifJoint?'Justificatif joint ✓ (cliquer pour retirer)':'Justificatif non encore joint (cliquer pour cocher)'}">${l.justificatifJoint?'✓ Justif.':'○ Justif.'}</button>`
+      : "";
     return `<div class="lg-row-wrap" data-id="${l.id}">
       <div class="lg-row">
         <input class="lg-title" placeholder="Intitulé (ex : Pellicule, Location studio…)" value="${esc(l.intitule)}" oninput="ligneUpd('${l.id}','intitule',this.value)">
@@ -3691,6 +3708,7 @@ function rLigne(l) {
           <button class="${l.devis==='debours'?'on warn':''}" onclick="ligneSetDevis('${l.id}','debours')">Débours</button>
         </div>
         ${paiementModeHtml}
+        ${justifBtn}
         <button class="lg-info-icon" onmouseenter="showPaiementInfo(event, 'ligne', '${l.id}')" onmouseleave="hidePaiementInfo()" onfocus="showPaiementInfo(event, 'ligne', '${l.id}')" onblur="hidePaiementInfo()" tabindex="0" aria-label="Voir les conséquences fiscales de ce choix">i</button>
         ${expandBtn}
         <button class="lg-del" onclick="ligneDel('${l.id}')" title="Supprimer">×</button>
