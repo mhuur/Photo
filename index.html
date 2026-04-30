@@ -309,7 +309,7 @@
 
   /* Statut field with (i) info button + tooltip on hover/focus */
   .seg-with-info{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
-  .tarif-info{position:relative;display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:50%;background:var(--surface-2);border:1px solid var(--border-light);color:var(--text-muted);font-size:12px;font-weight:700;font-style:italic;cursor:help;user-select:none;flex-shrink:0;padding:0;font-family:inherit;transition:color .12s,background .12s,border-color .12s}
+  .tarif-info{position:relative;display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;background:transparent;border:1px solid var(--border-light);color:var(--text-muted);font-size:13px;font-weight:600;font-style:italic;cursor:help;user-select:none;flex-shrink:0;padding:0;font-family:inherit;transition:color .12s,background .12s,border-color .12s}
   .tarif-info:hover,.tarif-info:focus{outline:none;color:var(--primary);border-color:var(--primary);background:var(--primary-soft)}
   .tarif-tooltip{position:absolute;top:calc(100% + 8px);left:50%;transform:translateX(-50%);background:var(--surface);border:1px solid var(--border-light);border-radius:8px;padding:14px 16px;box-shadow:var(--shadow);z-index:100;display:none;min-width:340px;text-align:left;font-style:normal;font-weight:normal;color:var(--text);cursor:default}
   .tarif-tooltip::before{content:"";position:absolute;top:-6px;left:50%;transform:translateX(-50%) rotate(45deg);width:10px;height:10px;background:var(--surface);border-left:1px solid var(--border-light);border-top:1px solid var(--border-light)}
@@ -340,7 +340,7 @@
   .row .field.lg{max-width:520px}
   .row .field.xl{max-width:none}
   .row .field.narrow{max-width:160px}
-  .row .field.tiny{max-width:90px}
+  .row .field.tiny{max-width:140px}
 
   /* Client picker */
   .cli-pick{position:relative;max-width:320px}
@@ -1500,7 +1500,7 @@
   .ech-row .pct-wrap input:focus{outline:none}
   .ech-row .pct-wrap .unit{color:var(--text-dim);font-size:13px}
   /* (i) info button on échéance rows — tooltip shows acompte suggestion */
-  .ech-info-icon{position:relative;background:transparent;border:1px solid var(--border-light);color:var(--text-muted);width:24px;height:24px;border-radius:50%;cursor:help;font-size:11px;font-weight:700;font-style:italic;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .15s;padding:0;line-height:1}
+  .ech-info-icon{position:relative;background:transparent;border:1px solid var(--border-light);color:var(--text-muted);width:22px;height:22px;border-radius:50%;cursor:help;font-size:13px;font-weight:600;font-style:italic;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .15s;padding:0;line-height:1}
   .ech-info-icon:hover,.ech-info-icon:focus{border-color:var(--primary);color:var(--primary);background:var(--primary-soft);outline:none}
   .ech-info-tooltip{position:absolute;bottom:calc(100% + 8px);left:50%;transform:translateX(-50%);background:var(--surface);border:1px solid var(--border);border-radius:8px;box-shadow:0 12px 32px rgba(0,0,0,.45);padding:10px 14px;width:300px;font-size:12px;font-style:normal;font-weight:400;text-align:left;color:var(--text-muted);line-height:1.5;letter-spacing:normal;display:none;z-index:1000;pointer-events:none;white-space:normal}
   .ech-info-tooltip strong{color:var(--text);font-weight:600}
@@ -1515,8 +1515,8 @@
   .ech-row.ech-total.ok .pct-total{color:var(--success)}
   .ech-row.ech-total.warn .pct-total{color:var(--warning)}
   /* Remise input with (i) info button */
-  .remise-input-wrap{display:flex;align-items:center;gap:8px}
-  .remise-input-wrap input{flex:1}
+  .remise-input-wrap{display:flex;align-items:center;gap:6px}
+  .remise-input-wrap input{flex:1;min-width:0}
   .remise-tooltip{position:absolute;top:calc(100% + 8px);left:0;background:var(--surface);border:1px solid var(--border);border-radius:8px;box-shadow:0 12px 32px rgba(0,0,0,.45);padding:14px 16px;width:340px;font-size:12px;font-style:normal;font-weight:400;text-align:left;color:var(--text-muted);line-height:1.5;letter-spacing:normal;display:none;z-index:1000;pointer-events:none}
   .ech-info-icon:hover .remise-tooltip,.ech-info-icon:focus .remise-tooltip{display:block}
   .ech-info-icon{position:relative}
@@ -1713,7 +1713,7 @@
   .lg-toggle-pmt.static button{cursor:default;opacity:.85}
   .lg-toggle-pmt.static button:disabled{background:var(--primary-soft);color:var(--primary);border-color:var(--primary-soft)}
   /* Info icon (i) — opens a tooltip on hover/focus */
-  .lg-info-icon{background:transparent;border:1px solid var(--border-light);color:var(--text-muted);width:24px;height:24px;border-radius:50%;cursor:help;font-size:11px;font-weight:700;font-style:italic;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .15s;padding:0;line-height:1}
+  .lg-info-icon{background:transparent;border:1px solid var(--border-light);color:var(--text-muted);width:22px;height:22px;border-radius:50%;cursor:help;font-size:13px;font-weight:600;font-style:italic;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .15s;padding:0;line-height:1}
   .lg-info-icon:hover,.lg-info-icon:focus{border-color:var(--primary);color:var(--primary);background:var(--primary-soft);outline:none}
   /* Tooltip element appended to body, positioned via JS */
   .paiement-tooltip-wrap{position:fixed;z-index:9999;background:var(--surface);border:1px solid var(--border);border-radius:8px;box-shadow:0 12px 32px rgba(0,0,0,.45);padding:0;width:380px;max-width:calc(100vw - 24px);font-size:12px;pointer-events:none}
