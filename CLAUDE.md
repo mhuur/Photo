@@ -20,13 +20,13 @@ App web personnelle pour générer des devis photographe.
 
 ## Fin de session
 
-Avant un `/clear` ou tout signal de fin de session ("on arrête là", "à demain", "fin de session", etc.), demander proactivement à l'utilisateur :
+Mot-clé de fin de session : **« Kenavo ! »** (au revoir en breton). Quand l'utilisateur écrit ce mot, répondre **avant** toute autre chose par la question :
 
 > Au vu de ce qu'on vient de faire, qu'est-ce qui mériterait d'être ajouté au CLAUDE.md pour qu'une prochaine session démarre mieux ? Propose des ajouts précis avec leur emplacement dans le fichier.
 
-Objectif : capturer les conventions, pièges et contextes nouveaux apparus pendant la session avant que le contexte ne soit perdu. La proposition doit être **précise** (nouveau point de bullet, nouvelle sous-section, modification d'une règle existante) avec **l'emplacement exact** (section + position).
+Objectif : capturer les conventions, pièges et contextes nouveaux apparus pendant la session avant que l'utilisateur ne `/clear`. La proposition doit être **précise** : nouveau point de bullet, nouvelle sous-section, ou modification d'une règle existante, avec **l'emplacement exact** (section + position dans le fichier).
 
-Note technique : la commande `/clear` est interceptée par le runtime — Claude ne la voit pas comme un message. Pour un déclenchement 100 % automatique sur cette commande il faut un hook `Stop` dans `settings.json` (skill `update-config`). À défaut, s'appuyer sur les autres signaux verbaux de fin de session.
+Une fois la réponse donnée et les ajouts validés (ou refusés), l'utilisateur fera `/clear` lui-même.
 
 ## Persistance
 
