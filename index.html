@@ -175,6 +175,9 @@
   .suv-expanded-panel{padding:14px 18px 16px;display:flex;flex-direction:column;gap:10px}
   .suv-expanded-actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding-bottom:8px;border-bottom:1px solid var(--border-soft)}
   .suv-expanded-print{display:flex;gap:6px;flex-wrap:wrap;align-items:center;padding-top:8px;border-top:1px solid var(--border-soft)}
+  /* Bouton danger en mode ghost — discret par défaut, accent rouge au hover */
+  .btn.btn-danger-ghost{color:var(--text-dim);border-color:transparent}
+  .btn.btn-danger-ghost:hover{background:var(--danger-soft);color:var(--danger);border-color:var(--danger)}
 
   /* Timeline (étapes) — utilisée dans le volet inline */
   .suv-tl{display:flex;flex-direction:column;padding:4px 4px 4px;position:relative}
@@ -6696,10 +6699,24 @@ function suiviDelDevis(devisId) {
   S.suivi.entries = S.suivi.entries.filter(e => e.devisId !== devisId);
   if (S.suivi.devis) delete S.suivi.devis[devisId];
   suiviSelected.delete(devisId);
+  if (suiviExpandedDevis === devisId) suiviExpandedDevis = null;
   save();
   render();
 }
 window.suiviDelDevis = suiviDelDevis;
+
+// Wrapper avec confirmation pour la suppression d'un devis depuis le volet inline.
+// Affiche ref + montant pour éviter les erreurs de cible.
+function suiviDelDevisConfirm(devisId) {
+  const lignes = suiviGroupLigne(devisId);
+  const total = lignes.reduce((s, e) => s + num(e.montant), 0);
+  const dv = S.suivi.devis && S.suivi.devis[devisId];
+  const ref = (dv && dv.ref) || devisId;
+  const msg = `Supprimer définitivement le devis « ${ref} » (${fmt(total)}, ${lignes.length} ligne${lignes.length > 1 ? 's' : ''}) ?\n\nCette action est irréversible.`;
+  if (!confirm(msg)) return;
+  suiviDelDevis(devisId);
+}
+window.suiviDelDevisConfirm = suiviDelDevisConfirm;
 
 function suiviUpd(id, field, val) {
   const e = S.suivi.entries.find(x => x.id === id);
@@ -6965,6 +6982,8 @@ function suiviExpandedRowHtml(g) {
         <button class="btn ghost" onclick="${stop}viewDevisOpen('${g.devisId}')">🖨 Devis</button>
         <button class="btn ghost" onclick="${stop}viewDeboursOpen('${g.devisId}')">🖨 Débours</button>
         <button class="btn ghost" onclick="${stop}viewFactureOpen('${g.devisId}')">🖨 Facture</button>
+        <span style="flex:1"></span>
+        <button class="btn ghost btn-danger-ghost" title="Supprimer définitivement ce devis (devis créé par erreur)" onclick="${stop}suiviDelDevisConfirm('${g.devisId}')">🗑 Supprimer</button>
       </div>
     </div></td>
   </tr>`;
