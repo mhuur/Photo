@@ -2104,14 +2104,13 @@ let tab = "mission";
 let cloudT = null;
 
 const TABS = [
-  ["mission", "📋 Devis"],
   ["profil",  "👤 Profil"],
-  ["tarifs",  "💰 Frais & Tarifs"],
+  ["mission", "📋 Devis"],
   ["suivi",   "📊 Suivi"],
+  ["tarifs",  "💰 Frais & Tarifs"],
   ["clients", "👥 Clients"],
-  ["compta",  "📈 Compta"],
-  ["bugs",    "📝 Notes"],
-  ["maj",     "🔄 Mises à jour"]
+  ["compta",  "📈 Comptabilité"],
+  ["bugs",    "🐛 Report bug"]
 ];
 
 const app = document.getElementById("app");
@@ -4259,7 +4258,7 @@ function render() {
     app.innerHTML = `<div class="login"><h1>🌊 Devis Photo</h1><button class="btn" onclick="signIn()">Se connecter avec Google</button></div>`;
     return;
   }
-  const renderers = { mission: rMS, profil: rPF, suivi: rSV, clients: rCL, tarifs: rTR, compta: rCP, bugs: rBG, maj: rMAJ };
+  const renderers = { mission: rMS, profil: rPF, suivi: rSV, clients: rCL, tarifs: rTR, compta: rCP, bugs: rBG };
   const view = (renderers[tab] || (() => ""))();
   app.innerHTML = `
     <aside class="sb">
