@@ -1660,6 +1660,17 @@ const DEFAULT_S = {
     cgvSections: [],
     signatureBlock: "Fait à __________________________, le ____ / ____ / ________\n\nSignature du client précédée de la mention « Bon pour accord » :"
   },
+  identite: {
+    prenom: "", nom: "", denomination: "",
+    adresse: "", cp: "", ville: "",
+    email: "", telephone: "", siteWeb: "",
+    formeJuridique: "micro-bnc", mentionEI: true,
+    siret: "", ape: "74.20Z", rcs: "", capitalSocial: "",
+    regimeTVA: "franchise", numTvaIntra: "",
+    rcPro: { assureur: "", numero: "", zone: "France" },
+    mediateur: { nom: "", adresse: "", url: "" },
+    clienteleType: "mixte"
+  },
   devis:    {},
   suivi:    { entries: [], devis: {} },
   clients:  { entries: [] },
@@ -1703,6 +1714,16 @@ if (!S.tarifs.heuresAnnuelles) S.tarifs.heuresAnnuelles = "900";
 if (typeof S.tarifs.facteurSecurite === "undefined") S.tarifs.facteurSecurite = "0";
 if (!S.bugs || (!Array.isArray(S.bugs.items) && !Array.isArray(S.bugs.entries) && typeof S.bugs.html !== "string")) S.bugs = { items: [] };
 if (!Array.isArray(S.bugs.items)) S.bugs.items = [];
+
+// Migrate identite: ensure structured emitter info exists (v1.40+)
+if (!S.identite || typeof S.identite !== "object") {
+  S.identite = JSON.parse(JSON.stringify(DEFAULT_S.identite));
+} else {
+  S.identite = { ...DEFAULT_S.identite, ...S.identite,
+    rcPro:     { ...DEFAULT_S.identite.rcPro,     ...(S.identite.rcPro     || {}) },
+    mediateur: { ...DEFAULT_S.identite.mediateur, ...(S.identite.mediateur || {}) }
+  };
+}
 
 // Migrate paiement: ensure structured payment object exists + margeAvance/margeUrssaf fields
 if (S.mission && !S.mission.paiement) {
@@ -1858,6 +1879,7 @@ async function saveToCloud() {
   if (!user) return;
   try {
     await db.collection("users").doc(user.uid).set({
+      identite: S.identite,
       mission: S.mission,
       devis:   S.devis,
       suivi:   S.suivi,
@@ -1889,6 +1911,12 @@ async function loadFromCloud() {
           postprod:    { ...dm.postprod,    ...(m.postprod    || {}) },
           deplacement: { ...dm.deplacement, ...(m.deplacement || {}) },
           autres:      { ...dm.autres,      ...(m.autres      || {}) }
+        };
+      }
+      if (d.identite) {
+        S.identite = { ...DEFAULT_S.identite, ...d.identite,
+          rcPro:     { ...DEFAULT_S.identite.rcPro,     ...(d.identite.rcPro     || {}) },
+          mediateur: { ...DEFAULT_S.identite.mediateur, ...(d.identite.mediateur || {}) }
         };
       }
       if (d.devis)   S.devis   = Object.assign({}, DEFAULT_S.devis,   d.devis);
