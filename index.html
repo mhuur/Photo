@@ -143,11 +143,6 @@
   /* Pill « en cours » (mix accepté/livré/payé sur les lignes du devis) */
   .pst[data-s="en_cours"]{background:var(--violet);box-shadow:0 0 6px rgba(167,139,250,.5)}
 
-  /* Badge orange transversal « Paiement en attente » */
-  .pmt-badge{display:inline-flex;align-items:center;gap:5px;padding:2px 9px;border-radius:11px;
-    background:var(--warning-soft);border:1px solid var(--warning);color:var(--warning);
-    font-size:11px;font-weight:600;line-height:1.4;white-space:nowrap;letter-spacing:.01em}
-
   /* Filter bar : chip orange séparé visuellement par un divider vertical */
   .suv-chip-divider{display:inline-block;width:1px;height:20px;background:var(--border-light);margin:0 8px;align-self:center}
   .suv-chip-attente{color:var(--warning);border-color:rgba(245,158,11,.35)}
@@ -7299,7 +7294,6 @@ function rSV() {
           <td class="ref-cell suv-nowrap">${esc(g.ref) || `<span class="muted">—</span>`}</td>
           <td class="suv-nowrap">
             <strong>${esc(cleanClientLabel(g.client)) || "—"}</strong>
-            ${g.attentePaiement ? `<span class="pmt-badge" style="margin-left:8px" title="Au moins une étape est livrée et attend son règlement">💰 Paiement en attente</span>` : ''}
           </td>
           <td class="amt">${fmt(g.total)}</td>
           <td class="actions" onclick="${stop}">
