@@ -1683,7 +1683,7 @@
   .lg-section-mat{margin-top:30px}
   .lg-row-wrap{display:flex;flex-direction:column;gap:6px}
   .lg-row{display:flex;align-items:center;gap:10px}
-  .lg-justif{display:inline-flex;align-items:center;gap:4px;height:var(--input-h);padding:0 8px;border:1px solid var(--border);background:var(--surface-2);color:var(--text-muted);border-radius:6px;font-size:11px;cursor:pointer;flex-shrink:0;font-variant-numeric:tabular-nums;transition:background .12s,color .12s,border-color .12s}
+  .lg-justif{display:inline-flex;align-items:center;gap:4px;height:var(--input-h);padding:0 12px;border:1px solid var(--border);background:var(--surface-2);color:var(--text-muted);border-radius:6px;font-size:13px;font-weight:500;cursor:pointer;flex-shrink:0;font-variant-numeric:tabular-nums;transition:background .12s,color .12s,border-color .12s}
   .lg-justif:hover{border-color:var(--primary);color:var(--text)}
   .lg-justif.on{background:var(--success-soft,#e8f5e9);color:var(--success,#2e7d32);border-color:var(--success,#2e7d32);font-weight:600}
   .lg-cession-detail{padding:10px 14px;background:var(--surface-2);border-radius:6px;display:flex;flex-direction:column;gap:8px;margin-left:0;margin-top:2px}
@@ -1705,9 +1705,9 @@
   .lg-prix input:focus{outline:none}
   .lg-prix .unit{color:var(--text-dim);font-size:13px;flex-shrink:0}
   .lg-toggle{min-width:170px;flex-shrink:0}
-  .lg-toggle button{flex:1;padding:0 10px;font-size:13px;justify-content:center}
-  .lg-toggle-pmt{min-width:auto;flex-shrink:0}
-  .lg-toggle-pmt button{padding:0 10px;font-size:12px;font-weight:500}
+  .lg-toggle button{flex:1;padding:0 14px;font-size:13px;font-weight:500;justify-content:center}
+  .lg-toggle-pmt{min-width:150px;flex-shrink:0}
+  .lg-toggle-pmt button{flex:1;padding:0 14px;font-size:13px;font-weight:500}
   /* Static pill version: single non-clickable button shown when only one valid mode (Débours → Fact. Direct) */
   .lg-toggle-pmt.static{cursor:default}
   .lg-toggle-pmt.static button{cursor:default;opacity:.85}
@@ -1734,8 +1734,8 @@
      toggles get pushed further right. */
   .depl-wrap{max-width:780px}
   .depl-subtoggle-row{display:flex;align-items:center;gap:10px;margin-top:8px}
-  .depl-subtoggle-row .lg-toggle{min-width:auto}
-  .depl-subtoggle-row .lg-toggle button{font-size:12px;padding:0 12px}
+  .depl-subtoggle-row .lg-toggle{min-width:300px}
+  .depl-subtoggle-row .lg-toggle button{font-size:13px;font-weight:500;padding:0 14px}
   /* Déplacement: structure miroir EXACTE des lignes matériel pour aligner les toggles
      verticalement. depl-title-slot mimétise .lg-title (flex:1, min-width:160px) et
      contient le toggle Voiture/Transports. lg-prix-spacer mimétise .lg-prix (90px).
@@ -5648,11 +5648,14 @@ function rDevisSectionDeplacement() {
       <div class="field narrow"><label>Distance (km)</label><input type="number" step="0.1" value="${esc(d.deplacement.km)}" oninput="upd('mission.deplacement.km', this.value)"></div>
       <div class="field narrow"><label>Péages (€)</label><input type="number" step="0.01" value="${esc(d.deplacement.peages)}" oninput="upd('mission.deplacement.peages', this.value)"></div>
       <div class="field narrow"><label>€/km</label><input type="number" step="0.01" value="${esc(d.deplacement.tauxKm ?? "0.40")}" oninput="upd('mission.deplacement.tauxKm', this.value)"></div>
+      <div class="field narrow"><label>Temps de trajet (h)</label><input type="number" step="0.25" value="${esc(d.deplacement.trajetH)}" oninput="upd('mission.deplacement.trajetH', this.value)"></div>
     </div>
     ` : `
-    <div class="row"><div class="field narrow"><label>Prix des billets (€)</label><input type="number" step="0.01" value="${esc(d.deplacement.ticket)}" oninput="upd('mission.deplacement.ticket', this.value)"></div></div>
+    <div class="row">
+      <div class="field narrow"><label>Prix des billets (€)</label><input type="number" step="0.01" value="${esc(d.deplacement.ticket)}" oninput="upd('mission.deplacement.ticket', this.value)"></div>
+      <div class="field narrow"><label>Temps de trajet (h)</label><input type="number" step="0.25" value="${esc(d.deplacement.trajetH)}" oninput="upd('mission.deplacement.trajetH', this.value)"></div>
+    </div>
     `}
-    <div class="row"><div class="field narrow"><label>Temps de trajet (h)</label><input type="number" step="0.25" value="${esc(d.deplacement.trajetH)}" oninput="upd('mission.deplacement.trajetH', this.value)"></div></div>
 
     <h5>Lignes matériel en débours</h5>
     <div class="lg-list" id="lgListDebours">
