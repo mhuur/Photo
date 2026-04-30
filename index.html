@@ -2994,7 +2994,6 @@ function rDeboursPreview() {
   return `<div class="devis-preview" id="deboursPreview">
     <div class="dp-top-row">
       ${d.logoUrl ? `<div class="dp-logo-wrap"><img src="${esc(d.logoUrl)}" alt="Logo" class="dp-logo"></div>` : `<div class="dp-logo-spacer"></div>`}
-      <div class="dp-doc-ref">${esc(ref)}</div>
     </div>
     <div class="dp-header-grid">
       ${(() => {
@@ -3003,11 +3002,13 @@ function rDeboursPreview() {
         return `<div class="dp-header-left empty">Renseigner ton identité dans l'onglet « Profil ».</div>`;
       })()}
       <div class="dp-header-right">
-        <div class="dp-meta-block">
-          <div>Émission : <strong>${dateFR(d.dateEmission) || "—"}</strong></div>
+        <div class="dp-meta-block dp-meta-box">
+          <div class="dp-meta-ref">${esc(ref)}</div>
+          <div class="dp-meta-row"><span class="lbl">Émission</span><strong>${dateFR(d.dateEmission) || "—"}</strong></div>
           <div class="dp-validity-mention">Document à conserver avec les justificatifs.</div>
         </div>
-        <div class="dp-client-block">
+        <div class="dp-client-block dp-client-box">
+          <div class="dp-client-label">Destinataire</div>
           <span class="name">${esc(cli.name || "(Sélectionner un client)")}</span>
           ${(() => {
             let pickedContact = null;
