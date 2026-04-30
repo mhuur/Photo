@@ -632,7 +632,11 @@
   .devis-preview .dp-fact-direct-block .dp-line{display:flex;justify-content:space-between;align-items:flex-start;grid-template-columns:none;gap:14px}
   .devis-preview .dp-fact-direct-block .dp-line .lbl{flex:1;min-width:0}
   .devis-preview .dp-debours-total{display:flex;justify-content:space-between;padding-top:6px;margin-top:4px;border-top:1px dashed var(--border);font-size:13px;font-weight:600;color:var(--text)}
-  .devis-preview .dp-fact-direct-block{margin-top:10px;font-style:italic;color:var(--text-muted);font-size:12px}
+  /* Bloc "À régler directement au fournisseur" : aligné droite sous les totaux, plus discret */
+  .devis-preview .dp-fact-direct-block{margin:8px 0 0 auto;max-width:340px;width:100%;padding-top:8px;border-top:1px dashed var(--border)}
+  .devis-preview .dp-fact-direct-line{display:flex;justify-content:space-between;gap:14px;font-size:12px;font-style:italic;color:var(--text-muted)}
+  .devis-preview .dp-fact-direct-line .amt{font-variant-numeric:tabular-nums;flex-shrink:0}
+  .devis-preview .dp-fact-direct-note{font-size:10.5px;color:var(--text-dim);margin-top:3px;text-align:right;line-height:1.35;font-style:italic}
 
   /* Payment info: right-aligned column, same width as totals, all stacked vertically */
   .devis-preview .dp-payment-info{margin-top:24px;padding-top:14px;border-top:1px solid var(--border-light);max-width:340px;margin-left:auto;width:100%}
@@ -1093,8 +1097,22 @@
       border-top: 0.5pt dashed #888 !important;
       font-size: 9.5pt !important; font-weight: 600 !important; color: #1a1a1a !important;
     }
+    /* Bloc "À régler directement au fournisseur" : sous les totaux, aligné droite, discret (print) */
     .devis-preview .dp-fact-direct-block, .view-devis-snapshot .dp-fact-direct-block {
-      margin-top: 6pt !important; font-size: 7.5pt !important; color: #888 !important; font-style: italic !important;
+      margin: 6pt 0 0 auto !important; max-width: 280pt !important; width: 100% !important;
+      padding-top: 4pt !important; border-top: 0.4pt dashed #888 !important;
+      page-break-inside: avoid !important;
+    }
+    .devis-preview .dp-fact-direct-line, .view-devis-snapshot .dp-fact-direct-line {
+      display: flex !important; justify-content: space-between !important; gap: 10pt !important;
+      font-size: 8pt !important; font-style: italic !important; color: #555 !important;
+    }
+    .devis-preview .dp-fact-direct-line .amt, .view-devis-snapshot .dp-fact-direct-line .amt {
+      font-variant-numeric: tabular-nums !important; flex-shrink: 0 !important;
+    }
+    .devis-preview .dp-fact-direct-note, .view-devis-snapshot .dp-fact-direct-note {
+      font-size: 7pt !important; color: #888 !important; margin-top: 2pt !important;
+      text-align: right !important; line-height: 1.3 !important; font-style: italic !important;
     }
 
     /* === BODY 2-COLUMN GRID: lines+totals (left) + modalités+conditions (right) === */
@@ -2751,7 +2769,11 @@ function rDevisPreview() {
     </div>` : ""}
 
     ${t.totalFactDirect > 0 ? `<div class="dp-fact-direct-block">
-      <div class="dp-line debours"><span class="lbl">Facturation directe <span class="debours-note">(à régler par le client au fournisseur)</span></span><span class="amt">${fmt(t.totalFactDirect)}</span></div>
+      <div class="dp-fact-direct-line">
+        <span class="lbl">À régler directement au fournisseur</span>
+        <span class="amt">${fmt(t.totalFactDirect)}</span>
+      </div>
+      <div class="dp-fact-direct-note">Hors devis — vous réglez ces frais directement auprès du prestataire concerné.</div>
     </div>` : ""}
 
     ${(() => {
