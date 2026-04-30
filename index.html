@@ -592,15 +592,15 @@
   .devis-preview .dp-meta-block strong{color:var(--text);font-weight:600}
   .devis-preview .dp-client-block{text-align:right;font-size:13px;color:var(--text);line-height:1.6;padding:0;min-width:220px;margin-top:0}
   .devis-preview .dp-client-block .name{font-weight:600;font-size:13px;color:var(--text);display:block}
-  /* New encadré meta + client boxes (commit 10 redesign) */
-  .devis-preview .dp-meta-block.dp-meta-box{border:1px solid var(--border);border-radius:6px;padding:10px 12px;background:var(--surface);min-width:240px}
-  .devis-preview .dp-meta-ref{font-weight:700;font-size:15px;color:var(--text);font-variant-numeric:tabular-nums;letter-spacing:.01em;padding-bottom:6px;margin-bottom:6px;border-bottom:1px solid var(--border-soft)}
-  .devis-preview .dp-meta-row{display:flex;justify-content:space-between;gap:10px;font-size:12px;color:var(--text-muted);margin:1px 0}
+  /* Meta + client : hiérarchie typographique sans encadré */
+  .devis-preview .dp-meta-block.dp-meta-box{padding:0;background:transparent;border:0;min-width:240px}
+  .devis-preview .dp-meta-ref{font-weight:700;font-size:16px;color:var(--text);font-variant-numeric:tabular-nums;letter-spacing:.01em;margin-bottom:6px}
+  .devis-preview .dp-meta-row{display:flex;justify-content:flex-end;gap:14px;font-size:12px;color:var(--text-muted);margin:1px 0}
   .devis-preview .dp-meta-row .lbl{color:var(--text-dim)}
   .devis-preview .dp-meta-row strong{color:var(--text);font-weight:600}
-  .devis-preview .dp-meta-block.dp-meta-box .dp-validity-mention{margin-top:6px;text-align:right;max-width:none}
-  .devis-preview .dp-client-block.dp-client-box{border:1px solid var(--border);border-radius:6px;padding:10px 12px;background:var(--surface);margin-top:10px}
-  .devis-preview .dp-client-label{font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--text-dim);font-weight:600;padding-bottom:4px;margin-bottom:4px;border-bottom:1px solid var(--border-soft)}
+  .devis-preview .dp-meta-block.dp-meta-box .dp-validity-mention{margin-top:4px;text-align:right;max-width:none;font-size:11px;font-style:italic;color:var(--text-dim)}
+  .devis-preview .dp-client-block.dp-client-box{padding:0;background:transparent;border:0;margin-top:14px}
+  .devis-preview .dp-client-label{font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--text-dim);font-weight:600;margin-bottom:3px}
   @media (max-width:680px){
     .devis-preview .dp-header-grid{grid-template-columns:1fr}
     .devis-preview .dp-header-left{border-right:0;border-bottom:1px solid var(--border-soft);padding-right:0;padding-bottom:14px}
@@ -899,18 +899,17 @@
       color: #1a1a1a !important;
       font-weight: 600 !important;
     }
-    /* Encadré meta + client boxes (commit 10) */
+    /* Meta + client : hiérarchie typographique sans encadré (print) */
     .devis-preview .dp-meta-block.dp-meta-box, .view-devis-snapshot .dp-meta-block.dp-meta-box {
-      border: 0.5pt solid #1a1a1a !important; border-radius: 2pt !important;
-      padding: 5pt 7pt !important; background: transparent !important; min-width: 0 !important;
+      border: 0 !important; padding: 0 !important; background: transparent !important; min-width: 0 !important;
     }
     .devis-preview .dp-meta-ref, .view-devis-snapshot .dp-meta-ref {
-      font-weight: 700 !important; font-size: 11pt !important; color: #1a1a1a !important;
-      letter-spacing: .005em !important; padding-bottom: 3pt !important; margin-bottom: 3pt !important;
-      border-bottom: 0.5pt solid #1a1a1a !important; font-variant-numeric: tabular-nums !important;
+      font-weight: 700 !important; font-size: 12pt !important; color: #1a1a1a !important;
+      letter-spacing: .005em !important; margin-bottom: 3pt !important;
+      font-variant-numeric: tabular-nums !important;
     }
     .devis-preview .dp-meta-row, .view-devis-snapshot .dp-meta-row {
-      display: flex !important; justify-content: space-between !important; gap: 8pt !important;
+      display: flex !important; justify-content: flex-end !important; gap: 10pt !important;
       font-size: 8.5pt !important; margin: 0 !important; color: #555 !important;
     }
     .devis-preview .dp-meta-row strong, .view-devis-snapshot .dp-meta-row strong {
@@ -918,18 +917,15 @@
     }
     .devis-preview .dp-meta-block.dp-meta-box .dp-validity-mention,
     .view-devis-snapshot .dp-meta-block.dp-meta-box .dp-validity-mention {
-      margin-top: 3pt !important; max-width: none !important; text-align: right !important;
+      margin-top: 2pt !important; max-width: none !important; text-align: right !important;
       font-size: 7.5pt !important; font-style: italic !important; color: #555 !important;
     }
     .devis-preview .dp-client-block.dp-client-box, .view-devis-snapshot .dp-client-block.dp-client-box {
-      border: 0.5pt solid #1a1a1a !important; border-radius: 2pt !important;
-      padding: 5pt 7pt !important; margin-top: 5pt !important; background: transparent !important;
+      border: 0 !important; padding: 0 !important; margin-top: 8pt !important; background: transparent !important;
     }
     .devis-preview .dp-client-label, .view-devis-snapshot .dp-client-label {
-      font-size: 7pt !important; text-transform: uppercase !important; letter-spacing: .06em !important;
-      color: #1a1a1a !important; font-weight: 600 !important;
-      padding-bottom: 2pt !important; margin-bottom: 2pt !important;
-      border-bottom: 0.25pt solid #1a1a1a !important;
+      font-size: 7pt !important; text-transform: uppercase !important; letter-spacing: .08em !important;
+      color: #888 !important; font-weight: 600 !important; margin-bottom: 2pt !important;
     }
     .devis-preview .dp-validity-mention, .view-devis-snapshot .dp-validity-mention {
       font-style: italic !important;
