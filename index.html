@@ -7017,11 +7017,15 @@ let suiviSelected = new Set();
 function suiviSetFilterPrincipal(k) {
   suiviFilterPrincipal = k;
   try { localStorage.setItem("suiviFilterPrincipal", k); } catch (e) {}
+  // Changement de filtre = intention de refiltrer → on referme le volet
+  // pour que le devis déplié soit traité comme les autres.
+  suiviExpandedDevis = null;
   render();
 }
 function suiviToggleFilterAttente() {
   suiviFilterAttente = !suiviFilterAttente;
   try { localStorage.setItem("suiviFilterAttente", suiviFilterAttente ? "1" : "0"); } catch (e) {}
+  suiviExpandedDevis = null;
   render();
 }
 window.suiviSetFilterPrincipal = suiviSetFilterPrincipal;
@@ -7095,7 +7099,7 @@ function suiviSortKey(field) {
 }
 window.suiviSortKey = suiviSortKey;
 
-function suiviSetFilterYear(v) { suiviFilterYear = v; render(); }
+function suiviSetFilterYear(v) { suiviFilterYear = v; suiviExpandedDevis = null; render(); }
 window.suiviSetFilterYear = suiviSetFilterYear;
 
 function suiviYears() {
@@ -7151,19 +7155,26 @@ function suiviGroups() {
       prestation: lead.prestation || ""
     });
   }
+  // Le devis dont le volet est déplié est exempté de tous les filtres : ainsi
+  // les actions internes (paiement, accept, refus, undo) qui changent son
+  // statut ne le font pas disparaître sous l'utilisateur. La pastille évolue
+  // visuellement, mais le devis reste à sa place. Le filtre se réapplique
+  // quand l'utilisateur referme le volet ou change un filtre (suiviSet*).
+  const sticky = suiviExpandedDevis;
+
   // Filtre principal (single-select, exclusif)
   if (suiviFilterPrincipal !== "all") {
     if (suiviFilterPrincipal === "refuse") {
       // Le chip "Refusé / Annulé" agrège les deux statuts post-clôture.
-      list = list.filter(g => g.statutPrin === "refuse" || g.statutPrin === "annule");
+      list = list.filter(g => g.devisId === sticky || g.statutPrin === "refuse" || g.statutPrin === "annule");
     } else {
-      list = list.filter(g => g.statutPrin === suiviFilterPrincipal);
+      list = list.filter(g => g.devisId === sticky || g.statutPrin === suiviFilterPrincipal);
     }
   }
   // Filtre année (existant)
-  if (suiviFilterYear !== "all") list = list.filter(g => g.lignes.some(e => (e.date || "").startsWith(suiviFilterYear)));
+  if (suiviFilterYear !== "all") list = list.filter(g => g.devisId === sticky || g.lignes.some(e => (e.date || "").startsWith(suiviFilterYear)));
   // Filtre transversal attente paiement (peut se combiner)
-  if (suiviFilterAttente) list = list.filter(g => g.attentePaiement);
+  if (suiviFilterAttente) list = list.filter(g => g.devisId === sticky || g.attentePaiement);
 
   // Tri
   const dir = suiviSort.dir === "asc" ? 1 : -1;
