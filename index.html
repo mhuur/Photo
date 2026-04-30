@@ -1684,7 +1684,7 @@ const DEFAULT_S = {
   mission: {
     ref: "", dateEmission: "", dateValidite: "",
     object: "", objectText: "", objectDate: "", objectLieu: "",
-    client: { num: "", name: "", contact: "", contactSelected: "", contactId: "", address: "", phone: "", phoneSelected: "", email: "", emailSelected: "" },
+    client: { num: "", name: "", contact: "", contactSelected: "", contactId: "", address: "", phone: "", phoneSelected: "", email: "", emailSelected: "", type: "" },
     prep:        { hours: "0", rate: "" },
     prod:        { hours: "0", rate: "" },
     postprod:    { hours: "0", rate: "" },
@@ -5158,6 +5158,15 @@ function rDevisSectionIdentification() {
     <div class="client-line">
       <div class="client-line-picker">${rClientPicker()}</div>
       <div class="client-line-contact">${rContactInline()}</div>
+    </div>
+    <div class="row" style="margin-top:8px">
+      <div class="field"><label style="font-size:11px;color:var(--text-muted)">Type de clientèle pour ce devis</label>
+        <div class="seg" style="max-width:380px">
+          <button class="${(d.client.type||"")===""?"on":""}" onclick="upd('mission.client.type', '');render()" title="Utilise le défaut du Profil">Auto (${esc(({"b2c":"B2C","b2b":"B2B","mixte":"Mixte"})[(S.identite||{}).clienteleType] || "Mixte")})</button>
+          <button class="${d.client.type==="b2c"?"on":""}" onclick="upd('mission.client.type', 'b2c');render()">B2C (particulier)</button>
+          <button class="${d.client.type==="b2b"?"on":""}" onclick="upd('mission.client.type', 'b2b');render()">B2B (entreprise)</button>
+        </div>
+      </div>
     </div>
   `;
 }
