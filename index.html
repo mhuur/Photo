@@ -3530,13 +3530,13 @@ function refreshTotals() {
       if (fresh) el.parentNode.replaceChild(fresh, el);
     }
   }
-  // Update the (i) tooltip next to "Cacher taux h" — only one targeted by data-kind.
-  // Les autres tarif-tooltip (ex: comparaison Taux réduit/Fixe en mode au black) ne
-  // sont pas touchés.
+  // Update the (i) tooltip next to "Dans taux h" — ciblé par data-kind.
+  // Les autres tarif-tooltip (ex: comparaison Taux réduit/Fixe en mode au black)
+  // ne sont pas touchés.
   const lisserTooltip = document.querySelector('.tarif-info[data-kind="depl-lisser"] .tarif-tooltip');
   if (lisserTooltip) {
     const b = tarifBreakdown(true);
-    if (b) lisserTooltip.innerHTML = `<div class="tt-title">Tarif horaire mis à jour avec déplacement (lissé)</div>${tarifBreakdownHtml(b)}`;
+    if (b) lisserTooltip.innerHTML = rDeplLisserTooltipBody(b, totals());
   }
   // Update the badge on the Débours tab button (total débours amount)
   const t2 = totals();
@@ -4554,6 +4554,21 @@ function tarifBreakdownHtml(b) {
   </table>`;
 }
 
+// Tooltip body shown next to the "Dans taux h" toggle (Déplacement).
+// 2 chiffres clés au lieu de la décomposition complète : ce qui change quand
+// on bascule en mode lissé, c'est la majoration ajoutée au tarif horaire.
+function rDeplLisserTooltipBody(b, t) {
+  if (!b) return "";
+  const majoration = t.deplPerHour || 0;
+  return `<div class="tt-title">Impact sur le taux horaire</div>
+    <table>
+      <tbody>
+        <tr><td style="text-align:left;color:var(--text-muted);padding:6px 8px">Prix matériel lissé à l'heure</td><td style="text-align:right;font-weight:600;padding:6px 8px;font-variant-numeric:tabular-nums">${fmt(b.matos)}/h</td></tr>
+        <tr><td style="text-align:left;color:var(--text-muted);padding:6px 8px">Majoration sur le taux horaire</td><td style="text-align:right;font-weight:700;padding:6px 8px;font-variant-numeric:tabular-nums;color:${majoration > 0 ? "var(--primary)" : "var(--text-dim)"}">${majoration > 0 ? "+" : ""}${fmt(majoration)}/h</td></tr>
+      </tbody>
+    </table>`;
+}
+
 // ============================================================================
 // DEVIS v2 — Helpers : drag-reorder, section summaries, validation,
 //                      snapshot dirty detection. Logique pure sauf event handlers.
@@ -4819,8 +4834,7 @@ function rDevisAccordion() {
     ${rEditSectionRaw("deplacement",    "Déplacement & frais débours", sums.deplacement,    rDevisSectionDeplacement())}
     ${rEditSectionRaw("ajustements",    "Ajustements",                 sums.ajustements,    rDevisSectionAjustements())}
     ${rEditSectionRaw("modalites",      "Modalités de paiement",       sums.modalites,      rDevisSectionModalites())}
-    ${rEditSectionRaw("conditions",     "Conditions & signature",      sums.conditions,     rDevisSectionConditions(),
-       `<button class="btn ghost edit-section-action" onclick="event.stopPropagation();cgvLoadTemplate()">📋 Modèle CGV</button>`)}
+    ${rEditSectionRaw("conditions",     "Conditions & signature",      sums.conditions,     rDevisSectionConditions())}
   </div>`;
 }
 
@@ -4951,22 +4965,24 @@ function rDevisSectionDeplacement() {
         <span class="lg-btn-spacer" aria-hidden="true"></span>
       </div>
       ${devis === 'principal' ? (() => {
-        // Quand "Cacher taux h" est actif, le déplacement est lissé dans le tarif
-        // horaire (pas affiché en ligne séparée). Un (i) à côté donne la
-        // décomposition. Le tooltip est mis à jour live par refreshTotals().
+        // Quand "Dans taux h" est actif, le déplacement est lissé dans le tarif
+        // horaire (pas affiché en ligne séparée). Un (i) à côté donne 2 chiffres :
+        //   - matériel amorti à l'heure (b.matos)
+        //   - majoration appliquée au taux horaire par le lissage (t.deplPerHour)
+        // Le tooltip est mis à jour live par refreshTotals().
         const t = totals();
         const b = afficheMode === 'lisser' ? tarifBreakdown(true) : null;
         const infoBtn = (afficheMode === 'lisser' && b)
-          ? `<button type="button" class="tarif-info" data-kind="depl-lisser" tabindex="0" aria-label="Voir l'impact sur le taux horaire">i<div class="tarif-tooltip" role="tooltip"><div class="tt-title">Tarif horaire mis à jour avec déplacement (lissé)</div>${tarifBreakdownHtml(b)}</div></button>`
+          ? `<button type="button" class="tarif-info" data-kind="depl-lisser" tabindex="0" aria-label="Voir l'impact sur le taux horaire">i<div class="tarif-tooltip" role="tooltip">${rDeplLisserTooltipBody(b, t)}</div></button>`
           : '';
         const noHoursWarn = (afficheMode === 'lisser' && t.totalHeures === 0)
-          ? `<div class="hint" style="margin-top:6px;color:var(--warning)">⚠ Pas d'heures dans le devis : le déplacement est facturé séparément en attendant (mode « Cacher taux h » nécessite des heures).</div>`
+          ? `<div class="hint" style="margin-top:6px;color:var(--warning)">⚠ Pas d'heures dans le devis : le déplacement est facturé séparément en attendant (mode « Dans taux h » nécessite des heures).</div>`
           : '';
         return `<div class="depl-subtoggle-row">
           <div class="seg-with-info">
             <div class="seg lg-toggle">
               <button class="${afficheMode==='afficher'?'on':''}" onclick="updDeplAfficheMode('afficher')">Afficher dans devis</button>
-              <button class="${afficheMode==='lisser'?'on':''}" onclick="updDeplAfficheMode('lisser')" title="Inclus dans le tarif horaire (ne ressort pas comme une ligne)">Cacher taux h</button>
+              <button class="${afficheMode==='lisser'?'on':''}" onclick="updDeplAfficheMode('lisser')" title="Le déplacement est inclus dans le tarif horaire (pas de ligne séparée dans le devis)">Dans taux h</button>
             </div>
             ${infoBtn}
           </div>
@@ -5010,6 +5026,8 @@ function rDevisSectionAjustements() {
           <button type="button" class="ech-info-icon" tabindex="0" aria-label="Voir le détail du calcul de remise">i<span class="remise-tooltip" role="tooltip">${tooltipHtml}</span></button>
         </div>
       </div>
+    </div>
+    <div class="row">
       <div class="field"><label>Taux URSSAF (%)</label>
         <div class="lock-field">
           <input id="urssafInput" type="number" step="0.1" value="${esc(d.urssafPct ?? "22")}" ${urssafUnlocked ? `oninput="upd('mission.urssafPct', this.value)"` : "disabled"}>
