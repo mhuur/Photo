@@ -1531,17 +1531,11 @@
   .lg-desc:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 3px var(--primary-soft);color:var(--text)}
 
   /* ============================================================================
-     DEVIS v2 — Layout 2 colonnes (form + preview live), mobile = tabs
+     DEVIS v2 — Accordéon vertical, preview pleine largeur en dessous
      ============================================================================ */
-  .devis-layout{display:grid;grid-template-columns:minmax(0,1fr) 460px;gap:24px;align-items:start;margin-top:6px}
-  .devis-edit{min-width:0}
-  .devis-preview-pane{position:sticky;top:18px;max-height:calc(100vh - 36px);display:flex;flex-direction:column;background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden;box-shadow:var(--shadow-sm)}
-  .devis-preview-pane .preview-tabs-wrap{display:flex;flex-direction:column;flex:1;min-height:0;border:0;border-radius:0;background:transparent;box-shadow:none}
-  .devis-preview-pane .preview-tabs-body{flex:1;overflow-y:auto;padding:14px 16px;background:var(--bg-3)}
-  .devis-preview-pane .preview-tabs-nav{flex-shrink:0}
 
-  /* Status banner above the "Enregistrer" CTA — validation + dirty snapshot */
-  .devis-pane-footer{flex-shrink:0;padding:12px 14px;border-top:1px solid var(--border);background:var(--surface);display:flex;flex-direction:column;gap:8px}
+  /* Status banner ABOVE the "+ Enregistrer dans Suivi" button — validation + dirty */
+  .devis-pane-footer{margin:14px 0 0;display:flex;flex-direction:column;gap:8px;max-width:880px}
   .devis-banner{font-size:12px;line-height:1.45;padding:8px 10px;border-radius:6px;display:flex;gap:8px;align-items:flex-start}
   .devis-banner.err{background:var(--danger-soft);border:1px solid var(--danger);color:var(--danger)}
   .devis-banner.warn{background:var(--warning-soft);border:1px solid var(--warning);color:var(--warning)}
@@ -1549,19 +1543,17 @@
   .devis-banner ul{margin:2px 0 0 16px;padding:0}
   .devis-banner-ico{flex-shrink:0;font-weight:700}
   .devis-pane-actions{display:flex;gap:8px;align-items:center}
-  .devis-pane-actions .btn{flex:1}
   .devis-pane-actions .btn[disabled]{opacity:.5;cursor:not-allowed;box-shadow:none}
 
-  /* Compact summary chip in each accordion header — "3 lignes · 850 €" */
-  .edit-section-summary{margin-left:auto;font-size:12px;color:var(--text-muted);font-weight:500;display:inline-flex;align-items:center;gap:8px;padding-right:8px}
+  /* Compact summary chip in accordion header — "3 lignes · 850 €" */
+  .edit-section-summary{font-size:12px;color:var(--text-muted);font-weight:500;display:inline-flex;align-items:center;gap:8px;padding-right:6px;flex-shrink:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:50%}
   .edit-section-summary .dot{width:3px;height:3px;border-radius:50%;background:var(--text-dim)}
   .edit-section-summary .amt{color:var(--text);font-variant-numeric:tabular-nums}
   .edit-section-summary .warn{color:var(--warning)}
   .edit-section-summary .err{color:var(--danger)}
   .edit-section.open .edit-section-summary{opacity:.5}
-  .edit-section-header:has(.edit-section-action) .edit-section-summary{margin-right:8px}
 
-  /* Drag handle + dragging state */
+  /* Drag handle + dragging state on lignes */
   .lg-row-wrap{position:relative;transition:opacity .15s}
   .lg-row-wrap.dragging{opacity:.4}
   .lg-row-wrap.drag-over{box-shadow:0 -2px 0 var(--primary)}
@@ -1569,26 +1561,12 @@
   .lg-drag:hover{color:var(--primary)}
   .lg-drag:active{cursor:grabbing}
 
-  /* Mobile: stacked tabs (Édition / Aperçu) */
-  .devis-mobile-tabs{display:none;margin:0 0 12px;background:var(--surface-2);border:1px solid var(--border-soft);border-radius:8px;padding:3px;gap:2px}
-  .devis-mobile-tabs button{flex:1;background:transparent;border:0;color:var(--text-muted);padding:8px 10px;font:inherit;font-size:13px;font-weight:500;cursor:pointer;border-radius:5px;transition:all .12s}
-  .devis-mobile-tabs button.on{background:var(--primary);color:#fff;box-shadow:0 1px 3px rgba(74,158,255,.3)}
-
-  @media (max-width:980px){
-    .devis-mobile-tabs{display:flex}
-    .devis-layout{grid-template-columns:1fr;gap:0}
-    .devis-preview-pane{position:static;max-height:none}
-    .devis-preview-pane .preview-tabs-body{max-height:none}
-    .devis-edit[data-mobile-hidden="1"],
-    .devis-preview-pane[data-mobile-hidden="1"]{display:none}
-  }
-
-  /* Sub-headings inside an accordion body (e.g. "Heures" / "Matériel" inside Prestations) */
+  /* Sub-headings inside an accordion body */
   .edit-section-body h5{margin:14px 0 6px;font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;font-weight:600;border:0;padding:0}
   .edit-section-body h5:first-child{margin-top:6px}
   .edit-section-body .lg-add{margin-top:6px}
 
-  /* Catalogue à portée: link to Frais & Tarifs */
+  /* Catalogue link inside accordion body */
   .devis-catalog-hint{font-size:11px;color:var(--text-dim);margin:4px 0 10px}
   .devis-catalog-hint a{color:var(--primary);text-decoration:none}
   .devis-catalog-hint a:hover{text-decoration:underline}
@@ -4578,23 +4556,9 @@ function tarifBreakdownHtml(b) {
 }
 
 // ============================================================================
-// DEVIS v2 — Helpers : mobile tab, drag-reorder, section summaries, validation,
+// DEVIS v2 — Helpers : drag-reorder, section summaries, validation,
 //                      snapshot dirty detection. Logique pure sauf event handlers.
 // ============================================================================
-
-// État UI éphémère (volontairement hors S — ne se persiste pas entre sessions)
-let devisMobileTab = "edit"; // "edit" | "preview"
-window.devisSetMobileTab = function(v) {
-  devisMobileTab = v;
-  // Toggle DOM directement, pas de re-render — focus préservé
-  const ed = document.querySelector(".devis-edit");
-  const pv = document.querySelector(".devis-preview-pane");
-  if (ed) ed.dataset.mobileHidden = (v === "preview") ? "1" : "0";
-  if (pv) pv.dataset.mobileHidden = (v === "edit") ? "1" : "0";
-  document.querySelectorAll(".devis-mobile-tabs button").forEach(b => {
-    b.classList.toggle("on", b.dataset.tab === v);
-  });
-};
 
 // ----------------------------------------------------------------------------
 // SECTION SUMMARIES — pures, pas d'accès DOM. Génèrent les chips compacts
@@ -4817,9 +4781,10 @@ function rLigneDraggable(l) {
 }
 
 // ============================================================================
-// rMS — shell 2 colonnes (form accordéon | preview live). Le moteur de calcul
-// (totals), la persistance (upd/save), la preview (rDevisPreview/rDeboursPreview)
-// et tous les handlers (ligneAdd/echeanceAdd/...) sont réutilisés tels quels.
+// rMS — formulaire en accordéon (6 sections), preview pleine largeur en dessous.
+// Le moteur de calcul (totals), la persistance (upd/save), la preview
+// (rDevisPreview/rDeboursPreview) et tous les handlers (ligneAdd/echeanceAdd/...)
+// sont réutilisés tels quels.
 // ============================================================================
 function rMS() {
   // Au premier rendu après un load, on ouvre les 2 sections les plus utilisées.
@@ -4833,21 +4798,9 @@ function rMS() {
 
   return `
     <span id="savedFlash" class="saved" style="position:absolute;top:18px;right:18px"></span>
-
-    <div class="devis-mobile-tabs" role="tablist">
-      <button data-tab="edit"    class="${devisMobileTab==='edit'?'on':''}"    onclick="devisSetMobileTab('edit')">✏ Édition</button>
-      <button data-tab="preview" class="${devisMobileTab==='preview'?'on':''}" onclick="devisSetMobileTab('preview')">👁 Aperçu</button>
-    </div>
-
-    <div class="devis-layout">
-      <div class="devis-edit" data-mobile-hidden="${devisMobileTab==='preview'?'1':'0'}">
-        ${rDevisAccordion()}
-      </div>
-      <aside class="devis-preview-pane" data-mobile-hidden="${devisMobileTab==='edit'?'1':'0'}">
-        ${rPreviewTabs()}
-        <div class="devis-pane-footer">${rDevisPaneFooterInner()}</div>
-      </aside>
-    </div>
+    ${rDevisAccordion()}
+    ${rPreviewTabs()}
+    <div class="devis-pane-footer">${rDevisPaneFooterInner()}</div>
     ${rContactPickerModal()}
   `;
 }
@@ -4855,32 +4808,30 @@ function rMS() {
 function rDV() { return ""; }
 
 // ----------------------------------------------------------------------------
-// Accordéon — 6 sections. Réutilise _editSectionOpen + editSectionToggle existants.
-// Variante rEditSectionRaw : titre passé en HTML brut (déjà esc()-é à la main),
-// pour pouvoir y injecter le span .edit-section-summary refreshable.
+// Accordéon — 6 sections. Le résumé est passé séparément du titre et inséré
+// comme frère flex de .edit-section-title (margin-left:auto via CSS) → pas
+// collé au titre.
 // ----------------------------------------------------------------------------
 function rDevisAccordion() {
   const sums = devisSectionSummaries();
-  const wrapTitle = (title, key) =>
-    `${esc(title)}<span class="edit-section-summary" data-summary="${key}">${sums[key]}</span>`;
-
   return `<div class="edit-accordion-list">
-    ${rEditSectionRaw("identification", wrapTitle("Identification & client", "identification"), rDevisSectionIdentification())}
-    ${rEditSectionRaw("prestations",    wrapTitle("Prestations", "prestations"),                rDevisSectionPrestations())}
-    ${rEditSectionRaw("deplacement",    wrapTitle("Déplacement & frais débours", "deplacement"), rDevisSectionDeplacement())}
-    ${rEditSectionRaw("ajustements",    wrapTitle("Ajustements", "ajustements"),                rDevisSectionAjustements())}
-    ${rEditSectionRaw("modalites",      wrapTitle("Modalités de paiement", "modalites"),        rDevisSectionModalites())}
-    ${rEditSectionRaw("conditions",     wrapTitle("Conditions & signature", "conditions"),      rDevisSectionConditions(),
+    ${rEditSectionRaw("identification", "Identification & client",     sums.identification, rDevisSectionIdentification())}
+    ${rEditSectionRaw("prestations",    "Prestations",                 sums.prestations,    rDevisSectionPrestations())}
+    ${rEditSectionRaw("deplacement",    "Déplacement & frais débours", sums.deplacement,    rDevisSectionDeplacement())}
+    ${rEditSectionRaw("ajustements",    "Ajustements",                 sums.ajustements,    rDevisSectionAjustements())}
+    ${rEditSectionRaw("modalites",      "Modalités de paiement",       sums.modalites,      rDevisSectionModalites())}
+    ${rEditSectionRaw("conditions",     "Conditions & signature",      sums.conditions,     rDevisSectionConditions(),
        `<button class="btn ghost edit-section-action" onclick="event.stopPropagation();cgvLoadTemplate()">📋 Modèle CGV</button>`)}
   </div>`;
 }
 
-function rEditSectionRaw(key, titleHtml, bodyHtml, headerActionHtml = "") {
+function rEditSectionRaw(key, title, summaryHtml, bodyHtml, headerActionHtml = "") {
   const open = !!_editSectionOpen[key];
   return `<div class="edit-section ${open ? 'open' : ''}" data-edit-section="${key}">
     <button type="button" class="edit-section-header" onclick="editSectionToggle('${key}')" aria-expanded="${open}">
       <span class="edit-section-chevron" aria-hidden="true">▸</span>
-      <span class="edit-section-title">${titleHtml}</span>
+      <span class="edit-section-title">${esc(title)}</span>
+      <span class="edit-section-summary" data-summary="${key}">${summaryHtml}</span>
       ${headerActionHtml}
     </button>
     <div class="edit-section-body" ${open ? '' : 'hidden'}>${bodyHtml}</div>
