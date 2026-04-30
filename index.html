@@ -143,13 +143,6 @@
   /* Pill « en cours » (mix accepté/livré/payé sur les lignes du devis) */
   .pst[data-s="en_cours"]{background:var(--violet);box-shadow:0 0 6px rgba(167,139,250,.5)}
 
-  /* Filter bar : chip orange séparé visuellement par un divider vertical */
-  .suv-chip-divider{display:inline-block;width:1px;height:20px;background:var(--border-light);margin:0 8px;align-self:center}
-  .suv-chip-attente{color:var(--warning);border-color:rgba(245,158,11,.35)}
-  .suv-chip-attente:hover{color:var(--warning);border-color:var(--warning);background:rgba(245,158,11,.06)}
-  .suv-chip-attente.on{background:var(--warning-soft);border-color:var(--warning);color:var(--warning);
-    box-shadow:0 0 0 1px var(--warning) inset}
-
   /* Quick print actions, toujours visibles à droite de chaque ligne */
   .suv-quick-actions{display:inline-flex;gap:4px;align-items:center}
   .suv-quick-actions .qa-btn{background:transparent;border:1px solid transparent;color:var(--text-muted);
@@ -197,9 +190,6 @@
   .suv-tl-card.paid .suv-tl-card-state{color:var(--success)}
   .suv-tl-card.idle .suv-tl-card-state{color:var(--text-dim)}
   .suv-tl-card.refused .suv-tl-card-state{color:var(--danger)}
-
-  /* État vide spécifique au filtre attente paiement */
-  .empty-attente{border-color:var(--warning);background:rgba(245,158,11,.04);color:var(--text-muted)}
 
   /* Bloc audit Suivi (Phase 1 refonte) */
   .audit-block{margin:30px 0 20px;border:1px dashed var(--border-light);border-radius:10px;background:var(--surface);overflow:hidden}
@@ -5982,11 +5972,11 @@ function rDevisPaneFooterInner() {
 }
 
 // ============================================================================
-// SUIVI v2 — Modèle de statuts à deux niveaux
+// SUIVI v2 — Modèle de statuts
 // ----------------------------------------------------------------------------
-// STATUTS_PRIN  : statut principal du devis (4 valeurs visibles + refusé)
-//                 dérivé à la volée depuis les statuts de ligne existants
-// attentePaiement : flag transversal superposable, dérivé sur la même base
+// STATUTS_PRIN : statut principal du devis (envoyé / en cours / soldé /
+//                refusé / annulé), dérivé à la volée depuis les statuts
+//                des lignes via devisPrincipal().
 // ============================================================================
 
 const STATUTS = [
@@ -6023,12 +6013,7 @@ function devisPrincipal(lignes) {
   return "en_cours";
 }
 
-// Flag transversal : le devis a-t-il une ligne livrée non payée ?
-function devisAttentePaiement(lignes) {
-  return lignes.some(e => entryStatut(e) === "attente");
-}
-
-// ---- Filter bar (single-select principal + boolean attente) ----
+// ---- Filter bar (single-select principal) ----
 function suiviLegendHtml() {
   const f = suiviFilterPrincipal;
   const chips = [
@@ -6038,7 +6023,6 @@ function suiviLegendHtml() {
     ["termine", "Soldé",    null, null]
   ];
   const refusedCount = suiviGroupsAll().filter(g => g.statutPrin === "refuse" || g.statutPrin === "annule").length;
-  const attenteCount = suiviGroupsAll().filter(g => g.attentePaiement).length;
 
   return `<div class="suv-chip-bar">
     ${chips.map(([k, l, ico]) => {
@@ -6050,12 +6034,6 @@ function suiviLegendHtml() {
     ${refusedCount > 0 ? `<button type="button" class="suv-chip ${f === 'refuse' ? 'on' : ''}"
         onclick="suiviSetFilterPrincipal('refuse')" aria-pressed="${f === 'refuse'}"
         title="Voir les devis refusés (avant acceptation) ou annulés (après acceptation)"><span class="pst" data-s="refuse"></span>Refusé / Annulé (${refusedCount})</button>` : ''}
-    <span class="suv-chip-divider" aria-hidden="true"></span>
-    <button type="button" class="suv-chip suv-chip-attente ${suiviFilterAttente ? 'on' : ''}"
-      onclick="suiviToggleFilterAttente()" aria-pressed="${suiviFilterAttente}"
-      title="Filtrer uniquement les devis avec un paiement en attente">
-      <span>💰</span>En attente de paiement${attenteCount > 0 ? ` (${attenteCount})` : ''}
-    </button>
   </div>`;
 }
 
@@ -6997,16 +6975,11 @@ function suiviStats(groups) {
 }
 
 function suiviStatsHtml(s) {
-  const all = suiviGroupsAll();
-  const attente = all.filter(g => g.attentePaiement).length;
   return `
     <div class="stat">Devis<strong>${s.count}</strong></div>
     <div class="stat">Envoyé<strong>${s.by.envoye || 0}</strong></div>
     <div class="stat">En cours<strong>${s.by.en_cours || 0}</strong></div>
     <div class="stat">Soldé<strong>${s.by.termine || 0}</strong></div>
-    <div class="stat" style="border-color:var(--warning);background:rgba(245,158,11,.06)">
-      💰 Attente paiement<strong style="color:var(--warning)">${attente}</strong>
-    </div>
     <div class="stat">Total facturé<strong>${fmt(s.total)}</strong></div>
   `;
 }
@@ -7022,11 +6995,6 @@ let suiviFilterPrincipal = (() => {
   try { return localStorage.getItem("suiviFilterPrincipal") || "all"; }
   catch (e) { return "all"; }
 })();
-// suiviFilterAttente : flag transversal indépendant, persistant
-let suiviFilterAttente = (() => {
-  try { return localStorage.getItem("suiviFilterAttente") === "1"; }
-  catch (e) { return false; }
-})();
 let suiviFilterYear = "all";
 let suiviSelected = new Set();
 
@@ -7038,14 +7006,7 @@ function suiviSetFilterPrincipal(k) {
   suiviExpandedDevis = null;
   render();
 }
-function suiviToggleFilterAttente() {
-  suiviFilterAttente = !suiviFilterAttente;
-  try { localStorage.setItem("suiviFilterAttente", suiviFilterAttente ? "1" : "0"); } catch (e) {}
-  suiviExpandedDevis = null;
-  render();
-}
 window.suiviSetFilterPrincipal = suiviSetFilterPrincipal;
-window.suiviToggleFilterAttente = suiviToggleFilterAttente;
 
 function suiviToggleOne(devisId, checked, ev) {
   if (ev) ev.stopPropagation();
@@ -7139,8 +7100,7 @@ function suiviGroupsAll() {
   }
   return [...m.entries()].map(([devisId, lignes]) => ({
     devisId, lignes,
-    statutPrin: devisPrincipal(lignes),
-    attentePaiement: devisAttentePaiement(lignes)
+    statutPrin: devisPrincipal(lignes)
   }));
 }
 
@@ -7155,14 +7115,13 @@ function suiviGroups() {
   for (const [devisId, lignes] of groups) {
     lignes.sort((a, b) => (a.date || "").localeCompare(b.date || ""));
     const statutPrin = devisPrincipal(lignes);
-    const attentePaiement = devisAttentePaiement(lignes);
     const total = lignes.reduce((s, e) => s + num(e.montant), 0);
     const dates = lignes.map(e => e.date || "").filter(Boolean);
     const ref = (S.suivi.devis && S.suivi.devis[devisId] && S.suivi.devis[devisId].ref) || "";
     const lead = lignes[0] || {};
     list.push({
       devisId, ref, lignes,
-      statutPrin, attentePaiement,
+      statutPrin,
       statutGlobal: statutPrin,            // alias pour suiviStats hérité
       total,
       dateMin: dates[0] || "",
@@ -7189,8 +7148,6 @@ function suiviGroups() {
   }
   // Filtre année (existant)
   if (suiviFilterYear !== "all") list = list.filter(g => g.devisId === sticky || g.lignes.some(e => (e.date || "").startsWith(suiviFilterYear)));
-  // Filtre transversal attente paiement (peut se combiner)
-  if (suiviFilterAttente) list = list.filter(g => g.devisId === sticky || g.attentePaiement);
 
   // Tri
   const dir = suiviSort.dir === "asc" ? 1 : -1;
@@ -7320,11 +7277,7 @@ function rSV() {
   if (totalEntries === 0) {
     emptyHtml = `<div class="empty">Aucun devis enregistré. Depuis l'onglet Devis, clique sur « + Enregistrer dans Suivi ».</div>`;
   } else if (list.length === 0) {
-    if (suiviFilterAttente && suiviFilterPrincipal === "all") {
-      emptyHtml = `<div class="empty empty-attente">Aucun devis en attente de paiement. ✨</div>`;
-    } else {
-      emptyHtml = `<div class="empty">Aucun devis ne correspond aux filtres sélectionnés.</div>`;
-    }
+    emptyHtml = `<div class="empty">Aucun devis ne correspond aux filtres sélectionnés.</div>`;
   }
 
   return `
