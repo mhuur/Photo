@@ -204,9 +204,22 @@
   .cp-toolbar{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin-bottom:10px}
 
   /* Compta : badge Δ% N vs N-1 sur les sous-totaux annuels */
-  .cp-delta{display:inline-block;font-size:11px;font-weight:600;padding:1px 8px;border-radius:9px;margin-left:8px;letter-spacing:0;text-transform:none;font-variant-numeric:tabular-nums}
+  .cp-delta{display:inline-block;font-size:11px;font-weight:600;padding:1px 8px;border-radius:9px;margin-left:8px;letter-spacing:0;text-transform:none;font-variant-numeric:tabular-nums;white-space:nowrap}
   .cp-delta.pos{background:var(--success-soft);color:var(--success)}
   .cp-delta.neg{background:var(--danger-soft);color:var(--danger)}
+
+  /* Compta : tableau bilan — en-tête à 2 niveaux + cellules numériques + zéros discrets */
+  .hist thead tr.cp-grouphdr th{padding:6px 12px;font-size:10px;font-weight:700;color:var(--text-dim);text-transform:uppercase;letter-spacing:.1em;background:var(--surface-2);border-bottom:1px solid var(--border);text-align:center}
+  .hist thead tr.cp-grouphdr th.cp-grp-act{color:var(--primary)}
+  .hist thead tr.cp-grouphdr th.cp-grp-flux{color:var(--text-muted)}
+  .hist thead tr.cp-grouphdr th.cp-grp-bilan{color:var(--success)}
+  .hist th.cp-grp-sep, .hist td.cp-grp-sep{border-left:1px solid var(--border)}
+  .hist td.cp-num{text-align:right;font-variant-numeric:tabular-nums;padding-right:14px;white-space:nowrap}
+  .hist td.cp-zero{text-align:right;color:var(--text-dim);opacity:.35;padding-right:14px;white-space:nowrap}
+  .hist td.cp-marge{text-align:right;font-variant-numeric:tabular-nums;padding-right:14px;font-weight:600;white-space:nowrap}
+  .hist td.cp-marge.pos{color:var(--success)}
+  .hist td.cp-marge.neg{color:var(--danger)}
+  .hist tr.subtotal td:first-child{white-space:nowrap}
 
   /* Compta : jauges seuils micro-BNC + franchise TVA */
   .cp-seuils{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px;margin:0 0 22px}
@@ -8566,12 +8579,12 @@ function comptaExportCSV() {
   });
   if (data.length === 0) { alert("Aucune donnée à exporter."); return; }
   const fr = v => num(v).toFixed(2).replace(".", ",");
-  const headers = ["Mois", "Heures", "Paye", "CA", "URSSAF", "Salaire net", "Tresorerie", "Abonnements", "Amort. materiel", "Marge nette", "Debours"];
+  const headers = ["Mois", "Heures", "Paye", "CA", "Salaire", "URSSAF", "Tresorerie", "Debours", "Abos", "Materiel", "Marge"];
   const lines = [headers.join(";")];
   for (const r of data) {
     const [y, m] = r.ym.split("-");
     const monthFr = `${MOIS_FR[parseInt(m, 10) - 1]} ${y}`;
-    lines.push([monthFr, fr(r.heures), fr(r.paye), fr(r.ca), fr(r.ursaf), fr(r.salaire), fr(r.tresorerie), fr(r.abos), fr(r.amort), fr(r.marge), fr(r.frais)].join(";"));
+    lines.push([monthFr, fr(r.heures), fr(r.paye), fr(r.ca), fr(r.salaire), fr(r.ursaf), fr(r.tresorerie), fr(r.frais), fr(r.abos), fr(r.amort), fr(r.marge)].join(";"));
   }
   const csv = lines.join("\n");
   const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8" });
@@ -8668,11 +8681,12 @@ function bilanRender() {
     const [y, m] = ym.split("-");
     return `${MOIS_FR[parseInt(m, 10) - 1]} ${y}`;
   };
-  const cellH = v => `<td style="text-align:right;font-variant-numeric:tabular-nums;padding-right:14px">${num(v).toFixed(2).replace(".", ",")}</td>`;
-  const cell  = v => `<td style="text-align:right;font-variant-numeric:tabular-nums;padding-right:14px">${fmt(v)}</td>`;
-  const cellMarge = v => `<td style="text-align:right;font-variant-numeric:tabular-nums;padding-right:14px;font-weight:600;color:${v >= 0 ? 'var(--success)' : 'var(--danger)'}">${fmt(v)}</td>`;
+  // Helpers : "—" gris-clair quand zéro, sinon valeur formatée. Class CSS = source unique de style.
+  const cellH = v => num(v) === 0 ? `<td class="cp-zero cp-grp-sep">—</td>` : `<td class="cp-num cp-grp-sep">${num(v).toFixed(2).replace(".", ",")}</td>`;
+  const cell  = (v, sep) => num(v) === 0 ? `<td class="cp-zero${sep ? ' cp-grp-sep' : ''}">—</td>` : `<td class="cp-num${sep ? ' cp-grp-sep' : ''}">${fmt(v)}</td>`;
+  const cellMarge = v => v === 0 ? `<td class="cp-zero">—</td>` : `<td class="cp-marge ${v >= 0 ? 'pos' : 'neg'}">${fmt(v)}</td>`;
 
-  const KEYS = ["heures","paye","ca","ursaf","salaire","tresorerie","abos","amort","marge","frais"];
+  const KEYS = ["heures","paye","ca","salaire","ursaf","tresorerie","frais","abos","amort","marge"];
   const empty = () => Object.fromEntries(KEYS.map(k => [k, 0]));
   const annual = {};
   const grand = empty();
@@ -8682,17 +8696,19 @@ function bilanRender() {
     for (const k of KEYS) { annual[y][k] += r[k]; grand[k] += r[k]; }
   }
 
+  // Ordre des colonnes : | Heures · Payé · CA | Salaire · URSSAF · Trésorerie · Débours | Abos · Matériel · Marge |
+  // sep=true sur la 1re col de chaque groupe pour la border-left.
   const rowCells = r => `
     ${cellH(r.heures)}
     ${cell(r.paye)}
     ${cell(r.ca)}
+    ${cell(r.salaire, true)}
     ${cell(r.ursaf)}
-    ${cell(r.salaire)}
     ${cell(r.tresorerie)}
-    ${cell(r.abos)}
+    ${cell(r.frais)}
+    ${cell(r.abos, true)}
     ${cell(r.amort)}
-    ${cellMarge(r.marge)}
-    ${cell(r.frais)}`;
+    ${cellMarge(r.marge)}`;
 
   // Pour chaque sous-total annuel, calcule Δ% du CA vs année N-1 (si dispo).
   const deltaTag = (y) => {
@@ -8808,18 +8824,23 @@ function rCP() {
 
     ${bilan.body ? `<table class="hist">
       <thead>
+        <tr class="cp-grouphdr">
+          <th rowspan="2" style="width:110px;text-align:left;background:var(--surface-2)">Mois</th>
+          <th colspan="3" class="cp-grp-act cp-grp-sep">Activité</th>
+          <th colspan="4" class="cp-grp-flux cp-grp-sep">Répartition de l'encaissé</th>
+          <th colspan="3" class="cp-grp-bilan cp-grp-sep">Coûts &amp; marge</th>
+        </tr>
         <tr>
-          <th style="width:110px">Mois</th>
-          <th style="text-align:right">Heures</th>
+          <th class="cp-grp-sep" style="text-align:right">Heures</th>
           <th style="text-align:right" title="Total réellement encaissé (déclaré + au noir)">Payé</th>
           <th style="text-align:right" title="CA déclaré uniquement (utilisé pour les seuils micro-BNC / TVA)">CA</th>
+          <th class="cp-grp-sep" style="text-align:right" title="Part qui rentre sur le compte perso">Salaire</th>
           <th style="text-align:right">URSSAF</th>
-          <th style="text-align:right">Salaire net</th>
-          <th style="text-align:right" title="Pool qui finance matériel + abonnements + sécurité (= Payé − Salaire − URSSAF − Débours)">Trésorerie</th>
-          <th style="text-align:right">Abonnements</th>
-          <th style="text-align:right">Amort. matériel</th>
-          <th style="text-align:right">Marge nette</th>
-          <th style="text-align:right">Débours</th>
+          <th style="text-align:right" title="Pool qui finance matériel + abonnements + sécurité">Trésorerie</th>
+          <th style="text-align:right" title="Frais débours refacturés (avancés pour le client)">Débours</th>
+          <th class="cp-grp-sep" style="text-align:right" title="Charge mensuelle des abonnements actifs">Abos</th>
+          <th style="text-align:right" title="Charge mensuelle d'amortissement matériel">Matériel</th>
+          <th style="text-align:right" title="Salaire − Abos − Matériel">Marge</th>
         </tr>
       </thead>
       <tbody>${bilan.body}</tbody>
