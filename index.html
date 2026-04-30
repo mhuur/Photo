@@ -1893,6 +1893,7 @@ const DEFAULT_S = {
     regimeTVA: "franchise", numTvaIntra: "",
     rcPro: { assureur: "", numero: "", zone: "France" },
     mediateur: { nom: "", adresse: "", url: "" },
+    bank: { banque: "", titulaire: "", iban: "", bic: "" },
     clienteleType: "mixte"
   },
   devis:    {},
@@ -1945,8 +1946,22 @@ if (!S.identite || typeof S.identite !== "object") {
 } else {
   S.identite = { ...DEFAULT_S.identite, ...S.identite,
     rcPro:     { ...DEFAULT_S.identite.rcPro,     ...(S.identite.rcPro     || {}) },
-    mediateur: { ...DEFAULT_S.identite.mediateur, ...(S.identite.mediateur || {}) }
+    mediateur: { ...DEFAULT_S.identite.mediateur, ...(S.identite.mediateur || {}) },
+    bank:      { ...DEFAULT_S.identite.bank,      ...(S.identite.bank      || {}) }
   };
+}
+
+// Migration : déplace banque/titulaire/iban/bic depuis mission.paiement (legacy) vers identite.bank.
+// Ces champs sont identité-niveau (mêmes pour tous les devis), pas mission-niveau.
+if (S.mission && S.mission.paiement && S.identite.bank) {
+  const b = S.identite.bank;
+  const p = S.mission.paiement;
+  if (!b.banque && p.banque)       b.banque    = p.banque;
+  if (!b.titulaire && p.titulaire) b.titulaire = p.titulaire;
+  if (!b.iban && p.iban)           b.iban      = p.iban;
+  if (!b.bic && p.bic)             b.bic       = p.bic;
+  // On garde le legacy dans mission.paiement le temps que toutes les sessions soient migrées,
+  // mais l'app lit désormais `S.identite.bank` partout.
 }
 
 // Migrate paiement: ensure structured payment object exists + margeAvance/margeUrssaf fields
@@ -2151,7 +2166,8 @@ async function loadFromCloud() {
       if (d.identite) {
         S.identite = { ...DEFAULT_S.identite, ...d.identite,
           rcPro:     { ...DEFAULT_S.identite.rcPro,     ...(d.identite.rcPro     || {}) },
-          mediateur: { ...DEFAULT_S.identite.mediateur, ...(d.identite.mediateur || {}) }
+          mediateur: { ...DEFAULT_S.identite.mediateur, ...(d.identite.mediateur || {}) },
+          bank:      { ...DEFAULT_S.identite.bank,      ...(d.identite.bank      || {}) }
         };
       }
       if (d.devis)   S.devis   = Object.assign({}, DEFAULT_S.devis,   d.devis);
@@ -2827,10 +2843,11 @@ function rDevisPreview() {
 
     ${(() => {
       const p = d.paiement || {};
-      const hasNew = !!(p.banque || p.iban || p.bic || p.titulaire);
+      const b = (S.identite && S.identite.bank) || {};
+      const hasBank = !!(b.banque || b.iban || b.bic || b.titulaire);
       const legacy = (d.conditionsPaiement || "").trim();
       const hasEcheances = (t.echeances || []).length > 0;
-      if (!hasNew && !legacy && !hasEcheances) return "";
+      if (!hasBank && !legacy && !hasEcheances) return "";
       return `<div class="dp-payment-info">
         <h4>Modalités de paiement</h4>
         ${hasEcheances ? `<div class="dp-payment-block">
@@ -2840,13 +2857,13 @@ function rDevisPreview() {
           </div>`).join("")}
         </div>` : ""}
         ${p.delai ? `<div class="dp-paiement-line dp-delai"><span class="lbl">Délai de paiement</span><span class="amt">${esc(delaiPaiementLabel(p.delai))}</span></div>` : ""}
-        ${hasNew ? `<div class="dp-payment-block dp-bank">
-          ${p.banque ? `<div class="dp-bank-line"><span class="lbl">Banque</span><span class="val">${esc(p.banque)}</span></div>` : ""}
-          ${p.titulaire ? `<div class="dp-bank-line"><span class="lbl">Titulaire</span><span class="val">${esc(p.titulaire)}</span></div>` : ""}
-          ${p.iban ? `<div class="dp-bank-line iban"><span class="lbl">IBAN</span><span class="val">${esc(p.iban)}</span></div>` : ""}
-          ${p.bic ? `<div class="dp-bank-line"><span class="lbl">BIC</span><span class="val">${esc(p.bic)}</span></div>` : ""}
+        ${hasBank ? `<div class="dp-payment-block dp-bank">
+          ${b.banque ? `<div class="dp-bank-line"><span class="lbl">Banque</span><span class="val">${esc(b.banque)}</span></div>` : ""}
+          ${b.titulaire ? `<div class="dp-bank-line"><span class="lbl">Titulaire</span><span class="val">${esc(b.titulaire)}</span></div>` : ""}
+          ${b.iban ? `<div class="dp-bank-line iban"><span class="lbl">IBAN</span><span class="val">${esc(b.iban)}</span></div>` : ""}
+          ${b.bic ? `<div class="dp-bank-line"><span class="lbl">BIC</span><span class="val">${esc(b.bic)}</span></div>` : ""}
         </div>` : ""}
-        ${legacy && !hasNew ? `<div class="dp-payment-text">${richDisplayHtml(legacy)}</div>` : ""}
+        ${legacy && !hasBank ? `<div class="dp-payment-text">${richDisplayHtml(legacy)}</div>` : ""}
       </div>`;
     })()}
 
@@ -3047,16 +3064,16 @@ function rDeboursPreview() {
     ${factDirectHtml}
 
     ${(() => {
-      const p = d.paiement || {};
-      const hasNew = !!(p.banque || p.iban || p.bic || p.titulaire);
-      if (!hasNew) return "";
+      const b = (S.identite && S.identite.bank) || {};
+      const hasBank = !!(b.banque || b.iban || b.bic || b.titulaire);
+      if (!hasBank) return "";
       return `<div class="dp-payment-info">
         <h4>Coordonnées de remboursement</h4>
         <div class="dp-payment-block dp-bank">
-          ${p.banque ? `<div class="dp-bank-line"><span class="lbl">Banque</span><span class="val">${esc(p.banque)}</span></div>` : ""}
-          ${p.titulaire ? `<div class="dp-bank-line"><span class="lbl">Titulaire</span><span class="val">${esc(p.titulaire)}</span></div>` : ""}
-          ${p.iban ? `<div class="dp-bank-line iban"><span class="lbl">IBAN</span><span class="val">${esc(p.iban)}</span></div>` : ""}
-          ${p.bic ? `<div class="dp-bank-line"><span class="lbl">BIC</span><span class="val">${esc(p.bic)}</span></div>` : ""}
+          ${b.banque ? `<div class="dp-bank-line"><span class="lbl">Banque</span><span class="val">${esc(b.banque)}</span></div>` : ""}
+          ${b.titulaire ? `<div class="dp-bank-line"><span class="lbl">Titulaire</span><span class="val">${esc(b.titulaire)}</span></div>` : ""}
+          ${b.iban ? `<div class="dp-bank-line iban"><span class="lbl">IBAN</span><span class="val">${esc(b.iban)}</span></div>` : ""}
+          ${b.bic ? `<div class="dp-bank-line"><span class="lbl">BIC</span><span class="val">${esc(b.bic)}</span></div>` : ""}
         </div>
       </div>`;
     })()}
@@ -4629,18 +4646,29 @@ window.editSectionToggle = function(key) {
 
 function rPaiementFields() {
   const p = (S.mission && S.mission.paiement) || {};
+  const b = (S.identite && S.identite.bank) || {};
   const delaiOptions = DELAIS_PAIEMENT.map(d =>
     `<option value="${esc(d.k)}" ${p.delai === d.k ? "selected" : ""}>${esc(d.l)}</option>`
   ).join("");
   // Migration helper: if legacy text exists in conditionsPaiement, show a small notice
   const legacy = (S.mission && S.mission.conditionsPaiement || "").trim();
-  const hasNewFields = !!(p.banque || p.iban || p.bic || p.titulaire);
-  const legacyNotice = (legacy && !hasNewFields)
+  const hasBank = !!(b.banque || b.iban || b.bic || b.titulaire);
+  const legacyNotice = (legacy && !hasBank)
     ? `<div class="hint" style="margin:6px 0 14px;color:var(--warning);font-size:12px;line-height:1.5;padding:10px 12px;background:var(--warning-soft);border-radius:6px">
-        ⚠ Tu as des « conditions de paiement » dans l'ancien format texte. Remplis les champs structurés ci-dessous puis clique sur « Effacer l'ancien texte » pour finaliser la migration.
+        ⚠ Tu as des « conditions de paiement » dans l'ancien format texte. Renseigne tes coordonnées bancaires dans l'onglet <strong>Profil</strong>, puis clique sur « Effacer l'ancien texte ».
         <button class="btn ghost" style="margin-left:8px;padding:4px 10px;font-size:11px" onclick="paiementClearLegacy()">Effacer l'ancien texte</button>
       </div>`
     : "";
+  // Récap coordonnées bancaires (lecture seule — édition dans Profil).
+  const bankRecap = hasBank
+    ? `<div class="hint" style="margin-top:10px;font-size:12px;color:var(--text-dim);line-height:1.5">
+        Coordonnées bancaires utilisées : ${esc(b.banque || "—")}${b.iban ? ` · IBAN ${esc(b.iban)}` : ""}.
+        <a href="#" onclick="setTab('profil');return false" style="color:var(--primary);text-decoration:none;margin-left:6px">Modifier dans Profil →</a>
+      </div>`
+    : `<div class="hint" style="margin-top:10px;font-size:12px;color:var(--warning);line-height:1.5">
+        ⚠ Aucune coordonnée bancaire renseignée. Le devis ne pourra pas être réglé par virement.
+        <a href="#" onclick="setTab('profil');return false" style="color:var(--primary);text-decoration:none;margin-left:6px">Renseigner dans Profil →</a>
+      </div>`;
   return `
     ${legacyNotice}
     <div class="row">
@@ -4648,22 +4676,7 @@ function rPaiementFields() {
         <select onchange="upd('mission.paiement.delai', this.value)">${delaiOptions}</select>
       </div>
     </div>
-    <div class="row">
-      <div class="field"><label>Banque</label>
-        <input type="text" value="${esc(p.banque || "")}" oninput="upd('mission.paiement.banque', this.value)" placeholder="Ex : Banque Populaire Grand Ouest">
-      </div>
-      <div class="field"><label>Titulaire du compte</label>
-        <input type="text" value="${esc(p.titulaire || "")}" oninput="upd('mission.paiement.titulaire', this.value)" placeholder="Ex : MLLE NOEMIE SAINTILAN">
-      </div>
-    </div>
-    <div class="row">
-      <div class="field"><label>IBAN</label>
-        <input type="text" value="${esc(p.iban || "")}" oninput="upd('mission.paiement.iban', this.value)" placeholder="FR76 1234 5678 9012 3456 7890 123" style="font-variant-numeric:tabular-nums">
-      </div>
-      <div class="field narrow"><label>BIC</label>
-        <input type="text" value="${esc(p.bic || "")}" oninput="upd('mission.paiement.bic', this.value)" placeholder="ABCDEFGH" style="font-variant-numeric:tabular-nums;text-transform:uppercase">
-      </div>
-    </div>
+    ${bankRecap}
   `;
 }
 window.paiementClearLegacy = function() {
@@ -5259,7 +5272,7 @@ function devisSectionSummaries() {
   const echBit = ok100
     ? `<span class="amt">${(d.echeances || []).length} échéance${(d.echeances || []).length > 1 ? "s" : ""}</span>`
     : `<span class="err">${pctSum.toString().replace(".",",")}% (≠100)</span>`;
-  const ibanBit = (d.paiement && d.paiement.iban) ? `<span>IBAN ✓</span>` : `<span class="warn">IBAN manquant</span>`;
+  const ibanBit = (S.identite && S.identite.bank && S.identite.bank.iban) ? `<span>IBAN ✓</span>` : `<span class="warn">IBAN manquant</span>`;
   const modSummary = `${echBit}<span class="dot"></span>${ibanBit}`;
 
   // 6. Conditions & signature — sections CGV
@@ -5318,7 +5331,7 @@ function validateDevis() {
   if (num(d.remisePct) > ri.remiseMaxPct) {
     warnings.push(`Remise ${num(d.remisePct)}% > marge max recommandée (${ri.remiseMaxPct}%)`);
   }
-  if (!d.paiement || !d.paiement.iban) warnings.push("IBAN non renseigné dans Modalités de paiement");
+  if (!(S.identite && S.identite.bank && S.identite.bank.iban)) warnings.push("IBAN non renseigné dans Profil");
 
   return { errors, warnings, ok: errors.length === 0 };
 }
@@ -9236,6 +9249,25 @@ function rPF() {
       </div>
       <div class="field"><label>URL de saisine</label>
         <input type="url" value="${esc(id.mediateur.url)}" oninput="upd('identite.mediateur.url', this.value)" placeholder="https://www.medicys-consommation.fr">
+      </div>
+    </div>
+
+    <h3 style="margin-top:24px">Coordonnées bancaires</h3>
+    <div class="hint" style="max-width:780px;margin-bottom:8px">IBAN, BIC, banque et titulaire du compte. Apparaissent automatiquement sur tous les devis, factures et feuilles débours dans le bloc « Modalités de paiement ».</div>
+    <div class="row">
+      <div class="field"><label>Banque</label>
+        <input type="text" value="${esc((id.bank || {}).banque || "")}" oninput="upd('identite.bank.banque', this.value)" placeholder="Ex : Banque Populaire Grand Ouest">
+      </div>
+      <div class="field"><label>Titulaire du compte</label>
+        <input type="text" value="${esc((id.bank || {}).titulaire || "")}" oninput="upd('identite.bank.titulaire', this.value)" placeholder="Ex : MLLE NOEMIE SAINTILAN">
+      </div>
+    </div>
+    <div class="row">
+      <div class="field"><label>IBAN</label>
+        <input type="text" value="${esc((id.bank || {}).iban || "")}" oninput="upd('identite.bank.iban', this.value)" placeholder="FR76 1234 5678 9012 3456 7890 123" style="font-variant-numeric:tabular-nums">
+      </div>
+      <div class="field narrow"><label>BIC</label>
+        <input type="text" value="${esc((id.bank || {}).bic || "")}" oninput="upd('identite.bank.bic', this.value)" placeholder="ABCDEFGH" style="font-variant-numeric:tabular-nums;text-transform:uppercase">
       </div>
     </div>
 
