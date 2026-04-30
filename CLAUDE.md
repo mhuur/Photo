@@ -25,6 +25,10 @@ App web personnelle pour générer des devis photographe.
   1. Initialisé dans `DEFAULT_S`
   2. Inclus dans le merge de `loadFromCloud` (sinon non rechargé au login)
   3. Inclus dans l'objet `set` de `saveToCloud` (sinon non sauvegardé cloud)
+
+  Exception : champs purement runtime posés sur des entries existantes (ex. `e.pmtTs` = timestamp de paiement, lu par `suiviDevisUndo` pour cibler le dernier paiement). Pas dans `DEFAULT_S`, pas de migration. À nettoyer (`delete e.pmtTs`) à la transition inverse pour rester propre.
+- **Filtre sticky pendant l'édition** : quand l'utilisateur édite un item via un volet déplié (ex. `suiviExpandedDevis` dans rSV), l'item doit être exempté des filtres en cours pour qu'il ne disparaisse pas sous lui quand son statut change. Pattern : `g.devisId === sticky || <predicate>` dans chaque branche `.filter()`. Reset du sticky quand l'user change explicitement de filtre.
+- **Dropdown ancré à un `<th>`** : dans une `<table>`, un menu `position:absolute` à l'intérieur d'un `<th>` se retrouve **sous** les cellules du `<tbody>` (stacking thead/tbody pénalisant en HTML). Solution : rendre le menu HORS de la table en `position:fixed`, avec coordonnées calculées via `getBoundingClientRect()` du `<th>` cible après render. Voir `positionThMenu()` + `suiviDateMenuHtml()` pour le template (call dans `requestAnimationFrame` après chaque action qui modifie le menu).
 - **Tooltip dans une section accordéon `.edit-section`** : utiliser le pattern portal (`position:fixed` dans `<body>` via JS, ex. `_paiementTooltipEl` / `showPaiementInfo` / `showRemiseInfo`), pas un tooltip CSS-only en `position:absolute`. La section parente a `overflow:hidden` qui clippe les tooltips classiques.
 
 ## Schéma de données
@@ -65,6 +69,24 @@ Champs clés : `ref` (DEVIS-YYYY-MM-NNN, généré par `recomputeRef`), `dateEmi
 
 `{ ref, snapshotHtml, snapshotDeboursHtml, snapshotAt, snapshotTotal, snapshotDebours, snapshotClient, snapshotHash }`. Capturé par `suiviAdd` + maintenu par `suiviUpdateSnapshot`.
 
+### `S.suivi.entries[]` (lignes d'échéance) — state machine
+
+5 statuts possibles sur `e.statut` :
+
+- `envoye` — devis pas encore accepté
+- `attente` — paiement en attente (post-acceptation)
+- `termine` — payée (« soldée »)
+- `refuse` — refusé client **avant** acceptation
+- `annule` — annulé **après** acceptation (mission tombée à l'eau)
+
+Pas d'état intermédiaire `accepte` (fusionné dans `attente` lors de la refonte Suivi). Le statut devis-level est dérivé via `devisPrincipal()` qui ajoute `en_cours` quand le devis a un mix `attente` + `termine`.
+
+**Champs invisibles à connaître sur `e`** :
+- `e.pmtTs` — timestamp posé à la transition `attente → termine`. Utilisé par `suiviDevisUndo()` pour cibler le paiement le plus récent. Supprimé au revert.
+- `e.statutAvantRefus` / `e.statutAvantAnnul` — snapshot du statut précédent pour permettre le revert depuis `refuse` / `annule`.
+
+**Mapping legacy** (dans `STATUT_LEGACY`) : `paye → termine`, `accepte → attente`. Migré silencieusement par `suiviMigrate()` au prochain `loadFromCloud`.
+
 ## Débours
 
 Toggle par ligne (matériel) et sur le déplacement : `devis: "principal" | "debours"`. Pour les lignes en `debours`, deux modes :
@@ -87,6 +109,7 @@ Feuille débours : `rDeboursPreview()`. Bloc dans le devis principal : `.dp-debo
 ## Méthode de travail attendue
 
 - **Découpage en phases** pour toute tâche non triviale : audit / proposition / exécution. Arrêt explicite à la fin de chaque phase, attente de mon "OK" avant de passer à la suivante.
+- **Audit en UI pour les grosses refontes** : pour les phases d'audit (Phase 1) sur des features complexes, injecter aussi le diagramme/audit **dans l'app** (bloc `<details>` collapsible, ex. `rSuiviAuditBlock` sous le tableau Suivi). Permet à l'utilisateur de valider visuellement le diagnostic avant Phase 2. Le bloc se retire à la fin de la refonte (étape dédiée). NB : `rSuiviAuditBlock` est encore en place — étape de retrait à faire quand la refonte Suivi est validée par usage.
 - **Audit + proposition obligatoires (même en auto mode)** pour toute opération qui : touche la navigation/menu · modifie le schéma de `S` · supprime > 50 lignes · utilise `sed` ou un Edit multi-zones. Pas d'exécution sans "OK" explicite.
 - **Challenger bienvenu** : tu es autorisé — et encouragé — à proposer des améliorations, questions, ou alternatives auxquelles je n'aurais pas pensé. Sépare-les clairement de ce que j'ai demandé. Pour chacune, indique : à faire maintenant / plus tard / juste à noter.
 - **Demander plutôt que deviner** sur les points métier (statut fiscal, conventions, intentions produit). Mieux vaut une question qu'une supposition.
