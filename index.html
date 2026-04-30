@@ -573,8 +573,8 @@
   .devis-preview .dp-header-left.empty{color:var(--text-dim);font-style:italic;font-size:13px}
   .devis-preview .dp-header-left:has(.dp-emetteur-name){white-space:normal}
   .devis-preview .dp-header-left .dp-emetteur-name{font-weight:600;font-size:14px;color:var(--text);margin-bottom:1px}
-  .devis-preview .dp-header-left .dp-emetteur-profession{font-size:12px;color:var(--text-muted);font-style:italic;margin-bottom:6px}
-  .devis-preview .dp-header-left .dp-emetteur-meta{margin-top:4px;font-size:11.5px;color:var(--text-muted);font-variant-numeric:tabular-nums}
+  .devis-preview .dp-header-left .dp-emetteur-profession{font-size:13px;color:var(--text-muted);margin-bottom:6px}
+  .devis-preview .dp-header-left .dp-emetteur-meta{margin-top:6px;font-size:12px;color:var(--text-muted);font-variant-numeric:tabular-nums}
   /* Mediateur conso block (B2C / mixte) */
   .devis-preview .dp-mediateur{margin-top:14px;padding:8px 12px;border:1px dashed var(--border);border-radius:6px;font-size:11.5px;color:var(--text-muted);line-height:1.5}
   .devis-preview .dp-mediateur-title{font-weight:600;color:var(--text);text-transform:uppercase;font-size:10px;letter-spacing:.06em;margin-bottom:3px}
@@ -585,7 +585,7 @@
   .devis-preview .dp-retractation .dp-mediateur-title{font-weight:600;color:var(--text);text-transform:uppercase;font-size:10px;letter-spacing:.06em;margin-bottom:3px}
   .devis-preview .dp-cgv-fallback{margin-top:14px;font-style:italic;font-size:11px;color:var(--text-dim);text-align:center}
   /* Pied de page (preview écran qui mime @page bottom-* en print) */
-  .devis-preview .dp-page-footer-preview{display:flex;justify-content:space-between;align-items:baseline;gap:14px;margin-top:24px;padding-top:8px;border-top:1px dashed var(--border-soft);font-size:10.5px;font-style:italic;color:var(--text-dim);line-height:1.4}
+  .devis-preview .dp-page-footer-preview{display:flex;justify-content:space-between;align-items:baseline;gap:14px;margin-top:24px;padding-top:8px;border-top:1px dashed var(--border-soft);font-size:10.5px;color:var(--text-dim);line-height:1.4}
   .devis-preview .dp-page-footer-preview .lft{flex:0 0 auto;text-align:left}
   .devis-preview .dp-page-footer-preview .ctr{flex:1;text-align:center}
   .devis-preview .dp-page-footer-preview .rgt{flex:0 0 auto;text-align:right;font-style:normal}
@@ -632,7 +632,7 @@
   .devis-preview .dp-debours-block{margin-top:20px;padding:10px 0;border-top:1px solid var(--border-light);border-bottom:1px solid var(--border-light)}
   .devis-preview .dp-debours-head{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin-bottom:6px}
   .devis-preview .dp-debours-title{font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.08em}
-  .devis-preview .dp-debours-note{font-size:11px;color:var(--text-dim);font-style:italic}
+  .devis-preview .dp-debours-note{font-size:11px;color:var(--text-dim)}
   .devis-preview .dp-debours-block .dp-line{display:flex;justify-content:space-between;align-items:flex-start;grid-template-columns:none;gap:14px;padding:4px 0}
   .devis-preview .dp-debours-block .dp-line .lbl{flex:1;min-width:0}
   .devis-preview .dp-debours-block .dp-line .amt{flex-shrink:0;white-space:nowrap}
@@ -641,9 +641,9 @@
   .devis-preview .dp-debours-total{display:flex;justify-content:space-between;padding-top:6px;margin-top:4px;border-top:1px dashed var(--border);font-size:13px;font-weight:600;color:var(--text)}
   /* Bloc "À régler directement au fournisseur" : aligné droite sous les totaux, plus discret */
   .devis-preview .dp-fact-direct-block{margin:8px 0 0 auto;max-width:340px;width:100%;padding-top:8px;border-top:1px dashed var(--border)}
-  .devis-preview .dp-fact-direct-line{display:flex;justify-content:space-between;gap:14px;font-size:12px;font-style:italic;color:var(--text-muted)}
+  .devis-preview .dp-fact-direct-line{display:flex;justify-content:space-between;gap:14px;font-size:12px;color:var(--text-muted)}
   .devis-preview .dp-fact-direct-line .amt{font-variant-numeric:tabular-nums;flex-shrink:0}
-  .devis-preview .dp-fact-direct-note{font-size:10.5px;color:var(--text-dim);margin-top:3px;text-align:right;line-height:1.35;font-style:italic}
+  .devis-preview .dp-fact-direct-note{font-size:10.5px;color:var(--text-dim);margin-top:3px;text-align:right;line-height:1.35}
 
   /* Payment info: right-aligned column, same width as totals, all stacked vertically */
   .devis-preview .dp-payment-info{margin-top:24px;padding-top:14px;border-top:1px solid var(--border-light);max-width:340px;margin-left:auto;width:100%}
@@ -867,7 +867,7 @@
     }
     .devis-preview .dp-header-left .dp-emetteur-profession,
     .view-devis-snapshot .dp-header-left .dp-emetteur-profession {
-      font-size: 8.5pt !important; color: #555 !important; font-style: italic !important; margin-bottom: 4pt !important;
+      font-size: 9pt !important; color: #555 !important; margin-bottom: 4pt !important;
     }
     .devis-preview .dp-header-left .dp-emetteur-meta,
     .view-devis-snapshot .dp-header-left .dp-emetteur-meta {
@@ -1102,7 +1102,7 @@
       letter-spacing: .06em !important; color: #1a1a1a !important;
     }
     .devis-preview .dp-debours-note, .view-devis-snapshot .dp-debours-note {
-      font-size: 7.5pt !important; color: #555 !important; font-style: italic !important;
+      font-size: 7.5pt !important; color: #555 !important;
     }
     .devis-preview .dp-debours-block .dp-line, .view-devis-snapshot .dp-debours-block .dp-line {
       display: flex !important; justify-content: space-between !important; align-items: flex-start !important;
@@ -1136,14 +1136,14 @@
     }
     .devis-preview .dp-fact-direct-line, .view-devis-snapshot .dp-fact-direct-line {
       display: flex !important; justify-content: space-between !important; gap: 10pt !important;
-      font-size: 8pt !important; font-style: italic !important; color: #555 !important;
+      font-size: 8pt !important; color: #555 !important;
     }
     .devis-preview .dp-fact-direct-line .amt, .view-devis-snapshot .dp-fact-direct-line .amt {
       font-variant-numeric: tabular-nums !important; flex-shrink: 0 !important;
     }
     .devis-preview .dp-fact-direct-note, .view-devis-snapshot .dp-fact-direct-note {
       font-size: 7pt !important; color: #888 !important; margin-top: 2pt !important;
-      text-align: right !important; line-height: 1.3 !important; font-style: italic !important;
+      text-align: right !important; line-height: 1.3 !important;
     }
 
     /* === BODY 2-COLUMN GRID: lines+totals (left) + modalités+conditions (right) === */
