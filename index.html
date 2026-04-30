@@ -6313,20 +6313,54 @@ function suiviAdd() {
     snapshotHash: (typeof devisHash === "function") ? devisHash() : ""
   };
 
-  const mkLine = (echeance, montant, heures) => ({
-    id: uid(), devisId, date, client, prestation,
-    montant: montant.toFixed(2),
-    heures:  heures.toFixed(2),
-    echeance,
-    paiement: montant.toFixed(2),
-    ca: montant.toFixed(2),
-    salaire: "0", ursaf: "0", tresorerie: "0", frais: "0",
-    commentaires: "", statut: "envoye"
-  });
+  // Décomposition montant → salaire / URSSAF / trésorerie (calque la logique Excel) :
+  //   URSSAF      = montant × urssafPct (0 si au noir)
+  //   Trésorerie  = montant × (tauxAvecSecurite / tarifH) — fraction du tarif horaire
+  //                qui finance matos+abos+sécurité (constant pour tout le devis)
+  //   Salaire net = montant − URSSAF − Trésorerie
+  const isDeclared = m.declare !== false;
+  const urssafPct  = num(m.urssafPct ?? 22);
+  const tm         = tauxMatos();
+  const tresoRatio = (t.tarifH > 0 && tm.tauxAvecSecurite > 0) ? (tm.tauxAvecSecurite / t.tarifH) : 0;
+
+  const mkLine = (echeance, montant, heures) => {
+    const ursaf      = isDeclared ? r2(montant * urssafPct / 100) : 0;
+    const tresorerie = r2(montant * tresoRatio);
+    const salaire    = r2(montant - ursaf - tresorerie);
+    return {
+      id: uid(), devisId, date, client, prestation,
+      montant: montant.toFixed(2),
+      heures:  heures.toFixed(2),
+      echeance,
+      paiement: montant.toFixed(2),
+      ca:         isDeclared ? montant.toFixed(2) : "0.00",
+      salaire:    salaire.toFixed(2),
+      ursaf:      ursaf.toFixed(2),
+      tresorerie: tresorerie.toFixed(2),
+      frais: "0",
+      commentaires: "", statut: "envoye"
+    };
+  };
 
   const acompte = mkLine("Acompte 30 %", t.acompte, hoursTotal * 0.30);
   const reste   = mkLine("Reste à payer 70 %", t.reste, hoursTotal * 0.70);
   S.suivi.entries.unshift(acompte, reste);
+
+  // Si le devis a des débours refacturés, créer une entry séparée pour suivre leur paiement.
+  // (Hors CA/URSSAF/trésorerie/salaire — c'est une avance de frais, neutre fiscalement.)
+  if (t.debours > 0) {
+    S.suivi.entries.unshift({
+      id: uid(), devisId, date, client, prestation,
+      montant: t.debours.toFixed(2),
+      heures:  "0.00",
+      echeance: "Frais de débours",
+      paiement: t.debours.toFixed(2),
+      ca: "0.00",
+      salaire: "0.00", ursaf: "0.00", tresorerie: "0.00",
+      frais: t.debours.toFixed(2),
+      commentaires: "", statut: "envoye"
+    });
+  }
 
   save();
   render();
