@@ -132,12 +132,6 @@
   table.hist tbody.devis-grp.sel{box-shadow:inset 4px 0 0 var(--warning)}
   table.hist tbody.devis-grp.sel tr.suv-row td{background:var(--warning-soft)}
 
-  /* Paid toggle pill (Suivi: marquer une échéance comme payée) — always visible */
-  .paid-toggle{display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:11px;background:var(--surface-2);border:1px solid var(--border);color:var(--text-muted);font-size:11px;font-weight:600;cursor:pointer;user-select:none;transition:background .12s,color .12s,border-color .12s;line-height:1;white-space:nowrap;flex-shrink:0}
-  .paid-toggle input[type=checkbox]{display:none}
-  .paid-toggle:hover{background:var(--surface);color:var(--text);border-color:var(--border-light)}
-  .paid-toggle.on{background:var(--success-soft);border-color:var(--success);color:var(--success)}
-
   /* ========================================================================
      SUIVI v2 — palette violette pour "En cours", badge attente paiement,
      divider de filtres, timeline modale.
@@ -5021,9 +5015,9 @@ function rViewFactureModal() {
   const lignes = (S.suivi.entries || []).filter(e => e.devisId === devisId);
   const refRaw = (dv && dv.ref) || devisId;
   const factureRef = formatRef(refRaw, "facture");
-  // Compute totals
+  // Compute totals — la vérité du paiement est portée par entry.statut === "termine"
   const totalDevis = lignes.reduce((s, e) => s + num(e.montant), 0);
-  const paidLines = lignes.filter(e => e.paid);
+  const paidLines = lignes.filter(e => entryStatut(e) === "termine");
   const totalPaid = paidLines.reduce((s, e) => s + num(e.montant), 0);
   const restant = r2(totalDevis - totalPaid);
   const fullyPaid = restant <= 0.01 && totalPaid > 0;
@@ -5041,7 +5035,7 @@ function rViewFactureModal() {
     <h4>Récapitulatif paiement</h4>
     ${paidLines.length > 0 ? `<div class="dp-receipt-list">
       ${paidLines.map(p => `<div class="dp-receipt-line">
-        <span class="lbl">${esc(p.echeance || "Paiement")}${p.paidAt ? ` — <span class="dim">payée le ${esc(dateFR(p.paidAt))}</span>` : ""}</span>
+        <span class="lbl">${esc(p.echeance || "Paiement")}</span>
         <span class="amt">${fmt(p.montant)}</span>
       </div>`).join("")}
     </div>` : `<div class="dp-receipt-line"><span class="lbl dim" style="font-style:italic">Aucune échéance n'est marquée comme payée pour l'instant.</span></div>`}
@@ -6145,6 +6139,10 @@ function suiviMigrate() {
     if (e.statutAvantRefus && STATUT_LEGACY[e.statutAvantRefus]) {
       e.statutAvantRefus = STATUT_LEGACY[e.statutAvantRefus];
     }
+    // Purge des champs paid/paidAt jamais câblés (refonte Suivi étape 4) :
+    // la vérité du paiement est désormais portée par e.statut === "termine".
+    if ("paid" in e)   delete e.paid;
+    if ("paidAt" in e) delete e.paidAt;
   }
 
   const ungrouped = S.suivi.entries.filter(e => !e.devisId);
@@ -7043,21 +7041,6 @@ function suiviSelInfoHtml() {
 }
 
 const SUIVI_NUMERIC = new Set(["montant","heures","paiement","ca","salaire","ursaf","tresorerie","frais"]);
-
-// Toggle paid status on a Suivi entry (échéance line)
-function suiviTogglePaid(id) {
-  const e = S.suivi.entries.find(x => x.id === id);
-  if (!e) return;
-  e.paid = !e.paid;
-  if (e.paid && !e.paidAt) {
-    e.paidAt = new Date().toISOString().slice(0, 10);
-  } else if (!e.paid) {
-    delete e.paidAt;
-  }
-  save();
-  render();
-}
-window.suiviTogglePaid = suiviTogglePaid;
 
 // Facture viewer modal state
 let viewFactureModal = null; // { devisId }
