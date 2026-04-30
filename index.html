@@ -572,7 +572,8 @@
   .devis-preview .dp-header-left{font-size:13px;color:var(--text);line-height:1.6;white-space:pre-wrap;padding-right:0;overflow-wrap:anywhere}
   .devis-preview .dp-header-left.empty{color:var(--text-dim);font-style:italic;font-size:13px}
   .devis-preview .dp-header-left:has(.dp-emetteur-name){white-space:normal}
-  .devis-preview .dp-header-left .dp-emetteur-name{font-weight:600;font-size:14px;color:var(--text);margin-bottom:2px}
+  .devis-preview .dp-header-left .dp-emetteur-name{font-weight:600;font-size:14px;color:var(--text);margin-bottom:1px}
+  .devis-preview .dp-header-left .dp-emetteur-profession{font-size:12px;color:var(--text-muted);font-style:italic;margin-bottom:6px}
   .devis-preview .dp-header-left .dp-emetteur-meta{margin-top:4px;font-size:11.5px;color:var(--text-muted);font-variant-numeric:tabular-nums}
   /* Mediateur conso block (B2C / mixte) */
   .devis-preview .dp-mediateur{margin-top:14px;padding:8px 12px;border:1px dashed var(--border);border-radius:6px;font-size:11.5px;color:var(--text-muted);line-height:1.5}
@@ -842,7 +843,11 @@
     .view-devis-snapshot .dp-header-left:has(.dp-emetteur-name) { white-space: normal !important; }
     .devis-preview .dp-header-left .dp-emetteur-name,
     .view-devis-snapshot .dp-header-left .dp-emetteur-name {
-      font-weight: 600 !important; font-size: 10pt !important; color: #1a1a1a !important; margin-bottom: 1pt !important;
+      font-weight: 600 !important; font-size: 10pt !important; color: #1a1a1a !important; margin-bottom: 0.5pt !important;
+    }
+    .devis-preview .dp-header-left .dp-emetteur-profession,
+    .view-devis-snapshot .dp-header-left .dp-emetteur-profession {
+      font-size: 8.5pt !important; color: #555 !important; font-style: italic !important; margin-bottom: 4pt !important;
     }
     .devis-preview .dp-header-left .dp-emetteur-meta,
     .view-devis-snapshot .dp-header-left .dp-emetteur-meta {
@@ -1861,6 +1866,7 @@ const DEFAULT_S = {
   },
   identite: {
     prenom: "", nom: "", denomination: "",
+    profession: "Photographe",
     adresse: "", cp: "", ville: "",
     email: "", telephone: "", siteWeb: "",
     formeJuridique: "micro-bnc", mentionEI: true,
@@ -2518,6 +2524,7 @@ function genHeaderEmetteur(identite, photographeRichtext) {
   if (id.capitalSocial) meta.push("Capital " + fmt(id.capitalSocial));
   const lines = [
     `<div class="dp-emetteur-name">${esc(displayName)}</div>`,
+    id.profession ? `<div class="dp-emetteur-profession">${esc(id.profession)}</div>` : "",
     id.adresse   ? `<div>${esc(id.adresse)}</div>`   : "",
     cityLine     ? `<div>${esc(cityLine)}</div>`     : "",
     id.email     ? `<div>${esc(id.email)}</div>`     : "",
@@ -8996,6 +9003,11 @@ function rPF() {
         <input type="text" value="${esc(id.denomination)}" oninput="upd('identite.denomination', this.value)" placeholder="Ex : Studio Saintilan">
       </div>
     </div>` : ""}
+    <div class="row">
+      <div class="field"><label>Profession / sous-titre <span class="hint" style="margin:0;font-size:11px">(affiché sous ton nom dans l'en-tête du devis)</span></label>
+        <input type="text" value="${esc(id.profession || "")}" oninput="upd('identite.profession', this.value)" placeholder="Ex : Photographe & Vidéaste">
+      </div>
+    </div>
     <div class="row">
       <div class="field"><label>Adresse</label>
         <input type="text" value="${esc(id.adresse)}" oninput="upd('identite.adresse', this.value)" placeholder="12 rue Exemple">
