@@ -2940,6 +2940,7 @@ function rDeboursPreview() {
   const sel = d.client.id ? S.clients.entries.find(x => x.id === d.client.id) : null;
   const cli = sel || d.client;
   const ref = formatRef(d.ref, "debours");
+  const cat = (S.tarifs.catalog || DEFAULT_CATALOG).find(c => c.k === d.object);
 
   // Build débours items — same numbered layout as devis principal.
   // Les fact-direct sont listés séparément après le bloc Total à rembourser.
@@ -2974,21 +2975,19 @@ function rDeboursPreview() {
   }
 
   // Bloc "À régler directement au fournisseur" — items fact-direct côté débours.
+  // Réutilise la charte .dp-debours-block (cohérente avec le bloc Débours du devis principal).
   let factDirectHtml = "";
   if (factDirectItems.length > 0) {
-    factDirectHtml = `<div class="dp-fact-direct-block" style="max-width:none;margin-top:18px;padding-top:10px">
-      <div class="dp-debours-head" style="margin-bottom:6px">
+    factDirectHtml = `<div class="dp-debours-block">
+      <div class="dp-debours-head">
         <span class="dp-debours-title">À régler directement au fournisseur</span>
-        <span class="dp-debours-note">Hors refacturation : le client règle ces frais directement auprès du prestataire concerné.</span>
+        <span class="dp-debours-note">hors refacturation — le client règle directement le prestataire concerné</span>
       </div>
-      ${factDirectItems.map(it => `<div class="dp-fact-direct-line">
-        <span class="lbl">${esc(it.intitule || "(Sans intitulé)")}${it.description ? ` — <span style="color:var(--text-dim)">${esc(it.description)}</span>` : ""}</span>
-        <span class="amt">${fmt(num(it.prix))}</span>
+      ${factDirectItems.map((it, i) => `<div class="dp-line">
+        <div class="lbl">${esc(it.intitule || "(Sans intitulé)")}${it.description ? `<div class="desc">${esc(it.description)}</div>` : ""}</div>
+        <div class="amt">${fmt(num(it.prix))}</div>
       </div>`).join("")}
-      <div class="dp-fact-direct-line" style="font-weight:700;border-top:1px dashed var(--border);margin-top:6px;padding-top:6px">
-        <span class="lbl">Total à régler directement</span>
-        <span class="amt">${fmt(totalFactDirectDebours)}</span>
-      </div>
+      <div class="dp-debours-total"><span class="lbl">Total à régler directement</span><span class="amt">${fmt(totalFactDirectDebours)}</span></div>
     </div>`;
   }
 
@@ -3033,15 +3032,14 @@ function rDeboursPreview() {
       </div>
     </div>
 
-    <div class="dp-doc-title" style="color:var(--accent)">DÉBOURS</div>
-    <div class="dp-doc-sub">Refacturation de frais avancés au nom et pour le compte du client (art. 267 II du CGI)</div>
+    ${cat ? `<div class="dp-objet">Objet : <strong>${esc((d.objectText || "").trim() || cat.l)}</strong></div>` : ""}
 
     ${t.debours > 0 ? `<div class="dp-section">
       ${linesHtml}
     </div>
 
     <div class="dp-totals">
-      <div class="dp-line grand" style="color:var(--accent)"><span class="lbl">Total à rembourser</span><span class="amt">${fmt(t.debours)}</span></div>
+      <div class="dp-line grand"><span class="lbl">Total à rembourser</span><span class="amt">${fmt(t.debours)}</span></div>
       <div class="dp-totals-tva">Refacturation au centime près sur justificatifs · ${esc(tvaMention(S.identite))}</div>
     </div>` : ""}
 
