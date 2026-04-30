@@ -96,6 +96,7 @@
   .pst[data-s="attente"]{background:var(--warning);box-shadow:0 0 6px rgba(245,158,11,.5)}
   .pst[data-s="termine"]{background:var(--success);box-shadow:0 0 6px rgba(34,197,94,.5)}
   .pst[data-s="refuse"]{background:var(--danger);box-shadow:0 0 6px rgba(239,68,68,.5)}
+  .pst[data-s="annule"]{background:var(--text-dim);box-shadow:0 0 4px rgba(148,163,184,.4)}
   .legend{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin:6px 0 10px;padding:6px;background:var(--surface);border:1px solid var(--border);border-radius:8px;font-size:13px;color:var(--text-muted)}
   .legend .item{display:flex;align-items:center;gap:6px}
   .legend-btn{background:transparent;border:1px solid transparent;color:var(--text-muted);padding:6px 12px;border-radius:6px;cursor:pointer;font:inherit;font-size:13px;transition:all .15s;display:inline-flex;align-items:center;gap:6px}
@@ -6023,7 +6024,8 @@ const STATUTS = [
   ["en_cours", "En cours"],
   ["attente",  "Paiement en attente"],
   ["termine",  "Soldée"],
-  ["refuse",   "Refusé"]
+  ["refuse",   "Refusé"],
+  ["annule",   "Annulé"]
 ];
 // Mapping legacy : conversions silencieuses des anciens statuts.
 // - "paye"    → ancien synonyme de "termine"
@@ -6040,10 +6042,12 @@ function pastille(statut) {
 
 // Dérive le statut principal d'un devis à partir des statuts de ses lignes.
 // "en_cours" = devis accepté avec un mix de lignes en attente et soldées.
+// "refuse" / "annule" : agrégés au niveau devis (jamais mixé en pratique).
 function devisPrincipal(lignes) {
   if (!lignes.length) return "envoye";
   const ss = lignes.map(entryStatut);
   if (ss.some(s => s === "refuse"))         return "refuse";
+  if (ss.some(s => s === "annule"))         return "annule";
   if (ss.every(s => s === "termine"))       return "termine";
   if (ss.every(s => s === "envoye"))        return "envoye";
   return "en_cours";
@@ -6063,7 +6067,7 @@ function suiviLegendHtml() {
     ["en_cours","En cours", null, null],
     ["termine", "Soldé",    null, null]
   ];
-  const refusedCount = suiviGroupsAll().filter(g => g.statutPrin === "refuse").length;
+  const refusedCount = suiviGroupsAll().filter(g => g.statutPrin === "refuse" || g.statutPrin === "annule").length;
   const attenteCount = suiviGroupsAll().filter(g => g.attentePaiement).length;
 
   return `<div class="suv-chip-bar">
@@ -6075,7 +6079,7 @@ function suiviLegendHtml() {
     }).join("")}
     ${refusedCount > 0 ? `<button type="button" class="suv-chip ${f === 'refuse' ? 'on' : ''}"
         onclick="suiviSetFilterPrincipal('refuse')" aria-pressed="${f === 'refuse'}"
-        title="Voir les devis refusés ou annulés"><span class="pst" data-s="refuse"></span>Refusé (${refusedCount})</button>` : ''}
+        title="Voir les devis refusés (avant acceptation) ou annulés (après acceptation)"><span class="pst" data-s="refuse"></span>Refusé / Annulé (${refusedCount})</button>` : ''}
     <span class="suv-chip-divider" aria-hidden="true"></span>
     <button type="button" class="suv-chip suv-chip-attente ${suiviFilterAttente ? 'on' : ''}"
       onclick="suiviToggleFilterAttente()" aria-pressed="${suiviFilterAttente}"
@@ -6842,15 +6846,43 @@ function suiviDevisRevertRefus(devisId) {
 }
 window.suiviDevisRevertRefus = suiviDevisRevertRefus;
 
+// Annulation après acceptation (mission tombée à l'eau, annulation tardive).
+// Distingué de "refuse" qui couvre uniquement le refus client AVANT acceptation.
+function suiviDevisAnnuler(devisId) {
+  for (const e of suiviGroupLigne(devisId)) {
+    e.statutAvantAnnul = entryStatut(e);
+    e.statut = "annule";
+  }
+  save();
+  render();
+}
+window.suiviDevisAnnuler = suiviDevisAnnuler;
+
+function suiviDevisRevertAnnul(devisId) {
+  for (const x of suiviGroupLigne(devisId)) {
+    x.statut = x.statutAvantAnnul || "attente";
+    delete x.statutAvantAnnul;
+  }
+  save();
+  render();
+}
+window.suiviDevisRevertAnnul = suiviDevisRevertAnnul;
+
 function devisActionsHtml(g) {
   const stop = "event.stopPropagation();";
   if (g.statutGlobal === "envoye") {
     return `
       <button class="btn-act act-vert" title="Accepté — toutes les lignes passent en « Paiement en attente »." onclick="${stop}suiviDevisAccepter('${g.devisId}')"><span class="ico">✓</span> Accepté</button>
-      <button class="btn-act act-rouge" title="Refusé — le client a refusé. Toutes les lignes passent à « Refusé »." onclick="${stop}suiviDevisRefuser('${g.devisId}')"><span class="ico">✗</span> Refusé</button>`;
+      <button class="btn-act act-rouge" title="Refusé — le client a refusé avant acceptation. Toutes les lignes passent à « Refusé »." onclick="${stop}suiviDevisRefuser('${g.devisId}')"><span class="ico">✗</span> Refusé</button>`;
+  }
+  if (g.statutGlobal === "en_cours" || g.statutGlobal === "termine") {
+    return `<button class="btn btn-icon ghost" title="Annuler — la mission est annulée après acceptation (différent de Refusé qui est avant)." onclick="${stop}suiviDevisAnnuler('${g.devisId}')">🚫</button>`;
   }
   if (g.statutGlobal === "refuse") {
     return `<button class="btn btn-icon ghost" title="Annuler le refus du devis et restaurer l'état précédent" onclick="${stop}suiviDevisRevertRefus('${g.devisId}')">↩</button>`;
+  }
+  if (g.statutGlobal === "annule") {
+    return `<button class="btn btn-icon ghost" title="Annuler l'annulation et restaurer l'état précédent" onclick="${stop}suiviDevisRevertAnnul('${g.devisId}')">↩</button>`;
   }
   return "";
 }
@@ -6913,11 +6945,11 @@ function suiviPaiementPopoverRow(g) {
 }
 
 function suiviStats(groups) {
-  const by = { envoye: 0, en_cours: 0, termine: 0, refuse: 0 };
+  const by = { envoye: 0, en_cours: 0, termine: 0, refuse: 0, annule: 0 };
   let total = 0;
   for (const g of groups) {
     by[g.statutGlobal] = (by[g.statutGlobal] || 0) + 1;
-    if (g.statutGlobal !== "refuse") total += g.total;
+    if (g.statutGlobal !== "refuse" && g.statutGlobal !== "annule") total += g.total;
   }
   return { by, count: groups.length, total };
 }
@@ -7064,7 +7096,7 @@ function suiviYears() {
   return [...ys].sort().reverse();
 }
 
-const STATUT_ORDER = { envoye: 0, en_cours: 1, attente: 2, termine: 3, refuse: 4 };
+const STATUT_ORDER = { envoye: 0, en_cours: 1, attente: 2, termine: 3, refuse: 4, annule: 5 };
 
 // Liste TOUS les groupes (sans filtre) — utile pour les compteurs des chips
 function suiviGroupsAll() {
@@ -7109,7 +7141,14 @@ function suiviGroups() {
     });
   }
   // Filtre principal (single-select, exclusif)
-  if (suiviFilterPrincipal !== "all") list = list.filter(g => g.statutPrin === suiviFilterPrincipal);
+  if (suiviFilterPrincipal !== "all") {
+    if (suiviFilterPrincipal === "refuse") {
+      // Le chip "Refusé / Annulé" agrège les deux statuts post-clôture.
+      list = list.filter(g => g.statutPrin === "refuse" || g.statutPrin === "annule");
+    } else {
+      list = list.filter(g => g.statutPrin === suiviFilterPrincipal);
+    }
+  }
   // Filtre année (existant)
   if (suiviFilterYear !== "all") list = list.filter(g => g.lignes.some(e => (e.date || "").startsWith(suiviFilterYear)));
   // Filtre transversal attente paiement (peut se combiner)
@@ -7183,6 +7222,9 @@ function suiviTimelineStepHtml(e) {
   if (s === "refuse") {
     dotClass = "refused"; icon = "✗";
     flagsHtml = `<span class="suv-tl-flag idle">Refusé</span>`;
+  } else if (s === "annule") {
+    dotClass = "refused"; icon = "🚫";
+    flagsHtml = `<span class="suv-tl-flag idle">Annulé</span>`;
   } else if (s === "termine") {
     dotClass = "done"; icon = "✓";
     flagsHtml = `<span class="suv-tl-flag paid">💰 Soldée</span>`;
@@ -7228,15 +7270,19 @@ function rSuiviTimelineModal() {
   const attente = devisAttentePaiement(lignes);
   const client = cleanClientLabel(lignes[0].client) || "—";
 
-  // Actions au niveau devis (acceptation, refus, revert)
+  // Actions au niveau devis (acceptation, refus, annulation, revert)
   const stop = "event.stopPropagation();";
   let devisLevelAction = "";
   if (statutPrin === "envoye") {
     devisLevelAction = `
       <button class="btn-act act-vert" onclick="${stop}suiviDevisAccepter('${devisId}')"><span class="ico">✓</span> Accepté</button>
       <button class="btn-act act-rouge" onclick="${stop}suiviDevisRefuser('${devisId}')"><span class="ico">✗</span> Refusé</button>`;
+  } else if (statutPrin === "en_cours" || statutPrin === "termine") {
+    devisLevelAction = `<button class="btn ghost" onclick="${stop}suiviDevisAnnuler('${devisId}')">🚫 Annuler la mission</button>`;
   } else if (statutPrin === "refuse") {
     devisLevelAction = `<button class="btn ghost" onclick="${stop}suiviDevisRevertRefus('${devisId}')">↩ Annuler le refus</button>`;
+  } else if (statutPrin === "annule") {
+    devisLevelAction = `<button class="btn ghost" onclick="${stop}suiviDevisRevertAnnul('${devisId}')">↩ Restaurer (annuler l'annulation)</button>`;
   }
 
   return `<div class="modal-overlay" onclick="if(event.target===this)suiviTimelineClose()">
