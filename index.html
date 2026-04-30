@@ -41,7 +41,7 @@
   /* Edit accordion (Édition du devis section) — collapsible groups */
   .edit-accordion-list{display:flex;flex-direction:column;gap:8px;margin-top:6px;margin-bottom:18px;max-width:880px}
   .edit-section{background:var(--surface-2);border:1px solid var(--border-soft);border-radius:8px;overflow:hidden;transition:border-color .15s}
-  .edit-section.open{border-color:var(--border-light);overflow:visible;position:relative;z-index:10}
+  .edit-section.open{border-color:var(--border-light)}
   .edit-section-header{width:100%;display:flex;align-items:center;gap:10px;padding:10px 14px;background:transparent;border:0;color:var(--text);font:inherit;font-size:13px;font-weight:600;cursor:pointer;text-align:left;transition:background .12s}
   .edit-section-header:hover{background:rgba(255,255,255,.03)}
   .edit-section-header:focus{outline:none;background:rgba(255,255,255,.04)}
@@ -3869,6 +3869,32 @@ window.hidePaiementInfo = function() {
   if (_paiementTooltipEl) _paiementTooltipEl.style.display = "none";
 };
 
+// Tooltip Remise — réutilise le même portail (position:fixed dans body)
+// pour éviter tout problème de clipping (overflow:hidden des sections accordéon).
+window.showRemiseInfo = function(evt) {
+  const el = _ensureTooltipEl();
+  const ri = computeRemiseInfo();
+  el.innerHTML = buildRemiseTooltipHtml(ri);
+  el.style.display = "block";
+  const target = evt.currentTarget || evt.target;
+  const rect = target.getBoundingClientRect();
+  const tooltipW = 340;
+  const margin = 12;
+  let left = rect.right + 8;
+  if (left + tooltipW > window.innerWidth - margin) left = Math.max(margin, rect.left - tooltipW - 8);
+  let top = rect.top - 4;
+  requestAnimationFrame(() => {
+    const h = el.offsetHeight;
+    if (top + h > window.innerHeight - margin) top = Math.max(margin, window.innerHeight - h - margin);
+    el.style.top = top + "px";
+  });
+  el.style.left = left + "px";
+  el.style.top = top + "px";
+};
+window.hideRemiseInfo = function() {
+  if (_paiementTooltipEl) _paiementTooltipEl.style.display = "none";
+};
+
 function rLigne(l) {
   const isExpanded = expandedLignes.has(l.id);
   const hasDesc = (l.description || "").trim().length > 0;
@@ -5116,13 +5142,12 @@ function buildRemiseTooltipHtml(ri) {
     </div>`;
 }
 
-// Refresh the remise tooltip + max attribute on the input, without re-rendering the form
+// Refresh the max attribute on the Remise input, without re-rendering the form
 // (so input focus and caret are preserved). Called from refreshTotals().
+// La tooltip elle-même est rebuild dynamiquement à chaque hover (showRemiseInfo),
+// donc plus besoin de la rafraîchir ici.
 function refreshRemiseTooltip() {
   const ri = computeRemiseInfo();
-  const tt = document.querySelector(".remise-tooltip");
-  if (tt) tt.innerHTML = buildRemiseTooltipHtml(ri);
-  // Update max attribute on the input + the onchange handler's max param
   const inp = document.querySelector(".remise-input-wrap input");
   if (inp) {
     inp.setAttribute("max", String(ri.remiseMaxPct));
@@ -5725,7 +5750,6 @@ function rDevisSectionAjustements() {
   const d = S.mission;
   const declare = d.declare !== false;
   const ri = computeRemiseInfo();
-  const tooltipHtml = buildRemiseTooltipHtml(ri);
 
   return `
     <div class="row">
@@ -5733,7 +5757,7 @@ function rDevisSectionAjustements() {
         <label>Remise (%)</label>
         <div class="remise-input-wrap">
           <input type="number" step="1" min="0" max="${ri.remiseMaxPct}" value="${esc(d.remisePct)}" oninput="updRemise(this.value, ${ri.remiseMaxPct})">
-          <button type="button" class="ech-info-icon" tabindex="0" aria-label="Voir le détail du calcul de remise">i<span class="remise-tooltip" role="tooltip">${tooltipHtml}</span></button>
+          <button type="button" class="ech-info-icon" tabindex="0" onmouseenter="showRemiseInfo(event)" onmouseleave="hideRemiseInfo()" onfocus="showRemiseInfo(event)" onblur="hideRemiseInfo()" aria-label="Voir le détail du calcul de remise">i</button>
         </div>
       </div>
     </div>
