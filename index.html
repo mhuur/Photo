@@ -589,6 +589,16 @@
   .devis-preview .dp-meta-block strong{color:var(--text);font-weight:600}
   .devis-preview .dp-client-block{text-align:right;font-size:13px;color:var(--text);line-height:1.6;padding:0;min-width:220px;margin-top:0}
   .devis-preview .dp-client-block .name{font-weight:600;font-size:13px;color:var(--text);display:block}
+  /* New encadré meta + client boxes (commit 10 redesign) */
+  .devis-preview .dp-meta-block.dp-meta-box{border:1px solid var(--border);border-radius:6px;padding:10px 12px;background:var(--surface);min-width:240px}
+  .devis-preview .dp-meta-ref{font-weight:700;font-size:15px;color:var(--text);font-variant-numeric:tabular-nums;letter-spacing:.01em;padding-bottom:6px;margin-bottom:6px;border-bottom:1px solid var(--border-soft)}
+  .devis-preview .dp-meta-row{display:flex;justify-content:space-between;gap:10px;font-size:12px;color:var(--text-muted);margin:1px 0}
+  .devis-preview .dp-meta-row .lbl{color:var(--text-dim)}
+  .devis-preview .dp-meta-row strong{color:var(--text);font-weight:600}
+  .devis-preview .dp-meta-block.dp-meta-box .dp-validity-mention{margin-top:6px;text-align:right;max-width:none}
+  .devis-preview .dp-meta-gratuit{font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--text-dim);margin-top:4px;padding-top:4px;border-top:1px dashed var(--border-soft)}
+  .devis-preview .dp-client-block.dp-client-box{border:1px solid var(--border);border-radius:6px;padding:10px 12px;background:var(--surface);margin-top:10px}
+  .devis-preview .dp-client-label{font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--text-dim);font-weight:600;padding-bottom:4px;margin-bottom:4px;border-bottom:1px solid var(--border-soft)}
   @media (max-width:680px){
     .devis-preview .dp-header-grid{grid-template-columns:1fr}
     .devis-preview .dp-header-left{border-right:0;border-bottom:1px solid var(--border-soft);padding-right:0;padding-bottom:14px}
@@ -844,6 +854,42 @@
     .devis-preview .dp-meta-block strong, .view-devis-snapshot .dp-meta-block strong {
       color: #1a1a1a !important;
       font-weight: 600 !important;
+    }
+    /* Encadré meta + client boxes (commit 10) */
+    .devis-preview .dp-meta-block.dp-meta-box, .view-devis-snapshot .dp-meta-block.dp-meta-box {
+      border: 0.5pt solid #1a1a1a !important; border-radius: 2pt !important;
+      padding: 5pt 7pt !important; background: transparent !important; min-width: 0 !important;
+    }
+    .devis-preview .dp-meta-ref, .view-devis-snapshot .dp-meta-ref {
+      font-weight: 700 !important; font-size: 11pt !important; color: #1a1a1a !important;
+      letter-spacing: .005em !important; padding-bottom: 3pt !important; margin-bottom: 3pt !important;
+      border-bottom: 0.5pt solid #1a1a1a !important; font-variant-numeric: tabular-nums !important;
+    }
+    .devis-preview .dp-meta-row, .view-devis-snapshot .dp-meta-row {
+      display: flex !important; justify-content: space-between !important; gap: 8pt !important;
+      font-size: 8.5pt !important; margin: 0 !important; color: #555 !important;
+    }
+    .devis-preview .dp-meta-row strong, .view-devis-snapshot .dp-meta-row strong {
+      color: #1a1a1a !important; font-weight: 600 !important;
+    }
+    .devis-preview .dp-meta-block.dp-meta-box .dp-validity-mention,
+    .view-devis-snapshot .dp-meta-block.dp-meta-box .dp-validity-mention {
+      margin-top: 3pt !important; max-width: none !important; text-align: right !important;
+    }
+    .devis-preview .dp-meta-gratuit, .view-devis-snapshot .dp-meta-gratuit {
+      font-size: 7pt !important; text-transform: uppercase !important; letter-spacing: .06em !important;
+      color: #888 !important; margin-top: 3pt !important; padding-top: 2pt !important;
+      border-top: 0.25pt dashed #888 !important;
+    }
+    .devis-preview .dp-client-block.dp-client-box, .view-devis-snapshot .dp-client-block.dp-client-box {
+      border: 0.5pt solid #1a1a1a !important; border-radius: 2pt !important;
+      padding: 5pt 7pt !important; margin-top: 5pt !important; background: transparent !important;
+    }
+    .devis-preview .dp-client-label, .view-devis-snapshot .dp-client-label {
+      font-size: 7pt !important; text-transform: uppercase !important; letter-spacing: .06em !important;
+      color: #1a1a1a !important; font-weight: 600 !important;
+      padding-bottom: 2pt !important; margin-bottom: 2pt !important;
+      border-bottom: 0.25pt solid #1a1a1a !important;
     }
     .devis-preview .dp-validity-mention, .view-devis-snapshot .dp-validity-mention {
       font-style: italic !important;
@@ -2481,7 +2527,6 @@ function rDevisPreview() {
   return `<div class="devis-preview" id="devisPreview">
     <div class="dp-top-row">
       ${d.logoUrl ? `<div class="dp-logo-wrap"><img src="${esc(d.logoUrl)}" alt="Logo" class="dp-logo"></div>` : `<div class="dp-logo-spacer"></div>`}
-      <div class="dp-doc-ref">${esc(formatRef(d.ref, "devis"))}</div>
     </div>
     <div class="dp-header-grid">
       ${(() => {
@@ -2490,11 +2535,15 @@ function rDevisPreview() {
         return `<div class="dp-header-left empty">Renseigner ton identité dans l'onglet « Profil ».</div>`;
       })()}
       <div class="dp-header-right">
-        <div class="dp-meta-block">
-          <div>Émission : <strong>${dateFR(d.dateEmission) || "—"}</strong></div>
+        <div class="dp-meta-block dp-meta-box">
+          <div class="dp-meta-ref">${esc(formatRef(d.ref, "devis"))}</div>
+          <div class="dp-meta-row"><span class="lbl">Émission</span><strong>${dateFR(d.dateEmission) || "—"}</strong></div>
+          ${d.dateValidite ? `<div class="dp-meta-row"><span class="lbl">Valable jusqu'au</span><strong>${esc(dateFR(d.dateValidite))}</strong></div>` : ""}
           <div class="dp-validity-mention">${esc(validityText(d.dateEmission, d.dateValidite))}</div>
+          <div class="dp-meta-gratuit">Devis gratuit</div>
         </div>
-        <div class="dp-client-block">
+        <div class="dp-client-block dp-client-box">
+          <div class="dp-client-label">Destinataire</div>
           <span class="name">${esc(cli.name || "(Sélectionner un client)")}</span>
           ${(() => {
             // Resolve current contact from contactId if any
