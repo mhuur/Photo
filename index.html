@@ -6966,12 +6966,10 @@ function suiviExpandedRowHtml(g) {
 
 function suiviStats(groups) {
   const by = { envoye: 0, en_cours: 0, termine: 0, refuse: 0, annule: 0 };
-  let total = 0;
   for (const g of groups) {
     by[g.statutGlobal] = (by[g.statutGlobal] || 0) + 1;
-    if (g.statutGlobal !== "refuse" && g.statutGlobal !== "annule") total += g.total;
   }
-  return { by, count: groups.length, total };
+  return { by, count: groups.length };
 }
 
 function suiviStatsHtml(s) {
@@ -6980,7 +6978,6 @@ function suiviStatsHtml(s) {
     <div class="stat">Envoyé<strong>${s.by.envoye || 0}</strong></div>
     <div class="stat">En cours<strong>${s.by.en_cours || 0}</strong></div>
     <div class="stat">Soldé<strong>${s.by.termine || 0}</strong></div>
-    <div class="stat">Total facturé<strong>${fmt(s.total)}</strong></div>
   `;
 }
 
