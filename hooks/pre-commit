@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+# pre-commit hook : lance check.sh avant tout commit.
+# Bypass possible avec `git commit --no-verify` (à utiliser avec parcimonie).
+
+repo_root="$(git rev-parse --show-toplevel)"
+if [ -x "$repo_root/check.sh" ]; then
+  if ! "$repo_root/check.sh"; then
+    echo ""
+    echo "✗ pre-commit : check.sh a échoué — commit bloqué."
+    echo "  Corrige les erreurs ci-dessus, ou bypass avec --no-verify si tu sais ce que tu fais."
+    exit 1
+  fi
+fi
