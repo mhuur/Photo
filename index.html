@@ -1971,12 +1971,10 @@ if (S.mission && Array.isArray(S.mission.lignes)) {
     if (!("paiementType" in l) || l.paiementType === "") {
       l.paiementType = "acompte"; // default forced choice
     }
-    // If currently "avance" but devis is "debours" → switch to "fact-direct"
-    if (l.paiementType === "avance" && l.devis === "debours") l.paiementType = "fact-direct";
-    // If currently "fact-direct" but devis is "principal" → switch to "avance"
+    // Avance + Débours invalide (avance n'a pas de sens en débours sans markup) → bascule sur Refacturé (acompte).
+    if (l.paiementType === "avance" && l.devis === "debours") l.paiementType = "acompte";
+    // Fact-direct + Principal invalide → bascule sur avance.
     if (l.paiementType === "fact-direct" && l.devis !== "debours") l.paiementType = "avance";
-    // v1.39+ : Débours+Acompte supprimé → forcé en Débours+Fact.Direct
-    if (l.paiementType === "acompte" && l.devis === "debours") l.paiementType = "fact-direct";
   }
 }
 // Migrate paiementType field on déplacement (default "acompte")
@@ -1985,14 +1983,10 @@ if (S.mission && S.mission.deplacement) {
     S.mission.deplacement.paiementType = "acompte";
   }
   if (S.mission.deplacement.paiementType === "avance" && S.mission.deplacement.devis === "debours") {
-    S.mission.deplacement.paiementType = "fact-direct";
+    S.mission.deplacement.paiementType = "acompte";
   }
   if (S.mission.deplacement.paiementType === "fact-direct" && S.mission.deplacement.devis !== "debours") {
     S.mission.deplacement.paiementType = "avance";
-  }
-  // v1.39+ : Débours+Acompte supprimé → forcé en Débours+Fact.Direct
-  if (S.mission.deplacement.paiementType === "acompte" && S.mission.deplacement.devis === "debours") {
-    S.mission.deplacement.paiementType = "fact-direct";
   }
   // v1.36+ : remove deprecated devis="taux" — convert to devis="principal" + afficheMode="lisser"
   if (S.mission.deplacement.devis === "taux") {
@@ -2247,11 +2241,14 @@ window.updMissionMode = updMissionMode;
 
 function updDeplDevis(val) {
   S.mission.deplacement.devis = val;
-  // v1.39+ : Débours+Acompte supprimé. En Débours, paiementType est forcé à "fact-direct".
+  // Combinaisons valides :
+  //   principal + acompte / avance
+  //   debours   + acompte (Refacturé) / fact-direct (Direct)
   if (val === "debours") {
-    S.mission.deplacement.paiementType = "fact-direct";
+    if (S.mission.deplacement.paiementType !== "acompte" && S.mission.deplacement.paiementType !== "fact-direct") {
+      S.mission.deplacement.paiementType = "acompte"; // défaut : Refacturé
+    }
   } else {
-    // Switching to principal: "fact-direct" can't apply, default to "acompte"
     if (S.mission.deplacement.paiementType === "fact-direct" ||
         (S.mission.deplacement.paiementType !== "acompte" && S.mission.deplacement.paiementType !== "avance")) {
       S.mission.deplacement.paiementType = "acompte";
@@ -2917,20 +2914,39 @@ window.setPreviewTab = function(tab) {
 function rDeboursPreview() {
   const d = S.mission;
   const t = totals();
-  if (t.debours <= 0) {
+
+  // Collecte les items en fact-direct côté débours (le client paie directement le fournisseur).
+  // Ils ne comptent pas dans `t.debours` mais sont listés à part pour informer le client.
+  const factDirectItems = [];
+  const deplPmt = d.deplacement.paiementType || "acompte";
+  const deplIsDebours = (d.deplacement.devis || "principal") === "debours";
+  if (deplIsDebours && t.depl > 0 && deplPmt === "fact-direct") {
+    factDirectItems.push({ intitule: "Déplacement", description: "Trajet payé directement par le client", prix: t.depl });
+  }
+  for (const l of (d.lignes || [])) {
+    if (l.type !== "materiel" || l.devis !== "debours") continue;
+    if (l.paiementType !== "fact-direct") continue;
+    const p = num(l.prix);
+    if (p === 0 && !l.intitule && !l.description) continue;
+    factDirectItems.push({ intitule: l.intitule, description: l.description, prix: p });
+  }
+  const totalFactDirectDebours = factDirectItems.reduce((s, x) => s + num(x.prix), 0);
+
+  // Cas vide : ni débours refacturés, ni items fact-direct.
+  if (t.debours <= 0 && factDirectItems.length === 0) {
     return `<div class="devis-preview"><div class="dp-empty">Pas de frais débours sur ce devis.<br><span style="font-size:13px;color:var(--text-dim)">Ajoutez du matériel en mode « Débours » dans Description prestation, ou choisissez « Débours » pour le déplacement.</span></div></div>`;
   }
+
   const sel = d.client.id ? S.clients.entries.find(x => x.id === d.client.id) : null;
   const cli = sel || d.client;
   const ref = formatRef(d.ref, "debours");
 
   // Build débours items — same numbered layout as devis principal.
-  // Exclut les lignes fact-direct (le client paie directement le fournisseur, pas à rembourser).
+  // Les fact-direct sont listés séparément après le bloc Total à rembourser.
   let linesHtml = "";
   let lineNum = 0;
-  // Déplacement débours line
-  const deplPmt = d.deplacement.paiementType || "acompte";
-  if ((d.deplacement.devis || "principal") === "debours" && t.depl > 0 && deplPmt !== "fact-direct") {
+  // Déplacement débours line (refacturé)
+  if (deplIsDebours && t.depl > 0 && deplPmt !== "fact-direct") {
     lineNum++;
     linesHtml += `<div class="dp-line">
       <div class="num">${lineNum}.</div>
@@ -2939,7 +2955,7 @@ function rDeboursPreview() {
       <div class="amt">${fmt(t.depl)}</div>
     </div>`;
   }
-  // Materiel débours lines
+  // Materiel débours lines (refacturés)
   for (const l of (d.lignes || [])) {
     if (l.type !== "materiel" || l.devis !== "debours") continue;
     if (l.paiementType === "fact-direct") continue;
@@ -2954,6 +2970,25 @@ function rDeboursPreview() {
       <div class="lbl">${esc(l.intitule || "(Sans intitulé)")}<div class="desc">${l.description ? esc(l.description) : "Frais débours"} · ${justifBadge}</div></div>
       <div class="qty"></div>
       <div class="amt">${fmt(num(l.prix))}</div>
+    </div>`;
+  }
+
+  // Bloc "À régler directement au fournisseur" — items fact-direct côté débours.
+  let factDirectHtml = "";
+  if (factDirectItems.length > 0) {
+    factDirectHtml = `<div class="dp-fact-direct-block" style="max-width:none;margin-top:18px;padding-top:10px">
+      <div class="dp-debours-head" style="margin-bottom:6px">
+        <span class="dp-debours-title">À régler directement au fournisseur</span>
+        <span class="dp-debours-note">Hors refacturation : le client règle ces frais directement auprès du prestataire concerné.</span>
+      </div>
+      ${factDirectItems.map(it => `<div class="dp-fact-direct-line">
+        <span class="lbl">${esc(it.intitule || "(Sans intitulé)")}${it.description ? ` — <span style="color:var(--text-dim)">${esc(it.description)}</span>` : ""}</span>
+        <span class="amt">${fmt(num(it.prix))}</span>
+      </div>`).join("")}
+      <div class="dp-fact-direct-line" style="font-weight:700;border-top:1px dashed var(--border);margin-top:6px;padding-top:6px">
+        <span class="lbl">Total à régler directement</span>
+        <span class="amt">${fmt(totalFactDirectDebours)}</span>
+      </div>
     </div>`;
   }
 
@@ -3001,14 +3036,16 @@ function rDeboursPreview() {
     <div class="dp-doc-title" style="color:var(--accent)">DÉBOURS</div>
     <div class="dp-doc-sub">Refacturation de frais avancés au nom et pour le compte du client (art. 267 II du CGI)</div>
 
-    <div class="dp-section">
-      ${linesHtml || `<div class="dp-empty" style="padding:14px">Aucune ligne de débours.</div>`}
+    ${t.debours > 0 ? `<div class="dp-section">
+      ${linesHtml}
     </div>
 
     <div class="dp-totals">
       <div class="dp-line grand" style="color:var(--accent)"><span class="lbl">Total à rembourser</span><span class="amt">${fmt(t.debours)}</span></div>
       <div class="dp-totals-tva">Refacturation au centime près sur justificatifs · ${esc(tvaMention(S.identite))}</div>
-    </div>
+    </div>` : ""}
+
+    ${factDirectHtml}
 
     ${(() => {
       const p = d.paiement || {};
@@ -3598,13 +3635,15 @@ function ligneSetDevis(id, devis) {
   const l = S.mission.lignes.find(x => x.id === id);
   if (!l) return;
   l.devis = devis;
-  // Remap paiementType to keep a valid combination:
-  //   principal → "acompte" or "avance" (preserve current if valid, else "acompte")
-  //   debours   → ALWAYS "fact-direct" (Acompte for Débours has been removed — see v1.39)
+  // Combinaisons valides :
+  //   principal + acompte / avance
+  //   debours   + acompte (= "Refacturé" : tu avances, le client te rembourse au centime près)
+  //             + fact-direct (= "Direct" : le client paie directement le fournisseur, hors devis fiscal)
   if (devis === "debours") {
-    l.paiementType = "fact-direct";
+    if (l.paiementType !== "acompte" && l.paiementType !== "fact-direct") {
+      l.paiementType = "acompte"; // défaut : Refacturé
+    }
   } else {
-    // Switching to principal: "fact-direct" can't apply, default to "acompte"
     if (l.paiementType === "fact-direct" || (l.paiementType !== "acompte" && l.paiementType !== "avance")) {
       l.paiementType = "acompte";
     }
@@ -3617,13 +3656,11 @@ window.ligneSetDevis = ligneSetDevis;
 function ligneSetPaiement(id, val) {
   const l = S.mission.lignes.find(x => x.id === id);
   if (!l) return;
-  // Forbid invalid combos:
-  //   - "avance" requires devis !== "debours"
-  //   - "fact-direct" requires devis === "debours"
-  //   - "acompte" requires devis !== "debours" (no Débours+Acompte anymore)
+  // Combinaisons valides :
+  //   principal + acompte / avance
+  //   debours   + acompte (Refacturé) / fact-direct (Direct)
   if (val === "avance" && l.devis === "debours") return;
   if (val === "fact-direct" && l.devis !== "debours") return;
-  if (val === "acompte" && l.devis === "debours") return;
   l.paiementType = val;
   save();
   render();
@@ -3634,7 +3671,6 @@ function updDeplPaiementType(val) {
   if (!S.mission.deplacement) S.mission.deplacement = {};
   if (val === "avance" && S.mission.deplacement.devis === "debours") return;
   if (val === "fact-direct" && S.mission.deplacement.devis !== "debours") return;
-  if (val === "acompte" && S.mission.deplacement.devis === "debours") return;
   S.mission.deplacement.paiementType = val;
   save();
   render();
@@ -3878,7 +3914,10 @@ function rLigne(l) {
     //   - Principal → toggle [Acompte | Avance]
     //   - Débours   → static "Fact. Direct" pill (only valid combo, no Débours+Acompte anymore)
     const paiementModeHtml = isDebours
-      ? `<div class="seg lg-toggle lg-toggle-pmt static" title="Le fournisseur facture directement le client final"><button class="on" disabled>Fact. Direct</button></div>`
+      ? `<div class="seg lg-toggle lg-toggle-pmt" title="Mode de refacturation des débours">
+          <button class="${pmt==='acompte'?'on':''}" onclick="ligneSetPaiement('${l.id}','acompte')" title="Tu avances le frais, le client te rembourse au centime près. Apparaît sur la feuille débours.">Refacturé</button>
+          <button class="${pmt==='fact-direct'?'on':''}" onclick="ligneSetPaiement('${l.id}','fact-direct')" title="Le client règle directement le fournisseur. Hors devis fiscal, mais listé sur la feuille débours pour info.">Direct</button>
+        </div>`
       : `<div class="seg lg-toggle lg-toggle-pmt" title="Mode de paiement (obligatoire)">
           <button class="${pmt==='acompte'?'on':''}" onclick="ligneSetPaiement('${l.id}','acompte')" title="Inclus dans l'acompte à la commande">Acompte</button>
           <button class="${pmt==='avance'?'on':''}" onclick="ligneSetPaiement('${l.id}','avance')" title="Tu avances la dépense, marge appliquée">Avance</button>
@@ -5591,7 +5630,10 @@ function rDevisSectionDeplacement() {
   const debLignes = (d.lignes || []).filter(l => l.type === "materiel" && l.devis === "debours");
 
   const paiementModeHtml = isDebours
-    ? `<div class="seg lg-toggle lg-toggle-pmt static" title="Le fournisseur facture directement le client final"><button class="on" disabled>Fact. Direct</button></div>`
+    ? `<div class="seg lg-toggle lg-toggle-pmt" title="Mode de refacturation des débours">
+        <button class="${pmt==='acompte'?'on':''}" onclick="updDeplPaiementType('acompte')" title="Tu avances le déplacement, le client te rembourse au centime près. Apparaît sur la feuille débours.">Refacturé</button>
+        <button class="${pmt==='fact-direct'?'on':''}" onclick="updDeplPaiementType('fact-direct')" title="Le client règle directement le transporteur. Hors devis fiscal, listé pour info.">Direct</button>
+      </div>`
     : `<div class="seg lg-toggle lg-toggle-pmt" title="Mode de paiement (obligatoire)">
         <button class="${pmt==='acompte'?'on':''}" onclick="updDeplPaiementType('acompte')">Acompte</button>
         <button class="${pmt==='avance'?'on':''}" onclick="updDeplPaiementType('avance')">Avance</button>
