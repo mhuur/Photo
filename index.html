@@ -227,7 +227,8 @@
   .hist thead tr.cp-grouphdr th.cp-grp-bilan{color:var(--success)}
   .hist th.cp-grp-sep, .hist td.cp-grp-sep{border-left:1px solid var(--border)}
   .hist td.cp-num{text-align:right;font-variant-numeric:tabular-nums;padding-right:14px;white-space:nowrap}
-  .hist td.cp-zero{text-align:right;color:var(--text-dim);opacity:.35;padding-right:14px;white-space:nowrap}
+  .hist td.cp-zero{text-align:right;padding-right:14px;white-space:nowrap}
+  .hist td.cp-zero > span{color:var(--text-dim);opacity:.45}
   .hist td.cp-marge{text-align:right;font-variant-numeric:tabular-nums;padding-right:14px;font-weight:600;white-space:nowrap}
   .hist td.cp-marge.pos{color:var(--success)}
   .hist td.cp-marge.neg{color:var(--danger)}
@@ -8740,9 +8741,12 @@ function bilanRender() {
     return `${MOIS_FR[parseInt(m, 10) - 1]} ${y}`;
   };
   // Helpers : "—" gris-clair quand zéro, sinon valeur formatée. Class CSS = source unique de style.
-  const cellH = v => num(v) === 0 ? `<td class="cp-zero cp-grp-sep">—</td>` : `<td class="cp-num cp-grp-sep">${num(v).toFixed(2).replace(".", ",")}</td>`;
-  const cell  = (v, sep) => num(v) === 0 ? `<td class="cp-zero${sep ? ' cp-grp-sep' : ''}">—</td>` : `<td class="cp-num${sep ? ' cp-grp-sep' : ''}">${fmt(v)}</td>`;
-  const cellMarge = v => v === 0 ? `<td class="cp-zero">—</td>` : `<td class="cp-marge ${v >= 0 ? 'pos' : 'neg'}">${fmt(v)}</td>`;
+  // Le "—" est dans un <span> pour appliquer l'opacité au texte sans rendre la cellule
+  // translucide (sinon le fond du sous-total surface-2 disparaît).
+  const dash = `<span>—</span>`;
+  const cellH = v => num(v) === 0 ? `<td class="cp-zero cp-grp-sep">${dash}</td>` : `<td class="cp-num cp-grp-sep">${num(v).toFixed(2).replace(".", ",")}</td>`;
+  const cell  = (v, sep) => num(v) === 0 ? `<td class="cp-zero${sep ? ' cp-grp-sep' : ''}">${dash}</td>` : `<td class="cp-num${sep ? ' cp-grp-sep' : ''}">${fmt(v)}</td>`;
+  const cellMarge = v => v === 0 ? `<td class="cp-zero">${dash}</td>` : `<td class="cp-marge ${v >= 0 ? 'pos' : 'neg'}">${fmt(v)}</td>`;
 
   const KEYS = ["heures","paye","ca","salaire","ursaf","tresorerie","frais","abos","amort","marge"];
   const empty = () => Object.fromEntries(KEYS.map(k => [k, 0]));
