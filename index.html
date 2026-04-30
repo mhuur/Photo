@@ -8499,12 +8499,12 @@ function comptaExportCSV() {
   });
   if (data.length === 0) { alert("Aucune donnée à exporter."); return; }
   const fr = v => num(v).toFixed(2).replace(".", ",");
-  const headers = ["Mois", "Heures", "CA", "URSSAF", "Salaire net", "Abonnements", "Amort. materiel", "Marge nette", "Debours"];
+  const headers = ["Mois", "Heures", "Paye", "CA", "URSSAF", "Salaire net", "Tresorerie", "Abonnements", "Amort. materiel", "Marge nette", "Debours"];
   const lines = [headers.join(";")];
   for (const r of data) {
     const [y, m] = r.ym.split("-");
     const monthFr = `${MOIS_FR[parseInt(m, 10) - 1]} ${y}`;
-    lines.push([monthFr, fr(r.heures), fr(r.ca), fr(r.ursaf), fr(r.salaire), fr(r.abos), fr(r.amort), fr(r.marge), fr(r.frais)].join(";"));
+    lines.push([monthFr, fr(r.heures), fr(r.paye), fr(r.ca), fr(r.ursaf), fr(r.salaire), fr(r.tresorerie), fr(r.abos), fr(r.amort), fr(r.marge), fr(r.frais)].join(";"));
   }
   const csv = lines.join("\n");
   const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8" });
@@ -8567,11 +8567,12 @@ function bilanCompute() {
     const date = e.date || "";
     if (date.length < 7) continue;
     const ym = date.slice(0, 7);
-    if (!byMonth[ym]) byMonth[ym] = { heures:0, ca:0, salaire:0, ursaf:0, tresorerie:0, frais:0 };
+    if (!byMonth[ym]) byMonth[ym] = { heures:0, paye:0, ca:0, salaire:0, ursaf:0, tresorerie:0, frais:0 };
     const b = byMonth[ym];
     const paid = entryStatut(e) === "termine";
     if (paid) {
       b.heures     += num(e.heures);
+      b.paye       += num(e.montant);
       b.ca         += num(e.ca       != null && e.ca       !== "" ? e.ca       : e.montant);
       b.salaire    += num(e.salaire);
       b.tresorerie += num(e.tresorerie);
@@ -8604,7 +8605,7 @@ function bilanRender() {
   const cell  = v => `<td style="text-align:right;font-variant-numeric:tabular-nums;padding-right:14px">${fmt(v)}</td>`;
   const cellMarge = v => `<td style="text-align:right;font-variant-numeric:tabular-nums;padding-right:14px;font-weight:600;color:${v >= 0 ? 'var(--success)' : 'var(--danger)'}">${fmt(v)}</td>`;
 
-  const KEYS = ["heures","ca","ursaf","salaire","abos","amort","marge","frais"];
+  const KEYS = ["heures","paye","ca","ursaf","salaire","tresorerie","abos","amort","marge","frais"];
   const empty = () => Object.fromEntries(KEYS.map(k => [k, 0]));
   const annual = {};
   const grand = empty();
@@ -8616,9 +8617,11 @@ function bilanRender() {
 
   const rowCells = r => `
     ${cellH(r.heures)}
+    ${cell(r.paye)}
     ${cell(r.ca)}
     ${cell(r.ursaf)}
     ${cell(r.salaire)}
+    ${cell(r.tresorerie)}
     ${cell(r.abos)}
     ${cell(r.amort)}
     ${cellMarge(r.marge)}
@@ -8741,9 +8744,11 @@ function rCP() {
         <tr>
           <th style="width:110px">Mois</th>
           <th style="text-align:right">Heures</th>
-          <th style="text-align:right">CA</th>
+          <th style="text-align:right" title="Total réellement encaissé (déclaré + au noir)">Payé</th>
+          <th style="text-align:right" title="CA déclaré uniquement (utilisé pour les seuils micro-BNC / TVA)">CA</th>
           <th style="text-align:right">URSSAF</th>
           <th style="text-align:right">Salaire net</th>
+          <th style="text-align:right" title="Pool qui finance matériel + abonnements + sécurité (= Payé − Salaire − URSSAF − Débours)">Trésorerie</th>
           <th style="text-align:right">Abonnements</th>
           <th style="text-align:right">Amort. matériel</th>
           <th style="text-align:right">Marge nette</th>
