@@ -112,6 +112,8 @@
   .suv-chip-all.on{background:var(--surface-hi);box-shadow:0 0 0 1px var(--text-muted) inset}
   .suv-chip-icon{color:var(--primary);font-size:11px;line-height:1}
   .suv-chip .pst{flex-shrink:0}
+  .suv-chip-count{display:inline-block;margin-left:4px;padding:1px 7px;border-radius:9px;background:var(--surface-hi);color:var(--text);font-size:11px;font-weight:700;font-variant-numeric:tabular-nums;letter-spacing:0;line-height:1.4}
+  .suv-chip.on .suv-chip-count{background:var(--surface);color:var(--text)}
   /* Suivi: nowrap on ref + client cells */
   td.suv-nowrap{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:280px}
   table.hist th.sortable{cursor:pointer;user-select:none;white-space:nowrap}
@@ -6014,26 +6016,30 @@ function devisPrincipal(lignes) {
 }
 
 // ---- Filter bar (single-select principal) ----
+// Chaque chip est aussi un compteur : label + nombre de devis concernés.
 function suiviLegendHtml() {
   const f = suiviFilterPrincipal;
+  const all = suiviGroupsAll();
+  const totalAll = all.length;
+  const count = (predicate) => all.filter(predicate).length;
   const chips = [
-    ["all",     "Tous",     "●", "var(--text-muted)"],
-    ["envoye",  "Envoyé",   null, null],
-    ["en_cours","En cours", null, null],
-    ["termine", "Soldé",    null, null]
+    ["all",     "Tous",     "●",  totalAll],
+    ["envoye",  "Envoyé",   null, count(g => g.statutPrin === "envoye")],
+    ["en_cours","En cours", null, count(g => g.statutPrin === "en_cours")],
+    ["termine", "Soldé",    null, count(g => g.statutPrin === "termine")]
   ];
-  const refusedCount = suiviGroupsAll().filter(g => g.statutPrin === "refuse" || g.statutPrin === "annule").length;
+  const refusedCount = count(g => g.statutPrin === "refuse" || g.statutPrin === "annule");
 
   return `<div class="suv-chip-bar">
-    ${chips.map(([k, l, ico]) => {
+    ${chips.map(([k, l, ico, n]) => {
       const on = f === k;
       const dot = ico ? `<span class="suv-chip-icon">${ico}</span>` : `<span class="pst" data-s="${k}"></span>`;
       const cls = `suv-chip ${on ? 'on' : ''} ${k === 'all' ? 'suv-chip-all' : ''}`;
-      return `<button type="button" class="${cls}" onclick="suiviSetFilterPrincipal('${k}')" aria-pressed="${on}">${dot}${esc(l)}</button>`;
+      return `<button type="button" class="${cls}" onclick="suiviSetFilterPrincipal('${k}')" aria-pressed="${on}">${dot}${esc(l)} <span class="suv-chip-count">${n}</span></button>`;
     }).join("")}
     ${refusedCount > 0 ? `<button type="button" class="suv-chip ${f === 'refuse' ? 'on' : ''}"
         onclick="suiviSetFilterPrincipal('refuse')" aria-pressed="${f === 'refuse'}"
-        title="Voir les devis refusés (avant acceptation) ou annulés (après acceptation)"><span class="pst" data-s="refuse"></span>Refusé / Annulé (${refusedCount})</button>` : ''}
+        title="Voir les devis refusés (avant acceptation) ou annulés (après acceptation)"><span class="pst" data-s="refuse"></span>Refusé / Annulé <span class="suv-chip-count">${refusedCount}</span></button>` : ''}
   </div>`;
 }
 
@@ -6964,23 +6970,6 @@ function suiviExpandedRowHtml(g) {
   </tr>`;
 }
 
-function suiviStats(groups) {
-  const by = { envoye: 0, en_cours: 0, termine: 0, refuse: 0, annule: 0 };
-  for (const g of groups) {
-    by[g.statutGlobal] = (by[g.statutGlobal] || 0) + 1;
-  }
-  return { by, count: groups.length };
-}
-
-function suiviStatsHtml(s) {
-  return `
-    <div class="stat">Devis<strong>${s.count}</strong></div>
-    <div class="stat">Envoyé<strong>${s.by.envoye || 0}</strong></div>
-    <div class="stat">En cours<strong>${s.by.en_cours || 0}</strong></div>
-    <div class="stat">Soldé<strong>${s.by.termine || 0}</strong></div>
-  `;
-}
-
 let suiviSort = { field: "date", dir: "desc" };
 
 // devisId du devis dont le volet inline est déplié, ou null. Un seul à la fois.
@@ -7119,7 +7108,7 @@ function suiviGroups() {
     list.push({
       devisId, ref, lignes,
       statutPrin,
-      statutGlobal: statutPrin,            // alias pour suiviStats hérité
+      statutGlobal: statutPrin,            // alias pour devisActionsHtml
       total,
       dateMin: dates[0] || "",
       dateMax: dates[dates.length - 1] || "",
@@ -7224,7 +7213,6 @@ function suiviTimelineStepHtml(e) {
 // ▼ rSV — RENDERER onglet Suivi
 function rSV() {
   const list = suiviGroups();
-  const stats = suiviStats(list);
   const years = suiviYears();
   const totalEntries = S.suivi.entries.length;
 
@@ -7281,8 +7269,6 @@ function rSV() {
     <h2>Suivi <span id="savedFlash" class="saved"></span></h2>
 
     ${suiviLegendHtml()}
-
-    <div class="stats">${suiviStatsHtml(stats)}</div>
 
     <div class="toolbar">
       <span id="suiviSelInfo">${suiviSelInfoHtml()}</span>
