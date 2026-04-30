@@ -179,6 +179,29 @@
   .suv-tl-card.idle .suv-tl-card-state{color:var(--text-dim)}
   .suv-tl-card.refused .suv-tl-card-state{color:var(--danger)}
 
+  /* Compta : KPI cards en haut de l'onglet */
+  .cp-kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;margin:12px 0 18px}
+  .cp-kpi{display:flex;flex-direction:column;gap:4px;padding:12px 14px;background:var(--surface);border:1px solid var(--border-light);border-radius:8px}
+  .cp-kpi-label{font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.04em}
+  .cp-kpi-value{font-size:20px;font-weight:700;font-variant-numeric:tabular-nums;color:var(--text)}
+  .cp-kpi-value.cp-kpi-warn{color:var(--warning)}
+  .cp-kpi-value.cp-kpi-ok{color:var(--success)}
+  .cp-kpi-value.cp-kpi-danger{color:var(--danger)}
+
+  /* Compta : jauges seuils micro-BNC + franchise TVA */
+  .cp-seuils{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px;margin:0 0 22px}
+  .cp-seuil{padding:12px 14px;background:var(--surface);border:1px solid var(--border-light);border-radius:8px}
+  .cp-seuil-label{display:flex;justify-content:space-between;align-items:baseline;gap:10px;font-size:13px;color:var(--text);margin-bottom:8px}
+  .cp-seuil-label > span:first-child{font-weight:600}
+  .cp-seuil-val{font-variant-numeric:tabular-nums;font-size:12px;color:var(--text-muted)}
+  .cp-seuil-bar{height:8px;background:var(--surface-2);border-radius:4px;overflow:hidden}
+  .cp-seuil-fill{height:100%;background:var(--success);transition:width .2s,background .2s}
+  .cp-seuil.warn .cp-seuil-fill{background:var(--warning)}
+  .cp-seuil.danger .cp-seuil-fill{background:var(--danger)}
+  .cp-seuil-pct{margin-top:6px;font-size:11px;color:var(--text-muted)}
+  .cp-seuil.warn .cp-seuil-pct{color:var(--warning)}
+  .cp-seuil.danger .cp-seuil-pct{color:var(--danger)}
+
   /* Bloc audit Suivi (Phase 1 refonte) */
   .audit-block{margin:30px 0 20px;border:1px dashed var(--border-light);border-radius:10px;background:var(--surface);overflow:hidden}
   .audit-block summary{padding:12px 16px;cursor:pointer;font-weight:600;color:var(--text-muted);user-select:none;display:flex;align-items:center;gap:8px}
@@ -8382,18 +8405,76 @@ function amortizationAnalysis() {
 
 const MOIS_FR = ["janv.","févr.","mars","avr.","mai","juin","juil.","août","sept.","oct.","nov.","déc."];
 
+// Filtre année multi-select pour l'onglet Compta. Set vide = pas de filtre
+// (toutes les années visibles). Set non vide = restreindre aux années cochées.
+let comptaFilterYears = new Set();
+
+function comptaToggleYear(y) {
+  if (comptaFilterYears.has(y)) comptaFilterYears.delete(y);
+  else comptaFilterYears.add(y);
+  render();
+}
+window.comptaToggleYear = comptaToggleYear;
+
+function comptaClearYears() {
+  comptaFilterYears.clear();
+  render();
+}
+window.comptaClearYears = comptaClearYears;
+
+// Différence en mois entre deux YYYY-MM (start <= end). Positif ou 0.
+function _ymMonthsBetween(ymStart, ymEnd) {
+  if (!ymStart || !ymEnd || ymStart > ymEnd) return 0;
+  const [y1, m1] = ymStart.split("-").map(Number);
+  const [y2, m2] = ymEnd.split("-").map(Number);
+  return (y2 - y1) * 12 + (m2 - m1);
+}
+
+// Charge mensuelle d'amortissement matériel pour un YYYY-MM donné.
+// Somme prix/(dureeVie*12) sur tous les investissements achetés <= ym et
+// pas encore complètement amortis à ce mois.
+function _amortMatosForMonth(ym) {
+  let total = 0;
+  for (const inv of (S.investissements.entries || [])) {
+    const prix = num(inv.prix);
+    const duree = num(inv.dureeVie) || 5;
+    if (prix <= 0 || duree <= 0) continue;
+    const purchaseYM = (inv.date || "").slice(0, 7);
+    if (!purchaseYM || ym < purchaseYM) continue;
+    const totalMonths = duree * 12;
+    const monthsSince = _ymMonthsBetween(purchaseYM, ym);
+    if (monthsSince >= totalMonths) continue; // entièrement amorti
+    total += prix / totalMonths;
+  }
+  return r2(total);
+}
+
+// Charge mensuelle d'abonnements actifs pour un YYYY-MM donné.
+// Un abonnement compte si dateDebut <= ym et (pas de dateFin ou dateFin >= ym).
+function _abonnementsForMonth(ym) {
+  let total = 0;
+  for (const a of (S.abonnements.entries || [])) {
+    const annual = num(a.annuel);
+    if (annual <= 0) continue;
+    const start = (a.dateDebut || "").slice(0, 7);
+    const end   = (a.dateFin   || "").slice(0, 7);
+    const active = (!start || start <= ym) && (!end || end >= ym);
+    if (active) total += annual / 12;
+  }
+  return r2(total);
+}
+
 function bilanCompute() {
   const byMonth = {};
   for (const e of S.suivi.entries) {
     const date = e.date || "";
     if (date.length < 7) continue;
     const ym = date.slice(0, 7);
-    if (!byMonth[ym]) byMonth[ym] = { heures:0, paiement:0, ca:0, salaire:0, ursaf:0, tresorerie:0, frais:0 };
+    if (!byMonth[ym]) byMonth[ym] = { heures:0, ca:0, salaire:0, ursaf:0, tresorerie:0, frais:0 };
     const b = byMonth[ym];
     const paid = entryStatut(e) === "termine";
     if (paid) {
       b.heures     += num(e.heures);
-      b.paiement   += num(e.paiement != null && e.paiement !== "" ? e.paiement : e.montant);
       b.ca         += num(e.ca       != null && e.ca       !== "" ? e.ca       : e.montant);
       b.salaire    += num(e.salaire);
       b.tresorerie += num(e.tresorerie);
@@ -8404,12 +8485,18 @@ function bilanCompute() {
   const months = Object.keys(byMonth).sort((a, b) => b.localeCompare(a));
   return months.map(ym => {
     const b = byMonth[ym];
-    return { ym, ...b, totalPro: b.ursaf + b.tresorerie + b.frais };
+    const abos  = _abonnementsForMonth(ym);
+    const amort = _amortMatosForMonth(ym);
+    const marge = r2(b.salaire - abos - amort);
+    return { ym, ...b, abos, amort, marge };
   });
 }
 
 function bilanRender() {
-  const data = bilanCompute();
+  const data = bilanCompute().filter(r => {
+    if (comptaFilterYears.size === 0) return true;
+    return comptaFilterYears.has(r.ym.slice(0, 4));
+  });
   if (data.length === 0) return { body: "", foot: "" };
 
   const monthLabel = ym => {
@@ -8418,93 +8505,141 @@ function bilanRender() {
   };
   const cellH = v => `<td style="text-align:right;font-variant-numeric:tabular-nums;padding-right:14px">${num(v).toFixed(2).replace(".", ",")}</td>`;
   const cell  = v => `<td style="text-align:right;font-variant-numeric:tabular-nums;padding-right:14px">${fmt(v)}</td>`;
+  const cellMarge = v => `<td style="text-align:right;font-variant-numeric:tabular-nums;padding-right:14px;font-weight:600;color:${v >= 0 ? 'var(--success)' : 'var(--danger)'}">${fmt(v)}</td>`;
 
+  const KEYS = ["heures","ca","ursaf","salaire","abos","amort","marge","frais"];
+  const empty = () => Object.fromEntries(KEYS.map(k => [k, 0]));
   const annual = {};
-  const grand = { heures:0, paiement:0, ca:0, salaire:0, totalPro:0, ursaf:0, tresorerie:0, frais:0 };
+  const grand = empty();
   for (const r of data) {
     const y = r.ym.slice(0, 4);
-    if (!annual[y]) annual[y] = { heures:0, paiement:0, ca:0, salaire:0, totalPro:0, ursaf:0, tresorerie:0, frais:0 };
-    for (const k of Object.keys(grand)) { annual[y][k] += r[k]; grand[k] += r[k]; }
+    if (!annual[y]) annual[y] = empty();
+    for (const k of KEYS) { annual[y][k] += r[k]; grand[k] += r[k]; }
   }
+
+  const rowCells = r => `
+    ${cellH(r.heures)}
+    ${cell(r.ca)}
+    ${cell(r.ursaf)}
+    ${cell(r.salaire)}
+    ${cell(r.abos)}
+    ${cell(r.amort)}
+    ${cellMarge(r.marge)}
+    ${cell(r.frais)}`;
 
   const rows = [];
   for (let i = 0; i < data.length; i++) {
     const r = data[i];
     const y = r.ym.slice(0, 4);
-    rows.push(`
-      <tr>
-        <td>${esc(monthLabel(r.ym))}</td>
-        ${cellH(r.heures)}
-        ${cell(r.paiement)}
-        ${cell(r.ca)}
-        ${cell(r.salaire)}
-        ${cell(r.totalPro)}
-        ${cell(r.ursaf)}
-        ${cell(r.tresorerie)}
-        ${cell(r.frais)}
-      </tr>
-    `);
+    rows.push(`<tr><td>${esc(monthLabel(r.ym))}</td>${rowCells(r)}</tr>`);
     const next = data[i + 1];
     if (!next || next.ym.slice(0, 4) !== y) {
       const a = annual[y];
-      rows.push(`
-        <tr class="subtotal">
-          <td>Sous-total ${esc(y)}</td>
-          ${cellH(a.heures)}
-          ${cell(a.paiement)}
-          ${cell(a.ca)}
-          ${cell(a.salaire)}
-          ${cell(a.totalPro)}
-          ${cell(a.ursaf)}
-          ${cell(a.tresorerie)}
-          ${cell(a.frais)}
-        </tr>
-      `);
+      a.marge = r2(a.salaire - a.abos - a.amort); // recalcul propre
+      rows.push(`<tr class="subtotal"><td>Sous-total ${esc(y)}</td>${rowCells(a)}</tr>`);
     }
   }
 
-  const foot = `
-    <tr class="grandtotal">
-      <td>Total général</td>
-      ${cellH(grand.heures)}
-      ${cell(grand.paiement)}
-      ${cell(grand.ca)}
-      ${cell(grand.salaire)}
-      ${cell(grand.totalPro)}
-      ${cell(grand.ursaf)}
-      ${cell(grand.tresorerie)}
-      ${cell(grand.frais)}
-    </tr>
-  `;
+  grand.marge = r2(grand.salaire - grand.abos - grand.amort);
+  const foot = `<tr class="grandtotal"><td>Total général</td>${rowCells(grand)}</tr>`;
 
   return { body: rows.join(""), foot };
 }
 
 // ▼ rCP — RENDERER onglet Compta
 function rCP() {
+  const allData = bilanCompute();
   const bilan = bilanRender();
-  return `
-    <h2>Compta <span id="savedFlash" class="saved"></span></h2>
 
-    <h3>Bilan mensuel (calculé automatiquement depuis Suivi)</h3>
-    <div class="hint">Pour gérer abonnements et investissements, voir l'onglet « Frais & Tarifs ».</div>
-    <table class="hist">
+  // KPI : mois courant + cumul YTD année en cours
+  const today = new Date();
+  const currentYM = today.toISOString().slice(0, 7);
+  const currentYear = today.getFullYear().toString();
+  const monthRow = allData.find(r => r.ym === currentYM);
+  const ytdRows = allData.filter(r => r.ym.slice(0, 4) === currentYear);
+  const ytd = ytdRows.reduce((acc, r) => ({
+    ca:      acc.ca      + r.ca,
+    salaire: acc.salaire + r.salaire,
+    ursaf:   acc.ursaf   + r.ursaf,
+    abos:    acc.abos    + r.abos,
+    amort:   acc.amort   + r.amort,
+  }), { ca:0, salaire:0, ursaf:0, abos:0, amort:0 });
+  ytd.marge = r2(ytd.salaire - ytd.abos - ytd.amort);
+  const caMois = monthRow ? monthRow.ca : 0;
+
+  // Seuils micro-BNC (BNC photographe : 77 700 € HT) et franchise TVA (39 100 €)
+  const SEUIL_BNC = 77700;
+  const SEUIL_TVA = 39100;
+  const pctBNC = SEUIL_BNC > 0 ? Math.min(100, (ytd.ca / SEUIL_BNC) * 100) : 0;
+  const pctTVA = SEUIL_TVA > 0 ? Math.min(100, (ytd.ca / SEUIL_TVA) * 100) : 0;
+  const seuilCls = pct => pct >= 95 ? "danger" : pct >= 80 ? "warn" : "ok";
+
+  // Filtre année : compteurs par année disponibles
+  const yearsAvailable = [...new Set(allData.map(r => r.ym.slice(0, 4)))].sort().reverse();
+  const allYearsActive = comptaFilterYears.size === 0;
+  const stop = "event.stopPropagation();";
+
+  return `
+    <h2>Comptabilité <span id="savedFlash" class="saved"></span></h2>
+
+    <div class="cp-kpi-grid">
+      <div class="cp-kpi"><span class="cp-kpi-label">CA mois (${esc(MOIS_FR[today.getMonth()])} ${esc(currentYear)})</span><strong class="cp-kpi-value">${fmt(caMois)}</strong></div>
+      <div class="cp-kpi"><span class="cp-kpi-label">CA cumulé ${esc(currentYear)}</span><strong class="cp-kpi-value">${fmt(ytd.ca)}</strong></div>
+      <div class="cp-kpi"><span class="cp-kpi-label">Salaire net cumulé</span><strong class="cp-kpi-value">${fmt(ytd.salaire)}</strong></div>
+      <div class="cp-kpi"><span class="cp-kpi-label">URSSAF à provisionner</span><strong class="cp-kpi-value cp-kpi-warn">${fmt(ytd.ursaf)}</strong></div>
+      <div class="cp-kpi"><span class="cp-kpi-label">Marge nette ${esc(currentYear)}</span><strong class="cp-kpi-value cp-kpi-${ytd.marge >= 0 ? 'ok' : 'danger'}">${fmt(ytd.marge)}</strong></div>
+    </div>
+
+    <div class="cp-seuils">
+      <div class="cp-seuil ${seuilCls(pctBNC)}">
+        <div class="cp-seuil-label">
+          <span>Plafond micro-BNC</span>
+          <span class="cp-seuil-val">${fmt(ytd.ca)} / ${fmt(SEUIL_BNC)}</span>
+        </div>
+        <div class="cp-seuil-bar"><div class="cp-seuil-fill" style="width:${pctBNC.toFixed(1)}%"></div></div>
+        <div class="cp-seuil-pct">${pctBNC.toFixed(1)} % du seuil annuel atteint</div>
+      </div>
+      <div class="cp-seuil ${seuilCls(pctTVA)}">
+        <div class="cp-seuil-label">
+          <span>Franchise TVA</span>
+          <span class="cp-seuil-val">${fmt(ytd.ca)} / ${fmt(SEUIL_TVA)}</span>
+        </div>
+        <div class="cp-seuil-bar"><div class="cp-seuil-fill" style="width:${pctTVA.toFixed(1)}%"></div></div>
+        <div class="cp-seuil-pct">${pctTVA.toFixed(1)} % du seuil — sortie de franchise au-delà</div>
+      </div>
+    </div>
+
+    <h3>Bilan mensuel <span class="hint" style="font-weight:normal;font-size:13px;color:var(--text-muted);margin-left:8px">(calculé automatiquement depuis Suivi — abonnements et matériel inclus)</span></h3>
+
+    ${yearsAvailable.length > 0 ? `<div class="suv-chip-bar" style="margin-bottom:10px">
+      <button type="button" class="suv-chip ${allYearsActive ? 'on' : ''}"
+        onclick="comptaClearYears()" aria-pressed="${allYearsActive}">
+        <span class="suv-chip-icon">●</span>Toutes les années
+      </button>
+      ${yearsAvailable.map(y => {
+        const on = comptaFilterYears.has(y);
+        return `<button type="button" class="suv-chip ${on ? 'on' : ''}"
+          onclick="comptaToggleYear('${esc(y)}')" aria-pressed="${on}">${esc(y)}</button>`;
+      }).join("")}
+    </div>` : ""}
+
+    ${bilan.body ? `<table class="hist">
       <thead>
         <tr>
           <th style="width:110px">Mois</th>
           <th style="text-align:right">Heures</th>
-          <th style="text-align:right">Paiement</th>
           <th style="text-align:right">CA</th>
-          <th style="text-align:right">Salaire (Perso)</th>
-          <th style="text-align:right">Total vers (Pro)</th>
-          <th style="text-align:right">URSAF (Pro)</th>
-          <th style="text-align:right">Trésorerie (Pro)</th>
-          <th style="text-align:right">Frais débours. (Pro)</th>
+          <th style="text-align:right">URSSAF</th>
+          <th style="text-align:right">Salaire net</th>
+          <th style="text-align:right">Abonnements</th>
+          <th style="text-align:right">Amort. matériel</th>
+          <th style="text-align:right">Marge nette</th>
+          <th style="text-align:right">Débours</th>
         </tr>
       </thead>
       <tbody>${bilan.body}</tbody>
       ${bilan.foot ? `<tfoot>${bilan.foot}</tfoot>` : ""}
-    </table>
+    </table>` : `<div class="empty">${comptaFilterYears.size > 0 ? "Aucun mois ne correspond aux années sélectionnées." : "Aucun encaissement enregistré pour le moment."}</div>`}
   `;
 }
 
