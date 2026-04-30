@@ -8772,17 +8772,6 @@ function bilanRender() {
     ${cell(r.amort)}
     ${cellMarge(r.marge)}`;
 
-  // Pour chaque sous-total annuel, calcule Δ% du CA vs année N-1 (si dispo).
-  const deltaTag = (y) => {
-    const prev = String(parseInt(y, 10) - 1);
-    if (!annual[prev] || annual[prev].ca <= 0) return "";
-    const cur = annual[y].ca;
-    const d = ((cur - annual[prev].ca) / annual[prev].ca) * 100;
-    const cls = d >= 0 ? "pos" : "neg";
-    const sign = d >= 0 ? "+" : "";
-    return ` <span class="cp-delta ${cls}">${sign}${d.toFixed(0)} % vs ${esc(prev)}</span>`;
-  };
-
   const rows = [];
   for (let i = 0; i < data.length; i++) {
     const r = data[i];
@@ -8792,7 +8781,7 @@ function bilanRender() {
     if (!next || next.ym.slice(0, 4) !== y) {
       const a = annual[y];
       a.marge = r2(a.salaire - a.abos - a.amort); // recalcul propre
-      rows.push(`<tr class="subtotal"><td>Sous-total ${esc(y)}${deltaTag(y)}</td>${rowCells(a)}</tr>`);
+      rows.push(`<tr class="subtotal"><td>Sous-total ${esc(y)}</td>${rowCells(a)}</tr>`);
     }
   }
 
