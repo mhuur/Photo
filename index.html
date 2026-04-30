@@ -2285,6 +2285,22 @@ function genHeaderEmetteur(identite, photographeRichtext) {
   return lines.join("");
 }
 
+// Compute the validity text (uses dateValidite if set, else dateEmission + 30 days fallback).
+function validityText(dateEmission, dateValidite) {
+  if (dateValidite && dateValidite.length >= 10) {
+    return `Devis valable jusqu'au ${dateFR(dateValidite)}.`;
+  }
+  if (dateEmission && dateEmission.length >= 10) {
+    const d = new Date(dateEmission + "T00:00:00");
+    if (!isNaN(d.getTime())) {
+      d.setDate(d.getDate() + 30);
+      const iso = d.toISOString().slice(0, 10);
+      return `Devis valable jusqu'au ${dateFR(iso)} (30 jours).`;
+    }
+  }
+  return "Devis valable 30 jours à compter de la date d'émission.";
+}
+
 // ============ DEVIS PREVIEW (rendered at the bottom of Mission) ============
 function rDevisPreview() {
   const d = S.mission;
@@ -2388,7 +2404,7 @@ function rDevisPreview() {
       <div class="dp-header-right">
         <div class="dp-meta-block">
           <div>Émission : <strong>${dateFR(d.dateEmission) || "—"}</strong></div>
-          <div class="dp-validity-mention">Devis valable 30 jours à compter de la date d'émission.</div>
+          <div class="dp-validity-mention">${esc(validityText(d.dateEmission, d.dateValidite))}</div>
         </div>
         <div class="dp-client-block">
           <span class="name">${esc(cli.name || "(Sélectionner un client)")}</span>
@@ -4988,6 +5004,9 @@ function rDevisSectionIdentification() {
       </div>
       <div class="field narrow"><label>Date d'émission</label>
         <input type="date" value="${esc(d.dateEmission)}" oninput="upd('mission.dateEmission', this.value)">
+      </div>
+      <div class="field narrow"><label>Valable jusqu'au</label>
+        <input type="date" value="${esc(d.dateValidite || "")}" oninput="upd('mission.dateValidite', this.value)" placeholder="auto +30j">
       </div>
     </div>
     <h5>Client</h5>
