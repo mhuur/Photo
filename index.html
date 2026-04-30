@@ -1856,6 +1856,7 @@ let cloudT = null;
 
 const TABS = [
   ["mission", "📋 Devis"],
+  ["profil",  "👤 Profil"],
   ["tarifs",  "💰 Frais & Tarifs"],
   ["suivi",   "📊 Suivi"],
   ["clients", "👥 Clients"],
@@ -3613,7 +3614,7 @@ function render() {
     app.innerHTML = `<div class="login"><h1>🌊 Devis Photo</h1><button class="btn" onclick="signIn()">Se connecter avec Google</button></div>`;
     return;
   }
-  const renderers = { mission: rMS, suivi: rSV, clients: rCL, tarifs: rTR, compta: rCP, bugs: rBG, maj: rMAJ };
+  const renderers = { mission: rMS, profil: rPF, suivi: rSV, clients: rCL, tarifs: rTR, compta: rCP, bugs: rBG, maj: rMAJ };
   const view = (renderers[tab] || (() => ""))();
   app.innerHTML = `
     <aside class="sb">
@@ -8416,6 +8417,158 @@ window.majToggleVersion = function(version) {
   majExpanded[version] = !majExpanded[version];
   render();
 };
+
+function rPF() {
+  const id = S.identite || DEFAULT_S.identite;
+  const formeOpts = [
+    ["micro-bnc", "Micro-entrepreneur (BNC)"],
+    ["ei",        "Entrepreneur individuel (EI)"],
+    ["eurl",      "EURL"],
+    ["sasu",      "SASU"],
+    ["sarl",      "SARL"],
+    ["artiste-auteur", "Artiste-auteur (URSSAF AA)"]
+  ].map(([v,l]) => `<option value="${v}" ${id.formeJuridique===v?"selected":""}>${esc(l)}</option>`).join("");
+  const tvaOpts = [
+    ["franchise", "Franchise en base (art. 293 B CGI)"],
+    ["assujetti", "Assujetti à la TVA"]
+  ].map(([v,l]) => `<option value="${v}" ${id.regimeTVA===v?"selected":""}>${esc(l)}</option>`).join("");
+  const clientOpts = [
+    ["b2c",   "B2C uniquement (particuliers)"],
+    ["b2b",   "B2B uniquement (entreprises)"],
+    ["mixte", "Mixte (B2C + B2B)"]
+  ].map(([v,l]) => `<option value="${v}" ${id.clienteleType===v?"selected":""}>${esc(l)}</option>`).join("");
+
+  const isEI = id.formeJuridique === "ei" || id.formeJuridique === "micro-bnc";
+  const isSociete = id.formeJuridique === "eurl" || id.formeJuridique === "sasu" || id.formeJuridique === "sarl";
+  const isFranchise = id.regimeTVA === "franchise";
+
+  return `
+    <h2>Profil <span id="savedFlash" class="saved"></span></h2>
+    <div class="hint" style="max-width:780px;margin-bottom:20px">
+      Identité de l'émetteur. Ces informations alimentent automatiquement l'en-tête et les mentions légales de tous tes devis et factures. Mentions obligatoires : SIRET, forme juridique, mention « EI » si applicable, médiateur conso si tu vends à des particuliers (art. L612-1 C. conso. — sanction 3 000 € si oublié).
+    </div>
+
+    <h3>Coordonnées</h3>
+    <div class="row">
+      <div class="field"><label>Prénom</label>
+        <input type="text" value="${esc(id.prenom)}" oninput="upd('identite.prenom', this.value)" placeholder="Romain">
+      </div>
+      <div class="field"><label>Nom</label>
+        <input type="text" value="${esc(id.nom)}" oninput="upd('identite.nom', this.value)" placeholder="Saintilan">
+      </div>
+    </div>
+    ${isSociete ? `
+    <div class="row">
+      <div class="field"><label>Dénomination sociale</label>
+        <input type="text" value="${esc(id.denomination)}" oninput="upd('identite.denomination', this.value)" placeholder="Ex : Studio Saintilan">
+      </div>
+    </div>` : ""}
+    <div class="row">
+      <div class="field"><label>Adresse</label>
+        <input type="text" value="${esc(id.adresse)}" oninput="upd('identite.adresse', this.value)" placeholder="12 rue Exemple">
+      </div>
+    </div>
+    <div class="row">
+      <div class="field narrow"><label>Code postal</label>
+        <input type="text" value="${esc(id.cp)}" oninput="upd('identite.cp', this.value)" placeholder="75001">
+      </div>
+      <div class="field"><label>Ville</label>
+        <input type="text" value="${esc(id.ville)}" oninput="upd('identite.ville', this.value)" placeholder="Paris">
+      </div>
+    </div>
+    <div class="row">
+      <div class="field"><label>Email</label>
+        <input type="email" value="${esc(id.email)}" oninput="upd('identite.email', this.value)" placeholder="contact@example.com">
+      </div>
+      <div class="field"><label>Téléphone</label>
+        <input type="tel" value="${esc(id.telephone)}" oninput="upd('identite.telephone', this.value)" placeholder="06 12 34 56 78">
+      </div>
+      <div class="field"><label>Site web</label>
+        <input type="url" value="${esc(id.siteWeb)}" oninput="upd('identite.siteWeb', this.value)" placeholder="https://...">
+      </div>
+    </div>
+
+    <h3 style="margin-top:24px">Statut juridique</h3>
+    <div class="row">
+      <div class="field"><label>Forme juridique</label>
+        <select onchange="upd('identite.formeJuridique', this.value); render()">${formeOpts}</select>
+      </div>
+      ${isEI ? `
+      <div class="field narrow" style="justify-content:flex-end">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:normal">
+          <input type="checkbox" ${id.mentionEI?"checked":""} onchange="upd('identite.mentionEI', this.checked)">
+          Afficher la mention « EI » sur les documents
+        </label>
+      </div>` : ""}
+    </div>
+    <div class="row">
+      <div class="field"><label>SIRET (14 chiffres)</label>
+        <input type="text" value="${esc(id.siret)}" oninput="upd('identite.siret', this.value.replace(/\\s/g,''))" placeholder="123 456 789 00012" maxlength="14" style="font-variant-numeric:tabular-nums">
+      </div>
+      <div class="field narrow"><label>Code APE/NAF</label>
+        <input type="text" value="${esc(id.ape)}" oninput="upd('identite.ape', this.value)" placeholder="74.20Z">
+      </div>
+    </div>
+    ${isSociete ? `
+    <div class="row">
+      <div class="field"><label>RCS (ville)</label>
+        <input type="text" value="${esc(id.rcs)}" oninput="upd('identite.rcs', this.value)" placeholder="Ex : Paris B 123 456 789">
+      </div>
+      <div class="field narrow"><label>Capital social (€)</label>
+        <input type="number" step="0.01" value="${esc(id.capitalSocial)}" oninput="upd('identite.capitalSocial', this.value)" placeholder="1000">
+      </div>
+    </div>` : ""}
+
+    <h3 style="margin-top:24px">Régime TVA</h3>
+    <div class="row">
+      <div class="field"><label>Régime</label>
+        <select onchange="upd('identite.regimeTVA', this.value); render()">${tvaOpts}</select>
+      </div>
+      ${!isFranchise ? `
+      <div class="field"><label>N° TVA intracommunautaire</label>
+        <input type="text" value="${esc(id.numTvaIntra)}" oninput="upd('identite.numTvaIntra', this.value)" placeholder="FR12345678901">
+      </div>` : ""}
+    </div>
+    ${isFranchise ? `<div class="hint" style="max-width:600px">Mention auto sur les devis : « TVA non applicable, art. 293 B du CGI ». Seuils 2026 : 37 500 € (majoré 41 250 €).</div>` : ""}
+
+    <h3 style="margin-top:24px">Clientèle</h3>
+    <div class="row">
+      <div class="field"><label>Type de clientèle</label>
+        <select onchange="upd('identite.clienteleType', this.value)">${clientOpts}</select>
+      </div>
+    </div>
+    <div class="hint" style="max-width:600px">Pilote l'affichage du bloc médiateur conso (obligatoire dès le 1er particulier).</div>
+
+    <h3 style="margin-top:24px">Médiateur de la consommation ${id.clienteleType !== "b2b" ? "<span style=\"color:#c0392b;font-size:12px;font-weight:normal\">(obligatoire pour B2C)</span>" : ""}</h3>
+    <div class="hint" style="max-width:780px;margin-bottom:8px">Adhésion à un médiateur agréé CECMC (ex : MEDICYS, AME-Conso, Médiation Litiges Consommation). Sanction si oublié sur le devis : 3 000 € PP / 15 000 € PM.</div>
+    <div class="row">
+      <div class="field"><label>Nom du médiateur</label>
+        <input type="text" value="${esc(id.mediateur.nom)}" oninput="upd('identite.mediateur.nom', this.value)" placeholder="Ex : MEDICYS">
+      </div>
+    </div>
+    <div class="row">
+      <div class="field"><label>Adresse</label>
+        <input type="text" value="${esc(id.mediateur.adresse)}" oninput="upd('identite.mediateur.adresse', this.value)" placeholder="73 boulevard de Clichy, 75009 Paris">
+      </div>
+      <div class="field"><label>URL de saisine</label>
+        <input type="url" value="${esc(id.mediateur.url)}" oninput="upd('identite.mediateur.url', this.value)" placeholder="https://www.medicys-consommation.fr">
+      </div>
+    </div>
+
+    <h3 style="margin-top:24px">Assurance RC professionnelle <span style="color:var(--text-muted);font-size:12px;font-weight:normal">(recommandée)</span></h3>
+    <div class="row">
+      <div class="field"><label>Assureur</label>
+        <input type="text" value="${esc(id.rcPro.assureur)}" oninput="upd('identite.rcPro.assureur', this.value)" placeholder="Ex : Hiscox">
+      </div>
+      <div class="field"><label>N° de contrat</label>
+        <input type="text" value="${esc(id.rcPro.numero)}" oninput="upd('identite.rcPro.numero', this.value)" placeholder="HARCP123456">
+      </div>
+      <div class="field narrow"><label>Zone de couverture</label>
+        <input type="text" value="${esc(id.rcPro.zone)}" oninput="upd('identite.rcPro.zone', this.value)" placeholder="France">
+      </div>
+    </div>
+  `;
+}
 
 function rMAJ() {
   let h = `<h2>Mises à jour <span id="savedFlash" class="saved"></span></h2>`;
