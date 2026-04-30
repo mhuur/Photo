@@ -569,8 +569,11 @@
 
   /* Devis header 2-col: photographer left, client+meta right */
   .devis-preview .dp-header-grid{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:22px;padding-bottom:18px;border-bottom:1px solid var(--border)}
-  .devis-preview .dp-header-left{font-size:13px;color:var(--text);line-height:1.6;white-space:pre-wrap;padding-right:0}
+  .devis-preview .dp-header-left{font-size:13px;color:var(--text);line-height:1.6;white-space:pre-wrap;padding-right:0;overflow-wrap:anywhere}
   .devis-preview .dp-header-left.empty{color:var(--text-dim);font-style:italic;font-size:13px}
+  .devis-preview .dp-header-left:has(.dp-emetteur-name){white-space:normal}
+  .devis-preview .dp-header-left .dp-emetteur-name{font-weight:600;font-size:14px;color:var(--text);margin-bottom:2px}
+  .devis-preview .dp-header-left .dp-emetteur-meta{margin-top:4px;font-size:11.5px;color:var(--text-muted);font-variant-numeric:tabular-nums}
   .devis-preview .dp-header-right{display:flex;flex-direction:column;align-items:flex-end;gap:0}
   .devis-preview .dp-meta-block{text-align:right;font-size:13px;color:var(--text-muted);line-height:1.6;margin-bottom:0}
   .devis-preview .dp-meta-block .ref{color:var(--text);font-weight:700;font-size:16px;font-variant-numeric:tabular-nums;margin-bottom:10px;letter-spacing:.01em}
@@ -777,6 +780,17 @@
       white-space: pre-line !important;
       border-right: 0 !important;
       padding-right: 0 !important;
+      overflow-wrap: anywhere !important;
+    }
+    .devis-preview .dp-header-left:has(.dp-emetteur-name),
+    .view-devis-snapshot .dp-header-left:has(.dp-emetteur-name) { white-space: normal !important; }
+    .devis-preview .dp-header-left .dp-emetteur-name,
+    .view-devis-snapshot .dp-header-left .dp-emetteur-name {
+      font-weight: 600 !important; font-size: 10pt !important; color: #1a1a1a !important; margin-bottom: 1pt !important;
+    }
+    .devis-preview .dp-header-left .dp-emetteur-meta,
+    .view-devis-snapshot .dp-header-left .dp-emetteur-meta {
+      margin-top: 3pt !important; font-size: 8pt !important; color: #555 !important;
     }
     .devis-preview .dp-header-right, .view-devis-snapshot .dp-header-right {
       text-align: right !important;
@@ -2201,6 +2215,76 @@ document.addEventListener("click", e => {
   });
 });
 
+// ============ EMITTER HELPERS (driven by S.identite) ============
+// Resolves the displayable status label (e.g. "Micro-entrepreneur · EI").
+function statusLabel(identite) {
+  const id = identite || {};
+  const map = {
+    "micro-bnc":      "Micro-entrepreneur",
+    "ei":             "Entrepreneur individuel",
+    "eurl":           "EURL",
+    "sasu":           "SASU",
+    "sarl":           "SARL",
+    "artiste-auteur": "Artiste-auteur"
+  };
+  let label = map[id.formeJuridique] || map["micro-bnc"];
+  const isEIish = id.formeJuridique === "ei" || id.formeJuridique === "micro-bnc";
+  if (id.mentionEI && isEIish) label = label + " · EI";
+  return label;
+}
+
+function tvaMention(identite) {
+  const id = identite || {};
+  if (id.regimeTVA === "franchise") return "TVA non applicable, art. 293 B du CGI";
+  if (id.numTvaIntra) return "N° TVA intracommunautaire : " + id.numTvaIntra;
+  return "TVA selon taux en vigueur";
+}
+
+function genFooterMentions(identite, variant) {
+  const parts = [statusLabel(identite)];
+  if (variant === "debours") parts.push("Refacturation au centime près sur justificatifs");
+  parts.push(tvaMention(identite));
+  return parts.join(" · ");
+}
+
+// Format SIRET as "XXX XXX XXX XXXXX" if 14 digits, else return as-is.
+function formatSiret(siret) {
+  const s = String(siret || "").replace(/\s/g, "");
+  if (s.length === 14 && /^\d{14}$/.test(s)) {
+    return s.slice(0,3) + " " + s.slice(3,6) + " " + s.slice(6,9) + " " + s.slice(9);
+  }
+  return s;
+}
+
+// Build the emitter header HTML from S.identite. Falls back to legacy richtext if no structured field is filled.
+// Returns the inner HTML of the emitter block (caller wraps in .dp-header-emetteur or .dp-header-left).
+function genHeaderEmetteur(identite, photographeRichtext) {
+  const id = identite || {};
+  const hasStructured = !!(id.nom || id.prenom || id.denomination || id.siret);
+  if (!hasStructured) {
+    return (photographeRichtext || "").trim() ? richDisplayHtml(photographeRichtext) : "";
+  }
+  const displayName = (id.denomination || `${id.prenom || ""} ${id.nom || ""}`.trim()) || "—";
+  const cityLine = [id.cp, id.ville].filter(Boolean).join(" ").trim();
+  const meta = [];
+  const isEIish = id.formeJuridique === "ei" || id.formeJuridique === "micro-bnc";
+  if (id.mentionEI && isEIish) meta.push("EI");
+  if (id.siret) meta.push("SIRET " + formatSiret(id.siret));
+  if (id.ape)   meta.push("APE " + id.ape);
+  if (id.rcs)   meta.push("RCS " + id.rcs);
+  if (id.capitalSocial) meta.push("Capital " + fmt(id.capitalSocial));
+  const lines = [
+    `<div class="dp-emetteur-name">${esc(displayName)}</div>`,
+    id.adresse   ? `<div>${esc(id.adresse)}</div>`   : "",
+    cityLine     ? `<div>${esc(cityLine)}</div>`     : "",
+    id.email     ? `<div>${esc(id.email)}</div>`     : "",
+    id.telephone ? `<div>${esc(id.telephone)}</div>` : "",
+    id.siteWeb   ? `<div>${esc(id.siteWeb)}</div>`   : "",
+    meta.length  ? `<div class="dp-emetteur-meta">${meta.map(esc).join(" · ")}</div>` : ""
+  ].filter(Boolean);
+  return lines.join("");
+}
+
 // ============ DEVIS PREVIEW (rendered at the bottom of Mission) ============
 function rDevisPreview() {
   const d = S.mission;
@@ -2296,7 +2380,11 @@ function rDevisPreview() {
       <div class="dp-doc-ref">${esc(formatRef(d.ref, "devis"))}</div>
     </div>
     <div class="dp-header-grid">
-      <div class="dp-header-left ${(d.photographe || "").trim() ? "" : "empty"}">${(d.photographe || "").trim() ? richDisplayHtml(d.photographe) : "Renseigner vos coordonnées dans la section « Photographe » de l'onglet Mission."}</div>
+      ${(() => {
+        const inner = genHeaderEmetteur(S.identite, d.photographe);
+        if (inner.trim()) return `<div class="dp-header-left">${inner}</div>`;
+        return `<div class="dp-header-left empty">Renseigner ton identité dans l'onglet « Profil ».</div>`;
+      })()}
       <div class="dp-header-right">
         <div class="dp-meta-block">
           <div>Émission : <strong>${dateFR(d.dateEmission) || "—"}</strong></div>
@@ -2380,7 +2468,7 @@ function rDevisPreview() {
           </div>`}
     </div>
 
-    <div class="dp-footer">Auto-entrepreneur · TVA non applicable, art. 293 B du CGI</div>
+    <div class="dp-footer">${esc(genFooterMentions(S.identite, "devis"))}</div>
 
     ${(() => {
       const cgvSections = Array.isArray(d.cgvSections) ? d.cgvSections.filter(s => s && (s.title || s.body)) : [];
@@ -2452,7 +2540,11 @@ function rDeboursPreview() {
       <div class="dp-doc-ref">${esc(ref)}</div>
     </div>
     <div class="dp-header-grid">
-      <div class="dp-header-left ${(d.photographe || "").trim() ? "" : "empty"}">${(d.photographe || "").trim() ? richDisplayHtml(d.photographe) : "Renseigner vos coordonnées dans la section « Photographe » de l'onglet Mission."}</div>
+      ${(() => {
+        const inner = genHeaderEmetteur(S.identite, d.photographe);
+        if (inner.trim()) return `<div class="dp-header-left">${inner}</div>`;
+        return `<div class="dp-header-left empty">Renseigner ton identité dans l'onglet « Profil ».</div>`;
+      })()}
       <div class="dp-header-right">
         <div class="dp-meta-block">
           <div>Émission : <strong>${dateFR(d.dateEmission) || "—"}</strong></div>
@@ -2520,7 +2612,7 @@ function rDeboursPreview() {
           </div>`}
     </div>
 
-    <div class="dp-footer">Auto-entrepreneur · Refacturation au centime près sur justificatifs · TVA non applicable, art. 293 B du CGI</div>
+    <div class="dp-footer">${esc(genFooterMentions(S.identite, "debours"))}</div>
 
     ${(() => {
       const cgvSections = Array.isArray(d.cgvSections) ? d.cgvSections.filter(s => s && (s.title || s.body)) : [];
@@ -2600,7 +2692,11 @@ function rFacturePreview(opts) {
       <div class="dp-doc-ref" style="color:var(--success)">${esc(ref)}</div>
     </div>
     <div class="dp-header-grid">
-      <div class="dp-header-left ${(d.photographe || "").trim() ? "" : "empty"}">${(d.photographe || "").trim() ? richDisplayHtml(d.photographe) : "Renseigner vos coordonnées dans la section « Photographe »."}</div>
+      ${(() => {
+        const inner = genHeaderEmetteur(S.identite, d.photographe);
+        if (inner.trim()) return `<div class="dp-header-left">${inner}</div>`;
+        return `<div class="dp-header-left empty">Renseigner ton identité dans l'onglet « Profil ».</div>`;
+      })()}
       <div class="dp-header-right">
         <div class="dp-meta-block">
           <div>Émission : <strong>${dateFR(d.dateEmission) || "—"}</strong></div>
@@ -2643,7 +2739,7 @@ function rFacturePreview(opts) {
       <div class="dp-receipt-line restant ${fullyPaid ? 'paid' : ''}"><span class="lbl">${fullyPaid ? "✓ Soldée" : "Reste à payer"}</span><span class="amt" style="color:${fullyPaid ? 'var(--success)' : 'var(--warning)'}">${fmt(restant)}</span></div>
     </div>
 
-    <div class="dp-footer">Auto-entrepreneur · TVA non applicable, art. 293 B du CGI</div>
+    <div class="dp-footer">${esc(genFooterMentions(S.identite, "devis"))}</div>
 
     <div class="dp-actions">
       <button class="btn ghost" onclick="window.print()">🖨️ Imprimer</button>
