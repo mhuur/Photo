@@ -2834,13 +2834,17 @@ function rDevisPreview() {
       const cgvSections = Array.isArray(d.cgvSections) ? d.cgvSections.filter(s => s && (s.title || s.body)) : [];
       const hasCgv = cgvSections.length > 0 || (d.cgvPreambule || "").trim().length > 0;
       if (!hasCgv) return "";
+      // Mention pénalités L441-10 / D441-5 : obligatoire B2B uniquement.
+      // Masquée si le client est explicitement B2C (mention sans fondement légal pour un particulier).
+      const effType = (d.client || {}).type || (S.identite || {}).clienteleType || "mixte";
+      const showPenalties = effType !== "b2c";
       return `<div class="devis-page-break"></div>
       <div class="dp-conditions cgv">
         <div class="dp-cgv-header">
           <span class="dp-cgv-title">Conditions générales de vente</span><span class="dp-cgv-sep"> — </span><span class="dp-cgv-ref">Annexe au ${esc(formatRef(d.ref, "devis"))}</span>
         </div>
         <div class="dp-cgv-body">${renderCgvSections(d.cgvPreambule, d.cgvSections)}</div>
-        <div class="dp-cgv-mentions">Pénalités de retard : 3× le taux d'intérêt légal en vigueur · Indemnité forfaitaire de recouvrement : 40 € (art. L441-10 et D441-5 du Code de commerce).</div>
+        ${showPenalties ? `<div class="dp-cgv-mentions">Pénalités de retard : 3× le taux d'intérêt légal en vigueur · Indemnité forfaitaire de recouvrement : 40 € (art. L441-10 et D441-5 du Code de commerce).</div>` : ""}
       </div>`;
     })()}
 
@@ -2985,13 +2989,15 @@ function rDeboursPreview() {
       const cgvSections = Array.isArray(d.cgvSections) ? d.cgvSections.filter(s => s && (s.title || s.body)) : [];
       const hasCgv = cgvSections.length > 0 || (d.cgvPreambule || "").trim().length > 0;
       if (!hasCgv) return "";
+      const effType = (d.client || {}).type || (S.identite || {}).clienteleType || "mixte";
+      const showPenalties = effType !== "b2c";
       return `<div class="devis-page-break"></div>
       <div class="dp-conditions cgv">
         <div class="dp-cgv-header">
           <span class="dp-cgv-title">Conditions générales de vente</span><span class="dp-cgv-sep"> — </span><span class="dp-cgv-ref">Annexe au ${esc(ref)}</span>
         </div>
         <div class="dp-cgv-body">${renderCgvSections(d.cgvPreambule, d.cgvSections)}</div>
-        <div class="dp-cgv-mentions">Pénalités de retard : 3× le taux d'intérêt légal en vigueur · Indemnité forfaitaire de recouvrement : 40 € (art. L441-10 et D441-5 du Code de commerce).</div>
+        ${showPenalties ? `<div class="dp-cgv-mentions">Pénalités de retard : 3× le taux d'intérêt légal en vigueur · Indemnité forfaitaire de recouvrement : 40 € (art. L441-10 et D441-5 du Code de commerce).</div>` : ""}
       </div>`;
     })()}
 
