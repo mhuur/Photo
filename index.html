@@ -1841,6 +1841,34 @@ const DEFAULT_CATALOG = [
   { k:"captation",           l:"CAPTATIONS VIDÉO + PHOTO + ITW",            p:0   }
 ];
 
+// =============================================================
+// TABLE DES MATIÈRES (line numbers approximatifs, à rafraîchir si gros refactor)
+// Lancer `grep -n "^function " index.html` pour resynchroniser.
+// =============================================================
+//   STATE & DEFAULTS                  ~1844-1900
+//     SK, DEFAULT_S, DEFAULT_CATALOG (au-dessus à 1820+)
+//   MIGRATIONS au load                ~1900-2080
+//     identité, paiement, blackMode, paiementType, dureeValidite, CGV, bugs
+//   PERSISTANCE                       ~2090-2170
+//     save, saveToCloud, loadFromCloud (Firestore + localStorage)
+//   CORE HELPERS                      ~2170-2700
+//     upd, recomputeRef, genFooterMentions, genHeaderEmetteur,
+//     validSiret, validityDate, mediateurBlock, retractationBlock
+//   PREVIEWS IMPRIMÉES                ~2630-3220
+//     rDevisPreview, rDeboursPreview, rFacturePreview
+//   FORMATAGE & TOTALS                ~3970-4250
+//     formatRef, totals, totalsHtml, refreshTotals
+//   FORMS DEVIS (accordion 6 sections) ~5540-5910
+//     rDevisAccordion, rDevisSection{Identification,Prestations,Deplacement,
+//     Ajustements,Modalites,Conditions}, rDevisPaneFooterInner
+//   SUIVI                             ~5320-7700
+//     validateDevis, suiviAdd, suiviUpdateSnapshot, suiviGroups, rSV
+//   AUTRES TABS                       ~7700-9000
+//     rCL (Clients), rCP (Compta), rTR (Tarifs), rPF (Profil), rBG (Report bug)
+//   DISPATCH & RENDER                 ~4250-4290
+//     renderers map (mission→rMS, profil→rPF, ...), render()
+// =============================================================
+
 const SK = "devis-photo-data-v2";
 const DEFAULT_S = {
   mission: {
