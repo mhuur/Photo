@@ -3109,7 +3109,7 @@ function rDeboursPreview() {
     })()}
 
     <div class="dp-actions">
-      <button class="btn ghost" onclick="printWithTip()">🖨️ Imprimer le débours</button>
+      <button class="btn" onclick="suiviAdd()">+ Enregistrer dans Suivi</button>
     </div>
   </div>`;
 }
@@ -4808,13 +4808,18 @@ function renderLockedTextarea(field, value, label, placeholder) {
 
 
 // ===== View-devis modal state (open from Suivi 👁 button) =====
-let viewDevisModal = null; // { devisId }
+let viewDevisModal = null; // { devisId, view: "devis"|"debours" }
 window.viewDevisOpen = function(devisId) {
-  viewDevisModal = { devisId };
+  viewDevisModal = { devisId, view: "devis" };
   render();
 };
 window.viewDevisClose = function() {
   viewDevisModal = null;
+  render();
+};
+window.viewDevisSetView = function(view) {
+  if (!viewDevisModal) return;
+  viewDevisModal.view = view;
   render();
 };
 window.viewDevisPrint = function() {
@@ -4827,7 +4832,7 @@ function computePrintFilename() {
   let dv = null, kind = "Devis";
   if (typeof viewDevisModal !== "undefined" && viewDevisModal) {
     dv = S.suivi.devis && S.suivi.devis[viewDevisModal.devisId];
-    kind = "Devis";
+    kind = (viewDevisModal.view === "debours") ? "Débours" : "Devis";
   } else if (typeof viewFactureModal !== "undefined" && viewFactureModal) {
     dv = S.suivi.devis && S.suivi.devis[viewFactureModal.devisId];
     kind = "Facture";
@@ -4938,24 +4943,33 @@ function rViewDevisModal() {
   const dv = S.suivi.devis && S.suivi.devis[viewDevisModal.devisId];
   if (!dv) return "";
   const ref = dv.ref || viewDevisModal.devisId;
-  let snapshot = dv.snapshotHtml || "";
+  const view = viewDevisModal.view || "devis";
+  const hasDebours = !!(dv.snapshotDeboursHtml && dv.snapshotDeboursHtml.trim());
+  let snapshot = (view === "debours" ? dv.snapshotDeboursHtml : dv.snapshotHtml) || "";
   // Inject current logo if absent from older snapshots
   const currentLogo = (S.mission && S.mission.logoUrl) || "";
   if (snapshot && currentLogo && !snapshot.includes('class="dp-logo"')) {
     snapshot = `<div class="dp-logo-wrap"><img src="${esc(currentLogo)}" alt="Logo" class="dp-logo"></div>${snapshot}`;
   }
   const when = dv.snapshotAt ? new Date(dv.snapshotAt).toLocaleString("fr-FR") : null;
+  const tabs = hasDebours ? `<div class="preview-tabs-nav" style="margin:0 0 12px">
+    <button class="${view==='devis'?'on':''}" onclick="viewDevisSetView('devis')">📄 Devis</button>
+    <button class="${view==='debours'?'on':''}" onclick="viewDevisSetView('debours')">💸 Débours${dv.snapshotDebours ? ` <span class="badge">${fmt(dv.snapshotDebours)}</span>` : ""}</button>
+  </div>` : "";
+  const printLabel = (view === "debours") ? "🖨️ Imprimer débours" : "🖨️ Imprimer devis";
+  const titleRef = (view === "debours") ? formatRef(ref, "debours") : formatRef(ref, "devis");
   return `<div class="modal-overlay" onclick="if(event.target===this)viewDevisClose()">
     <div class="modal-card modal-card-lg">
-      <div class="modal-title">${esc(formatRef(ref, "devis"))}</div>
+      <div class="modal-title">${esc(titleRef)}</div>
       ${when ? `<div class="modal-sub">Émis le ${esc(when)}</div>` : ""}
+      ${tabs}
       ${snapshot
         ? `<div class="devis-preview view-devis-snapshot">${snapshot}</div>`
         : `<div class="empty" style="padding:40px;text-align:center">
             Aucun snapshot disponible pour ce devis.<br><span style="font-size:13px;color:var(--text-dim)">Les snapshots sont créés à partir de l'émission depuis l'onglet Mission « + Enregistrer dans Suivi ».</span>
            </div>`}
       <div class="modal-actions">
-        ${snapshot ? `<button class="btn ghost" onclick="printWithTip()">🖨️ Imprimer</button>` : ""}
+        ${snapshot ? `<button class="btn ghost" onclick="printWithTip()">${printLabel}</button>` : ""}
         <button class="btn" onclick="viewDevisClose()">Fermer</button>
       </div>
     </div>
@@ -6146,24 +6160,39 @@ function suiviAdd() {
   const devisId = uid();
 
   // Snapshot the rendered devis HTML so we can re-display it later from Suivi
+  // Capture aussi la feuille débours si elle existe (rendue dans le DOM même si
+  // l'onglet preview actif n'est pas Débours — on la rend juste pour le snapshot).
   let snapshotHtml = "";
+  let snapshotDeboursHtml = "";
   try {
     const el = document.getElementById("devisPreview");
     if (el) {
-      // Clone and strip interactive elements (.dp-actions) before capturing
       const clone = el.cloneNode(true);
       clone.querySelectorAll(".dp-actions").forEach(n => n.remove());
       snapshotHtml = clone.innerHTML;
     }
+    // Génère le HTML débours à la volée (pas besoin que l'onglet soit actif).
+    const deboursHtml = rDeboursPreview();
+    if (deboursHtml && !deboursHtml.includes("dp-empty")) {
+      const tmp = document.createElement("div");
+      tmp.innerHTML = deboursHtml;
+      const deboursEl = tmp.querySelector("#deboursPreview") || tmp.firstElementChild;
+      if (deboursEl) {
+        deboursEl.querySelectorAll(".dp-actions").forEach(n => n.remove());
+        snapshotDeboursHtml = deboursEl.innerHTML;
+      }
+    }
   } catch (e) {
-    console.warn("Snapshot devis failed", e);
+    console.warn("Snapshot devis/débours failed", e);
   }
 
   S.suivi.devis[devisId] = {
     ref: m.ref || "",
     snapshotHtml,
+    snapshotDeboursHtml,
     snapshotAt: new Date().toISOString(),
     snapshotTotal: t.total,
+    snapshotDebours: t.debours || 0,
     snapshotClient: client,
     snapshotHash: (typeof devisHash === "function") ? devisHash() : ""
   };
@@ -7318,18 +7347,19 @@ function rSV() {
   `;
 }
 
-// Stub : ouverture du débours. Si tu n'as pas de snapshot débours dédié,
-// on peut soit (a) réutiliser le snapshot devis (les frais y figurent),
-// soit (b) afficher un message explicatif. Choix : (a) avec un fallback (b).
+// Ouvre la modal devis sur l'onglet Débours (snapshotDeboursHtml capturé au suiviAdd).
 window.viewDeboursOpen = function(devisId) {
   const dv = S.suivi.devis && S.suivi.devis[devisId];
-  if (!dv || !dv.snapshotHtml) {
-    alert("La note de débours sera disponible après réémission du devis depuis Mission.\n\nAstuce : depuis l'onglet Devis, ouvre la mission de ce devis et clique sur « 🖨 Imprimer le débours ».");
+  if (!dv) {
+    alert("Aucun snapshot disponible. Réenregistre le devis depuis l'onglet Devis (« + Enregistrer dans Suivi »).");
     return;
   }
-  // Tant que tu n'as pas un snapshot dédié débours, on réutilise viewDevisOpen
-  // (la section Débours est dans le même DOM, le CSS d'impression filtrera plus tard si besoin).
-  viewDevisOpen(devisId);
+  if (!dv.snapshotDeboursHtml) {
+    alert("Pas de feuille débours pour ce devis (aucun frais débours). Réenregistre le devis depuis l'onglet Devis si tu en as ajouté depuis.");
+    return;
+  }
+  viewDevisModal = { devisId, view: "debours" };
+  render();
 };
 
 let clientsExpanded = null;
