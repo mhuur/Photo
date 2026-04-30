@@ -169,36 +169,17 @@
   .suv-quick-actions .qa-paid:hover{background:var(--success-soft);color:var(--success);border-color:var(--success)}
   .suv-quick-actions .qa-on{box-shadow:0 0 0 1px currentColor inset}
 
-  /* Popover paiement déplié sous la ligne du devis */
-  table.hist tr.suv-pmt-row td{background:var(--surface-2);padding:0;border-bottom:1px solid var(--border)}
-  .suv-pmt-card{padding:10px 14px 14px}
-  .suv-pmt-title{font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px}
-  .suv-pmt-list{display:flex;flex-direction:column;gap:4px}
-  .suv-pmt-item{display:grid;grid-template-columns:24px 1fr 110px 110px;gap:10px;align-items:center;
-    padding:8px 12px;background:var(--surface);border:1px solid var(--border-light);border-radius:6px;
-    cursor:pointer;font:inherit;font-size:13px;color:var(--text);text-align:left;transition:all .12s}
-  .suv-pmt-item:hover{border-color:var(--text-muted);background:var(--surface-hi)}
-  .suv-pmt-item.pending{border-left:3px solid var(--warning)}
-  .suv-pmt-item.paid{border-left:3px solid var(--success);opacity:.85}
-  .suv-pmt-ico{font-size:14px;text-align:center}
-  .suv-pmt-item.pending .suv-pmt-ico{color:var(--warning)}
-  .suv-pmt-item.paid .suv-pmt-ico{color:var(--success)}
-  .suv-pmt-label{font-weight:500;color:var(--text)}
-  .suv-pmt-amt{font-variant-numeric:tabular-nums;text-align:right;font-weight:600;color:var(--text)}
-  .suv-pmt-state{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;text-align:right}
-  .suv-pmt-item.pending .suv-pmt-state{color:var(--warning)}
-  .suv-pmt-item.paid .suv-pmt-state{color:var(--success)}
+  /* Volet inline déplié sous la ligne d'un devis (remplace l'ancienne modale) */
+  table.hist tr.suv-row.clickable.on td{background:var(--primary-soft)}
+  table.hist tr.suv-expanded-row td{background:var(--surface-2);padding:0;border-bottom:1px solid var(--border)}
+  .suv-expanded-panel{padding:14px 18px 16px;display:flex;flex-direction:column;gap:10px}
+  .suv-expanded-actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding-bottom:8px;border-bottom:1px solid var(--border-soft)}
+  .suv-expanded-print{display:flex;gap:6px;flex-wrap:wrap;align-items:center;padding-top:8px;border-top:1px solid var(--border-soft)}
 
-  /* Timeline modal */
-  .modal-card.modal-card-timeline{max-width:680px}
-  .suv-tl-header{display:flex;flex-direction:column;gap:4px;padding-bottom:14px;border-bottom:1px solid var(--border);margin-bottom:6px}
-  .suv-tl-header-top{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
-  .suv-tl-ref{font-size:13px;font-weight:700;color:var(--text);font-variant-numeric:tabular-nums;letter-spacing:.01em}
-  .suv-tl-meta{display:flex;gap:14px;font-size:12px;color:var(--text-muted);flex-wrap:wrap;margin-top:4px}
-  .suv-tl-meta strong{color:var(--text);font-weight:600;font-variant-numeric:tabular-nums}
-  .suv-tl{display:flex;flex-direction:column;padding:10px 4px 6px;position:relative}
+  /* Timeline (étapes) — utilisée dans le volet inline */
+  .suv-tl{display:flex;flex-direction:column;padding:4px 4px 4px;position:relative}
   .suv-tl::before{content:"";position:absolute;left:18px;top:24px;bottom:24px;width:2px;background:var(--border-soft);z-index:0}
-  .suv-tl-step{display:grid;grid-template-columns:36px 1fr auto;gap:14px;align-items:center;padding:10px 0;position:relative;z-index:1}
+  .suv-tl-step{display:grid;grid-template-columns:36px 1fr auto;gap:14px;align-items:center;padding:8px 0;position:relative;z-index:1}
   .suv-tl-dot{width:36px;height:36px;border-radius:50%;background:var(--surface-2);border:2px solid var(--border-light);
     display:flex;align-items:center;justify-content:center;font-size:14px;color:var(--text-dim);
     transition:all .2s;flex-shrink:0}
@@ -211,16 +192,11 @@
   .suv-tl-flag{display:inline-flex;align-items:center;gap:4px;padding:1px 7px;border-radius:8px;
     font-size:10px;font-weight:600;letter-spacing:.02em;text-transform:uppercase;line-height:1.5;
     border:1px solid;background:transparent}
-  .suv-tl-flag.delivered{color:var(--success);border-color:rgba(34,197,94,.35);background:var(--success-soft)}
   .suv-tl-flag.paid{color:var(--success-dark);border-color:var(--success);background:var(--success-soft)}
   .suv-tl-flag.pending{color:var(--warning);border-color:var(--warning);background:var(--warning-soft)}
   .suv-tl-flag.idle{color:var(--text-dim);border-color:var(--border);background:transparent}
   .suv-tl-amount{font-weight:700;font-variant-numeric:tabular-nums;color:var(--text);font-size:13px;text-align:right;white-space:nowrap}
   .suv-tl-actions{grid-column:2 / 4;display:flex;gap:6px;flex-wrap:wrap;margin-top:4px}
-  .suv-tl-empty{padding:24px;text-align:center;color:var(--text-dim);font-size:13px}
-  .suv-tl-footer{display:flex;justify-content:space-between;align-items:center;gap:10px;
-    padding-top:12px;margin-top:6px;border-top:1px solid var(--border);flex-wrap:wrap}
-  .suv-tl-footer .left{display:flex;gap:6px;flex-wrap:wrap}
 
   /* État vide spécifique au filtre attente paiement */
   .empty-attente{border-color:var(--warning);background:rgba(245,158,11,.04);color:var(--text-muted)}
@@ -1862,7 +1838,7 @@ const DEFAULT_CATALOG = [
 //                            ▼ rDevisSectionAjustements  ▼ rDevisSectionModalites
 //                            ▼ rDevisSectionConditions  ▼ rDevisPaneFooterInner
 //   SUIVI                    ▼ validateDevis  ▼ suiviAdd  ▼ suiviAddLigne
-//                            ▼ rSuiviTimelineModal  ▼ rSV
+//                            ▼ suiviExpandedRowHtml  ▼ rSV
 //   AUTRES TABS              ▼ rCL (Clients)  ▼ rCP (Compta)  ▼ rTR (Tarifs)
 //                            ▼ rPF (Profil)   ▼ rBG (Notes/bugs)
 // =============================================================
@@ -4301,7 +4277,7 @@ function render() {
     ${rViewDevisModal()}
     ${rViewFactureModal()}
     ${rPrintTipModal()}
-    ${rSuiviTimelineModal()}`;
+`;
 }
 
 // State: track if picker is force-opened (e.g. after user clicks "Changer de contact")
@@ -6805,23 +6781,13 @@ function suiviLigneTogglePaiement(id) {
 }
 window.suiviLigneTogglePaiement = suiviLigneTogglePaiement;
 
-// Toggle direct depuis le tableau pour les devis 1-ligne payable (1 clic).
-// Pour les devis multi-ligne, utiliser suiviPaiementOpenToggle (ouvre un popover).
-function suiviPaiementQuickToggle(devisId) {
-  const lignes = suiviGroupLigne(devisId).filter(e => {
-    const s = entryStatut(e);
-    return s === "attente" || s === "termine";
-  });
-  if (lignes.length !== 1) return;
-  suiviLigneTogglePaiement(lignes[0].id);
-}
-window.suiviPaiementQuickToggle = suiviPaiementQuickToggle;
-
-function suiviPaiementOpenToggle(devisId) {
-  suiviPaiementOpen = (suiviPaiementOpen === devisId) ? null : devisId;
+// Déplie / replie le volet inline d'un devis sous sa ligne (un seul ouvert
+// à la fois). Remplace l'ancienne modale timeline + l'ancienne popover paiement.
+function suiviExpandedToggle(devisId) {
+  suiviExpandedDevis = (suiviExpandedDevis === devisId) ? null : devisId;
   render();
 }
-window.suiviPaiementOpenToggle = suiviPaiementOpenToggle;
+window.suiviExpandedToggle = suiviExpandedToggle;
 
 function suiviRevert(id) {
   const e = S.suivi.entries.find(x => x.id === id);
@@ -6942,10 +6908,9 @@ function devisActionsHtml(g) {
   return parts.join("");
 }
 
-// Bouton paiement compact dans la quick-actions row du tableau Suivi.
-// - 1 ligne payable : toggle direct (1 clic).
-// - Multi-ligne : ouvre/ferme un popover détaillant chaque échéance.
-// - Renvoie "" si aucune ligne n'est payable (devis envoyé ou refusé).
+// Indicateur de paiement compact dans la quick-actions row du tableau Suivi.
+// Cliquer ouvre/ferme le volet inline (même effet que cliquer sur la ligne).
+// Renvoie "" si aucune ligne n'est payable (devis envoyé ou refusé/annulé).
 function suiviPaiementButtonHtml(g) {
   const stop = "event.stopPropagation();";
   const payables = (g.lignes || []).filter(e => {
@@ -6956,45 +6921,51 @@ function suiviPaiementButtonHtml(g) {
   const paid = payables.filter(e => entryStatut(e) === "termine").length;
   const total = payables.length;
   const allPaid = paid === total;
-
-  if (total === 1) {
-    const tooltip = allPaid ? "Soldé — cliquer pour annuler le paiement" : "Marquer comme payé";
-    const label   = allPaid ? "✓ Soldé" : "💰 À encaisser";
-    const cls     = allPaid ? "qa-btn qa-paid" : "qa-btn qa-pay";
-    return `<button class="${cls}" title="${tooltip}" onclick="${stop}suiviPaiementQuickToggle('${g.devisId}')"><span class="qa-ico">${allPaid ? '✓' : '💰'}</span>${allPaid ? 'Soldé' : 'Encaisser'}</button>`;
-  }
-
-  const open = suiviPaiementOpen === g.devisId;
-  const tooltip = `${paid}/${total} échéance${total > 1 ? 's' : ''} payée${paid > 1 ? 's' : ''} — détail`;
+  const open = suiviExpandedDevis === g.devisId;
+  const tooltip = `${paid}/${total} échéance${total > 1 ? 's' : ''} payée${paid > 1 ? 's' : ''}`;
   const cls = `qa-btn ${allPaid ? 'qa-paid' : 'qa-pay'} ${open ? 'qa-on' : ''}`;
-  return `<button class="${cls}" title="${tooltip}" onclick="${stop}suiviPaiementOpenToggle('${g.devisId}')"><span class="qa-ico">${allPaid ? '✓' : '💰'}</span>${paid}/${total}</button>`;
+  const label = total === 1
+    ? (allPaid ? 'Soldé' : 'Encaisser')
+    : `${paid}/${total}`;
+  return `<button class="${cls}" title="${tooltip}" onclick="${stop}suiviExpandedToggle('${g.devisId}')"><span class="qa-ico">${allPaid ? '✓' : '💰'}</span>${label}</button>`;
 }
 
-// Ligne <tr> dépliée sous la ligne principale du devis quand le popover est ouvert.
-// Liste les échéances payables avec un toggle individuel.
-function suiviPaiementPopoverRow(g) {
-  if (suiviPaiementOpen !== g.devisId) return "";
+// ▼ suiviExpandedRowHtml — volet inline d'un devis Suivi (remplace l'ancienne modale)
+// Contient le statut de chaque étape, ses actions individuelles, les actions
+// devis-level (accept/refus/annule/undo) et les boutons d'impression.
+// Toutes les actions de l'ancienne modale sont reprises ici.
+function suiviExpandedRowHtml(g) {
+  if (suiviExpandedDevis !== g.devisId) return "";
   const stop = "event.stopPropagation();";
-  const lignes = (g.lignes || []).filter(e => {
-    const s = entryStatut(e);
-    return s === "attente" || s === "termine";
-  });
-  if (lignes.length === 0) return "";
-  const items = lignes.map(e => {
-    const isPaid = entryStatut(e) === "termine";
-    return `<button type="button" class="suv-pmt-item ${isPaid ? 'paid' : 'pending'}"
-      onclick="${stop}suiviLigneTogglePaiement('${e.id}')"
-      title="Cliquer pour basculer payé / en attente">
-      <span class="suv-pmt-ico">${isPaid ? '✓' : '💰'}</span>
-      <span class="suv-pmt-label">${esc(e.echeance || 'Étape')}</span>
-      <span class="suv-pmt-amt">${fmt(e.montant)}</span>
-      <span class="suv-pmt-state">${isPaid ? 'Soldée' : 'À encaisser'}</span>
-    </button>`;
-  }).join("");
-  return `<tr class="suv-pmt-row" onclick="${stop}">
-    <td colspan="7"><div class="suv-pmt-card">
-      <div class="suv-pmt-title">Encaissements — ${esc(cleanClientLabel(g.client))}</div>
-      <div class="suv-pmt-list">${items}</div>
+  const lignes = [...(g.lignes || [])].sort((a, b) => (a.date || "").localeCompare(b.date || ""));
+  if (!lignes.length) return "";
+  const statutPrin = g.statutPrin;
+
+  // Actions au niveau devis (mêmes règles que l'ancien rSuiviTimelineModal).
+  const undoLabel = suiviDevisUndoLabel(g);
+  const undoBtn = undoLabel
+    ? `<button class="btn ghost" title="Revenir en arrière sur la dernière action" onclick="${stop}suiviDevisUndo('${g.devisId}')">↩ ${esc(undoLabel)}</button>`
+    : "";
+  let devisLevelAction = "";
+  if (statutPrin === "envoye") {
+    devisLevelAction = `
+      <button class="btn-act act-vert" onclick="${stop}suiviDevisAccepter('${g.devisId}')"><span class="ico">✓</span> Accepté</button>
+      <button class="btn-act act-rouge" onclick="${stop}suiviDevisRefuser('${g.devisId}')"><span class="ico">✗</span> Refusé</button>`;
+  } else if (statutPrin === "en_cours" || statutPrin === "termine") {
+    devisLevelAction = `<button class="btn ghost" onclick="${stop}suiviDevisAnnuler('${g.devisId}')">🚫 Annuler la mission</button>${undoBtn}`;
+  } else {
+    devisLevelAction = undoBtn;
+  }
+
+  return `<tr class="suv-expanded-row" onclick="${stop}">
+    <td colspan="7"><div class="suv-expanded-panel">
+      ${devisLevelAction ? `<div class="suv-expanded-actions">${devisLevelAction}</div>` : ''}
+      <div class="suv-tl">${lignes.map(suiviTimelineStepHtml).join("")}</div>
+      <div class="suv-expanded-print">
+        <button class="btn ghost" onclick="${stop}viewDevisOpen('${g.devisId}')">🖨 Devis</button>
+        <button class="btn ghost" onclick="${stop}viewDeboursOpen('${g.devisId}')">🖨 Débours</button>
+        <button class="btn ghost" onclick="${stop}viewFactureOpen('${g.devisId}')">🖨 Facture</button>
+      </div>
     </div></td>
   </tr>`;
 }
@@ -7026,8 +6997,8 @@ function suiviStatsHtml(s) {
 
 let suiviSort = { field: "date", dir: "desc" };
 
-// devisId du devis dont le popover paiement est ouvert, ou null
-let suiviPaiementOpen = null;
+// devisId du devis dont le volet inline est déplié, ou null. Un seul à la fois.
+let suiviExpandedDevis = null;
 
 // === SUIVI v2 — filtres
 // suiviFilterPrincipal : "all" | "envoye" | "en_cours" | "termine" | "refuse"
@@ -7221,18 +7192,8 @@ function arr(field) {
 function statutLabel(k) { const s = STATUTS.find(x => x[0] === k); return s ? s[1] : k; }
 
 // ============================================================================
-// SUIVI v2 — Modale Timeline (détail d'un devis avec étapes + actions contextuelles)
+// SUIVI v2 — Volet inline (replace ancienne modale, voir suiviExpandedRowHtml)
 // ============================================================================
-let suiviTimelineModal = null; // { devisId }
-
-window.suiviTimelineOpen = function(devisId) {
-  suiviTimelineModal = { devisId };
-  render();
-};
-window.suiviTimelineClose = function() {
-  suiviTimelineModal = null;
-  render();
-};
 
 // Génère le bouton contextuel d'une étape selon son statut courant
 function suiviTimelineStepAction(e) {
@@ -7289,79 +7250,7 @@ function suiviTimelineStepHtml(e) {
     </div>`;
 }
 
-// ▼ rSuiviTimelineModal — modal timeline d'un devis Suivi
-function rSuiviTimelineModal() {
-  if (!suiviTimelineModal) return "";
-  const devisId = suiviTimelineModal.devisId;
-  const lignes = S.suivi.entries.filter(e => e.devisId === devisId)
-    .sort((a, b) => (a.date || "").localeCompare(b.date || ""));
-  if (!lignes.length) {
-    suiviTimelineModal = null;
-    return "";
-  }
-  const dv = S.suivi.devis && S.suivi.devis[devisId];
-  const ref = (dv && dv.ref) || "(sans référence)";
-  const total = lignes.reduce((s, e) => s + num(e.montant), 0);
-  const dates = lignes.map(e => e.date).filter(Boolean).sort();
-  const dateMin = dates[0] || "";
-  const dateMax = dates[dates.length - 1] || "";
-  const dateLabel = dateMin === dateMax ? dateFR(dateMin) : `${dateFR(dateMin)} → ${dateFR(dateMax)}`;
-  const statutPrin = devisPrincipal(lignes);
-  const attente = devisAttentePaiement(lignes);
-  const client = cleanClientLabel(lignes[0].client) || "—";
-
-  // Actions au niveau devis (acceptation/refus puis annulation + undo unifié)
-  const stop = "event.stopPropagation();";
-  const gMock = { statutPrin, lignes };  // forme attendue par suiviDevisUndoLabel
-  const undoLabel = suiviDevisUndoLabel(gMock);
-  const undoBtn = undoLabel
-    ? `<button class="btn ghost" title="Revenir en arrière sur la dernière action" onclick="${stop}suiviDevisUndo('${devisId}')">↩ ${esc(undoLabel)}</button>`
-    : "";
-  let devisLevelAction = "";
-  if (statutPrin === "envoye") {
-    devisLevelAction = `
-      <button class="btn-act act-vert" onclick="${stop}suiviDevisAccepter('${devisId}')"><span class="ico">✓</span> Accepté</button>
-      <button class="btn-act act-rouge" onclick="${stop}suiviDevisRefuser('${devisId}')"><span class="ico">✗</span> Refusé</button>`;
-  } else if (statutPrin === "en_cours" || statutPrin === "termine") {
-    devisLevelAction = `<button class="btn ghost" onclick="${stop}suiviDevisAnnuler('${devisId}')">🚫 Annuler la mission</button>${undoBtn}`;
-  } else {
-    // refuse / annule : seul le bouton undo a du sens
-    devisLevelAction = undoBtn;
-  }
-
-  return `<div class="modal-overlay" onclick="if(event.target===this)suiviTimelineClose()">
-    <div class="modal-card modal-card-timeline">
-      <div class="suv-tl-header">
-        <div class="suv-tl-header-top">
-          ${pastille(statutPrin)}
-          <span class="suv-tl-ref">${esc(ref)}</span>
-          <span style="flex:1"></span>
-          ${attente ? `<span class="pmt-badge">💰 Paiement en attente</span>` : ''}
-        </div>
-        <div class="suv-tl-meta">
-          <span>Client : <strong>${esc(client)}</strong></span>
-          <span>Total : <strong>${fmt(total)}</strong></span>
-          <span>Date : <strong>${esc(dateLabel)}</strong></span>
-          <span>${lignes.length} étape${lignes.length > 1 ? 's' : ''}</span>
-        </div>
-        ${devisLevelAction ? `<div style="display:flex;gap:6px;margin-top:8px">${devisLevelAction}</div>` : ''}
-      </div>
-
-      <div class="suv-tl">
-        ${lignes.map(suiviTimelineStepHtml).join("")}
-      </div>
-
-      <div class="suv-tl-footer">
-        <div class="left">
-          <button class="btn ghost" onclick="suiviTimelineClose();viewDevisOpen('${devisId}')">🖨 Devis</button>
-          <button class="btn ghost" onclick="suiviTimelineClose();viewDeboursOpen('${devisId}')">🖨 Débours</button>
-          <button class="btn ghost" onclick="suiviTimelineClose();viewFactureOpen('${devisId}')">🖨 Facture</button>
-        </div>
-        <button class="btn" onclick="suiviTimelineClose()">Fermer</button>
-      </div>
-    </div>
-  </div>`;
-}
+// (rSuiviTimelineModal supprimée — remplacée par suiviExpandedRowHtml inline)
 
 // ============================================================================
 // rSV — vue Suivi v2
@@ -7385,7 +7274,7 @@ function rSV() {
 
     return `
       <tbody class="devis-grp${selected ? ' sel' : ''}">
-        <tr class="suv-row clickable" onclick="suiviTimelineOpen('${g.devisId}')">
+        <tr class="suv-row clickable ${suiviExpandedDevis === g.devisId ? 'on' : ''}" onclick="suiviExpandedToggle('${g.devisId}')">
           <td class="cb" onclick="${stop}">
             <input type="checkbox" ${selected ? 'checked' : ''}
               onclick="suiviToggleOne('${g.devisId}', this.checked, event)">
@@ -7410,7 +7299,7 @@ function rSV() {
             </div>
           </td>
         </tr>
-        ${suiviPaiementPopoverRow(g)}
+        ${suiviExpandedRowHtml(g)}
       </tbody>`;
   }).join("");
 
