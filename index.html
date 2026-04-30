@@ -234,11 +234,12 @@
   .ico-btn[title*="Supprimer"]:hover{background:var(--danger-soft);color:var(--danger)}
   td.ref-cell{color:var(--text);font-variant-numeric:tabular-nums}
   td.ref-cell .muted{color:var(--text-dim)}
-  /* Menu déroulant ancré sous l'en-tête « Date » (tri + filtre année) */
-  table.hist th.th-date{position:relative}
+  /* Menu déroulant ancré sous l'en-tête « Date » (tri + filtre année).
+     Rendu hors de la table en position:fixed pour échapper au stacking
+     thead/tbody. Coordonnées calculées par positionThMenu() après render. */
   .th-filter-badge{display:inline-block;margin-left:6px;padding:1px 7px;border-radius:9px;background:var(--primary-soft);color:var(--primary);font-size:11px;font-weight:700;font-variant-numeric:tabular-nums;letter-spacing:0;text-transform:none;line-height:1.4}
-  .th-menu-backdrop{position:fixed;inset:0;z-index:60;background:transparent;cursor:default}
-  .th-menu{position:absolute;top:calc(100% + 4px);left:0;z-index:61;min-width:220px;
+  .th-menu-backdrop{position:fixed;inset:0;z-index:1000;background:transparent;cursor:default}
+  .th-menu{position:fixed;top:0;left:0;z-index:1001;min-width:240px;
     background:var(--surface);border:1px solid var(--border-light);border-radius:8px;
     box-shadow:0 4px 16px rgba(0,0,0,.35);padding:6px;display:flex;flex-direction:column;gap:2px;
     font-weight:400;text-transform:none;letter-spacing:0;font-size:13px;color:var(--text)}
@@ -251,6 +252,8 @@
   .th-menu-item.on{background:var(--primary-soft);color:var(--text)}
   .th-menu-radio{font-size:14px;line-height:1;color:var(--text-muted)}
   .th-menu-item.on .th-menu-radio{color:var(--primary)}
+  .th-menu-check{font-size:14px;line-height:1;color:var(--text-muted)}
+  .th-menu-item.on .th-menu-check{color:var(--primary)}
   .th-menu-label{font-weight:500}
   .th-menu-count{font-size:11px;font-weight:700;font-variant-numeric:tabular-nums;color:var(--text-muted);background:var(--surface-2);padding:1px 7px;border-radius:9px;line-height:1.4}
   .th-menu-item.on .th-menu-count{background:var(--surface);color:var(--text)}
@@ -7002,7 +7005,9 @@ let suiviFilterPrincipal = (() => {
   try { return localStorage.getItem("suiviFilterPrincipal") || "all"; }
   catch (e) { return "all"; }
 })();
-let suiviFilterYear = "all";
+// Set vide = pas de filtre (toutes les années visibles).
+// Set non vide = filtrer aux années cochées (multi-sélection).
+let suiviFilterYears = new Set();
 let suiviSelected = new Set();
 
 function suiviSetFilterPrincipal(k) {
@@ -7087,6 +7092,7 @@ function suiviSortKey(field) {
 function suiviHeaderMenuToggleDate() {
   suiviHeaderMenu = (suiviHeaderMenu === "date") ? null : "date";
   render();
+  if (suiviHeaderMenu) requestAnimationFrame(positionThMenu);
 }
 window.suiviHeaderMenuToggleDate = suiviHeaderMenuToggleDate;
 
@@ -7106,15 +7112,34 @@ function suiviPickSort(field, dir) {
 }
 window.suiviPickSort = suiviPickSort;
 
-// Choix d'une année dans le menu : applique le filtre + ferme le menu.
-function suiviPickYear(v) {
-  suiviHeaderMenu = null;
-  suiviSetFilterYear(v); // déclenche render
+// Multi-sélection des années dans le menu. Toggle l'année dans le set ; le
+// menu reste ouvert. L'utilisateur peut cocher/décocher plusieurs années
+// avant de fermer (clic sur backdrop).
+function suiviToggleYear(y) {
+  if (suiviFilterYears.has(y)) suiviFilterYears.delete(y);
+  else suiviFilterYears.add(y);
+  // On ne ferme pas suiviExpandedDevis ici : le filtre change, mais on ne
+  // ferme pas le volet déplié (cohérence avec la logique sticky du devis).
+  // Toutefois on referme le volet pour que la liste se rafraîchisse net.
+  suiviExpandedDevis = null;
+  render();
+  if (suiviHeaderMenu) requestAnimationFrame(positionThMenu);
 }
-window.suiviPickYear = suiviPickYear;
+window.suiviToggleYear = suiviToggleYear;
+
+// « Toutes les années » = vider le set (= pas de filtre).
+function suiviClearYears() {
+  suiviFilterYears.clear();
+  suiviExpandedDevis = null;
+  render();
+  if (suiviHeaderMenu) requestAnimationFrame(positionThMenu);
+}
+window.suiviClearYears = suiviClearYears;
 
 // Menu déroulant ancré sous l'en-tête « Date » : choix de sens de tri puis
-// filtre par année. Backdrop transparent pour fermer au clic en dehors.
+// filtre par année (multi-sélection). Le menu est rendu hors de la table
+// (au top-level de rSV) avec position:fixed pour échapper au stacking
+// thead/tbody. Backdrop transparent pour fermer au clic en dehors.
 function suiviDateMenuHtml() {
   const years = suiviYears();
   const all = suiviGroupsAll();
@@ -7123,12 +7148,10 @@ function suiviDateMenuHtml() {
   const sortActive = suiviSort.field === "date";
   const isAsc = sortActive && suiviSort.dir === "asc";
   const isDesc = sortActive && suiviSort.dir === "desc";
-  const items = [
-    { value: "all", label: "Toutes les années", n: all.length }
-  ].concat(years.map(y => ({ value: y, label: y, n: countYear(y) })));
+  const allYears = suiviFilterYears.size === 0;
   return `
     <div class="th-menu-backdrop" onclick="${stop}suiviHeaderMenuClose()"></div>
-    <div class="th-menu" onclick="${stop}">
+    <div class="th-menu" id="thMenuDate" onclick="${stop}">
       <div class="th-menu-section">Trier</div>
       <button type="button" class="th-menu-item ${isAsc ? 'on' : ''}"
         onclick="${stop}suiviPickSort('date','asc')">
@@ -7142,18 +7165,37 @@ function suiviDateMenuHtml() {
       </button>
       <div class="th-menu-divider"></div>
       <div class="th-menu-section">Filtrer par année</div>
-      ${items.map(it => `<button type="button" class="th-menu-item ${suiviFilterYear === it.value ? 'on' : ''}"
-        onclick="${stop}suiviPickYear('${esc(it.value)}')">
-        <span class="th-menu-radio">${suiviFilterYear === it.value ? '●' : '○'}</span>
-        <span class="th-menu-label">${esc(it.label)}</span>
-        <span class="th-menu-count">${it.n}</span>
-      </button>`).join("")}
+      <button type="button" class="th-menu-item ${allYears ? 'on' : ''}"
+        onclick="${stop}suiviClearYears()">
+        <span class="th-menu-check">${allYears ? '☑' : '☐'}</span>
+        <span class="th-menu-label">Toutes les années</span>
+        <span class="th-menu-count">${all.length}</span>
+      </button>
+      ${years.map(y => {
+        const checked = suiviFilterYears.has(y);
+        return `<button type="button" class="th-menu-item ${checked ? 'on' : ''}"
+          onclick="${stop}suiviToggleYear('${esc(y)}')">
+          <span class="th-menu-check">${checked ? '☑' : '☐'}</span>
+          <span class="th-menu-label">${esc(y)}</span>
+          <span class="th-menu-count">${countYear(y)}</span>
+        </button>`;
+      }).join("")}
     </div>`;
 }
 window.suiviSortKey = suiviSortKey;
 
-function suiviSetFilterYear(v) { suiviFilterYear = v; suiviExpandedDevis = null; render(); }
-window.suiviSetFilterYear = suiviSetFilterYear;
+// Positionne le menu déroulant Date sous l'en-tête de la colonne au moyen
+// de getBoundingClientRect(). Appelé via requestAnimationFrame après chaque
+// render pour rester synchro (open/close, scroll, resize).
+function positionThMenu() {
+  const th = document.querySelector('table.hist th.th-date');
+  const menu = document.getElementById('thMenuDate');
+  if (!th || !menu) return;
+  const rect = th.getBoundingClientRect();
+  menu.style.top = `${rect.bottom + 4}px`;
+  menu.style.left = `${rect.left}px`;
+}
+window.positionThMenu = positionThMenu;
 
 function suiviYears() {
   const ys = new Set();
@@ -7223,7 +7265,7 @@ function suiviGroups() {
     }
   }
   // Filtre année (existant)
-  if (suiviFilterYear !== "all") list = list.filter(g => g.devisId === sticky || g.lignes.some(e => (e.date || "").startsWith(suiviFilterYear)));
+  if (suiviFilterYears.size > 0) list = list.filter(g => g.devisId === sticky || g.lignes.some(e => suiviFilterYears.has((e.date || "").slice(0, 4))));
 
   // Tri
   const dir = suiviSort.dir === "asc" ? 1 : -1;
@@ -7303,7 +7345,6 @@ function suiviTimelineStepHtml(e) {
 // ▼ rSV — RENDERER onglet Suivi
 function rSV() {
   const list = suiviGroups();
-  const years = suiviYears();
   const totalEntries = S.suivi.entries.length;
 
   const stop = "event.stopPropagation();";
@@ -7344,9 +7385,6 @@ function rSV() {
       </tbody>`;
   }).join("");
 
-  const yearOpts = [`<option value="all" ${suiviFilterYear === "all" ? "selected" : ""}>Toutes les années</option>`]
-    .concat(years.map(y => `<option value="${esc(y)}" ${suiviFilterYear === y ? "selected" : ""}>${esc(y)}</option>`)).join("");
-
   // États vides spécialisés
   let emptyHtml = "";
   if (totalEntries === 0) {
@@ -7374,7 +7412,7 @@ function rSV() {
               onclick="suiviSelectAll(this.checked)">
           </th>
           <th class="sortable" style="width:80px;text-align:center" onclick="suiviSortKey('statut')">Statut${arr('statut')}</th>
-          <th class="sortable th-date" style="width:160px" onclick="suiviHeaderMenuToggleDate()">Date${arr('date')}${suiviFilterYear !== "all" ? `<span class="th-filter-badge">${esc(suiviFilterYear)}</span>` : ""}${suiviHeaderMenu === "date" ? suiviDateMenuHtml() : ""}</th>
+          <th class="sortable th-date" style="width:160px" onclick="suiviHeaderMenuToggleDate()">Date${arr('date')}${suiviFilterYears.size > 0 ? `<span class="th-filter-badge">${suiviFilterYears.size === 1 ? esc([...suiviFilterYears][0]) : suiviFilterYears.size + ' ans'}</span>` : ""}</th>
           <th class="sortable" style="width:170px" onclick="suiviSortKey('ref')">Numéro${arr('ref')}</th>
           <th class="sortable" onclick="suiviSortKey('client')">Client${arr('client')}</th>
           <th class="sortable" style="width:120px;text-align:right" onclick="suiviSortKey('montant')">Montant${arr('montant')}</th>
@@ -7383,6 +7421,8 @@ function rSV() {
       </thead>
       ${rowsHtml}
     </table>`}
+
+    ${suiviHeaderMenu === "date" ? suiviDateMenuHtml() : ""}
 
     ${rSuiviAuditBlock()}
   `;
