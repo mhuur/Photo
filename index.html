@@ -2601,6 +2601,8 @@ function rDevisPreview() {
   for (const l of (d.lignes || [])) {
     if (l.type === "heures") {
       const h = num(l.duree) * (l.unit === "j" ? HOURS_PER_DAY : 1);
+      // Skip lignes vides (durée à 0 ET pas d'intitulé/description) — bruit visuel sinon.
+      if (h === 0 && !l.intitule && !l.description) continue;
       const amount = h * tarifH;
       lineNum++;
       linesHtml += `<div class="dp-line">
@@ -2610,6 +2612,8 @@ function rDevisPreview() {
         <div class="amt">${fmt(amount)}</div>
       </div>`;
     } else if (l.type === "materiel" && l.devis !== "debours") {
+      const p = num(l.prix);
+      if (p === 0 && !l.intitule && !l.description) continue;
       lineNum++;
       const info = ligneDisplayInfo(l.devis, l.paiementType, l.prix, ma, mu, true);
       linesHtml += `<div class="dp-line">
@@ -2619,6 +2623,8 @@ function rDevisPreview() {
         <div class="amt">${fmt(info.amount)}</div>
       </div>`;
     } else if (l.type === "cession") {
+      const p = num(l.prix);
+      if (p === 0 && !l.intitule && !l.description && !l.duree && !l.territoire && !l.supports) continue;
       lineNum++;
       const detailParts = [
         l.duree      ? "Durée : " + l.duree           : "",
@@ -2662,19 +2668,22 @@ function rDevisPreview() {
   }
   // "lisser" mode → no separate déplacement line (already baked into the hourly rate)
 
-  // Débours items (separately)
+  // Débours items (separately) — exclut les lignes fact-direct qui sont dans leur propre bloc.
   let deboursHtml = "";
-  if (deplDevisMode === "debours") {
+  const deplPmt = d.deplacement.paiementType || "acompte";
+  if (deplDevisMode === "debours" && deplPmt !== "fact-direct") {
     deboursHtml += deplLineHtml;
   }
   for (const l of (d.lignes || [])) {
-    if (l.type === "materiel" && l.devis === "debours") {
-      deboursHtml += `<div class="dp-line">
-        <div class="lbl">${esc(l.intitule || "(Sans intitulé)")}${l.description ? `<div class="desc">${esc(l.description)}</div>` : ""}</div>
-        <div class="qty"></div>
-        <div class="amt">${fmt(num(l.prix))}</div>
-      </div>`;
-    }
+    if (l.type !== "materiel" || l.devis !== "debours") continue;
+    if (l.paiementType === "fact-direct") continue; // bloc Facturation directe séparé
+    const p = num(l.prix);
+    if (p === 0 && !l.intitule && !l.description) continue;
+    deboursHtml += `<div class="dp-line">
+      <div class="lbl">${esc(l.intitule || "(Sans intitulé)")}${l.description ? `<div class="desc">${esc(l.description)}</div>` : ""}</div>
+      <div class="qty"></div>
+      <div class="amt">${fmt(num(l.prix))}</div>
+    </div>`;
   }
 
   return `<div class="devis-preview" id="devisPreview">
@@ -2834,11 +2843,13 @@ function rDeboursPreview() {
   const cli = sel || d.client;
   const ref = formatRef(d.ref, "debours");
 
-  // Build débours items — same numbered layout as devis principal
+  // Build débours items — same numbered layout as devis principal.
+  // Exclut les lignes fact-direct (le client paie directement le fournisseur, pas à rembourser).
   let linesHtml = "";
   let lineNum = 0;
   // Déplacement débours line
-  if ((d.deplacement.devis || "principal") === "debours" && t.depl > 0) {
+  const deplPmt = d.deplacement.paiementType || "acompte";
+  if ((d.deplacement.devis || "principal") === "debours" && t.depl > 0 && deplPmt !== "fact-direct") {
     lineNum++;
     linesHtml += `<div class="dp-line">
       <div class="num">${lineNum}.</div>
@@ -2849,18 +2860,20 @@ function rDeboursPreview() {
   }
   // Materiel débours lines
   for (const l of (d.lignes || [])) {
-    if (l.type === "materiel" && l.devis === "debours") {
-      lineNum++;
-      const justifBadge = l.justificatifJoint
-        ? `<span class="dp-justif-badge">✓ Justificatif joint</span>`
-        : `<span class="dp-justif-badge dp-justif-pending">Justificatif à fournir</span>`;
-      linesHtml += `<div class="dp-line">
-        <div class="num">${lineNum}.</div>
-        <div class="lbl">${esc(l.intitule || "(Sans intitulé)")}<div class="desc">${l.description ? esc(l.description) : "Frais débours"} · ${justifBadge}</div></div>
-        <div class="qty"></div>
-        <div class="amt">${fmt(num(l.prix))}</div>
-      </div>`;
-    }
+    if (l.type !== "materiel" || l.devis !== "debours") continue;
+    if (l.paiementType === "fact-direct") continue;
+    const p = num(l.prix);
+    if (p === 0 && !l.intitule && !l.description) continue;
+    lineNum++;
+    const justifBadge = l.justificatifJoint
+      ? `<span class="dp-justif-badge">✓ Justificatif joint</span>`
+      : `<span class="dp-justif-badge dp-justif-pending">Justificatif à fournir</span>`;
+    linesHtml += `<div class="dp-line">
+      <div class="num">${lineNum}.</div>
+      <div class="lbl">${esc(l.intitule || "(Sans intitulé)")}<div class="desc">${l.description ? esc(l.description) : "Frais débours"} · ${justifBadge}</div></div>
+      <div class="qty"></div>
+      <div class="amt">${fmt(num(l.prix))}</div>
+    </div>`;
   }
 
   return `<div class="devis-preview" id="deboursPreview">
