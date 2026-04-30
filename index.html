@@ -145,20 +145,6 @@
   /* Pill « en cours » (mix accepté/livré/payé sur les lignes du devis) */
   .pst[data-s="en_cours"]{background:var(--violet);box-shadow:0 0 6px rgba(167,139,250,.5)}
 
-  /* Quick print actions, toujours visibles à droite de chaque ligne */
-  .suv-quick-actions{display:inline-flex;gap:4px;align-items:center}
-  .suv-quick-actions .qa-btn{background:transparent;border:1px solid transparent;color:var(--text-muted);
-    padding:5px 9px;border-radius:6px;cursor:pointer;font:inherit;font-size:11px;font-weight:500;
-    display:inline-flex;align-items:center;gap:4px;transition:all .12s;line-height:1.2}
-  .suv-quick-actions .qa-btn:hover{background:var(--surface-hi);color:var(--text);border-color:var(--border-light)}
-  .suv-quick-actions .qa-btn .qa-ico{font-size:13px}
-  /* Bouton paiement (compteur N/M ou « Encaisser » / « Soldé ») */
-  .suv-quick-actions .qa-pay{color:var(--warning);border-color:rgba(245,158,11,.35)}
-  .suv-quick-actions .qa-pay:hover{background:var(--warning-soft);color:var(--warning);border-color:var(--warning)}
-  .suv-quick-actions .qa-paid{color:var(--success);border-color:rgba(34,197,94,.30)}
-  .suv-quick-actions .qa-paid:hover{background:var(--success-soft);color:var(--success);border-color:var(--success)}
-  .suv-quick-actions .qa-on{box-shadow:0 0 0 1px currentColor inset}
-
   /* Volet inline déplié sous la ligne d'un devis (remplace l'ancienne modale) */
   table.hist tr.suv-row.clickable.on td{background:var(--primary-soft)}
   table.hist tr.suv-expanded-row td{background:var(--surface-2);padding:0;border-bottom:1px solid var(--border)}
@@ -6926,28 +6912,6 @@ function devisActionsHtml(g) {
   return parts.join("");
 }
 
-// Indicateur de paiement compact dans la quick-actions row du tableau Suivi.
-// Cliquer ouvre/ferme le volet inline (même effet que cliquer sur la ligne).
-// Renvoie "" si aucune ligne n'est payable (devis envoyé ou refusé/annulé).
-function suiviPaiementButtonHtml(g) {
-  const stop = "event.stopPropagation();";
-  const payables = (g.lignes || []).filter(e => {
-    const s = entryStatut(e);
-    return s === "attente" || s === "termine";
-  });
-  if (payables.length === 0) return "";
-  const paid = payables.filter(e => entryStatut(e) === "termine").length;
-  const total = payables.length;
-  const allPaid = paid === total;
-  const open = suiviExpandedDevis === g.devisId;
-  const tooltip = `${paid}/${total} échéance${total > 1 ? 's' : ''} payée${paid > 1 ? 's' : ''}`;
-  const cls = `qa-btn ${allPaid ? 'qa-paid' : 'qa-pay'} ${open ? 'qa-on' : ''}`;
-  const label = total === 1
-    ? (allPaid ? 'Soldé' : 'Encaisser')
-    : `${paid}/${total}`;
-  return `<button class="${cls}" title="${tooltip}" onclick="${stop}suiviExpandedToggle('${g.devisId}')"><span class="qa-ico">${allPaid ? '✓' : '💰'}</span>${label}</button>`;
-}
-
 // ▼ suiviExpandedRowHtml — volet inline d'un devis Suivi (remplace l'ancienne modale)
 // Contient le statut de chaque étape, ses actions individuelles, les actions
 // devis-level (accept/refus/annule/undo) et les boutons d'impression.
@@ -6976,7 +6940,7 @@ function suiviExpandedRowHtml(g) {
   }
 
   return `<tr class="suv-expanded-row" onclick="${stop}">
-    <td colspan="7"><div class="suv-expanded-panel">
+    <td colspan="6"><div class="suv-expanded-panel">
       ${devisLevelAction ? `<div class="suv-expanded-actions">${devisLevelAction}</div>` : ''}
       <div class="suv-tl">${lignes.map(suiviTimelineStepHtml).join("")}</div>
       <div class="suv-expanded-print">
@@ -7369,17 +7333,6 @@ function rSV() {
             <strong>${esc(cleanClientLabel(g.client)) || "—"}</strong>
           </td>
           <td class="amt">${fmt(g.total)}</td>
-          <td class="actions" onclick="${stop}">
-            <div class="suv-quick-actions">
-              ${suiviPaiementButtonHtml(g)}
-              <button class="qa-btn" title="Voir / imprimer le devis émis"
-                onclick="viewDevisOpen('${g.devisId}')"><span class="qa-ico">🖨</span>Devis</button>
-              <button class="qa-btn" title="Voir / imprimer la note de débours"
-                onclick="viewDeboursOpen('${g.devisId}')"><span class="qa-ico">🖨</span>Débours</button>
-              <button class="qa-btn" title="Voir / imprimer la facture"
-                onclick="viewFactureOpen('${g.devisId}')"><span class="qa-ico">🖨</span>Facture</button>
-            </div>
-          </td>
         </tr>
         ${suiviExpandedRowHtml(g)}
       </tbody>`;
@@ -7416,7 +7369,6 @@ function rSV() {
           <th class="sortable" style="width:170px" onclick="suiviSortKey('ref')">Numéro${arr('ref')}</th>
           <th class="sortable" onclick="suiviSortKey('client')">Client${arr('client')}</th>
           <th class="sortable" style="width:120px;text-align:right" onclick="suiviSortKey('montant')">Montant${arr('montant')}</th>
-          <th style="width:240px;text-align:right">Actions</th>
         </tr>
       </thead>
       ${rowsHtml}
