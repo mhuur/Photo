@@ -120,42 +120,17 @@
   table.hist th .arr.on{opacity:1;color:var(--primary)}
   table.hist tr.suv-row{cursor:pointer}
   table.hist tr.suv-row:hover td{background:var(--surface-2)}
-  table.hist tr.suv-row.expanded td{background:var(--primary-soft)}
   table.hist tr.suv-row td{padding:9px 12px;font-size:13px}
-  table.hist tr.suv-row td.amt{text-align:right;font-variant-numeric:tabular-nums}
+  table.hist tr.suv-row td.amt{text-align:right;font-variant-numeric:tabular-nums;padding-right:12px}
   table.hist td.cb,table.hist th:first-child{text-align:center;width:34px;padding:6px 4px}
   table.hist td.cb input,table.hist th input[type="checkbox"]{cursor:pointer;width:16px;height:16px}
-  table.hist tr.suv-detail td{background:transparent;padding:0;border-bottom:0}
   table.hist tr.suv-row.clickable{cursor:pointer}
-  table.hist tr.suv-multi td{font-weight:500}
-  .suv-caret{display:inline-block;color:var(--text-dim);font-size:13px;margin-right:2px}
   table.hist tbody.devis-grp{border-bottom:1px solid var(--border);transition:background .12s ease, box-shadow .12s ease}
   table.hist tbody.devis-grp:last-child{border-bottom:0}
   table.hist tbody.devis-grp tr td{background:var(--surface)}
   table.hist tbody.devis-grp:hover tr.suv-row td{background:var(--surface-2)}
-  table.hist tbody.devis-grp.expanded{box-shadow:inset 4px 0 0 var(--primary)}
-  table.hist tbody.devis-grp.expanded tr.suv-row td,
-  table.hist tbody.devis-grp.expanded tr.suv-sub td,
-  table.hist tbody.devis-grp.expanded tr.suv-detail td{background:var(--primary-soft)}
-  table.hist tbody.devis-grp.editing{box-shadow:inset 4px 0 0 var(--warning)}
-  table.hist tbody.devis-grp.editing tr.suv-row td,
-  table.hist tbody.devis-grp.editing tr.suv-detail td{background:var(--warning-soft)}
-  table.hist tbody.devis-grp.sel:not(.editing):not(.expanded){box-shadow:inset 4px 0 0 var(--warning)}
+  table.hist tbody.devis-grp.sel{box-shadow:inset 4px 0 0 var(--warning)}
   table.hist tbody.devis-grp.sel tr.suv-row td{background:var(--warning-soft)}
-  table.hist tbody.devis-grp.sel.expanded tr.suv-row td{background:rgba(245,158,11,.18)}
-  table.hist tr.suv-sub td{padding:6px 12px;font-size:13px;color:var(--text-muted);border-bottom:0}
-  table.hist tr.suv-sub td.statut{padding-left:30px}
-  table.hist tr.suv-sub td.sub-lib{color:var(--text);font-style:italic}
-  table.hist tr.suv-sub td.amt{color:var(--text);padding-right:12px}
-  table.hist tr.suv-row td.amt,table.hist tr.suv-sub td.amt{font-variant-numeric:tabular-nums;text-align:right;padding-right:12px}
-  table.hist td.actions:has(.suv-row-actions){text-align:right;width:auto;min-width:200px;padding:4px 8px}
-  .suv-row-actions{display:inline-flex;gap:8px;align-items:center;justify-content:flex-end;opacity:0;transition:opacity .12s ease;pointer-events:none}
-  table.hist tbody.devis-grp.expanded .suv-row-actions,
-  table.hist tbody.devis-grp.editing .suv-row-actions{opacity:1;pointer-events:auto}
-  table.hist tr.suv-detail .suv-row-actions{opacity:1;pointer-events:auto}
-
-  /* Wrapper: paid-toggle (always visible) + suv-row-actions (hidden until hover) sit side by side */
-  .actions-cell{display:inline-flex;gap:8px;align-items:center;justify-content:flex-end;width:100%}
 
   /* Paid toggle pill (Suivi: marquer une échéance comme payée) — always visible */
   .paid-toggle{display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:11px;background:var(--surface-2);border:1px solid var(--border);color:var(--text-muted);font-size:11px;font-weight:600;cursor:pointer;user-select:none;transition:background .12s,color .12s,border-color .12s;line-height:1;white-space:nowrap;flex-shrink:0}
@@ -254,18 +229,6 @@
   .ico-btn[title*="Supprimer"]:hover{background:var(--danger-soft);color:var(--danger)}
   td.ref-cell{color:var(--text);font-variant-numeric:tabular-nums}
   td.ref-cell .muted{color:var(--text-dim)}
-  .suv-panel{padding:12px 16px}
-  .suv-actions{display:flex;gap:8px;margin-top:10px;padding-top:10px;border-top:1px solid var(--border);align-items:center}
-  .suv-compact-row{display:flex;gap:6px;flex-wrap:wrap;align-items:flex-end;margin-bottom:8px}
-  .suv-compact-row label{display:flex;flex-direction:column;font-size:13px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.03em;flex:0 0 auto}
-  .suv-compact-row label span{margin-bottom:2px}
-  .suv-compact-row label input,.suv-compact-row label .ro,.suv-compact-row label textarea{padding:4px 6px;border:1px solid var(--border-light);border-radius:4px;font:inherit;font-size:13px;color:var(--text);background:var(--surface-2);width:80px}
-  .suv-compact-row label .ro{background:var(--bg-2);color:var(--text-muted);font-variant-numeric:tabular-nums}
-  .suv-compact-row label.lib{flex:1;min-width:160px}
-  .suv-compact-row label.lib input{width:100%}
-  .suv-compact-row label.wide{flex:1}
-  .suv-compact-row label.wide textarea{width:100%;min-height:48px;resize:vertical}
-  .suv-compact-row label input:focus,.suv-compact-row label textarea:focus{outline:none;border-color:var(--primary)}
   .filter-group{display:flex;gap:6px;align-items:center}
   .filter-group label{font-size:13px;color:var(--text-muted)}
   .filter-group select{padding:8px 10px;border:1px solid var(--border-light);border-radius:6px;font:inherit;background:var(--surface);color:var(--text);cursor:pointer}
