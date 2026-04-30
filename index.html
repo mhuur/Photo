@@ -691,10 +691,24 @@
   .devis-page-break{display:block;height:1px;margin:40px 0 30px;border-top:1px solid var(--border-light);position:relative}
   .devis-page-break::before{content:"page 2";position:absolute;top:-9px;left:50%;transform:translateX(-50%);background:var(--surface-2);padding:0 14px;font-size:11px;color:var(--text-dim);letter-spacing:.12em;text-transform:uppercase}
   @media print {
-    @page { size: A4 portrait; margin: 18mm 18mm 20mm 18mm; }
-    @page :first { @bottom-right { content: "Page " counter(page) " / " counter(pages); font-family: -apple-system, "Segoe UI", "Helvetica Neue", Helvetica, Arial, sans-serif; font-size: 8pt; color: #888; } }
-    @page :left { @bottom-right { content: "Page " counter(page) " / " counter(pages); font-family: -apple-system, "Segoe UI", "Helvetica Neue", Helvetica, Arial, sans-serif; font-size: 8pt; color: #888; } }
-    @page :right { @bottom-right { content: "Page " counter(page) " / " counter(pages); font-family: -apple-system, "Segoe UI", "Helvetica Neue", Helvetica, Arial, sans-serif; font-size: 8pt; color: #888; } }
+    @page {
+      size: A4 portrait; margin: 18mm 18mm 20mm 18mm;
+      @bottom-left {
+        content: "Original — ne tient pas lieu de facture";
+        font-family: -apple-system, "Segoe UI", "Helvetica Neue", Helvetica, Arial, sans-serif;
+        font-size: 7pt; font-style: italic; color: #888;
+      }
+      @bottom-center {
+        content: "Photographe à Nantes — disponible partout en France";
+        font-family: -apple-system, "Segoe UI", "Helvetica Neue", Helvetica, Arial, sans-serif;
+        font-size: 7pt; font-style: italic; color: #888;
+      }
+      @bottom-right {
+        content: "Page " counter(page) " / " counter(pages);
+        font-family: -apple-system, "Segoe UI", "Helvetica Neue", Helvetica, Arial, sans-serif;
+        font-size: 8pt; color: #888;
+      }
+    }
     html, body { background: #fff !important; margin: 0 !important; padding: 0 !important; orphans: 3; widows: 3; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 
     /* === ISOLATION via display === */
