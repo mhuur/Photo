@@ -8660,14 +8660,46 @@ function bilanCompute() {
       b.ursaf      += num(e.ursaf);
     }
   }
-  const months = Object.keys(byMonth).sort((a, b) => b.localeCompare(a));
-  return months.map(ym => {
-    const b = byMonth[ym];
-    const abos  = _abonnementsForMonth(ym);
-    const amort = _amortMatosForMonth(ym);
-    const marge = r2(b.salaire - abos - amort);
-    return { ym, ...b, abos, amort, marge };
-  });
+
+  // Étend la plage [min..max] pour inclure les mois sans entries mais avec charges fixes
+  // (abos actifs / amortissement matériel en cours). Sans ça, un mois sans encaissement
+  // n'apparaît pas dans le bilan et les charges fixes manquent au cumul annuel.
+  const allYMs = new Set(Object.keys(byMonth));
+  for (const a of (S.abonnements.entries || [])) {
+    const s = (a.dateDebut || "").slice(0, 7);
+    if (s.length === 7) allYMs.add(s);
+  }
+  for (const inv of (S.investissements.entries || [])) {
+    const s = (inv.date || "").slice(0, 7);
+    if (s.length === 7) allYMs.add(s);
+  }
+  const today = new Date();
+  const todayYM = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}`;
+  allYMs.add(todayYM);
+  if (allYMs.size === 0) return [];
+
+  const sorted = [...allYMs].sort();
+  const [y0, m0] = sorted[0].split("-").map(Number);
+  const [y1, m1] = sorted[sorted.length - 1].split("-").map(Number);
+  const fullRange = [];
+  let y = y0, m = m0;
+  while (y < y1 || (y === y1 && m <= m1)) {
+    fullRange.push(`${y}-${String(m).padStart(2, "0")}`);
+    m++; if (m > 12) { y++; m = 1; }
+  }
+
+  return fullRange
+    .map(ym => {
+      const b = byMonth[ym] || { heures:0, paye:0, ca:0, salaire:0, ursaf:0, tresorerie:0, frais:0 };
+      const abos  = _abonnementsForMonth(ym);
+      const amort = _amortMatosForMonth(ym);
+      const marge = r2(b.salaire - abos - amort);
+      return { ym, ...b, abos, amort, marge };
+    })
+    // Élide uniquement les mois "vraiment vides" (avant tout abo/matériel/encaissement).
+    .filter(r => r.heures > 0 || r.paye > 0 || r.ca > 0 || r.salaire > 0 || r.ursaf > 0
+              || r.tresorerie > 0 || r.frais > 0 || r.abos > 0 || r.amort > 0)
+    .sort((a, b) => b.ym.localeCompare(a.ym));
 }
 
 function bilanRender() {
