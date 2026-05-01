@@ -3760,6 +3760,11 @@ window.ligneSetUnit = ligneSetUnit;
 function ligneSetDevis(id, devis) {
   const l = S.mission.lignes.find(x => x.id === id);
   if (!l) return;
+  // Section où la ligne est CURRENTEMENT visible (sticky en cours OU section
+  // déterminée par l.devis avant la modif).
+  const currentDisplay = (_ligneStickySection && _ligneStickySection.id === id)
+    ? _ligneStickySection.displayIn
+    : (l.devis === "debours" ? "debours" : "principal");
   l.devis = devis;
   // Combinaisons valides :
   //   principal + acompte / avance
@@ -3774,10 +3779,31 @@ function ligneSetDevis(id, devis) {
       l.paiementType = "acompte";
     }
   }
+  // Si la nouvelle valeur de l.devis correspond déjà à la section visible,
+  // pas de sticky. Sinon : on garde la ligne visible dans sa section d'origine
+  // jusqu'au prochain render (cf. _ligneStickyShown dans render()).
+  const newSection = (devis === "debours") ? "debours" : "principal";
+  if (newSection === currentDisplay) {
+    _ligneStickySection = null;
+    _ligneStickyShown = false;
+  } else {
+    _ligneStickySection = { id, displayIn: currentDisplay };
+    _ligneStickyShown = false;
+  }
   save();
   render();
 }
 window.ligneSetDevis = ligneSetDevis;
+
+// Détermine la section où la ligne doit être affichée. Honore le sticky
+// _ligneStickySection (rétention visuelle après toggle Principal/Débours)
+// avant de retomber sur la valeur réelle l.devis.
+function ligneSectionFor(l) {
+  if (_ligneStickySection && _ligneStickySection.id === l.id) {
+    return _ligneStickySection.displayIn;
+  }
+  return l.devis === "debours" ? "debours" : "principal";
+}
 
 function ligneSetPaiement(id, val) {
   const l = S.mission.lignes.find(x => x.id === id);
@@ -4375,11 +4401,28 @@ function totalsHtml(t) {
   `;
 }
 
+// Sticky de visibilité d'une ligne matériel après toggle Principal/Débours.
+// Quand l'user clique le toggle, la ligne reste visible dans sa section
+// d'origine pendant le render qui suit (sinon elle "disparaît sous l'œil").
+// Au render suivant (déclenché par n'importe quelle autre action), le
+// sticky est purgé et la ligne reprend sa position naturelle. Pattern
+// jumeau de suiviExpandedDevis. Cf. CLAUDE.md "Filtre sticky pendant l'édition".
+let _ligneStickySection = null; // { id, displayIn: "principal" | "debours" }
+let _ligneStickyShown   = false;
+
 // ▼ render — DISPATCHER : recompose app.innerHTML par onglet
 function render() {
   if (!user) {
     app.innerHTML = `<div class="login"><h1>🌊 Devis Photo</h1><button class="btn" onclick="signIn()">Se connecter avec Google</button></div>`;
     return;
+  }
+  // Purge le sticky de section ligne après le render où il a été appliqué.
+  // (re-set par ligneSetDevis avant le render qui suit le toggle)
+  if (_ligneStickyShown) {
+    _ligneStickySection = null;
+    _ligneStickyShown = false;
+  } else if (_ligneStickySection) {
+    _ligneStickyShown = true;
   }
   const renderers = { accueil: rAC, mission: rMS, profil: rPF, suivi: rSV, clients: rCL, tarifs: rTR, compta: rCP, bugs: rBG };
   const view = (renderers[tab] || (() => ""))();
@@ -5795,7 +5838,7 @@ function rDevisSectionPrestations() {
   const d = S.mission;
   const declare = d.declare !== false;
   const heures   = (d.lignes || []).filter(l => l.type === "heures");
-  const materiel = (d.lignes || []).filter(l => l.type === "materiel" && l.devis !== "debours");
+  const materiel = (d.lignes || []).filter(l => l.type === "materiel" && ligneSectionFor(l) === "principal");
   const cessions = (d.lignes || []).filter(l => l.type === "cession");
 
   const objectInput = `<div class="row">
@@ -5858,7 +5901,7 @@ function rDevisSectionDeplacement() {
   const isDebours = devis === "debours";
   const pmt = d.deplacement.paiementType || "acompte";
   const afficheMode = d.deplacement.afficheMode || "afficher";
-  const debLignes = (d.lignes || []).filter(l => l.type === "materiel" && l.devis === "debours");
+  const debLignes = (d.lignes || []).filter(l => l.type === "materiel" && ligneSectionFor(l) === "debours");
 
   const paiementModeHtml = isDebours
     ? `<div class="seg lg-toggle lg-toggle-pmt" title="Mode de refacturation des débours">
