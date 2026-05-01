@@ -5477,8 +5477,16 @@ function rViewFactureModal() {
       <div class="modal-sub">Émise le ${esc(dateFR(facture.dateEmission))} · Échéance ${esc(dateFR(facture.dateEcheance))} · ${paidLines.length}/${ents.length} échéance${ents.length > 1 ? "s" : ""} payée${paidLines.length > 1 ? "s" : ""}</div>
       <div class="devis-preview view-devis-snapshot">
         ${statusBannerHtml}
-        ${facture.snapshotHtml}
-        ${receiptHtml}
+        ${(() => {
+          // Le récap paiement est dynamique (statut paiement live) → injecté
+          // dans le snapshot juste avant le footer mentions, pas concaténé
+          // après (sinon il apparaît visuellement après les mentions légales).
+          const snap = facture.snapshotHtml;
+          if (snap.includes('class="dp-facture-footer"')) {
+            return snap.replace(/(<div class="dp-facture-footer">)/, receiptHtml + '$1');
+          }
+          return snap + receiptHtml;
+        })()}
       </div>
       <div class="modal-actions">
         <button class="btn ghost" onclick="printWithTip()">🖨️ Imprimer</button>
