@@ -8,6 +8,7 @@ Source : `index.html` (bloc `const DEFAULT_S = { ... };`).
   - **ref**: string _(default `""`)_
   - **dateEmission**: string _(default `""`)_
   - **dureeValidite**: number _(default `30`)_
+  - **datePrestation**: string _(default `""`)_
   - **object**: string _(default `""`)_
   - **objectText**: string _(default `""`)_
   - **objectDate**: string _(default `""`)_

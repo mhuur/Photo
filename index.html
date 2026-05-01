@@ -194,6 +194,25 @@
   .suv-tl-card.idle .suv-tl-card-state{color:var(--text-dim)}
   .suv-tl-card.refused .suv-tl-card-state{color:var(--danger)}
 
+  /* Facture : bandeau métadonnées + statut imprimé + footer mentions */
+  .dp-facture-meta{display:grid;grid-template-columns:auto 1fr;gap:6px 16px;padding:12px 16px;background:var(--surface-2);border:1px solid var(--border-light);border-radius:8px;margin:0 0 14px;font-size:13px}
+  .dp-facture-meta .dp-fm-row{display:contents}
+  .dp-facture-meta .dp-fm-row > .lbl{color:var(--text-muted);font-size:11px;text-transform:uppercase;letter-spacing:.04em;font-weight:600;align-self:center}
+  .dp-facture-meta .dp-fm-row > strong{color:var(--text);font-variant-numeric:tabular-nums}
+  .dp-facture-meta .dp-fm-row.dp-fm-ref-devis > span{color:var(--text-dim);font-size:12px;font-variant-numeric:tabular-nums}
+  .dp-facture-status{margin:0 0 14px;padding:10px 14px;text-align:center;border-radius:6px;font-weight:800;font-size:14px;letter-spacing:.06em}
+  .dp-facture-status.paid{background:var(--success-soft, rgba(34,197,94,.16));color:var(--success);border:1px solid var(--success)}
+  .dp-facture-status.pending{background:var(--warning-soft, rgba(245,158,11,.16));color:var(--warning);border:1px solid var(--warning)}
+  .dp-facture-footer{margin:18px 0 0;padding:10px 14px;border-top:1px solid var(--border-soft);font-size:11px;color:var(--text-dim);font-style:italic;line-height:1.5;text-align:center}
+  @media print{
+    .dp-facture-meta{background:transparent;border:1px solid #888}
+    .dp-facture-meta .dp-fm-row > .lbl{color:#666}
+    .dp-facture-meta .dp-fm-row > strong{color:#000}
+    .dp-facture-status.paid{background:transparent;color:#1b6e3a;border:2px solid #1b6e3a}
+    .dp-facture-status.pending{background:transparent;color:#9a4d00;border:2px solid #9a4d00}
+    .dp-facture-footer{color:#444}
+  }
+
   /* Tarifs : carte synthèse coûts horaires */
   .tr-cost-card{background:var(--surface);border:1px solid var(--border-light);border-radius:12px;max-width:780px;margin:14px 0 18px;overflow:hidden}
   .tr-cost-head{display:flex;align-items:center;justify-content:space-between;gap:24px;padding:20px 24px;background:linear-gradient(135deg,var(--primary-soft),transparent);border-bottom:1px solid var(--border-soft);flex-wrap:wrap}
@@ -1936,6 +1955,7 @@ const SK = "devis-photo-data-v2";
 const DEFAULT_S = {
   mission: {
     ref: "", dateEmission: "", dureeValidite: 30,
+    datePrestation: "",
     object: "", objectText: "", objectDate: "", objectLieu: "",
     client: { num: "", name: "", contact: "", contactSelected: "", contactId: "", address: "", phone: "", phoneSelected: "", email: "", emailSelected: "", type: "" },
     prep:        { hours: "0", rate: "" },
@@ -2612,10 +2632,16 @@ function tvaMention(identite) {
 }
 
 // ▼ genFooterMentions — pied imprimé (TVA, statut, mentions légales)
+// variant : "devis" (default) | "debours" | "facture"
+// Pour facture : ajoute mentions L441-9 + L441-10 II C. com. (pénalités, escompte).
 function genFooterMentions(identite, variant) {
   const parts = [statusLabel(identite)];
   if (variant === "debours") parts.push("Refacturation au centime près sur justificatifs");
   parts.push(tvaMention(identite));
+  if (variant === "facture") {
+    parts.push("Pas d'escompte pour paiement anticipé");
+    parts.push("Pénalités de retard : 3 × taux d'intérêt légal en vigueur · Indemnité forfaitaire pour frais de recouvrement : 40 € (art. L441-10 II C. com.)");
+  }
   return parts.join(" · ");
 }
 
@@ -4110,8 +4136,79 @@ function formatRef(ref, type) {
   const labels = { devis: "Devis", debours: "Débours", facture: "Facture" };
   const label = labels[type] || "Devis";
   if (!ref || ref === "DEVIS-…-…") return `${label} n° …`;
-  const stripped = ref.replace(/^(DEVIS|DEBOURS|FACTURE)-/i, "");
+  const stripped = ref.replace(/^(DEVIS|DEBOURS|FACTURE|FACT)-/i, "");
   return `${label} n° ${stripped}`;
+}
+
+// ▼ nextFactureSequence — calcule le prochain numéro facture pour un YYYY-MM
+// Format de référence facture : FACT-YYYY-MM-NNN (séquence par mois).
+// Scanne tous les S.suivi.devis[*].factures[].ref pour trouver le max.
+function nextFactureSequence(ym) {
+  const re = new RegExp("^FACT-" + ym.replace("-", "\\-") + "-(\\d+)$");
+  let maxN = 0;
+  const all = (S.suivi && S.suivi.devis) || {};
+  for (const k of Object.keys(all)) {
+    const factures = (all[k] && all[k].factures) || [];
+    for (const f of factures) {
+      const m = (f.ref || "").match(re);
+      if (m) {
+        const n = parseInt(m[1], 10);
+        if (n > maxN) maxN = n;
+      }
+    }
+  }
+  return maxN + 1;
+}
+
+// ▼ computeDateEcheance — calcule la date d'échéance de paiement à partir
+// d'une date d'émission ISO et d'un délai (cf. DELAIS_PAIEMENT).
+// Retourne une date ISO YYYY-MM-DD, ou "" si impossible.
+function computeDateEcheance(dateEmission, delaiKey) {
+  if (!dateEmission || dateEmission.length < 10) return "";
+  const d = new Date(dateEmission + "T00:00:00");
+  if (isNaN(d.getTime())) return "";
+  const k = delaiKey || "30j_fdm";
+  const daysMap = { "reception": 0, "comptant": 0, "15j": 15, "30j": 30, "45j": 45, "60j": 60 };
+  const fdmDays = { "30j_fdm": 30, "45j_fdm": 45, "60j_fdm": 60 };
+  let target = new Date(d);
+  if (k in daysMap) {
+    target.setDate(target.getDate() + daysMap[k]);
+  } else if (k in fdmDays) {
+    target.setDate(target.getDate() + fdmDays[k]);
+    // « Fin de mois » : dernier jour du mois courant après le décalage
+    target = new Date(target.getFullYear(), target.getMonth() + 1, 0);
+  } else if (k === "10_mois_suiv") {
+    target = new Date(d.getFullYear(), d.getMonth() + 1, 10);
+  } else if (k === "15_mois_suiv") {
+    target = new Date(d.getFullYear(), d.getMonth() + 1, 15);
+  }
+  return target.toISOString().slice(0, 10);
+}
+
+// ▼ ensureFactureForDevis — création paresseuse d'une facture pour un devis
+// donné. Tier 1 : 1 seule facture par devis (type "globale"). Tier 2 ajoutera
+// "acompte" / "solde". Retourne l'objet facture (existant ou nouvellement créé).
+function ensureFactureForDevis(devisId) {
+  if (!S.suivi.devis) S.suivi.devis = {};
+  if (!S.suivi.devis[devisId]) S.suivi.devis[devisId] = { ref: "" };
+  const dv = S.suivi.devis[devisId];
+  if (!Array.isArray(dv.factures)) dv.factures = [];
+  if (dv.factures.length > 0) return dv.factures[0];
+  const today = new Date().toISOString().slice(0, 10);
+  const ym = today.slice(0, 7);
+  const seq = nextFactureSequence(ym);
+  const ref = `FACT-${ym}-${String(seq).padStart(3, "0")}`;
+  const delaiKey = dv.snapshotPaiementDelai || "30j_fdm";
+  const facture = {
+    id: uid(),
+    ref,
+    type: "globale", // Tier 2 : "acompte" | "solde"
+    dateEmission: today,
+    dateEcheance: computeDateEcheance(today, delaiKey)
+  };
+  dv.factures.push(facture);
+  save();
+  return facture;
 }
 
 // Standard French payment delays (B2B/B2C). Default for B2B = 30j fin de mois.
@@ -5101,13 +5198,15 @@ function rViewDevisModal() {
 }
 
 // ▼ rViewFactureModal — modal Suivi : visu/impression facture
+// Tier 1 conformité : numérotation FACT-YYYY-MM-NNN propre (≠ ref devis),
+// date d'émission facture distincte de la date du devis, date d'échéance
+// affichée explicitement, mentions légales L441-9 / L441-10 II C. com.
+// La facture est créée paresseusement à la première ouverture (ensureFactureForDevis).
 function rViewFactureModal() {
   if (!viewFactureModal) return "";
   const devisId = viewFactureModal.devisId;
   const dv = S.suivi.devis && S.suivi.devis[devisId];
   const lignes = (S.suivi.entries || []).filter(e => e.devisId === devisId);
-  const refRaw = (dv && dv.ref) || devisId;
-  const factureRef = formatRef(refRaw, "facture");
   // Compute totals — la vérité du paiement est portée par entry.statut === "termine"
   const totalDevis = lignes.reduce((s, e) => s + num(e.montant), 0);
   const paidLines = lignes.filter(e => entryStatut(e) === "termine");
@@ -5115,13 +5214,31 @@ function rViewFactureModal() {
   const restant = r2(totalDevis - totalPaid);
   const fullyPaid = restant <= 0.01 && totalPaid > 0;
   let snapshot = (dv && dv.snapshotHtml) || "";
+
+  // Création paresseuse de la facture (numéro + date émission + date échéance).
+  // Première ouverture du modal sur ce devis = émission de la facture.
+  const facture = (dv && snapshot) ? ensureFactureForDevis(devisId) : null;
+  const factureRefDisplay = facture ? formatRef(facture.ref, "facture") : "Facture n° …";
+
   // Inject current logo if absent from older snapshots
   const currentLogo = (S.mission && S.mission.logoUrl) || "";
   if (snapshot && currentLogo && !snapshot.includes('class="dp-logo"')) {
     snapshot = `<div class="dp-logo-wrap"><img src="${esc(currentLogo)}" alt="Logo" class="dp-logo"></div>${snapshot}`;
   }
   const client = (dv && dv.snapshotClient) || (lignes[0] && lignes[0].client) || "—";
-  const when = (dv && dv.snapshotAt) ? new Date(dv.snapshotAt).toLocaleString("fr-FR") : null;
+
+  // Bandeau métadonnées facture (en-tête remplaçant celui du devis dans le rendu)
+  const datePrestation = (dv && dv.snapshotDatePrestation) || "";
+  const facMetaHtml = facture ? `<div class="dp-facture-meta">
+    <div class="dp-fm-row"><span class="lbl">Référence</span><strong>${esc(formatRef(facture.ref, "facture"))}</strong></div>
+    <div class="dp-fm-row"><span class="lbl">Date d'émission</span><strong>${esc(dateFR(facture.dateEmission))}</strong></div>
+    ${datePrestation ? `<div class="dp-fm-row"><span class="lbl">Date de prestation</span><strong>${esc(dateFR(datePrestation))}</strong></div>` : ""}
+    <div class="dp-fm-row"><span class="lbl">Date d'échéance</span><strong style="color:var(--warning)">${esc(dateFR(facture.dateEcheance))}</strong></div>
+    <div class="dp-fm-row dp-fm-ref-devis"><span class="lbl">Devis lié</span><span>${esc((dv && dv.ref) || devisId)}</span></div>
+  </div>` : "";
+
+  // Footer mentions légales facture (L441-9 / L441-10 II C. com.)
+  const facFooterHtml = `<div class="dp-facture-footer">${esc(genFooterMentions(S.identite, "facture"))}</div>`;
 
   // Build receipt section
   const receiptHtml = `<div class="dp-receipt" style="margin:18px 0 0">
@@ -5136,18 +5253,29 @@ function rViewFactureModal() {
     <div class="dp-receipt-line restant ${fullyPaid ? 'paid' : ''}"><span class="lbl">${fullyPaid ? "✓ Soldée" : "Reste à payer"}</span><span class="amt" style="color:${fullyPaid ? 'var(--success)' : 'var(--warning)'}">${fmt(restant)}</span></div>
   </div>`;
 
-  // Build the facture body: snapshot HTML with the ref swapped from "Devis"/"DEVIS" → "Facture"/"FACTURE"
+  // Bandeau statut imprimé (visible en PDF) : ✓ PAYÉE / EN ATTENTE
+  const statusBannerHtml = facture ? `<div class="dp-facture-status ${fullyPaid ? 'paid' : 'pending'}">${fullyPaid ? "✓ FACTURE SOLDÉE" : "EN ATTENTE DE PAIEMENT"}</div>` : "";
+
+  // Build the facture body: bandeau meta + snapshot + status + receipt + mentions
+  // Le snapshot est un rendu HTML du devis ; on le ré-étiquette pour cohérence
+  // (vieux snapshots avec "DEVIS"/"Devis" en haut). Mais les nouvelles données
+  // canoniques (numéro, dates) viennent de l'objet facture.
   let body;
   if (snapshot) {
     const snapshotFacture = snapshot
       .replace(/(<div class="ref"[^>]*>)([\s\S]*?)(<\/div>)/, (m, a, content, end) => {
-        // Replace either old format ("DEVIS-...") or new format ("Devis n° ...")
         const newContent = content
           .replace(/^DEVIS\b/, "FACTURE")
           .replace(/^Devis\b/, "Facture");
         return `${a}${newContent}${end}`;
       });
-    body = `<div class="devis-preview view-devis-snapshot">${snapshotFacture}${receiptHtml}</div>`;
+    body = `<div class="devis-preview view-devis-snapshot">
+      ${facMetaHtml}
+      ${statusBannerHtml}
+      ${snapshotFacture}
+      ${receiptHtml}
+      ${facFooterHtml}
+    </div>`;
   } else {
     body = `<div class="empty" style="padding:40px;text-align:center">
       Aucun snapshot devis disponible.<br><span style="font-size:13px;color:var(--text-dim)">La facture est générée à partir du snapshot du devis émis. Émets d'abord le devis depuis l'onglet Devis (« + Enregistrer dans Suivi »).</span>
@@ -5156,8 +5284,8 @@ function rViewFactureModal() {
 
   return `<div class="modal-overlay" onclick="if(event.target===this)viewFactureClose()">
     <div class="modal-card modal-card-lg">
-      <div class="modal-title" style="color:var(--success)">🧾 ${esc(factureRef)} — ${esc(client)}</div>
-      ${when ? `<div class="modal-sub">Devis émis le ${esc(when)} · ${paidLines.length}/${lignes.length} échéance${lignes.length > 1 ? "s" : ""} payée${paidLines.length > 1 ? "s" : ""}</div>` : ""}
+      <div class="modal-title" style="color:var(--success)">🧾 ${esc(factureRefDisplay)} — ${esc(client)}</div>
+      ${facture ? `<div class="modal-sub">Émise le ${esc(dateFR(facture.dateEmission))} · Échéance ${esc(dateFR(facture.dateEcheance))} · ${paidLines.length}/${lignes.length} échéance${lignes.length > 1 ? "s" : ""} payée${paidLines.length > 1 ? "s" : ""}</div>` : ""}
       ${body}
       <div class="modal-actions">
         ${snapshot ? `<button class="btn ghost" onclick="printWithTip()">🖨️ Imprimer</button>` : ""}
@@ -5557,6 +5685,9 @@ window.suiviUpdateSnapshot = function() {
   e.snap.snapshotTotal = t.total;
   e.snap.snapshotDebours = t.debours || 0;
   e.snap.snapshotHash = devisHash();
+  e.snap.snapshotPaiementDelai = (m.paiement && m.paiement.delai) || "30j_fdm";
+  e.snap.snapshotDatePrestation = m.datePrestation || "";
+  if (!Array.isArray(e.snap.factures)) e.snap.factures = [];
 
   // 3. Vérifie qu'il y a bien des entries Suivi pour ce devis. Si tout a été
   // supprimé manuellement (ou si le devis a été enregistré avec un ancien flux
@@ -5737,6 +5868,9 @@ function rDevisSectionIdentification() {
       </div>
       <div class="field narrow"><label>Durée de validité (jours)</label>
         <input type="number" min="1" max="365" step="1" value="${esc(String(duree))}" oninput="upd('mission.dureeValidite', Math.max(1, parseInt(this.value)||30))">
+      </div>
+      <div class="field narrow"><label>Date de prestation <span class="hint" style="margin:0;font-size:10px">(optionnel)</span></label>
+        <input type="date" value="${esc(d.datePrestation || "")}" oninput="upd('mission.datePrestation', this.value)" title="Date de réalisation / livraison de la prestation. Affichée sur la facture (art. 289-I CGI).">
       </div>
     </div>
     <div class="row">
@@ -6373,6 +6507,11 @@ function suiviAdd() {
     console.warn("Snapshot devis/débours failed", e);
   }
 
+  // Préserve le tableau factures[] s'il existait déjà (cas suiviUpdateSnapshot
+  // appelle indirectement par re-archivage). Tier 1 : 1 facture max par devis.
+  const existingFactures = (S.suivi.devis[devisId] && Array.isArray(S.suivi.devis[devisId].factures))
+    ? S.suivi.devis[devisId].factures
+    : [];
   S.suivi.devis[devisId] = {
     ref: m.ref || "",
     snapshotHtml,
@@ -6381,7 +6520,11 @@ function suiviAdd() {
     snapshotTotal: t.total,
     snapshotDebours: t.debours || 0,
     snapshotClient: client,
-    snapshotHash: (typeof devisHash === "function") ? devisHash() : ""
+    snapshotHash: (typeof devisHash === "function") ? devisHash() : "",
+    // Données structurées pour la facture (Tier 1 : conformité légale)
+    snapshotPaiementDelai: (m.paiement && m.paiement.delai) || "30j_fdm",
+    snapshotDatePrestation: m.datePrestation || "",
+    factures: existingFactures
   };
 
   // Décomposition montant → salaire / URSSAF / trésorerie (calque la logique Excel) :
