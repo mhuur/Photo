@@ -2250,6 +2250,21 @@ if (S.mission) {
   recomputeRef();
 }
 
+// Backfill snapshotMission pour le devis CURRENT (= celui qui correspond à
+// S.mission.ref). Permet aux anciens devis archivés AVANT la feature Réviser
+// de devenir révisables dès lors qu'ils restent l'éditable courant : le
+// clone structuré est posé à partir de S.mission. Pour les autres devis
+// (plus anciens, devis multiples), il faut passer par « Enregistrer modifs »
+// pour backfiller (cf suiviUpdateSnapshot).
+if (S.mission && S.mission.ref && S.suivi && S.suivi.devis) {
+  for (const [devisId, dv] of Object.entries(S.suivi.devis)) {
+    if (!dv || dv.snapshotMission || dv.ref !== S.mission.ref) continue;
+    const sm = JSON.parse(JSON.stringify(S.mission));
+    delete sm.revisesDevisId;
+    dv.snapshotMission = sm;
+  }
+}
+
 // Migration Tier 1 → Tier 2 : factures de type "globale" (refonte initiale)
 // reclassées en "acompte" ou "solde" selon l'état des entries du devis.
 // Critère : "solde" si toutes les entries du devis sont en statut "termine"
@@ -6030,6 +6045,13 @@ window.suiviUpdateSnapshot = function() {
   e.snap.snapshotPaiementDelai = (m.paiement && m.paiement.delai) || "30j_fdm";
   e.snap.snapshotDatePrestation = m.datePrestation || "";
   if (!Array.isArray(e.snap.factures)) e.snap.factures = [];
+  // Backfill snapshotMission (ajout post-feature-Réviser) : à chaque
+  // « Enregistrer modifs » sur un devis Suivi, on met à jour la copie
+  // structurée éditable. Permet de rendre révisable un ancien devis dès
+  // que l'user le ré-édite.
+  const snapMission = JSON.parse(JSON.stringify(m));
+  delete snapMission.revisesDevisId;
+  e.snap.snapshotMission = snapMission;
 
   // 3. Vérifie qu'il y a bien des entries Suivi pour ce devis. Si tout a été
   // supprimé manuellement (ou si le devis a été enregistré avec un ancien flux
