@@ -133,7 +133,7 @@ Chaque devis a `S.mission.declare` (true par défaut, false = au noir). `suiviAd
 ## Méthode de travail attendue
 
 - **Découpage en phases** pour toute tâche non triviale : audit / proposition / exécution. Arrêt explicite à la fin de chaque phase, attente de mon "OK" avant de passer à la suivante.
-- **Audit en UI pour les grosses refontes** : pour les phases d'audit (Phase 1) sur des features complexes, injecter aussi le diagramme/audit **dans l'app** (bloc `<details>` collapsible, ex. `rSuiviAuditBlock` sous le tableau Suivi). Permet à l'utilisateur de valider visuellement le diagnostic avant Phase 2. Le bloc se retire à la fin de la refonte (étape dédiée). NB : `rSuiviAuditBlock` est encore en place — étape de retrait à faire quand la refonte Suivi est validée par usage.
+- **Audit en UI pour les grosses refontes** : pour les phases d'audit (Phase 1) sur des features complexes, injecter aussi le diagramme/audit **dans l'app** (bloc `<details>` collapsible). Permet à l'utilisateur de valider visuellement le diagnostic avant Phase 2. Le bloc se retire à la fin de la refonte (étape dédiée).
 - **Audit + proposition obligatoires (même en auto mode)** pour toute opération qui : touche la navigation/menu · modifie le schéma de `S` · supprime > 50 lignes · utilise `sed` ou un Edit multi-zones. Pas d'exécution sans "OK" explicite.
 - **Challenger bienvenu** : tu es autorisé — et encouragé — à proposer des améliorations, questions, ou alternatives auxquelles je n'aurais pas pensé. Sépare-les clairement de ce que j'ai demandé. Pour chacune, indique : à faire maintenant / plus tard / juste à noter.
 - **Demander plutôt que deviner** sur les points métier (statut fiscal, conventions, intentions produit). Mieux vaut une question qu'une supposition.
