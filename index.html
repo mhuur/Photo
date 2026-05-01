@@ -204,6 +204,9 @@
   .dp-facture-status.paid{background:var(--success-soft, rgba(34,197,94,.16));color:var(--success);border:1px solid var(--success)}
   .dp-facture-status.pending{background:var(--warning-soft, rgba(245,158,11,.16));color:var(--warning);border:1px solid var(--warning)}
   .dp-facture-footer{margin:18px 0 0;padding:10px 14px;border-top:1px solid var(--border-soft);font-size:11px;color:var(--text-dim);font-style:italic;line-height:1.5;text-align:center}
+  .dp-acompte-note{margin:14px 0;padding:10px 14px;background:var(--surface-2);border-left:3px solid var(--accent);border-radius:4px;font-size:12px;color:var(--text-muted);line-height:1.5}
+  .dp-acomptes-deduits{background:var(--surface-2);border:1px solid var(--border-soft);border-radius:6px;padding:12px 14px;margin:14px 0}
+  .dp-facture-debours{background:var(--surface-2);border:1px solid var(--border-soft);border-radius:6px;padding:12px 14px;margin:14px 0}
   @media print{
     .dp-facture-meta{background:transparent;border:1px solid #888}
     .dp-facture-meta .dp-fm-row > .lbl{color:#666}
@@ -2205,6 +2208,25 @@ if (S.mission) {
   }
   recomputeRef();
 }
+
+// Migration Tier 1 → Tier 2 : factures de type "globale" (refonte initiale)
+// reclassées en "acompte" ou "solde" selon l'état des entries du devis.
+// Critère : "solde" si toutes les entries du devis sont en statut "termine"
+// (ou legacy "paye"), sinon "acompte". Les refs FACT- existantes sont
+// conservées (pas de ré-attribution FA-/FS- rétroactive — séquence comptable
+// déjà émise / imprimée à respecter).
+if (S.suivi && S.suivi.devis && typeof S.suivi.devis === "object") {
+  const _isPaid = (s) => s === "termine" || s === "paye";
+  for (const [devisId, dv] of Object.entries(S.suivi.devis)) {
+    if (!dv || !Array.isArray(dv.factures)) continue;
+    for (const f of dv.factures) {
+      if (f.type !== "globale") continue;
+      const ents = (S.suivi.entries || []).filter(e => e.devisId === devisId && (parseFloat(e.frais) || 0) === 0);
+      const allPaid = ents.length > 0 && ents.every(e => _isPaid(e.statut));
+      f.type = allPaid ? "solde" : "acompte";
+    }
+  }
+}
 let user = null;
 let tab = "accueil";
 let cloudT = null;
@@ -4141,10 +4163,11 @@ function formatRef(ref, type) {
 }
 
 // ▼ nextFactureSequence — calcule le prochain numéro facture pour un YYYY-MM
-// Format de référence facture : FACT-YYYY-MM-NNN (séquence par mois).
-// Scanne tous les S.suivi.devis[*].factures[].ref pour trouver le max.
-function nextFactureSequence(ym) {
-  const re = new RegExp("^FACT-" + ym.replace("-", "\\-") + "-(\\d+)$");
+// Tier 2 : prefix séparé par type — "FA" (acompte) / "FS" (solde) / "FACT" (legacy).
+// Format référence : <prefix>-YYYY-MM-NNN (séquence par mois et par préfixe).
+function nextFactureSequence(ym, prefix) {
+  const px = prefix || "FACT";
+  const re = new RegExp("^" + px + "-" + ym.replace("-", "\\-") + "-(\\d+)$");
   let maxN = 0;
   const all = (S.suivi && S.suivi.devis) || {};
   for (const k of Object.keys(all)) {
@@ -4185,24 +4208,52 @@ function computeDateEcheance(dateEmission, delaiKey) {
   return target.toISOString().slice(0, 10);
 }
 
-// ▼ ensureFactureForDevis — création paresseuse d'une facture pour un devis
-// donné. Tier 1 : 1 seule facture par devis (type "globale"). Tier 2 ajoutera
-// "acompte" / "solde". Retourne l'objet facture (existant ou nouvellement créé).
-function ensureFactureForDevis(devisId) {
+// ▼ findFactureFor — retourne la facture du type demandé pour un devis, ou null.
+// Type : "acompte" | "solde". Pour la rétrocompat, type "acompte" matche aussi
+// les anciennes factures de type "globale" qui auraient été migrées en acompte.
+function findFactureFor(devisId, type) {
+  const dv = S.suivi.devis && S.suivi.devis[devisId];
+  if (!dv || !Array.isArray(dv.factures)) return null;
+  return dv.factures.find(f => f.type === type) || null;
+}
+
+// ▼ isFactureApplicable — peut-on émettre une facture de ce type sur ce devis ?
+// - "acompte" : ≥ 1 entry (hors débours) en statut "termine" (au moins un acompte
+//   versé), ET au moins une entry n'est pas encore "termine" (sinon c'est une
+//   facture de solde, pas d'acompte). Si TOUT est déjà payé, plus d'acompte
+//   éligible — on émet directement la facture de solde.
+// - "solde" : toutes les entries (hors débours) en statut "termine".
+function isFactureApplicable(devisId, type) {
+  const ents = (S.suivi.entries || []).filter(e => e.devisId === devisId && num(e.frais) === 0);
+  if (ents.length === 0) return false;
+  const allPaid = ents.every(e => entryStatut(e) === "termine");
+  const anyPaid = ents.some(e => entryStatut(e) === "termine");
+  if (type === "solde")   return allPaid;
+  if (type === "acompte") return anyPaid && !allPaid;
+  return false;
+}
+
+// ▼ ensureFactureForDevis — création paresseuse d'une facture (acompte ou solde)
+// pour un devis donné. Tier 2 : 2 factures max par devis (FA + FS).
+// Retourne l'objet facture (existant ou nouvellement créé), ou null si non
+// applicable (le caller doit avoir vérifié isFactureApplicable au préalable).
+function ensureFactureForDevis(devisId, type) {
   if (!S.suivi.devis) S.suivi.devis = {};
   if (!S.suivi.devis[devisId]) S.suivi.devis[devisId] = { ref: "" };
   const dv = S.suivi.devis[devisId];
   if (!Array.isArray(dv.factures)) dv.factures = [];
-  if (dv.factures.length > 0) return dv.factures[0];
+  const existing = dv.factures.find(f => f.type === type);
+  if (existing) return existing;
   const today = new Date().toISOString().slice(0, 10);
   const ym = today.slice(0, 7);
-  const seq = nextFactureSequence(ym);
-  const ref = `FACT-${ym}-${String(seq).padStart(3, "0")}`;
+  const prefix = type === "acompte" ? "FA" : type === "solde" ? "FS" : "FACT";
+  const seq = nextFactureSequence(ym, prefix);
+  const ref = `${prefix}-${ym}-${String(seq).padStart(3, "0")}`;
   const delaiKey = dv.snapshotPaiementDelai || "30j_fdm";
   const facture = {
     id: uid(),
     ref,
-    type: "globale", // Tier 2 : "acompte" | "solde"
+    type,
     dateEmission: today,
     dateEcheance: computeDateEcheance(today, delaiKey)
   };
@@ -5197,51 +5248,186 @@ function rViewDevisModal() {
   </div>`;
 }
 
-// ▼ rViewFactureModal — modal Suivi : visu/impression facture
-// Tier 1 conformité : numérotation FACT-YYYY-MM-NNN propre (≠ ref devis),
-// date d'émission facture distincte de la date du devis, date d'échéance
-// affichée explicitement, mentions légales L441-9 / L441-10 II C. com.
-// La facture est créée paresseusement à la première ouverture (ensureFactureForDevis).
-function rViewFactureModal() {
-  if (!viewFactureModal) return "";
-  const devisId = viewFactureModal.devisId;
-  const dv = S.suivi.devis && S.suivi.devis[devisId];
-  const lignes = (S.suivi.entries || []).filter(e => e.devisId === devisId);
-  // Compute totals — la vérité du paiement est portée par entry.statut === "termine"
-  const totalDevis = lignes.reduce((s, e) => s + num(e.montant), 0);
-  const paidLines = lignes.filter(e => entryStatut(e) === "termine");
-  const totalPaid = paidLines.reduce((s, e) => s + num(e.montant), 0);
-  const restant = r2(totalDevis - totalPaid);
-  const fullyPaid = restant <= 0.01 && totalPaid > 0;
-  let snapshot = (dv && dv.snapshotHtml) || "";
-
-  // Création paresseuse de la facture (numéro + date émission + date échéance).
-  // Première ouverture du modal sur ce devis = émission de la facture.
-  const facture = (dv && snapshot) ? ensureFactureForDevis(devisId) : null;
-  const factureRefDisplay = facture ? formatRef(facture.ref, "facture") : "Facture n° …";
-
-  // Inject current logo if absent from older snapshots
-  const currentLogo = (S.mission && S.mission.logoUrl) || "";
-  if (snapshot && currentLogo && !snapshot.includes('class="dp-logo"')) {
-    snapshot = `<div class="dp-logo-wrap"><img src="${esc(currentLogo)}" alt="Logo" class="dp-logo"></div>${snapshot}`;
-  }
-  const client = (dv && dv.snapshotClient) || (lignes[0] && lignes[0].client) || "—";
-
-  // Bandeau métadonnées facture (en-tête remplaçant celui du devis dans le rendu)
-  const datePrestation = (dv && dv.snapshotDatePrestation) || "";
-  const facMetaHtml = facture ? `<div class="dp-facture-meta">
+// ▼ rFactureMetaHtml — bandeau métadonnées (ref, dates, devis lié) commun aux 2 types
+function rFactureMetaHtml(facture, dv, devisId, datePrestation) {
+  return `<div class="dp-facture-meta">
     <div class="dp-fm-row"><span class="lbl">Référence</span><strong>${esc(formatRef(facture.ref, "facture"))}</strong></div>
     <div class="dp-fm-row"><span class="lbl">Date d'émission</span><strong>${esc(dateFR(facture.dateEmission))}</strong></div>
     ${datePrestation ? `<div class="dp-fm-row"><span class="lbl">Date de prestation</span><strong>${esc(dateFR(datePrestation))}</strong></div>` : ""}
     <div class="dp-fm-row"><span class="lbl">Date d'échéance</span><strong style="color:var(--warning)">${esc(dateFR(facture.dateEcheance))}</strong></div>
     <div class="dp-fm-row dp-fm-ref-devis"><span class="lbl">Devis lié</span><span>${esc((dv && dv.ref) || devisId)}</span></div>
-  </div>` : "";
+  </div>`;
+}
 
-  // Footer mentions légales facture (L441-9 / L441-10 II C. com.)
-  const facFooterHtml = `<div class="dp-facture-footer">${esc(genFooterMentions(S.identite, "facture"))}</div>`;
+// ▼ rFactureAcompteBody — corps figé d'une facture d'acompte.
+// Stocké dans facture.snapshotHtml à l'émission (B3). Pas de réutilisation
+// du snapshot devis : la facture d'acompte ne liste pas les prestations détaillées,
+// juste le montant de l'acompte versé sur le devis lié.
+function rFactureAcompteBody(facture, dv, devisId) {
+  const acompteEntries = (S.suivi.entries || []).filter(e =>
+    e.devisId === devisId && num(e.frais) === 0 && entryStatut(e) === "termine"
+  );
+  const totalAcompte = acompteEntries.reduce((s, e) => s + num(e.montant), 0);
+  const totalDevis = (dv && num(dv.snapshotTotal)) || 0;
+  const pct = totalDevis > 0 ? Math.round(totalAcompte / totalDevis * 100) : 0;
+  const datePrestation = (dv && dv.snapshotDatePrestation) || "";
+  const headerHtml = (typeof genHeaderEmetteur === "function")
+    ? `<div class="dp-header-emetteur">${genHeaderEmetteur(S.identite, "")}</div>`
+    : "";
+  const ligneHtml = acompteEntries.map(e => `<div class="dp-line">
+    <div class="lbl">${esc(e.echeance || "Acompte")}<div class="desc">Sur devis ${esc((dv && dv.ref) || devisId)}</div></div>
+    <div class="qty"></div>
+    <div class="amt">${fmt(num(e.montant))}</div>
+  </div>`).join("");
+  return `<div class="dp-doc-title" style="color:var(--success)">FACTURE D'ACOMPTE</div>
+    ${headerHtml}
+    ${rFactureMetaHtml(facture, dv, devisId, datePrestation)}
+    <div class="dp-section">
+      <h4>Détail</h4>
+      ${ligneHtml || `<div class="dp-empty" style="padding:14px">Aucun acompte versé.</div>`}
+    </div>
+    <div class="dp-totals">
+      <div class="dp-line grand"><span class="lbl">Total HT</span><span class="amt">${fmt(totalAcompte)}</span></div>
+      <div class="dp-totals-tva">${esc(tvaMention(S.identite))}</div>
+    </div>
+    <div class="dp-acompte-note">${pct > 0 ? `Acompte de ${pct}% sur un devis de ${fmt(totalDevis)} HT.` : "Acompte sur devis."} Le solde fera l'objet d'une facture de solde à la livraison.</div>
+    <div class="dp-facture-footer">${esc(genFooterMentions(S.identite, "facture"))}</div>`;
+}
 
-  // Build receipt section
-  const receiptHtml = `<div class="dp-receipt" style="margin:18px 0 0">
+// ▼ rFactureSoldeBody — corps figé d'une facture de solde.
+// Réutilise le snapshot devis (lignes prestations, total HT) puis ajoute :
+//  - section "Acomptes déjà facturés" (déduction des FA précédentes) si applicable
+//  - section "Frais débours refacturés" (B4) si snapshotDeboursHtml présent
+function rFactureSoldeBody(facture, dv, devisId) {
+  let snapshot = (dv && dv.snapshotHtml) || "";
+  const currentLogo = (S.mission && S.mission.logoUrl) || "";
+  if (snapshot && currentLogo && !snapshot.includes('class="dp-logo"')) {
+    snapshot = `<div class="dp-logo-wrap"><img src="${esc(currentLogo)}" alt="Logo" class="dp-logo"></div>${snapshot}`;
+  }
+  // Ré-étiquette "DEVIS"/"Devis" → "FACTURE"/"Facture" dans le ref + titre
+  const snapshotFacture = snapshot
+    .replace(/(<div class="ref"[^>]*>)([\s\S]*?)(<\/div>)/, (m, a, content, end) => {
+      const newContent = content
+        .replace(/^DEVIS\b/, "FACTURE")
+        .replace(/^Devis\b/, "Facture");
+      return `${a}${newContent}${end}`;
+    })
+    .replace(/<div class="dp-doc-title"[^>]*>DEVIS<\/div>/, '<div class="dp-doc-title" style="color:var(--success)">FACTURE</div>');
+  const datePrestation = (dv && dv.snapshotDatePrestation) || "";
+  const metaHtml = rFactureMetaHtml(facture, dv, devisId, datePrestation);
+
+  // Section "Acomptes déjà facturés" (déduction)
+  const facAcompte = findFactureFor(devisId, "acompte");
+  const totalDevis = (dv && num(dv.snapshotTotal)) || 0;
+  let acomptesHtml = "";
+  let netAPayer = totalDevis;
+  if (facAcompte) {
+    // Recompute the acompte amount snapshotted at FA emission (paid entries at that time)
+    // Approche simple : utilise la somme des entries acompte payées MAINTENANT
+    const acompteEntries = (S.suivi.entries || []).filter(e =>
+      e.devisId === devisId && num(e.frais) === 0 && entryStatut(e) === "termine"
+    );
+    // Si toutes payées, l'acompte = entries[0..n-2], le solde = entries[n-1]
+    // Pour simplifier : on considère l'acompte = toutes les entries hors la dernière
+    const sortedByDate = [...acompteEntries].sort((a,b) => (a.date||"").localeCompare(b.date||""));
+    const acomptePart = sortedByDate.slice(0, -1).reduce((s, e) => s + num(e.montant), 0);
+    netAPayer = r2(totalDevis - acomptePart);
+    acomptesHtml = `<div class="dp-section dp-acomptes-deduits">
+      <h4>Acomptes déjà facturés (déduits)</h4>
+      <div class="dp-line">
+        <div class="lbl">Facture d'acompte ${esc(formatRef(facAcompte.ref, "facture"))} du ${esc(dateFR(facAcompte.dateEmission))}</div>
+        <div class="qty"></div>
+        <div class="amt">−${fmt(acomptePart)}</div>
+      </div>
+      <div class="dp-line grand"><span class="lbl">Net à payer (solde)</span><span class="amt">${fmt(netAPayer)}</span></div>
+    </div>`;
+  }
+
+  // Section débours refacturés (B4)
+  let deboursHtml = "";
+  const snapDebours = (dv && dv.snapshotDeboursHtml) || "";
+  const totalDebours = (dv && num(dv.snapshotDebours)) || 0;
+  if (snapDebours && totalDebours > 0) {
+    deboursHtml = `<div class="dp-section dp-facture-debours">
+      <h4>Frais débours refacturés</h4>
+      <div class="hint" style="margin:0 0 8px;font-size:11px">Avancés pour le compte du client, refacturés au centime près sur justificatifs (CGI 267-II).</div>
+      <div class="dp-line"><div class="lbl">Total débours</div><div class="qty"></div><div class="amt">${fmt(totalDebours)}</div></div>
+    </div>`;
+  }
+
+  return `${metaHtml}
+    ${snapshotFacture}
+    ${acomptesHtml}
+    ${deboursHtml}
+    <div class="dp-facture-footer">${esc(genFooterMentions(S.identite, "facture"))}</div>`;
+}
+
+// ▼ rViewFactureModal — modal Suivi : visu/impression facture (acompte ou solde)
+// Tier 2 : 2 types distincts (FA-/FS-), snapshot figé à l'émission (facture.snapshotHtml),
+// inclusion des débours refacturés sur la facture solde.
+function rViewFactureModal() {
+  if (!viewFactureModal) return "";
+  const { devisId, type } = viewFactureModal;
+  const dv = S.suivi.devis && S.suivi.devis[devisId];
+  const lignes = (S.suivi.entries || []).filter(e => e.devisId === devisId);
+  if (!dv || !dv.snapshotHtml) {
+    return `<div class="modal-overlay" onclick="if(event.target===this)viewFactureClose()">
+      <div class="modal-card">
+        <div class="modal-title">Facture indisponible</div>
+        <div class="empty" style="padding:30px;text-align:center">Aucun snapshot devis pour ce devis.<br><span style="font-size:13px;color:var(--text-dim)">Émets d'abord le devis (« + Enregistrer dans Suivi »).</span></div>
+        <div class="modal-actions"><button class="btn" onclick="viewFactureClose()">Fermer</button></div>
+      </div>
+    </div>`;
+  }
+
+  // Facture existante OU créable (selon applicabilité)
+  let facture = findFactureFor(devisId, type);
+  const applicable = isFactureApplicable(devisId, type);
+  if (!facture && applicable) {
+    facture = ensureFactureForDevis(devisId, type);
+  }
+
+  if (!facture) {
+    // Pas applicable et pas encore créée
+    const reason = type === "acompte"
+      ? "Cette facture d'acompte ne peut pas encore être émise : aucun acompte n'a été versé, ou toutes les échéances sont déjà payées (auquel cas il faut émettre la facture de solde directement)."
+      : "Cette facture de solde ne peut pas encore être émise : toutes les échéances doivent être en statut « Payé » dans le Suivi.";
+    return `<div class="modal-overlay" onclick="if(event.target===this)viewFactureClose()">
+      <div class="modal-card">
+        <div class="modal-title">${type === "acompte" ? "Facture d'acompte" : "Facture de solde"} — pas encore émissible</div>
+        <div class="empty" style="padding:24px;line-height:1.5">${esc(reason)}</div>
+        <div class="modal-actions"><button class="btn" onclick="viewFactureClose()">Fermer</button></div>
+      </div>
+    </div>`;
+  }
+
+  // Snapshot figé : à la 1ère ouverture après émission, on capture le body HTML
+  // pour qu'il soit immuable même si le devis sous-jacent est modifié plus tard.
+  if (!facture.snapshotHtml) {
+    facture.snapshotHtml = type === "acompte"
+      ? rFactureAcompteBody(facture, dv, devisId)
+      : rFactureSoldeBody(facture, dv, devisId);
+    save();
+  }
+
+  // Statut paiement live (peut évoluer post-émission, ne fige pas le snapshot)
+  const ents = lignes.filter(e => num(e.frais) === 0);
+  const paidLines = ents.filter(e => entryStatut(e) === "termine");
+  const totalDevis = ents.reduce((s, e) => s + num(e.montant), 0);
+  const totalPaid = paidLines.reduce((s, e) => s + num(e.montant), 0);
+  const restant = r2(totalDevis - totalPaid);
+  const fullyPaid = restant <= 0.01 && totalPaid > 0;
+
+  // Pour la facture d'acompte, statut = "payée" si l'acompte est versé (== applicable)
+  // Pour la facture de solde, statut = "payée" si tout est payé (fullyPaid)
+  const statusPaid = type === "acompte" ? true : fullyPaid;
+  const statusLabel = type === "acompte"
+    ? (statusPaid ? "✓ ACOMPTE ENCAISSÉ" : "EN ATTENTE")
+    : (statusPaid ? "✓ FACTURE SOLDÉE" : "EN ATTENTE DE PAIEMENT");
+  const statusBannerHtml = `<div class="dp-facture-status ${statusPaid ? 'paid' : 'pending'}">${esc(statusLabel)}</div>`;
+
+  // Récap paiement (live, non figé)
+  const receiptHtml = `<div class="dp-receipt">
     <h4>Récapitulatif paiement</h4>
     ${paidLines.length > 0 ? `<div class="dp-receipt-list">
       ${paidLines.map(p => `<div class="dp-receipt-line">
@@ -5250,45 +5436,23 @@ function rViewFactureModal() {
       </div>`).join("")}
     </div>` : `<div class="dp-receipt-line"><span class="lbl dim" style="font-style:italic">Aucune échéance n'est marquée comme payée pour l'instant.</span></div>`}
     <div class="dp-receipt-line total"><span class="lbl">Total payé</span><span class="amt" style="color:var(--success)">${fmt(totalPaid)}</span></div>
-    <div class="dp-receipt-line restant ${fullyPaid ? 'paid' : ''}"><span class="lbl">${fullyPaid ? "✓ Soldée" : "Reste à payer"}</span><span class="amt" style="color:${fullyPaid ? 'var(--success)' : 'var(--warning)'}">${fmt(restant)}</span></div>
+    <div class="dp-receipt-line restant ${fullyPaid ? 'paid' : ''}"><span class="lbl">${fullyPaid ? "✓ Soldé" : "Reste à payer"}</span><span class="amt" style="color:${fullyPaid ? 'var(--success)' : 'var(--warning)'}">${fmt(restant)}</span></div>
   </div>`;
 
-  // Bandeau statut imprimé (visible en PDF) : ✓ PAYÉE / EN ATTENTE
-  const statusBannerHtml = facture ? `<div class="dp-facture-status ${fullyPaid ? 'paid' : 'pending'}">${fullyPaid ? "✓ FACTURE SOLDÉE" : "EN ATTENTE DE PAIEMENT"}</div>` : "";
-
-  // Build the facture body: bandeau meta + snapshot + status + receipt + mentions
-  // Le snapshot est un rendu HTML du devis ; on le ré-étiquette pour cohérence
-  // (vieux snapshots avec "DEVIS"/"Devis" en haut). Mais les nouvelles données
-  // canoniques (numéro, dates) viennent de l'objet facture.
-  let body;
-  if (snapshot) {
-    const snapshotFacture = snapshot
-      .replace(/(<div class="ref"[^>]*>)([\s\S]*?)(<\/div>)/, (m, a, content, end) => {
-        const newContent = content
-          .replace(/^DEVIS\b/, "FACTURE")
-          .replace(/^Devis\b/, "Facture");
-        return `${a}${newContent}${end}`;
-      });
-    body = `<div class="devis-preview view-devis-snapshot">
-      ${facMetaHtml}
-      ${statusBannerHtml}
-      ${snapshotFacture}
-      ${receiptHtml}
-      ${facFooterHtml}
-    </div>`;
-  } else {
-    body = `<div class="empty" style="padding:40px;text-align:center">
-      Aucun snapshot devis disponible.<br><span style="font-size:13px;color:var(--text-dim)">La facture est générée à partir du snapshot du devis émis. Émets d'abord le devis depuis l'onglet Devis (« + Enregistrer dans Suivi »).</span>
-    </div>`;
-  }
+  const client = (dv && dv.snapshotClient) || (lignes[0] && lignes[0].client) || "—";
+  const titlePrefix = type === "acompte" ? "🧾 Acompte" : "🧾 Solde";
 
   return `<div class="modal-overlay" onclick="if(event.target===this)viewFactureClose()">
     <div class="modal-card modal-card-lg">
-      <div class="modal-title" style="color:var(--success)">🧾 ${esc(factureRefDisplay)} — ${esc(client)}</div>
-      ${facture ? `<div class="modal-sub">Émise le ${esc(dateFR(facture.dateEmission))} · Échéance ${esc(dateFR(facture.dateEcheance))} · ${paidLines.length}/${lignes.length} échéance${lignes.length > 1 ? "s" : ""} payée${paidLines.length > 1 ? "s" : ""}</div>` : ""}
-      ${body}
+      <div class="modal-title" style="color:var(--success)">${titlePrefix} ${esc(formatRef(facture.ref, "facture"))} — ${esc(client)}</div>
+      <div class="modal-sub">Émise le ${esc(dateFR(facture.dateEmission))} · Échéance ${esc(dateFR(facture.dateEcheance))} · ${paidLines.length}/${ents.length} échéance${ents.length > 1 ? "s" : ""} payée${paidLines.length > 1 ? "s" : ""}</div>
+      <div class="devis-preview view-devis-snapshot">
+        ${statusBannerHtml}
+        ${facture.snapshotHtml}
+        ${receiptHtml}
+      </div>
       <div class="modal-actions">
-        ${snapshot ? `<button class="btn ghost" onclick="printWithTip()">🖨️ Imprimer</button>` : ""}
+        <button class="btn ghost" onclick="printWithTip()">🖨️ Imprimer</button>
         <button class="btn" onclick="viewFactureClose()">Fermer</button>
       </div>
     </div>
@@ -7237,7 +7401,26 @@ function suiviExpandedRowHtml(g) {
       <div class="suv-expanded-print">
         <button class="btn ghost" onclick="${stop}viewDevisOpen('${g.devisId}')">🖨 Devis</button>
         <button class="btn ghost" onclick="${stop}viewDeboursOpen('${g.devisId}')">🖨 Débours</button>
-        <button class="btn ghost" onclick="${stop}viewFactureOpen('${g.devisId}')">🖨 Facture</button>
+        ${(() => {
+          const facA = findFactureFor(g.devisId, "acompte");
+          const facS = findFactureFor(g.devisId, "solde");
+          const appA = isFactureApplicable(g.devisId, "acompte");
+          const appS = isFactureApplicable(g.devisId, "solde");
+          let html = "";
+          if (facA || appA) {
+            const lbl = facA ? "🖨 Acompte " + esc(formatRef(facA.ref, "facture")) : "📄 Émettre acompte";
+            html += `<button class="btn ghost" onclick="${stop}viewFactureOpen('${g.devisId}','acompte')">${lbl}</button>`;
+          }
+          if (facS || appS) {
+            const lbl = facS ? "🖨 Solde " + esc(formatRef(facS.ref, "facture")) : "📄 Émettre solde";
+            html += `<button class="btn ghost" onclick="${stop}viewFactureOpen('${g.devisId}','solde')">${lbl}</button>`;
+          }
+          if (!html) {
+            // Aucune facture émissible (ex. devis envoyé sans paiement) — désactivé pour info
+            html = `<button class="btn ghost" disabled title="Au moins un paiement reçu nécessaire pour émettre une facture" style="opacity:.5;cursor:not-allowed">🖨 Facture</button>`;
+          }
+          return html;
+        })()}
         <span style="flex:1"></span>
         <button class="btn ghost btn-danger-ghost" title="Supprimer définitivement ce devis (devis créé par erreur)" onclick="${stop}suiviDelDevisConfirm('${g.devisId}')">🗑 Supprimer</button>
       </div>
@@ -7351,10 +7534,10 @@ function suiviSelInfoHtml() {
 
 const SUIVI_NUMERIC = new Set(["montant","heures","paiement","ca","salaire","ursaf","tresorerie","frais"]);
 
-// Facture viewer modal state
-let viewFactureModal = null; // { devisId }
-window.viewFactureOpen = function(devisId) {
-  viewFactureModal = { devisId };
+// Facture viewer modal state — type ∈ "acompte" | "solde"
+let viewFactureModal = null; // { devisId, type }
+window.viewFactureOpen = function(devisId, type) {
+  viewFactureModal = { devisId, type: type || "solde" };
   render();
 };
 window.viewFactureClose = function() {
