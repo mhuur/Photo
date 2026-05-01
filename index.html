@@ -207,6 +207,12 @@
   .dp-acompte-note{margin:14px 0;padding:10px 14px;background:var(--surface-2);border-left:3px solid var(--accent);border-radius:4px;font-size:12px;color:var(--text-muted);line-height:1.5}
   .dp-acomptes-deduits{background:var(--surface-2);border:1px solid var(--border-soft);border-radius:6px;padding:12px 14px;margin:14px 0}
   .dp-facture-debours{background:var(--surface-2);border:1px solid var(--border-soft);border-radius:6px;padding:12px 14px;margin:14px 0}
+  /* Sur la facture solde, on superpose un bandeau dp-facture-meta en haut. Le
+     dp-meta-block.dp-meta-box du snapshot devis (ref devis + date émission +
+     "valable jusqu'au") est redondant avec le bandeau facture → masqué. Le
+     dp-client-block dans le même header-grid reste visible. */
+  .view-facture-solde .dp-meta-block.dp-meta-box{display:none!important}
+  .view-facture-solde .dp-validity-mention{display:none!important}
   @media print{
     .dp-facture-meta{background:transparent;border:1px solid #888}
     .dp-facture-meta .dp-fm-row > .lbl{color:#666}
@@ -845,6 +851,8 @@
     }
     /* Inside modal-card, hide title/sub/actions; only the snapshot content remains */
     .modal-title, .modal-sub, .modal-actions { display: none !important; }
+    /* Hide tabs nav inside printable contexts (Mission preview + Suivi modal devis/débours) */
+    .preview-tabs-nav { display: none !important; }
     /* Hide actions inside the printable content */
     .devis-preview .dp-actions, .view-devis-snapshot .dp-actions { display: none !important; }
     .devis-preview button, .view-devis-snapshot button { display: none !important; }
@@ -5289,9 +5297,9 @@ function rFactureMetaHtml(facture, dv, devisId, datePrestation) {
 }
 
 // ▼ rFactureAcompteBody — corps figé d'une facture d'acompte.
-// Stocké dans facture.snapshotHtml à l'émission (B3). Pas de réutilisation
-// du snapshot devis : la facture d'acompte ne liste pas les prestations détaillées,
-// juste le montant de l'acompte versé sur le devis lié.
+// Stocké dans facture.snapshotHtml à l'émission (B3). Reprend la trame
+// visuelle de rDevisPreview / rDeboursPreview (top-row + header-grid +
+// dp-objet + dp-section + dp-totals) pour cohérence inter-documents.
 function rFactureAcompteBody(facture, dv, devisId) {
   const acompteEntries = (S.suivi.entries || []).filter(e =>
     e.devisId === devisId && num(e.frais) === 0 && entryStatut(e) === "termine"
@@ -5300,26 +5308,66 @@ function rFactureAcompteBody(facture, dv, devisId) {
   const totalDevis = (dv && num(dv.snapshotTotal)) || 0;
   const pct = totalDevis > 0 ? Math.round(totalAcompte / totalDevis * 100) : 0;
   const datePrestation = (dv && dv.snapshotDatePrestation) || "";
-  const headerHtml = (typeof genHeaderEmetteur === "function")
-    ? `<div class="dp-header-emetteur">${genHeaderEmetteur(S.identite, "")}</div>`
-    : "";
-  const ligneHtml = acompteEntries.map(e => `<div class="dp-line">
-    <div class="lbl">${esc(e.echeance || "Acompte")}<div class="desc">Sur devis ${esc((dv && dv.ref) || devisId)}</div></div>
+  const factureRefLabel = formatRef(facture.ref, "facture");
+  const devisRef = (dv && dv.ref) || devisId;
+  const clientName = (dv && dv.snapshotClient) || (acompteEntries[0] && acompteEntries[0].client) || "";
+  const logoUrl = (S.mission && S.mission.logoUrl) || "";
+
+  // Tente de retrouver le client en référentiel pour ses coords/SIRET/TVA.
+  // Sinon fallback sur le nom du snapshot.
+  const cliFromRef = clientName
+    ? (S.clients.entries || []).find(c => c.name === clientName)
+    : null;
+  const cli = cliFromRef || { name: clientName };
+  const headerEmetteur = genHeaderEmetteur(S.identite, "");
+
+  const ligneHtml = acompteEntries.map((e, i) => `<div class="dp-line">
+    <div class="num">${i + 1}.</div>
+    <div class="lbl">${esc(e.echeance || "Acompte")}<div class="desc">Sur devis ${esc(devisRef)}</div></div>
     <div class="qty"></div>
     <div class="amt">${fmt(num(e.montant))}</div>
   </div>`).join("");
-  return `<div class="dp-doc-title" style="color:var(--success)">FACTURE D'ACOMPTE</div>
-    ${headerHtml}
-    ${rFactureMetaHtml(facture, dv, devisId, datePrestation)}
+
+  return `
+    <div class="dp-top-row">
+      ${logoUrl ? `<div class="dp-logo-wrap"><img src="${esc(logoUrl)}" alt="Logo" class="dp-logo"></div>` : `<div class="dp-logo-spacer"></div>`}
+      <div class="dp-doc-ref" style="color:var(--success)">${esc(factureRefLabel)}</div>
+    </div>
+    <div class="dp-header-grid">
+      ${headerEmetteur.trim() ? `<div class="dp-header-left">${headerEmetteur}</div>` : `<div class="dp-header-left empty">Renseigner ton identité dans l'onglet « Profil ».</div>`}
+      <div class="dp-header-right">
+        <div class="dp-meta-block dp-meta-box">
+          <div class="dp-meta-ref">${esc(factureRefLabel)}</div>
+          <div class="dp-meta-row"><span class="lbl">Émission</span><strong>${esc(dateFR(facture.dateEmission))}</strong></div>
+          ${datePrestation ? `<div class="dp-meta-row"><span class="lbl">Prestation</span><strong>${esc(dateFR(datePrestation))}</strong></div>` : ""}
+          <div class="dp-meta-row"><span class="lbl">Échéance</span><strong>${esc(dateFR(facture.dateEcheance))}</strong></div>
+          <div class="dp-validity-mention">Devis lié : ${esc(devisRef)}</div>
+        </div>
+        <div class="dp-client-block dp-client-box">
+          <div class="dp-client-label">Destinataire</div>
+          <span class="name">${esc(cli.name || "—")}</span>
+          ${cli.address ? `<div>${esc(cli.address)}</div>` : ""}
+          ${cli.cityPostal ? `<div>${esc(cli.cityPostal)}</div>` : ""}
+          ${cli.siret ? `<div class="dp-client-meta">SIRET ${esc(formatSiret(cli.siret))}</div>` : ""}
+          ${cli.tvaIntra ? `<div class="dp-client-meta">TVA intra ${esc(cli.tvaIntra)}</div>` : ""}
+        </div>
+      </div>
+    </div>
+
+    <div class="dp-doc-title" style="color:var(--success)">FACTURE D'ACOMPTE</div>
+
+    <div class="dp-objet">Acompte sur devis : <strong>${esc(devisRef)}</strong>${pct > 0 ? ` — ${pct}% du total HT (${fmt(totalDevis)})` : ""}</div>
+
     <div class="dp-section">
-      <h4>Détail</h4>
       ${ligneHtml || `<div class="dp-empty" style="padding:14px">Aucun acompte versé.</div>`}
     </div>
+
     <div class="dp-totals">
       <div class="dp-line grand"><span class="lbl">Total HT</span><span class="amt">${fmt(totalAcompte)}</span></div>
       <div class="dp-totals-tva">${esc(tvaMention(S.identite))}</div>
     </div>
-    <div class="dp-acompte-note">${pct > 0 ? `Acompte de ${pct}% sur un devis de ${fmt(totalDevis)} HT.` : "Acompte sur devis."} Le solde fera l'objet d'une facture de solde à la livraison.</div>
+
+    <div class="dp-acompte-note">Le solde fera l'objet d'une <strong>facture de solde</strong> à la livraison de la prestation.</div>
     <div class="dp-facture-footer">${esc(genFooterMentions(S.identite, "facture"))}</div>`;
 }
 
@@ -5475,7 +5523,7 @@ function rViewFactureModal() {
     <div class="modal-card modal-card-lg">
       <div class="modal-title" style="color:var(--success)">${titlePrefix} ${esc(formatRef(facture.ref, "facture"))} — ${esc(client)}</div>
       <div class="modal-sub">Émise le ${esc(dateFR(facture.dateEmission))} · Échéance ${esc(dateFR(facture.dateEcheance))} · ${paidLines.length}/${ents.length} échéance${ents.length > 1 ? "s" : ""} payée${paidLines.length > 1 ? "s" : ""}</div>
-      <div class="devis-preview view-devis-snapshot">
+      <div class="devis-preview view-devis-snapshot view-facture view-facture-${type}">
         ${statusBannerHtml}
         ${(() => {
           // Le récap paiement est dynamique (statut paiement live) → injecté
