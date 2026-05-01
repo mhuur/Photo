@@ -194,6 +194,28 @@
   .suv-tl-card.idle .suv-tl-card-state{color:var(--text-dim)}
   .suv-tl-card.refused .suv-tl-card-state{color:var(--danger)}
 
+  /* Tarifs : carte synthèse coûts horaires */
+  .tr-cost-card{background:var(--surface);border:1px solid var(--border-light);border-radius:12px;max-width:780px;margin:14px 0 18px;overflow:hidden}
+  .tr-cost-head{display:flex;align-items:center;justify-content:space-between;gap:24px;padding:20px 24px;background:linear-gradient(135deg,var(--primary-soft),transparent);border-bottom:1px solid var(--border-soft);flex-wrap:wrap}
+  .tr-cost-headline{display:flex;flex-direction:column;gap:4px;min-width:0}
+  .tr-cost-eyebrow{font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em}
+  .tr-cost-value{font-size:34px;font-weight:800;color:var(--primary);font-variant-numeric:tabular-nums;line-height:1.1;display:inline-flex;align-items:baseline;gap:4px}
+  .tr-cost-unit{font-size:16px;font-weight:600;color:var(--text-muted)}
+  .tr-cost-controls{display:flex;gap:12px;flex-wrap:wrap}
+  .tr-cost-control{display:flex;flex-direction:column;gap:5px;min-width:130px}
+  .tr-cost-control label{font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.04em}
+  .tr-cost-control input{width:100%;text-align:right;font-variant-numeric:tabular-nums}
+  .tr-cost-breakdown{padding:6px 24px 14px}
+  .tr-cost-row{display:flex;justify-content:space-between;align-items:baseline;gap:12px;padding:10px 0;font-size:13px;color:var(--text-muted)}
+  .tr-cost-row + .tr-cost-row{border-top:1px solid var(--border-soft)}
+  .tr-cost-row-amt{font-variant-numeric:tabular-nums;font-weight:700;color:var(--text);font-size:14px;white-space:nowrap}
+  .tr-cost-row-label{display:flex;flex-direction:column;gap:1px;min-width:0}
+  .tr-cost-row-note{color:var(--text-dim);font-size:11px;font-weight:400}
+  .tr-cost-row.tr-cost-row--total{margin-top:2px}
+  .tr-cost-row.tr-cost-row--total .tr-cost-row-label{color:var(--text);font-weight:700}
+  .tr-cost-row.tr-cost-row--total .tr-cost-row-amt{font-weight:800}
+  .tr-cost-row.tr-cost-row--marge .tr-cost-row-amt{color:var(--text-muted)}
+
   /* Accueil : listes "À relancer" et "À encaisser" */
   .ac-section{margin:24px 0}
   .ac-section h3{margin:0 0 10px;font-size:14px;font-weight:600;color:var(--text);display:flex;align-items:center;gap:8px}
@@ -8841,59 +8863,44 @@ function rTR() {
     <h2>Frais &amp; Tarifs <span id="savedFlash" class="saved"></span></h2>
 
     <h3>Synthèse coûts horaires</h3>
-    <div class="hint" style="max-width:880px">Calcul du coût horaire à intégrer à ton tarif facturé.<br>
-      <strong>Abonnements</strong> : équivalent annuel des abos actifs (mensuel × 12) ÷ heures annuelles.<br>
-      <strong>Matériel</strong> : pour chaque équipement encore en cours d'amortissement, mensualités à amortir sur les 12 prochains mois — sommé puis divisé par les heures annuelles.</div>
+    <div class="hint" style="max-width:780px">Coût horaire à intégrer dans tes tarifs (Net = Tarif − URSSAF − ce coût). Heures : estimation prudente ≈ 900 h/an. Facteur sécurité : marge pour les imprévus (ex. 15 %).</div>
 
-    <div class="row" style="margin-bottom:14px;gap:18px">
-      <div class="field narrow"><label>Heures facturables annuelles</label>
-        <input id="heuresInput" type="number" step="10" min="1" value="${esc(S.tarifs.heuresAnnuelles || "900")}" oninput="tarifHeuresAnnuelles(this.value)">
+    <section class="tr-cost-card">
+      <header class="tr-cost-head">
+        <div class="tr-cost-headline">
+          <span class="tr-cost-eyebrow">Coût horaire matériel à répercuter</span>
+          <span class="tr-cost-value">${fmt(tm.tauxAvecSecurite)}<span class="tr-cost-unit">/h</span></span>
+        </div>
+        <div class="tr-cost-controls">
+          <div class="tr-cost-control">
+            <label>Heures annuelles</label>
+            <input id="heuresInput" type="number" step="10" min="1" value="${esc(S.tarifs.heuresAnnuelles || "900")}" oninput="tarifHeuresAnnuelles(this.value)">
+          </div>
+          <div class="tr-cost-control">
+            <label>Facteur sécurité (%)</label>
+            <input id="facteurInput" type="number" step="1" min="0" max="100" value="${esc(S.tarifs.facteurSecurite || "0")}" oninput="tarifFacteurSecurite(this.value)">
+          </div>
+        </div>
+      </header>
+      <div class="tr-cost-breakdown">
+        <div class="tr-cost-row">
+          <span class="tr-cost-row-label">Abonnements pro<span class="tr-cost-row-note">${fmt(r2(tm.mensuelActif * 12))}/an ÷ ${esc(tm.heures)} h</span></span>
+          <span class="tr-cost-row-amt">${fmt(tm.tauxAbo)}/h</span>
+        </div>
+        <div class="tr-cost-row">
+          <span class="tr-cost-row-label">Amortissement matériel<span class="tr-cost-row-note">${fmt(tm.materielAnnuel)}/an ÷ ${esc(tm.heures)} h</span></span>
+          <span class="tr-cost-row-amt">${fmt(tm.tauxInv)}/h</span>
+        </div>
+        <div class="tr-cost-row tr-cost-row--total">
+          <span class="tr-cost-row-label">Sous-total brut</span>
+          <span class="tr-cost-row-amt">${fmt(tm.tauxBrut)}/h</span>
+        </div>
+        ${tm.facteur > 0 ? `<div class="tr-cost-row tr-cost-row--marge">
+          <span class="tr-cost-row-label">+ Facteur sécurité ${esc(tm.facteur)} %</span>
+          <span class="tr-cost-row-amt">+${fmt(r2(tm.tauxAvecSecurite - tm.tauxBrut))}/h</span>
+        </div>` : ""}
       </div>
-      <div class="field narrow"><label>Facteur sécurité (%)</label>
-        <input id="facteurInput" type="number" step="1" min="0" max="100" value="${esc(S.tarifs.facteurSecurite || "0")}" oninput="tarifFacteurSecurite(this.value)">
-      </div>
-    </div>
-    <div class="hint" style="margin-top:-10px">Heures : estimation prudente ≈ 900 h/an. Facteur sécurité : pour gonfler ton tarif (ex. 15 % d'imprévus / marge).</div>
-
-    <table class="hist" style="max-width:780px">
-      <thead>
-        <tr>
-          <th>Source</th>
-          <th style="width:200px;text-align:right">Détail (${tm.currentYear})</th>
-          <th style="width:140px;text-align:right">Coût horaire</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr>
-          <td>Abonnements professionnels<div style="font-size:13px;color:var(--text-dim);margin-top:2px">${fmt(tm.mensuelActif)}/mois × 12 mois</div></td>
-          <td class="amount" style="text-align:right;color:var(--text);font-variant-numeric:tabular-nums;padding-right:14px">${fmt(r2(tm.mensuelActif * 12))}<div style="font-size:13px;color:var(--text-dim);margin-top:2px">équivalent annuel</div></td>
-          <td class="amount" style="text-align:right;color:var(--text);font-variant-numeric:tabular-nums;padding-right:14px;font-weight:600">${fmt(tm.tauxAbo)}</td>
-        </tr>
-        <tr>
-          <td>Amortissement matériel<div style="font-size:13px;color:var(--text-dim);margin-top:2px">Mensualités sur les 12 prochains mois (équipements en cours)</div></td>
-          <td class="amount" style="text-align:right;color:var(--text);font-variant-numeric:tabular-nums;padding-right:14px">${fmt(tm.materielAnnuel)}<div style="font-size:13px;color:var(--text-dim);margin-top:2px">amortissement annuel</div></td>
-          <td class="amount" style="text-align:right;color:var(--text);font-variant-numeric:tabular-nums;padding-right:14px;font-weight:600">${fmt(tm.tauxInv)}</td>
-        </tr>
-      </tbody>
-      <tfoot>
-        <tr style="background:var(--surface-hi)">
-          <td><strong>Coût horaire brut</strong></td>
-          <td></td>
-          <td class="amount" style="text-align:right;color:var(--text);font-weight:700;font-variant-numeric:tabular-nums;padding-right:14px;font-size:13px">${fmt(tm.tauxBrut)}</td>
-        </tr>
-        ${tm.facteur > 0 ? `<tr>
-          <td style="color:var(--text-muted)">+ Facteur sécurité (${tm.facteur} %)</td>
-          <td></td>
-          <td class="amount" style="text-align:right;color:var(--text-muted);font-variant-numeric:tabular-nums;padding-right:14px">+${fmt(r2(tm.tauxAvecSecurite - tm.tauxBrut))}</td>
-        </tr>` : ""}
-        <tr style="background:var(--primary-soft)">
-          <td><strong style="color:var(--primary)">Coût horaire matériel</strong><div style="font-size:13px;color:var(--text-dim);margin-top:2px;font-weight:400">À répercuter dans tes tarifs (cf. tableau Prestations ci-dessous)</div></td>
-          <td></td>
-          <td class="amount" style="text-align:right;color:var(--primary);font-weight:800;font-variant-numeric:tabular-nums;padding-right:14px;font-size:15px">${fmt(tm.tauxAvecSecurite)}</td>
-        </tr>
-      </tfoot>
-    </table>
-    <div class="hint" style="margin-top:8px;max-width:780px">Le <strong>coût horaire matériel</strong> (${fmt(tm.tauxAvecSecurite)}/h) est utilisé pour décomposer chaque prestation ci-dessous : on part du prix client final (TTC), on en retire l'URSSAF, puis le coût matériel — il reste le net pour ton temps.</div>
+    </section>
 
     <h3>Prestations &amp; tarifs (€/h)</h3>
     <div class="hint" style="max-width:880px">Saisis le <strong>tarif final</strong> facturé au client (TTC, URSSAF incluse, à droite). Le tableau remonte le calcul : <strong>− URSSAF − coût matériel = Net</strong> qui te reste pour ton temps.</div>
