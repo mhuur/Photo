@@ -121,3 +121,5 @@ Source : `index.html` (bloc `const DEFAULT_S = { ... };`).
   - **facteurSecurite**: string _(default `"0"`)_
 - **bugs** _(object)_
   - **items** _(array (empty))_
+- **prefs** _(object)_
+  - **relanceJours**: number _(default `7`)_
