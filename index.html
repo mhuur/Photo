@@ -166,6 +166,14 @@
   .suv-expanded-panel{padding:14px 18px 16px;display:flex;flex-direction:column;gap:10px}
   .suv-expanded-actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding-bottom:8px;border-bottom:1px solid var(--border-soft)}
   .suv-expanded-print{display:flex;gap:6px;flex-wrap:wrap;align-items:center;padding-top:8px;border-top:1px solid var(--border-soft)}
+  /* Indicateur révision (↻ / ↺) à côté de la ref dans la ligne tableau */
+  .suv-revision-ico{display:inline-block;margin-left:6px;font-size:13px;color:var(--accent);cursor:help;font-weight:600}
+  /* Bloc détail révision dans le volet expanded (cf Q4 option C) */
+  .suv-revision-info{display:flex;flex-direction:column;gap:4px;padding:8px 10px;background:var(--surface);border:1px solid var(--border-soft);border-radius:6px;margin-top:8px}
+  .suv-revision-link{font-size:12px;color:var(--text-muted);display:flex;align-items:center;gap:6px}
+  .suv-revision-link strong{color:var(--text);font-variant-numeric:tabular-nums}
+  .suv-revision-jump{background:transparent;border:0;color:var(--primary);cursor:pointer;font:inherit;font-size:12px;padding:2px 6px;border-radius:3px}
+  .suv-revision-jump:hover{background:var(--primary-soft)}
   /* Bouton danger en mode ghost — discret par défaut, accent rouge au hover */
   .btn.btn-danger-ghost{color:var(--text-dim);border-color:transparent}
   .btn.btn-danger-ghost:hover{background:var(--danger-soft);color:var(--danger);border-color:var(--danger)}
@@ -4321,6 +4329,69 @@ function ensureFactureForDevis(devisId, type) {
   return facture;
 }
 
+// ▼ canReviseDevis — un devis peut-il être révisé (clone + V1 annulé) ?
+// Returns { ok: true } ou { ok: false, reason: "…" }
+// Conditions :
+//   - snapshotMission présent (devis archivé après l'introduction du flow)
+//   - aucune entry du devis en "termine" (paiement encaissé = avoir nécessaire)
+//   - aucune facture émise (FA / FS) — facture émise = écriture comptable figée
+function canReviseDevis(devisId) {
+  const dv = S.suivi.devis && S.suivi.devis[devisId];
+  if (!dv) return { ok: false, reason: "Devis introuvable." };
+  if (!dv.snapshotMission) {
+    return { ok: false, reason: "Devis trop ancien pour être révisé (snapshot mission absent). Pour les nouveaux devis, la révision sera disponible." };
+  }
+  const ents = (S.suivi.entries || []).filter(e => e.devisId === devisId);
+  const anyPaid = ents.some(e => entryStatut(e) === "termine");
+  if (anyPaid) {
+    return { ok: false, reason: "Impossible : au moins un paiement a été encaissé. Pour réviser, il faut d'abord traiter l'avoir manuellement (ou rembourser le client)." };
+  }
+  if (Array.isArray(dv.factures) && dv.factures.length > 0) {
+    return { ok: false, reason: "Impossible : une facture a déjà été émise pour ce devis. Une facture émise est une écriture comptable figée." };
+  }
+  return { ok: true };
+}
+
+// ▼ reviseDevisStart — démarre le flow de révision pour un devis donné.
+// Charge le snapshotMission dans S.mission (en remplaçant complètement le
+// brouillon courant), pose le marqueur transient revisesDevisId, recompute
+// la nouvelle référence, switch tab Mission. À la prochaine "+ Enregistrer
+// dans Suivi", suiviAdd détectera revisesDevisId et fera la liaison V1↔V2.
+window.reviseDevisStart = function(devisId) {
+  const check = canReviseDevis(devisId);
+  if (!check.ok) {
+    alert(check.reason);
+    return;
+  }
+  const dv = S.suivi.devis[devisId];
+  // Confirmation si brouillon courant non vide (pas encore archivé dans Suivi).
+  // Heuristique : on considère le brouillon "non vide" s'il a un client ou des
+  // lignes — pas si seuls les défauts sont posés.
+  const hasDraft = !devisCurrentSuiviEntry()
+    && S.mission
+    && ((S.mission.client && (S.mission.client.id || S.mission.client.name))
+        || (S.mission.lignes && S.mission.lignes.length > 0));
+  if (hasDraft) {
+    const ok = confirm(`Tu as un brouillon en cours dans Mission qui n'a pas été enregistré dans Suivi.\n\n` +
+      `Le charger DEVIS ${dv.ref || devisId} va écraser ce brouillon.\n\nContinuer ?`);
+    if (!ok) return;
+  }
+  // Clone profond du snapshotMission pour ne pas partager la référence
+  const cloned = JSON.parse(JSON.stringify(dv.snapshotMission));
+  // Remplacement complet de S.mission (on ne garde rien du brouillon courant)
+  S.mission = cloned;
+  // Date d'émission = aujourd'hui (V2 est un nouveau document)
+  S.mission.dateEmission = new Date().toISOString().slice(0, 10);
+  // Reset ref pour qu'elle soit recalculée à la prochaine séquence
+  S.mission.ref = "";
+  // Marqueur transient pour suiviAdd
+  S.mission.revisesDevisId = devisId;
+  recomputeRef();
+  save();
+  tab = "mission";
+  render();
+};
+
 // Standard French payment delays (B2B/B2C). Default for B2B = 30j fin de mois.
 const DELAIS_PAIEMENT = [
   { k: "reception",   l: "À réception" },
@@ -6783,6 +6854,14 @@ function suiviAdd() {
   const existingFactures = (S.suivi.devis[devisId] && Array.isArray(S.suivi.devis[devisId].factures))
     ? S.suivi.devis[devisId].factures
     : [];
+  // Lien V1↔V2 si on est en train de réviser un devis existant
+  const replaces = m.revisesDevisId || null;
+  // Snapshot mission structuré : permet la re-édition (Réviser) en chargeant
+  // l'éditable original. snapshotHtml seul ne suffit pas car c'est du HTML rendu.
+  const snapshotMission = JSON.parse(JSON.stringify(m));
+  // On retire le marqueur transient revisesDevisId du clone (il ne fait pas
+  // partie du contenu du devis, c'est juste un drapeau de flow).
+  delete snapshotMission.revisesDevisId;
   S.suivi.devis[devisId] = {
     ref: m.ref || "",
     snapshotHtml,
@@ -6795,7 +6874,11 @@ function suiviAdd() {
     // Données structurées pour la facture (Tier 1 : conformité légale)
     snapshotPaiementDelai: (m.paiement && m.paiement.delai) || "30j_fdm",
     snapshotDatePrestation: m.datePrestation || "",
-    factures: existingFactures
+    factures: existingFactures,
+    // Snapshot mission éditable (pour fonction Réviser)
+    snapshotMission,
+    // Lien V1↔V2 (si V2 vient d'une révision)
+    replaces
   };
 
   // Décomposition montant → salaire / URSSAF / trésorerie (calque la logique Excel) :
@@ -6845,6 +6928,25 @@ function suiviAdd() {
       frais: t.debours.toFixed(2),
       commentaires: "", statut: "envoye"
     });
+  }
+
+  // Flow Réviser : si V2 vient d'une révision de V1, on lie les deux et on
+  // bascule V1 en "annule" (mais SEULEMENT si V1 était en "envoye" — un V1
+  // déjà refusé par le client reste refusé, info commerciale conservée).
+  const v1Id = m.revisesDevisId;
+  if (v1Id && S.suivi.devis[v1Id]) {
+    S.suivi.devis[v1Id].replacedBy = devisId;
+    const v1Entries = S.suivi.entries.filter(e => e.devisId === v1Id);
+    const allEnvoye = v1Entries.length > 0 && v1Entries.every(e => entryStatut(e) === "envoye");
+    if (allEnvoye) {
+      for (const e of v1Entries) {
+        e.statutAvantAnnul = e.statut;
+        e.statut = "annule";
+      }
+    }
+    // Reset le marqueur transient sur S.mission (côté éditable courant) — V2
+    // est désormais le devis "actif" dans S.mission, plus de lien transient.
+    delete S.mission.revisesDevisId;
   }
 
   save();
@@ -7528,9 +7630,35 @@ function suiviExpandedRowHtml(g) {
           }
           return html;
         })()}
+        ${(() => {
+          // Bouton Réviser : si éligible, bouton actif. Sinon désactivé avec
+          // tooltip explicatif (devis trop ancien / paiement encaissé / facture émise).
+          const check = canReviseDevis(g.devisId);
+          if (check.ok) {
+            return `<button class="btn ghost" onclick="${stop}reviseDevisStart('${g.devisId}')" title="Charge ce devis dans Mission pour en créer une nouvelle version. L'ancienne sera annulée si elle était envoyée.">↻ Réviser</button>`;
+          }
+          return `<button class="btn ghost" disabled title="${esc(check.reason)}" style="opacity:.5;cursor:not-allowed">↻ Réviser</button>`;
+        })()}
         <span style="flex:1"></span>
         <button class="btn ghost btn-danger-ghost" title="Supprimer définitivement ce devis (devis créé par erreur)" onclick="${stop}suiviDelDevisConfirm('${g.devisId}')">🗑 Supprimer</button>
       </div>
+      ${(() => {
+        // Détail révision : liens V1↔V2 (cf Q4 option C — détail dans volet expanded)
+        const dv = S.suivi.devis && S.suivi.devis[g.devisId];
+        if (!dv) return "";
+        const parts = [];
+        if (dv.replaces) {
+          const v1 = S.suivi.devis[dv.replaces];
+          const v1Ref = v1 ? (v1.ref || dv.replaces) : dv.replaces;
+          parts.push(`<div class="suv-revision-link">↺ Remplace <strong>${esc(v1Ref)}</strong> <button class="suv-revision-jump" onclick="${stop}suiviExpandedToggle('${dv.replaces}')" title="Voir l'ancienne version">→</button></div>`);
+        }
+        if (dv.replacedBy) {
+          const v2 = S.suivi.devis[dv.replacedBy];
+          const v2Ref = v2 ? (v2.ref || dv.replacedBy) : dv.replacedBy;
+          parts.push(`<div class="suv-revision-link">↻ Remplacé par <strong>${esc(v2Ref)}</strong> <button class="suv-revision-jump" onclick="${stop}suiviExpandedToggle('${dv.replacedBy}')" title="Voir la nouvelle version">→</button></div>`);
+        }
+        return parts.length ? `<div class="suv-revision-info">${parts.join("")}</div>` : "";
+      })()}
     </div></td>
   </tr>`;
 }
@@ -7973,7 +8101,14 @@ function rSV() {
           </td>
           <td class="statut">${pastille(g.statutPrin)}</td>
           <td>${dateLabel}</td>
-          <td class="ref-cell suv-nowrap">${esc(g.ref) || `<span class="muted">—</span>`}</td>
+          <td class="ref-cell suv-nowrap">${esc(g.ref) || `<span class="muted">—</span>`}${(() => {
+            // Indicateur ↻/↺ si lien V1↔V2 (cf Q4 option C — visuel discret)
+            const dv = S.suivi.devis && S.suivi.devis[g.devisId];
+            if (!dv) return "";
+            if (dv.replacedBy) return ` <span class="suv-revision-ico" title="Ce devis a été remplacé par une nouvelle version (clique pour déplier)">↻</span>`;
+            if (dv.replaces)   return ` <span class="suv-revision-ico" title="Ce devis remplace une version précédente (clique pour déplier)">↺</span>`;
+            return "";
+          })()}</td>
           <td class="suv-nowrap">
             <strong>${esc(cleanClientLabel(g.client)) || "—"}</strong>
           </td>
