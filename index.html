@@ -685,6 +685,7 @@
   .devis-preview .dp-meta-block strong{color:var(--text);font-weight:700}
   .devis-preview .dp-client-block{text-align:right;font-size:13px;color:var(--text);line-height:1.6;padding:0;min-width:220px;margin-top:0}
   .devis-preview .dp-client-block .name{font-weight:400;font-size:13px;color:var(--text);display:block}
+  .devis-preview .dp-client-block .dp-client-meta{font-size:11px;color:var(--text-muted);margin-top:2px;font-variant-numeric:tabular-nums}
   /* Meta + client : hiérarchie typographique sans encadré */
   .devis-preview .dp-meta-block.dp-meta-box{padding:0;background:transparent;border:0;min-width:240px}
   .devis-preview .dp-meta-ref{font-weight:700;font-size:17px;color:var(--text);font-variant-numeric:tabular-nums;letter-spacing:.01em;margin-bottom:6px}
@@ -709,6 +710,8 @@
   /* Totals: right-aligned chunk under detail lines (full-width section, content cadré à droite) */
   .devis-preview .dp-totals{margin-top:18px;padding-top:14px;border-top:1px solid var(--border-light);max-width:340px;margin-left:auto;width:100%}
   .devis-preview .dp-totals .dp-line{display:flex;justify-content:space-between;grid-template-columns:none;padding:5px 0;border-bottom:0;color:var(--text-muted)}
+  .devis-preview .dp-totals .dp-line.dp-subtotal{font-size:13px;color:var(--text-muted)}
+  .devis-preview .dp-totals .dp-line.dp-subtotal:first-child{padding-top:0}
   .devis-preview .dp-totals .dp-line.grand{font-size:17px;font-weight:700;padding:10px 0 6px;margin-top:4px;border-top:1px solid var(--border)}
   .devis-preview .dp-totals .dp-line.grand .lbl,.devis-preview .dp-totals .dp-line.grand .amt{color:var(--text)}
   .devis-preview .dp-totals-tva{margin-top:4px;text-align:right;font-size:12px;color:var(--text-dim);line-height:1.4}
@@ -2826,12 +2829,15 @@ function rDevisPreview() {
   const mu = _isDeclared ? num(d.urssafPct ?? 22) : 0;
   let linesHtml = "";
   let lineNum = 0;
+  // Sous-totaux par catégorie (C3) — affichés dans dp-totals si ≥ 2 catégories actives.
+  const sub = { heures: 0, materiel: 0, cession: 0, deplacement: 0 };
   for (const l of (d.lignes || [])) {
     if (l.type === "heures") {
       const h = num(l.duree) * (l.unit === "j" ? HOURS_PER_DAY : 1);
       // Skip lignes vides (durée à 0 ET pas d'intitulé/description) — bruit visuel sinon.
       if (h === 0 && !l.intitule && !l.description) continue;
       const amount = h * tarifH;
+      sub.heures += amount;
       lineNum++;
       linesHtml += `<div class="dp-line">
         <div class="num">${lineNum}.</div>
@@ -2844,6 +2850,7 @@ function rDevisPreview() {
       if (p === 0 && !l.intitule && !l.description) continue;
       lineNum++;
       const info = ligneDisplayInfo(l.devis, l.paiementType, l.prix, ma, mu, true);
+      sub.materiel += info.amount;
       linesHtml += `<div class="dp-line">
         <div class="num">${lineNum}.</div>
         <div class="lbl">${esc(l.intitule || "(Sans intitulé)")}<div class="desc">${l.description ? esc(l.description) : "Matériel"}</div></div>
@@ -2854,6 +2861,7 @@ function rDevisPreview() {
       const p = num(l.prix);
       if (p === 0 && !l.intitule && !l.description && !l.duree && !l.territoire && !l.supports) continue;
       lineNum++;
+      sub.cession += p;
       const detailParts = [
         l.duree      ? "Durée : " + l.duree           : "",
         l.territoire ? "Territoire : " + l.territoire : "",
@@ -2893,6 +2901,7 @@ function rDevisPreview() {
   </div>` : "";
   if (deplDevisMode === "principal") {
     linesHtml += deplLineHtml;
+    sub.deplacement += deplFinalAmount;
   }
   // "lisser" mode → no separate déplacement line (already baked into the hourly rate)
 
@@ -2961,6 +2970,8 @@ function rDevisPreview() {
               ${cli.cityPostal ? `<div>${esc(cli.cityPostal)}</div>` : ""}
               ${contactEmail ? `<div>${esc(contactEmail)}</div>` : ""}
               ${contactPhone ? `<div>${esc(contactPhone)}</div>` : ""}
+              ${cli.siret ? `<div class="dp-client-meta">SIRET ${esc(formatSiret(cli.siret))}</div>` : ""}
+              ${cli.tvaIntra ? `<div class="dp-client-meta">TVA intra ${esc(cli.tvaIntra)}</div>` : ""}
             `;
           })()}
         </div>
@@ -2979,6 +2990,20 @@ function rDevisPreview() {
     </div>
 
     <div class="dp-totals">
+      ${(() => {
+        // Sous-totaux par catégorie (C3) — affichés si ≥ 2 catégories actives,
+        // sinon redondants avec le total.
+        const cats = [
+          ["Prestations (heures)", sub.heures],
+          ["Matériel",              sub.materiel],
+          ["Cession de droits",    sub.cession],
+          ["Déplacement",          sub.deplacement]
+        ].filter(([, v]) => v > 0);
+        if (cats.length < 2) return "";
+        return cats.map(([label, val]) =>
+          `<div class="dp-line dp-subtotal"><span class="lbl">${esc(label)}</span><span class="amt">${fmt(val)}</span></div>`
+        ).join("");
+      })()}
       ${t.remise > 0 ? `
       <div class="dp-line"><span class="lbl">Sous-total</span><span class="amt">${fmt(t.subtotal)}</span></div>
       <div class="dp-line"><span class="lbl">Remise (${num(d.remisePct).toString().replace(".",",")} %)</span><span class="amt">−${fmt(t.remise)}</span></div>` : ""}
@@ -3203,6 +3228,8 @@ function rDeboursPreview() {
               ${cli.cityPostal ? `<div>${esc(cli.cityPostal)}</div>` : ""}
               ${contactEmail ? `<div>${esc(contactEmail)}</div>` : ""}
               ${contactPhone ? `<div>${esc(contactPhone)}</div>` : ""}
+              ${cli.siret ? `<div class="dp-client-meta">SIRET ${esc(formatSiret(cli.siret))}</div>` : ""}
+              ${cli.tvaIntra ? `<div class="dp-client-meta">TVA intra ${esc(cli.tvaIntra)}</div>` : ""}
             `;
           })()}
         </div>
@@ -3412,7 +3439,7 @@ function rPreviewTabs() {
 // ============ CLIENT PICKER (Mission) ============
 let cliPickQuery = "";
 let cliPickCreating = false;
-let cliPickDraft = { num:"", name:"", contact:"", address:"", cityPostal:"", phone:"", email:"", rencontre:"" };
+let cliPickDraft = { num:"", name:"", contact:"", address:"", cityPostal:"", phone:"", email:"", rencontre:"", siret:"", tvaIntra:"" };
 
 // ▼ rClientPicker — modal de sélection client
 function rClientPicker() {
@@ -3446,6 +3473,8 @@ function rClientPicker() {
         <label>Téléphone<input value="${esc(draft.phone)}" oninput="cliPickDraftSet('phone',this.value)"></label>
         <label class="full">Email<input type="email" value="${esc(draft.email)}" oninput="cliPickDraftSet('email',this.value)"></label>
         <label class="full">Rencontre / origine<input value="${esc(draft.rencontre)}" oninput="cliPickDraftSet('rencontre',this.value)" placeholder="Comment avez-vous connu le client ?"></label>
+        <label>SIRET <span style="color:var(--text-dim);font-size:11px">(B2B)</span><input value="${esc(draft.siret || "")}" oninput="cliPickDraftSet('siret',this.value)" placeholder="123 456 789 00012" style="font-variant-numeric:tabular-nums"></label>
+        <label>N° TVA intra <span style="color:var(--text-dim);font-size:11px">(B2B)</span><input value="${esc(draft.tvaIntra || "")}" oninput="cliPickDraftSet('tvaIntra',this.value)" placeholder="FR12345678901" style="font-variant-numeric:tabular-nums;text-transform:uppercase"></label>
       </div>
       <div class="actions">
         <button class="btn ghost" onclick="cliPickCancelCreate()">Annuler</button>
@@ -3586,7 +3615,7 @@ function cliPickSaveCreate() {
   recomputeRef();
   cliPickCreating = false;
   cliPickQuery = "";
-  cliPickDraft = { num:"", name:"", contact:"", address:"", cityPostal:"", phone:"", email:"", rencontre:"" };
+  cliPickDraft = { num:"", name:"", contact:"", address:"", cityPostal:"", phone:"", email:"", rencontre:"", siret:"", tvaIntra:"" };
   save();
   render();
 }
@@ -7537,7 +7566,24 @@ const SUIVI_NUMERIC = new Set(["montant","heures","paiement","ca","salaire","urs
 // Facture viewer modal state — type ∈ "acompte" | "solde"
 let viewFactureModal = null; // { devisId, type }
 window.viewFactureOpen = function(devisId, type) {
-  viewFactureModal = { devisId, type: type || "solde" };
+  type = type || "solde";
+  // Confirmation explicite avant 1ère émission (pose date + numéro de
+  // facture définitifs). Sans cela, l'émission se faisait silencieusement à
+  // la 1ère ouverture du modal — flou côté user (« est-ce un brouillon ? »).
+  if (!findFactureFor(devisId, type) && isFactureApplicable(devisId, type)) {
+    const today = new Date().toISOString().slice(0, 10);
+    const ym = today.slice(0, 7);
+    const prefix = type === "acompte" ? "FA" : "FS";
+    const seq = nextFactureSequence(ym, prefix);
+    const nextRef = `${prefix}-${ym}-${String(seq).padStart(3, "0")}`;
+    const label = type === "acompte" ? "Facture d'acompte" : "Facture de solde";
+    const ok = confirm(`Émettre la ${label.toLowerCase()} ?\n\n` +
+      `Numéro : ${nextRef}\n` +
+      `Date d'émission : ${today.split("-").reverse().join("/")}\n\n` +
+      `Une fois émise, la facture est figée (date + numéro définitifs).`);
+    if (!ok) return;
+  }
+  viewFactureModal = { devisId, type };
   render();
 };
 window.viewFactureClose = function() {
@@ -8282,6 +8328,10 @@ function rCL() {
         <div class="row">
           <div class="field"><label>Rencontré via</label><input value="${esc(e.rencontre)}" oninput="clientsUpd('${e.id}','rencontre',this.value)"></div>
         </div>
+        <div class="row">
+          <div class="field"><label>SIRET <span style="color:var(--text-dim);font-size:11px">(B2B uniquement)</span></label><input value="${esc(e.siret || "")}" oninput="clientsUpd('${e.id}','siret',this.value)" placeholder="123 456 789 00012" style="font-variant-numeric:tabular-nums"></div>
+          <div class="field"><label>N° TVA intra <span style="color:var(--text-dim);font-size:11px">(B2B uniquement)</span></label><input value="${esc(e.tvaIntra || "")}" oninput="clientsUpd('${e.id}','tvaIntra',this.value)" placeholder="FR12345678901" style="font-variant-numeric:tabular-nums;text-transform:uppercase"></div>
+        </div>
         <div class="cli-actions">
           <button class="btn" onclick="clientsEditDone()">Terminer</button>
           <button class="btn ghost" onclick="clientsToggle('${e.id}')">Fermer</button>
@@ -8304,6 +8354,8 @@ function rCL() {
         <div class="cli-info"><span class="cli-label">Adresse</span><span>${esc(e.address) || "—"}</span></div>
         <div class="cli-info"><span class="cli-label">CP - Ville</span><span>${esc(e.cityPostal) || "—"}</span></div>
         <div class="cli-info"><span class="cli-label">Rencontré via</span><span>${esc(e.rencontre) || "—"}</span></div>
+        ${e.siret ? `<div class="cli-info"><span class="cli-label">SIRET</span><span>${esc(formatSiret(e.siret))}</span></div>` : ""}
+        ${e.tvaIntra ? `<div class="cli-info"><span class="cli-label">TVA intra</span><span>${esc(e.tvaIntra)}</span></div>` : ""}
         <div class="cli-actions">
           <button class="btn" onclick="clientsEdit('${e.id}')">Modifier</button>
           <button class="btn ghost" onclick="clientsToggle('${e.id}')">Fermer</button>
