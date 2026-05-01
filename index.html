@@ -1258,7 +1258,13 @@
       min-height: 16pt !important;
     }
 
-    /* Signature row: pinned near bottom, full width */
+    /* Signature row: pinned near bottom, full width.
+       break-inside:avoid sur la rangée ET sur ses enfants block (dp-sig-default,
+       dp-sig-row, dp-sig-mention, et tout <p> issu de richDisplayHtml du
+       signatureBlock custom) — sinon le print engine peut couper entre le « Fait
+       à ___, le ___/___/___ » et la mention « Bon pour accord » qui suit.
+       break-before:auto + page-break-before:auto pour ne pas forcer un saut
+       inutile : on veut juste éviter le split, pas reloger systématiquement.  */
     .devis-preview .dp-signature-row, .view-devis-snapshot .dp-signature-row {
       padding-top: 10pt !important;
       border-top: 0.5pt solid #ccc !important;
@@ -1266,6 +1272,17 @@
       line-height: 1.6 !important;
       color: #1a1a1a !important;
       page-break-inside: avoid !important;
+      break-inside: avoid !important;
+      page-break-before: auto !important;
+      break-before: auto !important;
+    }
+    .devis-preview .dp-signature-row > *, .view-devis-snapshot .dp-signature-row > *,
+    .devis-preview .dp-sig-default, .view-devis-snapshot .dp-sig-default,
+    .devis-preview .dp-sig-row, .view-devis-snapshot .dp-sig-row,
+    .devis-preview .dp-sig-mention, .view-devis-snapshot .dp-sig-mention,
+    .devis-preview .dp-signature-row p, .view-devis-snapshot .dp-signature-row p {
+      page-break-inside: avoid !important;
+      break-inside: avoid !important;
     }
     .devis-preview .dp-signature-row .dp-sig-mention, .view-devis-snapshot .dp-signature-row .dp-sig-mention {
       margin-top: 6pt !important;
