@@ -30,6 +30,7 @@ App web personnelle pour générer des devis photographe.
 - **Filtre sticky pendant l'édition** : quand l'utilisateur édite un item via un volet déplié (ex. `suiviExpandedDevis` dans rSV), l'item doit être exempté des filtres en cours pour qu'il ne disparaisse pas sous lui quand son statut change. Pattern : `g.devisId === sticky || <predicate>` dans chaque branche `.filter()`. Reset du sticky quand l'user change explicitement de filtre.
 - **Dropdown ancré à un `<th>`** : dans une `<table>`, un menu `position:absolute` à l'intérieur d'un `<th>` se retrouve **sous** les cellules du `<tbody>` (stacking thead/tbody pénalisant en HTML). Solution : rendre le menu HORS de la table en `position:fixed`, avec coordonnées calculées via `getBoundingClientRect()` du `<th>` cible après render. Voir `positionThMenu()` + `suiviDateMenuHtml()` pour le template (call dans `requestAnimationFrame` après chaque action qui modifie le menu).
 - **Tooltip dans une section accordéon `.edit-section`** : utiliser le pattern portal (`position:fixed` dans `<body>` via JS, ex. `_paiementTooltipEl` / `showPaiementInfo` / `showRemiseInfo`), pas un tooltip CSS-only en `position:absolute`. La section parente a `overflow:hidden` qui clippe les tooltips classiques.
+- **Opacité sur cellule de tableau** : `opacity` sur un `<td>` rend la cellule **entière** translucide — si la ligne a un fond personnalisé (`tr.subtotal { background:var(--surface-2) }`, `tr.grandtotal`, etc.), la cellule devient un "trou" qui laisse passer le fond de la page. Pattern : envelopper le contenu dans un `<span>` enfant et appliquer l'opacité au span. Voir `.hist td.cp-zero > span` (cellule "—" du bilan Compta).
 
 ## Schéma de données
 
@@ -97,6 +98,29 @@ Toggle par ligne (matériel) et sur le déplacement : `devis: "principal" | "deb
 ⚠ **Frais de déplacement** engagés par le photographe = fiscalement des **frais accessoires** (CGI 267-I-2°, soumis à TVA), **pas des débours**, sauf cas rare où le client paie directement. Le toggle Débours reste possible mais à utiliser avec précaution.
 
 Feuille débours : `rDeboursPreview()`. Bloc dans le devis principal : `.dp-debours-block`.
+
+## Compta & au noir vs déclaré
+
+L'app distingue deux flux d'argent par entry Suivi :
+
+- `e.montant` = total réellement encaissé (toujours rempli)
+- `e.ca` = part **déclarée** uniquement (0 si au noir)
+- `e.ursaf` = 0 sur les entries au noir
+- `e.salaire` / `e.tresorerie` = remplis quel que soit le statut fiscal (le photographe encaisse / met de côté la même chose)
+
+Dans `bilanCompute()`, deux colonnes distinctes :
+- **Payé** = somme de `e.montant` (déclaré + au noir)
+- **CA** = somme de `e.ca` (déclaré seulement, sert aux seuils micro-BNC / TVA)
+
+⚠ **Ne jamais utiliser `montant - frais` comme fallback pour `ca` quand `ca = 0`**. Une entry avec `ca=0` et `montant>0` = volontairement au noir, pas une donnée manquante. Promouvoir ça en CA déclaré = faute fiscale.
+
+Chaque devis a `S.mission.declare` (true par défaut, false = au noir). `suiviAdd()` câble automatiquement la décomposition à l'archivage :
+- URSSAF = `montant × urssafPct` (0 si au noir)
+- Trésorerie = `montant × (tauxAvecSecurite / tarifH)` — fraction du tarif horaire qui finance matos+abos+sécurité
+- Salaire net = `montant − URSSAF − Trésorerie`
+- CA = `montant` si déclaré, `0` si au noir
+
+**Plage de mois affichée** : `bilanCompute()` génère TOUS les mois entre la première activité (entry / début abo / achat matériel) et aujourd'hui — pas seulement les mois avec entries Suivi. Sinon les mois sans encaissement mais avec abos/amort actifs sont oubliés et le sous-total annuel des charges fixes est faux. Filtre final élide uniquement les mois "vraiment vides" (zéro partout).
 
 ## Archivage et impression
 
