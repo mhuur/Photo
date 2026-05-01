@@ -2196,6 +2196,10 @@ if (S.mission) {
     if (parseFloat(prod.hours) > 0) S.mission.lignes.push({ id: Date.now().toString(36)+"b", type:"heures", intitule:"Shooting / production", duree: String(prod.hours), unit:"h", description:"" });
     if (parseFloat(post.hours) > 0) S.mission.lignes.push({ id: Date.now().toString(36)+"c", type:"heures", intitule:"Post-production", duree: String(post.hours), unit:"h", description:"" });
   }
+  // Date d'émission par défaut = aujourd'hui (modifiable manuellement par l'user via l'input)
+  if (!S.mission.dateEmission) {
+    S.mission.dateEmission = new Date().toISOString().slice(0, 10);
+  }
   recomputeRef();
 }
 let user = null;
@@ -2297,6 +2301,9 @@ async function loadFromCloud() {
       if (d.tarifs && Array.isArray(d.tarifs.catalog) && d.tarifs.catalog.length) S.tarifs = { catalog: d.tarifs.catalog, heuresAnnuelles: d.tarifs.heuresAnnuelles || S.tarifs.heuresAnnuelles || "900", facteurSecurite: d.tarifs.facteurSecurite || S.tarifs.facteurSecurite || "0" };
       if (d.bugs)    S.bugs    = { items: Array.isArray(d.bugs.items) ? d.bugs.items : (Array.isArray(d.bugs.entries) ? d.bugs.entries.map(e => ({ id: e.id, text: e.title || "", steps: e.desc ? [e.desc] : [], validated: e.status === "fixed", createdAt: e.date ? new Date(e.date).getTime() || Date.now() : Date.now() })) : []) };
       if (d.prefs)   S.prefs   = { ...DEFAULT_S.prefs, ...d.prefs };
+      if (S.mission && !S.mission.dateEmission) {
+        S.mission.dateEmission = new Date().toISOString().slice(0, 10);
+      }
       suiviMigrate();
       recomputeRef();
       localStorage.setItem(SK, JSON.stringify(S));
