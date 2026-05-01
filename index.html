@@ -1258,23 +1258,28 @@
       min-height: 16pt !important;
     }
 
-    /* Signature row: pinned near bottom, full width.
-       break-inside:avoid sur la rangée ET sur ses enfants block (dp-sig-default,
-       dp-sig-row, dp-sig-mention, et tout <p> issu de richDisplayHtml du
-       signatureBlock custom) — sinon le print engine peut couper entre le « Fait
-       à ___, le ___/___/___ » et la mention « Bon pour accord » qui suit.
-       break-before:auto + page-break-before:auto pour ne pas forcer un saut
-       inutile : on veut juste éviter le split, pas reloger systématiquement.  */
+    /* Signature row : forçage saut de page AVANT le bloc.
+       Le contenu par défaut du signatureBlock est saisi en plain-text avec
+       "\n\n" entre la ligne « Fait à ___ » et « Signature précédée… ». Le
+       rendu via richDisplayHtml convertit \n en <br>, donc le bloc reste un
+       seul container avec un <br><br> interne. Chrome's print engine traite
+       les <br> comme points de coupure inline et IGNORE break-inside:avoid
+       dans ce cas — d'où le split observé en pratique. La seule solution
+       fiable et compatible avec les snapshots déjà figés (où on ne peut pas
+       changer le HTML rétroactivement) est de forcer un saut de page avant
+       la signature. Coût : potentiellement 1 page supplémentaire pour les
+       devis très courts ; bénéfice : pas de mention « Bon pour accord »
+       isolée sans le « Fait à » qui la précède. */
     .devis-preview .dp-signature-row, .view-devis-snapshot .dp-signature-row {
       padding-top: 10pt !important;
       border-top: 0.5pt solid #ccc !important;
       font-size: 9pt !important;
       line-height: 1.6 !important;
       color: #1a1a1a !important;
+      page-break-before: always !important;
+      break-before: page !important;
       page-break-inside: avoid !important;
       break-inside: avoid !important;
-      page-break-before: auto !important;
-      break-before: auto !important;
     }
     .devis-preview .dp-signature-row > *, .view-devis-snapshot .dp-signature-row > *,
     .devis-preview .dp-sig-default, .view-devis-snapshot .dp-sig-default,
