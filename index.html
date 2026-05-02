@@ -669,6 +669,14 @@
   .bug-chip{display:inline-flex;align-items:center;gap:5px;padding:5px 12px;border-radius:14px;background:transparent;color:var(--text-muted);font-size:12px;font-weight:600;border:1px solid var(--border-light);cursor:pointer;font-family:inherit;transition:all .12s;white-space:nowrap}
   .bug-chip:hover{border-color:var(--primary);color:var(--primary)}
   .bug-chip.active{background:var(--primary);color:#fff;border-color:var(--primary)}
+  /* Chip actif : couleur correspondant à l'onglet (cohérent avec badge) */
+  .bug-chip.active.bug-chip-mission{background:#22c55e;border-color:#22c55e}
+  .bug-chip.active.bug-chip-suivi{background:#a78bfa;border-color:#a78bfa}
+  .bug-chip.active.bug-chip-tarifs{background:#f59e0b;border-color:#f59e0b}
+  .bug-chip.active.bug-chip-clients{background:#22d3ee;border-color:#22d3ee;color:#022}
+  .bug-chip.active.bug-chip-compta{background:#fbbf24;border-color:#fbbf24;color:#222}
+  .bug-chip.active.bug-chip-profil{background:#ec4899;border-color:#ec4899}
+  .bug-chip.active.bug-chip-bugs,.bug-chip.active.bug-chip-autres{background:var(--text-muted);border-color:var(--text-muted)}
   .bug-chip-n{font-size:11px;font-weight:700;background:rgba(255,255,255,.18);padding:1px 7px;border-radius:8px;color:inherit}
   .bug-chip:not(.active) .bug-chip-n{background:var(--surface-2);color:var(--text-dim)}
   .bug-search{padding:7px 12px;border:1px solid var(--border-light);border-radius:6px;background:var(--bg-2);color:var(--text);font:inherit;font-size:13px;width:200px;flex-shrink:0}
@@ -709,11 +717,39 @@
   .bug-shot-file-btn{color:var(--primary);cursor:pointer;text-decoration:underline;font-weight:600}
   .bug-shot-meta{font-size:11px;color:var(--text-dim);margin-top:4px}
 
-  /* Cartes enrichies */
+  /* Cartes enrichies (Phase 2) */
+  .fb-card.bug-card-v2{padding:12px 14px;animation:bugCardIn .25s ease}
+  @keyframes bugCardIn{from{opacity:0;transform:translateY(-3px)}to{opacity:1;transform:none}}
   .bug-card-main{flex:1;display:flex;flex-direction:column;gap:4px;min-width:0}
-  .bug-card-meta{display:flex;align-items:center;gap:6px}
-  .bug-tab-badge{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;padding:2px 8px;border-radius:10px;background:var(--primary-soft);color:var(--primary)}
-  .bug-tab-badge.bug-tab-autres{background:var(--surface-2);color:var(--text-muted)}
+  .bug-card-meta{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+
+  /* Couleurs par onglet — palette cohérente, badge léger + texte saturé */
+  .bug-tab-badge{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;padding:2px 8px;border-radius:10px}
+  .bug-tab-badge.bug-tab-accueil{background:rgba(74,158,255,.14);color:#4a9eff}
+  .bug-tab-badge.bug-tab-mission{background:rgba(34,197,94,.16);color:#22c55e}
+  .bug-tab-badge.bug-tab-suivi{background:rgba(167,139,250,.18);color:#a78bfa}
+  .bug-tab-badge.bug-tab-tarifs{background:rgba(245,158,11,.18);color:#f59e0b}
+  .bug-tab-badge.bug-tab-clients{background:rgba(6,182,212,.16);color:#22d3ee}
+  .bug-tab-badge.bug-tab-compta{background:rgba(251,191,36,.16);color:#fbbf24}
+  .bug-tab-badge.bug-tab-profil{background:rgba(236,72,153,.16);color:#ec4899}
+  .bug-tab-badge.bug-tab-bugs{background:var(--surface-2);color:var(--text-muted)}
+  .bug-tab-badge.bug-tab-autres{background:var(--surface-2);color:var(--text-dim)}
+
+  /* Status pill (à traiter / validée) */
+  .bug-status-pill{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;padding:2px 8px;border-radius:10px;display:inline-flex;align-items:center;gap:3px}
+  .bug-status-open{background:var(--warning-soft);color:var(--warning)}
+  .bug-status-done{background:var(--success-soft);color:var(--success)}
+
+  /* Date relative (à droite des badges, discrète) */
+  .bug-card-date{font-size:11px;color:var(--text-dim);margin-left:auto;font-style:italic;cursor:help}
+
+  /* Cover image — bandeau gauche cliquable */
+  .bug-card-cover{position:relative;width:64px;height:48px;border-radius:6px;overflow:hidden;border:1px solid var(--border-light);background:var(--bg-3);flex-shrink:0;cursor:zoom-in;transition:transform .12s,border-color .12s}
+  .bug-card-cover:hover{transform:scale(1.04);border-color:var(--primary)}
+  .bug-card-cover img{width:100%;height:100%;object-fit:cover;display:block}
+  .bug-card-cover-count{position:absolute;bottom:2px;right:2px;background:rgba(0,0,0,.7);color:#fff;font-size:10px;font-weight:700;padding:1px 5px;border-radius:8px;line-height:1.4}
+  .fb-card.fb-done .bug-card-cover{opacity:.5}
+
   .bug-card-title{font-weight:700;font-size:13px}
   .bug-card-text{flex:1;border:0;background:transparent;color:var(--text-muted);font:inherit;font-size:13px;outline:none;padding:5px 7px;border-radius:4px;min-width:0;resize:vertical;font-family:inherit;min-height:32px}
   .bug-card-text:hover{background:rgba(74,158,255,.06)}
@@ -722,7 +758,7 @@
   .bug-card-copy{border:1px solid var(--border-light);background:var(--surface);color:var(--text-muted);cursor:pointer;font-size:13px;width:30px;height:28px;border-radius:5px;display:flex;align-items:center;justify-content:center;transition:all .15s;padding:0}
   .bug-card-copy:hover{border-color:var(--primary);color:var(--primary);background:var(--primary-soft)}
   .bug-card-copy.copied{border-color:var(--success);color:var(--success);background:var(--success-soft)}
-  .bug-card-shots{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0 4px 38px}
+  .bug-card-shots{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0 4px 102px}
 
   /* Lightbox bug screenshot */
   .bug-lb-overlay{background:rgba(8,15,28,.92);cursor:zoom-out;align-items:center;justify-content:center}
@@ -4885,6 +4921,24 @@ const BUG_TAB_OPTIONS = [
 function bugTabLabel(k) {
   const found = BUG_TAB_OPTIONS.find(o => o[0] === k);
   return found ? found[1] : "—";
+}
+
+// Date relative humaine : « à l'instant », « il y a 5 min », « hier »…
+function bugRelativeTime(ts) {
+  if (!ts) return "";
+  const diff = Date.now() - ts;
+  if (diff < 60 * 1000) return "à l'instant";
+  const min = Math.floor(diff / 60000);
+  if (min < 60) return `il y a ${min} min`;
+  const h = Math.floor(min / 60);
+  if (h < 24) return `il y a ${h} h`;
+  const d = Math.floor(h / 24);
+  if (d === 1) return "hier";
+  if (d < 7) return `il y a ${d} j`;
+  if (d < 30) return `il y a ${Math.floor(d / 7)} sem`;
+  // Au-delà : date absolue
+  const date = new Date(ts);
+  return dateFR(date.toISOString().slice(0, 10));
 }
 
 function bugDraftSet(field, val) {
@@ -12935,23 +12989,37 @@ function rBG() {
     }
   }
   items.forEach(it => {
-    const tabBadge = it.tab && it.tab !== "autres"
-      ? `<span class="bug-tab-badge bug-tab-${esc(it.tab)}">${esc(bugTabLabel(it.tab))}</span>`
-      : (it.tab === "autres" ? `<span class="bug-tab-badge bug-tab-autres">Autres</span>` : "");
-    const shotsHtml = (Array.isArray(it.screenshots) && it.screenshots.length > 0)
+    const tabKey = it.tab || "autres";
+    const tabBadge = `<span class="bug-tab-badge bug-tab-${esc(tabKey)}">${esc(bugTabLabel(tabKey))}</span>`;
+    const statusPill = it.validated
+      ? `<span class="bug-status-pill bug-status-done">✓ Validée</span>`
+      : `<span class="bug-status-pill bug-status-open">À traiter</span>`;
+    const dateRel = it.createdAt
+      ? `<span class="bug-card-date" title="${esc(new Date(it.createdAt).toLocaleString("fr-FR"))}">${esc(bugRelativeTime(it.createdAt))}</span>`
+      : "";
+    // Cover image : 1ʳᵉ capture en bandeau gauche (cliquable → lightbox).
+    const cover = (Array.isArray(it.screenshots) && it.screenshots.length > 0)
+      ? `<div class="bug-card-cover" onclick="bugLightboxOpen('${esc(it.id)}',0)" title="Voir la capture">
+          <img src="${esc(it.screenshots[0].dataUrl)}" alt="capture">
+          ${it.screenshots.length > 1 ? `<span class="bug-card-cover-count">+${it.screenshots.length - 1}</span>` : ""}
+         </div>`
+      : "";
+    // Captures additionnelles (à partir de la 2e), juste si on en a > 1.
+    const extraShotsHtml = (Array.isArray(it.screenshots) && it.screenshots.length > 1)
       ? `<div class="bug-card-shots">
-          ${it.screenshots.map((s, i) => `
+          ${it.screenshots.slice(1).map((s, i) => `
             <div class="bug-card-shot">
-              <img src="${esc(s.dataUrl)}" alt="capture" onclick="bugLightboxOpen('${esc(it.id)}',${i})">
+              <img src="${esc(s.dataUrl)}" alt="capture" onclick="bugLightboxOpen('${esc(it.id)}',${i + 1})">
               <button class="bug-shot-del" onclick="event.stopPropagation();bugRemoveScreenshot('${esc(it.id)}','${esc(s.id)}')" title="Retirer">✕</button>
             </div>`).join("")}
          </div>`
       : "";
-    h += `<div class="fb-card ${it.validated ? "fb-done" : ""}">
+    h += `<div class="fb-card bug-card-v2 ${it.validated ? "fb-done" : ""}">
       <div class="fb-hd">
         <button class="fb-check ${it.validated ? "on" : ""}" onclick="bugToggleValid('${it.id}')" title="${it.validated ? "Marquer en cours" : "Valider"}">✓</button>
+        ${cover}
         <div class="bug-card-main">
-          <div class="bug-card-meta">${tabBadge}</div>
+          <div class="bug-card-meta">${tabBadge}${statusPill}${dateRel}</div>
           <input class="fb-text bug-card-title" value="${esc(it.title || "")}" placeholder="Titre…" oninput="bugUpdateTitle('${it.id}',this.value)">
           <textarea class="bug-card-text" rows="2" placeholder="Description…" oninput="bugUpdateText('${it.id}',this.value)">${esc(it.text || "")}</textarea>
         </div>
@@ -12960,7 +13028,7 @@ function rBG() {
           <button class="fb-del" onclick="bugDel('${it.id}')" title="Supprimer">×</button>
         </div>
       </div>
-      ${shotsHtml}`;
+      ${extraShotsHtml}`;
     (it.steps || []).forEach((st, idx) => {
       h += `<div class="fb-step">
         <span class="fb-step-bul">↳</span>
