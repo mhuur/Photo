@@ -1,205 +1,192 @@
 # Devis Photo
 
-App web personnelle pour générer des devis photographe.
+## Projet
+
+App web personnelle de génération de devis photographe. **Mono-utilisateur** (saintilan.romain@gmail.com) avec workspace partagé multi-membres validés. **Production**, hébergée GitHub Pages depuis `main`.
+
+## Stack & versions
+
+- **Vanilla JS monolithique** dans `index.html` (~9000 lignes). Pas de build, pas de tests, pas d'`import`.
+- **Firebase v8 compat** via CDN (`firebase.auth()`, `db.collection(...)`). **Ne pas migrer vers v9 modulaire.**
+- **Cache local** : `localStorage["devis-photo-data-v2"]` (constante `SK`). Changer le suffixe casse tous les caches.
+- **Firestore Rules** stockées en console Firebase, pas dans le repo.
+
+## Commandes essentielles
+
+```bash
+python3 -m http.server 8000               # serveur local
+./check.sh                                # sanity check (regen SCHEMA.md inclus)
+py gen-schema.py                          # régénère SCHEMA.md depuis DEFAULT_S
+grep -n "^// ▼ " index.html               # liste toutes les ancres
+grep -nE "^function r[A-Z]" index.html    # liste tous les renderers (rXX)
+```
+
+**Workflow git** : push direct sur `main`. Pas de branche `claude/<slug>`, pas de merge, pas de PR.
+
+## Architecture
+
+- `index.html` — tout le code (HTML + CSS + JS). Navigation par **ancres** `// ▼ <nom> — <description>`.
+- `SCHEMA.md` — schéma `S` auto-généré (lire en début de session avant de toucher au schéma). Régénéré par `gen-schema.py`.
+- `check.sh` — sanity check (déséquilibre accolades, fonctions-clés, balises). Lancer après tout `sed` ou Edit multi-zones.
+- `hooks/` — git hooks.
+- **Workspace cloud** : doc unique `users/<ownerUid>` partagé via `workspaces/<ownerUid>.members`. Sync live `onSnapshot` + anti-écho `_lastWriteBy` (fenêtre 2s).
+
+**Renderers par onglet** : `rMS` Mission/Devis, `rPF` Profil, `rTR` Tarifs, `rSV` Suivi, `rCL` Clients, `rCP` Compta, `rBG` Notes, `rMAJ` Mises à jour. Helpers : `esc() save() render() upd() num() fmt() r2() dateFR() uid()`.
 
 ## Conventions
 
-- **Push direct sur `main`** : repo mono-utilisateur, pas de revue. **Pas de branche `claude/<slug>`, pas de merge.** Cette règle prime sur les instructions par défaut.
+- **État global `S`**. Toute mutation passe par `upd(path, val)` → `S` + `save()` + parfois `refreshTotals()`.
+- **`esc()` obligatoire** sur toute valeur dynamique injectée en HTML (XSS).
+- **Identifiants courts** (cf. liste ci-dessus). Pose une ancre `// ▼ <nom>` au-dessus de toute fonction-clé que tu ajoutes.
+- **Tout nouveau champ ajouté à `S`** doit être : (1) initialisé dans `DEFAULT_S`, (2) inclus dans le merge `loadFromCloud`, (3) inclus dans le payload `saveToCloud`. Exception : champs runtime transient sur entries existantes (ex. `e.pmtTs`) — à nettoyer (`delete`) à la transition inverse.
+- **Renumérotation/rename client** : propager `S.clients.entries[].num` à 5 endroits — `S.mission.client.num`, `S.suivi.devis[].ref` (regex `^DEVIS-NUM-YYYY-MM-NNN$`), `snapshotMission.client.num`, `S.suivi.entries[].client` (legacy `#NUM Nom`). Voir `clientsRenumberAll()`.
+- **`missionNew(presetClient?)`** : garde la config (taux, urssafPct, paiement, échéances, CGV, déplacement.mode), efface les données spécifiques. Tout nouveau champ `S.mission` doit être catégorisé.
+- **Lookup client depuis devis** : toujours via `findClientForDevis(devisId)` (3 stratégies en cascade), jamais ad hoc.
+- **Pop-up : `uiAlert/uiConfirm/uiPrompt` PAS `alert/confirm/prompt`** — natifs interdits (style blanc cassé, alignés top, sortent du thème). Helpers async dans le module `uiDialog` ([index.html](index.html), recherche `▼ uiAlert`). API : `await uiAlert(msg, { title?, kind:"info"|"warn"|"danger", confirmLabel? })`, `await uiConfirm(...)` → bool, `await uiPrompt(...)` → string|null. ESC=cancel, Enter=confirm, click overlay=cancel (sauf alert pure). **Toute fonction qui appelle `await uiConfirm/uiPrompt` doit être `async`** — propager aux callers (souvent juste rendre la fonction `async`, les onclick le tolèrent). Pour les `onclick="if(confirm())xxx()"` inline, créer un wrapper async `xxxConfirm(id)` (cf. `clientsDelConfirm`, `deleteAbonnementConfirm`). Choix de `kind` : `danger` = suppression définitive ou écrasement, `warn` = action destructrice réversible / validation, `info` = confirmation neutre / succès.
 
-## Stack
+## Schéma & sémantique métier
 
-- **Tout dans `index.html`** (vanilla JS, monolithique, pas de build, pas de tests).
-- **Firebase v8 compat** via CDN — pas v9 modulaire, garder `firebase.auth()`, `db.collection(...)`. Pas d'`import`.
-- **Cache local** : `localStorage["devis-photo-data-v2"]` (constante `SK`). Changer le suffixe casse tous les caches.
-- **Hébergement** : page statique servie depuis `main` (GitHub Pages).
-- **Pour itérer en local** : `python3 -m http.server 8000`.
-- **Workspace partagé multi-user** : un seul doc Firestore `users/<ownerUid>` partagé entre tous les membres validés. Owner défini par `OWNER_EMAIL` hardcodé (`saintilan.romain@gmail.com`). Membres listés dans `workspaces/<ownerUid>.members` (map indexée par uid). Live sync via `onSnapshot` avec preserve focus + caret. Anti-écho via `_lastWriteBy` + fenêtre 2s. **Si l'OWNER_EMAIL change** : updater code + Firestore Rules en console + supprimer manuellement `workspace_ids/<ancien-email>`.
-- **Firestore Security Rules** stockées en console Firebase, **pas dans le repo**. Restrictives : `users/<ownerUid>` accessible par owner + members ; `workspaces/<ownerUid>` accessible par owner + members + pendingRequests ; `workspace_ids/<email>` get-only public.
+Voir `SCHEMA.md` pour la structure exhaustive de `S`. Points NON-déductibles du code :
 
-## Patterns de code
+### State machine `S.suivi.entries[].statut`
 
-- **État global `S`**. Tout passe par `upd(path, val)` qui met à jour `S` + `save()` + parfois `refreshTotals()`.
-- **`render()` recompose** `app.innerHTML` au changement d'onglet ou de session. **Jamais `render()` depuis un `oninput`** sur un input texte → perte de focus garantie. OK depuis `onchange` d'un toggle/select et depuis un click button.
-- **`esc()` obligatoire** sur toute valeur dynamique injectée dans du HTML (sécurité XSS).
-- **Identifiants courts** : `S`, helpers `esc()` `save()` `render()` `upd()` `num()` `fmt()` `r2()` `dateFR()` `uid()`. Renderers par onglet : `rMS` (Mission/Devis), `rPF` (Profil), `rTR` (Tarifs), `rSV` (Suivi), `rCL` (Clients), `rCP` (Compta), `rBG` (Notes), `rMAJ` (Mises à jour).
-- **Modèle mental de `S`** : voir `SCHEMA.md` (auto-généré depuis `DEFAULT_S` par `gen-schema.py`). À lire en début de session avant de toucher au schéma.
-- **Tout nouveau champ ajouté à `S`** doit être :
-  1. Initialisé dans `DEFAULT_S`
-  2. Inclus dans le merge de `loadFromCloud` (sinon non rechargé au login)
-  3. Inclus dans l'objet `set` de `saveToCloud` (sinon non sauvegardé cloud)
+5 statuts : `envoye` (pas accepté) → `attente` (paiement en attente) → `termine` (soldée). Branches alternatives : `refuse` (avant accept), `annule` (après accept). Pas d'état `accepte` (fusionné dans `attente`). Statut devis-level dérivé via `devisPrincipal()` (ajoute `en_cours` si mix attente+termine).
 
-  Exception : champs purement runtime posés sur des entries existantes (ex. `e.pmtTs` = timestamp de paiement, lu par `suiviDevisUndo` pour cibler le dernier paiement). Pas dans `DEFAULT_S`, pas de migration. À nettoyer (`delete e.pmtTs`) à la transition inverse pour rester propre.
-- **Filtre sticky pendant l'édition** : quand l'utilisateur édite un item via un volet déplié (ex. `suiviExpandedDevis` dans rSV), l'item doit être exempté des filtres en cours pour qu'il ne disparaisse pas sous lui quand son statut change. Pattern : `g.devisId === sticky || <predicate>` dans chaque branche `.filter()`. Reset du sticky quand l'user change explicitement de filtre.
-- **Dropdown ancré à un `<th>`** : dans une `<table>`, un menu `position:absolute` à l'intérieur d'un `<th>` se retrouve **sous** les cellules du `<tbody>` (stacking thead/tbody pénalisant en HTML). Solution : rendre le menu HORS de la table en `position:fixed`, avec coordonnées calculées via `getBoundingClientRect()` du `<th>` cible après render. Voir `positionThMenu()` + `suiviDateMenuHtml()` pour le template (call dans `requestAnimationFrame` après chaque action qui modifie le menu).
-- **Tooltip dans une section accordéon `.edit-section`** : utiliser le pattern portal (`position:fixed` dans `<body>` via JS), pas un tooltip CSS-only en `position:absolute`. La section parente a `overflow:hidden` qui clippe les tooltips classiques. **Helper générique** : `showInfo(event, "key")` lit `INFO_HTML[key]` et affiche dans le portail partagé `_paiementTooltipEl`. Pour ajouter un tooltip d'aide : (1) ajouter une entrée dans `INFO_HTML`, (2) `<button class="lg-info-icon" onmouseenter="showInfo(event, 'maKey')" onmouseleave="hideInfo()">i</button>`. Helpers spécifiques préexistants (`showPaiementInfo`, `showRemiseInfo`) restent valides — ils calculent leur contenu dynamiquement.
-- **Opacité sur cellule de tableau** : `opacity` sur un `<td>` rend la cellule **entière** translucide — si la ligne a un fond personnalisé (`tr.subtotal { background:var(--surface-2) }`, `tr.grandtotal`, etc.), la cellule devient un "trou" qui laisse passer le fond de la page. Pattern : envelopper le contenu dans un `<span>` enfant et appliquer l'opacité au span. Voir `.hist td.cp-zero > span` (cellule "—" du bilan Compta).
-- **Renumérotation / rename d'un client** : si tu modifies `S.clients.entries[].num`, propage le mapping ancien→nouveau à **5 endroits** : (a) `S.mission.client.num` si la mission est liée, (b) `S.suivi.devis[].ref` (regex `^DEVIS-NUM-YYYY-MM-NNN$`), (c) `S.suivi.devis[].snapshotMission.client.num`, (d) `S.suivi.entries[].client` (legacy format `#NUM Nom`). Voir `clientsRenumberAll()` pour le pattern. Toute nouvelle référence client à introduire DOIT être ajoutée à cette propagation, sinon désync silencieux.
-- **`missionNew(presetClient?)`** : démarre un nouveau devis. **Garde** la config (taux horaires, urssafPct, paiement.delai/marges, **echeances**, CGV, déplacement.mode/tauxKm). **Efface** les données spécifiques (heures, lignes, client, déplacement chiffres, autres, remise, contratHorsEtab, datePrestation, object*). Si tu ajoutes un champ à `S.mission`, décide de quelle catégorie il relève et ajoute-le à `missionNew()`.
-- **Lookup client depuis devis** : `findClientForDevis(devisId)` essaie 3 stratégies en cascade — `snapshotMission.client.id`, puis `snapshotClient` cleané du préfixe `#NUM`, puis 1ère entry Suivi du devis. Robuste pour les devis legacy. Toujours utiliser ce helper, pas un lookup ad hoc.
-- **Devis legacy (pré-outil) — reconstitution** : pour les devis archivés AVANT la feature snapshot, `S.suivi.devis[id]` n'a pas de `snapshotHtml`. Deux helpers :
-  - `reconstructMissionFromSuivi(devisId)` — pur, retourne `{ mission, recovered: [...] }`. Reconstitue un objet `mission` à partir des entries Suivi (heures cumulées, client via `findClientForDevis`, type prestation via catalogue) + champs `snapshot*` du devis. Ne mute rien. Utilisé par `reviseDevisStart` (legacy fallback) et `ensureLegacySnapshot`.
-  - `ensureLegacySnapshot(devisId)` — idempotent. Si `dv.snapshotHtml` est absent, swap `S.mission` temporairement, appelle `rDevisPreview()`/`rDeboursPreview()`, capture le HTML, ajoute un bandeau `.dp-reconstructed-banner` (visible aussi à l'impression PDF), pose une ref rétroactive `DEVIS-NUM-YYYY-MM-NNN` (date émission = min(entries.date)) si manquante, marque `dv.legacyReconstructed = true`. Appelé en lazy depuis `viewDevisOpen`, `viewDeboursOpen`, `viewFactureOpen`. Si `dv.snapshotMission` existe déjà (boot-backfill), il est préféré à la reconstruction depuis entries.
-- **Pas de facture sur devis au noir** : `isDevisAuNoir(devisId)` = vrai si `Σ ca === 0` && `Σ montant > 0` sur les entries hors débours. Bloque `isFactureApplicable` + `viewFactureOpen` (alert dédiée) + UI `suiviExpandedPanelHtml` (bouton désactivé). Logique : la facture est un document fiscal, l'au noir ne doit pas en générer. Pour facturer un devis au noir, ajuster d'abord `e.ca` des entries Suivi.
-- **Auth mobile** : `signInWithRedirect` sur mobile (détection UA), `signInWithPopup` sur desktop. Google bloque le popup OAuth sur la plupart des navigateurs mobiles (politique « secure browsers »). `isInAppWebView()` détecte les WebViews intégrées (Messenger, Instagram, FB, Twitter, etc.) et affiche un écran d'instructions « Ouvre dans Safari/Chrome » au lieu de tenter l'auth (qui échouerait avec `disallowed_useragent`).
-- **Compose mail Gmail** : `buildGmailUrl(to, subject, body)` retourne `https://accounts.google.com/AccountChooser?continue=<gmail_compose_url>`. Le AccountChooser force le **sélecteur de compte Google** avant le compose (utile si multi-sessions Google) — l'utilisateur choisit librement (pas de pin via `Email=` ni `/u/<email>/`). Le compose s'ouvre toujours en **fullscreen** (limitation Google ~2018, pas contournable via URL externe). NE PAS revenir à `mailto:` : route vers Outlook sur Edge/Windows par défaut. Pour bulk : `bcc=...` pour préserver la confidentialité. Templates relance dans `S.prefs.gmailTemplates` éditables dans Profil ; placeholders `{contact} {ref} {date} {client} {name}`.
-- **Workflow relance** — Dissociation explicite ouverture Gmail / marquage relancé. Cliquer ✉ Relance (`gmailRelanceForDevis`) ouvre Gmail mais **NE stampe rien** (l'utilisateur peut annuler le brouillon). Bouton dédié ✓ (`relanceMark`) pose `S.suivi.devis[id].lastRelance = now` après envoi confirmé. Tag vert « ↻ Relancé le DD/MM/YYYY ✕ » remplace les deux boutons une fois marqué (clic = `relanceUndo`, retire le stamp). Filtre « À relancer » Accueil utilise `max(dateMin, lastRelance)` pour le seuil 7j.
-- **Firestore sync : `update()` PAS `set + merge:true`** — `saveToCloud` utilise `docRef.update(payload)`, qui remplace chaque top-level field entièrement (suivi, mission, etc.). **Ne jamais revenir à `set({...}, { merge: true })`** : le deep-merge Firestore PRÉSERVE silencieusement les sous-champs absents du payload, donc une suppression locale (ex `delete dv.lastRelance`) n'est jamais répercutée au cloud → ré-injection au prochain `onSnapshot`. Fallback `set(payload)` (sans merge) uniquement si le doc n'existe pas (`error.code === "not-found"`).
-- **Réconciliation timestamp `_localChangeTs`** — `save()` bump `S._localChangeTs = Date.now()` (persisté localStorage + cloud). Lu par `loadFromCloud` (boot one-shot) ET `subscribeWorkspaceData onSnapshot` (live) : si `cloud._localChangeTs < S._localChangeTs` → SKIP merge cloud + PUSH local au cloud. Évite la perte de modifs faites avant l'expiration du debounce save (200ms) sur reload rapide. Sur merge `cloud > local`, on adopte `cloud._localChangeTs` comme nouveau référentiel local.
-- **Beforeunload / pagehide flush** — `flushSaveBeforeUnload` clear le `cloudT` et appelle `saveToCloud()` synchrone (best-effort, navigateur peut tronquer). Combiné avec le timestamp + debounce 200ms, fenêtre de perte de données quasi-nulle.
-- **Maj Trame vs Réviser (architecture devis legacy)** — Deux flows distincts :
-  - **🖼 Maj Trame** (`majTrameStart`) : visible uniquement sur les devis legacy (`legacyReconstructed=true` ou `!snapshotMission`). Marqueur transient `S.mission.majTrameDevisId`. À l'enregistrement (`suiviAdd` détecte le marqueur en début de fonction), si total HT inchangé → **mise à jour EN PLACE** du snapshot (même `devisId`, même ref, dates V1 conservées, `legacyReconstructed` retiré, pas de V<N+1>). Si total a changé → confirm puis bascule auto en révision standard.
-  - **↻ Réviser → rev<N+1>** (`reviseDevisStart`) : sur tous les devis non payés/facturés. Marqueur `S.mission.revisesDevisId`. Crée V<N+1> avec date du jour, V<N> annulée. Si aucun changement détecté hors dates → confirm « rafraîchir la date ? ».
-  - Numérotation 0-indexée via `computeRevisionNumber(devisId)` (walk-back chaîne `replaces`). Affichée dans le bouton (« → rev<N+1> »), à côté de la ref dans Suivi/Accueil (`<span class="suv-rev-tag">rev2</span>`), et dans le PDF (`dp-meta-ref`).
-- **`tarifHOverride` (champ utilisateur explicite, persisté)** — Input dédié dans la section Prestations (à côté du dropdown catalogue). Si renseigné, `totals()` l'utilise comme **tarif horaire absolu** (bypass `cat.p` ET les ajustements declare/blackMode). Cas d'usage : Maj Trame legacy (pré-rempli `totalMontant / dureeForLine`), Réviser avec tarif négocié, devis ad hoc. Persisté dans `snapshotMission` — **NE PAS stripper au save**, c'est un choix utilisateur. Pour revenir au tarif catalogue, l'utilisateur vide explicitement le champ.
-- **`pickObject(k)` n'efface pas `tarifHOverride`** — L'utilisateur contrôle l'override via l'input dédié. Picker une prestation change juste `S.mission.object` et `S.mission.prod.rate`.
-- **Sticky filter Accueil** — `accueilExpandedDevis` exempte le devis dont le panneau est ouvert des filtres « À relancer » et « En attente paiement » (même pattern que `suiviExpandedDevis` dans Suivi). Le filtre se réapplique quand l'utilisateur referme le volet → la ligne ne disparaît pas instantanément quand on clique ✓ Marquer comme relancé.
-
-## Schéma de données
-
-### Top-level keys de `S`
-
-`identite` (émetteur), `mission` (devis en cours), `suivi` (`{ entries[], devis{} }`), `clients`, `tarifs`, `compta`, `abonnements`, `investissements`, `bugs`, `devis`.
-
-### `S.identite` (édité dans onglet Profil `rPF`)
-
-```js
-{
-  prenom, nom, denomination, profession,
-  adresse, cp, ville, email, telephone, siteWeb,
-  formeJuridique: "micro-bnc"|"ei"|"eurl"|"sasu"|"sarl"|"artiste-auteur",
-  mentionEI, siret, ape, rcs, capitalSocial,
-  regimeTVA: "franchise"|"assujetti", numTvaIntra,
-  rcPro: { assureur, numero, zone },
-  mediateur: { nom, adresse, url },              // obligatoire B2C/mixte (L612-1 C. conso.)
-  bank: { banque, titulaire, iban, bic },        // alimente devis/débours/facture
-  clienteleType: "b2c"|"b2b"|"mixte"             // défaut, override par mission.client.type
-}
-```
-
-### `S.mission` (devis en cours, brouillon)
-
-Champs clés : `ref` (**`DEVIS-NUM-YYYY-MM-NNN`** si client a un n°, sinon `DEVIS-YYYY-MM-NNN` ; généré par `recomputeRef`. NUM = `S.mission.client.num`), `dateEmission`, `dureeValidite` (jours, défaut 30), `client: { type: "mixte"|"b2c"|"b2b" }`, `contratHorsEtab` (déclenche rétractation 14j), `lignes[]`, `echeances[]`, `paiement: { delai }`, `cgvSections[]`.
-
-**`recomputeRef`** régénère la ref si elle est dans un format obsolète (ancien `DEVIS-YYYY-MM-NNN` sans num client) ou si le client courant a un num qui ne match pas le préfixe actuel. Protection : si la ref correspond à un devis archivé ET que son format reflète le client courant, on ne touche pas (évite d'écraser une ref figée). Appelé au boot (post-loadFromCloud) pour aligner les missions héritées.
+Champs invisibles sur `e` : `pmtTs` (ts paiement, ciblé par `suiviDevisUndo`), `statutAvantRefus` / `statutAvantAnnul` (revert). Mapping legacy `STATUT_LEGACY` : `paye→termine`, `accepte→attente` (migré silencieusement par `suiviMigrate`).
 
 ### `S.mission.lignes[]` — 3 types
 
-- **`type:"heures"`** — `{ id, intitule, duree, unit:"h"|"j", description }`. Multipliée par `totals().tarifHEff`.
-- **`type:"materiel"`** — `{ id, intitule, prix, devis:"principal"|"debours", paiementType, justificatifJoint, description }`.
-  - Principal → paiementType ∈ `"acompte" | "avance"`.
-  - Débours → paiementType ∈ `"acompte"` (= « Refacturé ») | `"fact-direct"` (= « Direct »). **Jamais "avance" en débours.**
-- **`type:"cession"`** — `{ id, intitule, prix, duree, territoire, supports, exclusivite, description }`. Conforme CPI L131-3. Forfait, contribue au total HT.
+- **`heures`** : `{ duree, unit:"h"|"j" }`. Multipliée par `totals().tarifHEff`.
+- **`materiel`** : `{ prix, devis:"principal"|"debours", paiementType }`. Principal → `acompte|avance`. Débours → `acompte` (Refacturé) | `fact-direct` (Direct). **Jamais `avance` en débours.**
+- **`cession`** : forfait CPI L131-3 (territoire, supports, exclusivité, durée).
 
-### `S.suivi.devis[id]` (snapshot d'archivage)
+### Au noir vs déclaré (CRITIQUE — faute fiscale possible)
 
-`{ ref, snapshotHtml, snapshotDeboursHtml, snapshotAt, snapshotTotal, snapshotDebours, snapshotClient, snapshotHash }`. Capturé par `suiviAdd` + maintenu par `suiviUpdateSnapshot`.
+Par entry : `e.montant` = encaissé total (toujours rempli). `e.ca` = part déclarée (0 si au noir). `e.ursaf` = 0 si au noir. `e.salaire`/`e.tresorerie` = remplis quel que soit le statut.
 
-### `S.suivi.entries[]` (lignes d'échéance) — state machine
+`bilanCompute()` : colonne **Payé** = Σ `montant`, colonne **CA** = Σ `ca` (seuils micro-BNC/TVA). **Ne jamais utiliser `montant - frais` comme fallback pour `ca`** : `ca=0 ∧ montant>0` est volontaire. Promouvoir = faute fiscale.
 
-5 statuts possibles sur `e.statut` :
+`S.mission.declare` (true par défaut) câble la décomposition à `suiviAdd()`. Pas de facture sur devis au noir : `isDevisAuNoir(devisId)` bloque `isFactureApplicable` + `viewFactureOpen` + UI.
 
-- `envoye` — devis pas encore accepté
-- `attente` — paiement en attente (post-acceptation)
-- `termine` — payée (« soldée »)
-- `refuse` — refusé client **avant** acceptation
-- `annule` — annulé **après** acceptation (mission tombée à l'eau)
+**Plage mois bilan** : `bilanCompute()` génère TOUS les mois entre 1ʳᵉ activité (entry/abo/matériel) et aujourd'hui, sinon les mois sans encaissement mais avec abos/amort actifs sont oubliés.
 
-Pas d'état intermédiaire `accepte` (fusionné dans `attente` lors de la refonte Suivi). Le statut devis-level est dérivé via `devisPrincipal()` qui ajoute `en_cours` quand le devis a un mix `attente` + `termine`.
+### Débours
 
-**Champs invisibles à connaître sur `e`** :
-- `e.pmtTs` — timestamp posé à la transition `attente → termine`. Utilisé par `suiviDevisUndo()` pour cibler le paiement le plus récent. Supprimé au revert.
-- `e.statutAvantRefus` / `e.statutAvantAnnul` — snapshot du statut précédent pour permettre le revert depuis `refuse` / `annule`.
+Toggle `devis: "principal"|"debours"` par ligne matériel + déplacement.
 
-**Mapping legacy** (dans `STATUT_LEGACY`) : `paye → termine`, `accepte → attente`. Migré silencieusement par `suiviMigrate()` au prochain `loadFromCloud`.
+- **Refacturé** (`acompte`) — tu avances, client rembourse au centime. Apparaît sur feuille débours (« Total à rembourser »).
+- **Direct** (`fact-direct`) — client règle le fournisseur. Hors devis fiscal (CGI 267-II). Bloc séparé « À régler directement ».
 
-### `S.prefs`
+⚠ Frais de déplacement engagés par toi = **frais accessoires** (CGI 267-I-2°, soumis TVA), pas débours, sauf cas rare client paie direct.
 
-```js
-{
-  relanceJours: 7,                              // seuil "À relancer" Accueil
-  gmailTemplates: {
-    devis:    { subject, body },                // template relance "pas de réponse"
-    paiement: { subject, body }                 // template relance "en attente paiement"
-  }
-}
-```
+### Devis legacy (pré-snapshot)
 
-Templates Gmail éditables dans Profil → « Modèles de relance Gmail ». Placeholders supportés (substitution simple) : `{contact}` (prénom), `{ref}` (réf devis), `{date}` (FR), `{client}` (nom complet), `{name}` (toi, depuis `S.identite`).
+Pour devis archivés sans `snapshotHtml` : `reconstructMissionFromSuivi(devisId)` (pur) reconstitue depuis entries Suivi. `ensureLegacySnapshot(devisId)` (idempotent) capture le HTML + bandeau `.dp-reconstructed-banner` + ref rétroactive. Appelé en lazy depuis `viewDevisOpen|viewDeboursOpen|viewFactureOpen`. Si `snapshotMission` existe (boot-backfill), préféré à la reconstruction.
 
-## Débours
+## Workflows fréquents
 
-Toggle par ligne (matériel) et sur le déplacement : `devis: "principal" | "debours"`. Pour les lignes en `debours`, deux modes :
+### Maj Trame vs Réviser (devis legacy)
 
-- **Refacturé** (`paiementType:"acompte"`) — tu avances le frais, le client te rembourse au centime près. Apparaît sur la **feuille débours** dans le bloc principal « Total à rembourser ».
-- **Direct** (`paiementType:"fact-direct"`) — le client règle directement le fournisseur. Hors devis fiscal (CGI 267-II). Listé pour info dans un bloc séparé « À régler directement au fournisseur » sur la feuille débours, pas dans le total.
+Deux flows distincts, ne pas confondre :
 
-⚠ **Frais de déplacement** engagés par le photographe = fiscalement des **frais accessoires** (CGI 267-I-2°, soumis à TVA), **pas des débours**, sauf cas rare où le client paie directement. Le toggle Débours reste possible mais à utiliser avec précaution.
+- **🖼 Maj Trame** (`majTrameStart`) — uniquement sur devis legacy (`legacyReconstructed=true` ou `!snapshotMission`). Marqueur `S.mission.majTrameDevisId`. À l'enregistrement (`suiviAdd` détecte le marqueur), si total HT inchangé → MAJ EN PLACE (même `devisId`, même ref, dates V1 conservées, `legacyReconstructed` retiré). Si total a changé → confirm puis bascule en révision standard.
+- **↻ Réviser → rev<N+1>** (`reviseDevisStart`) — sur tous devis non payés/facturés. Marqueur `S.mission.revisesDevisId`. Crée V<N+1> date du jour, V<N> annulée. Si aucun changement hors dates → confirm « rafraîchir la date ? ». Numérotation 0-indexée via `computeRevisionNumber(devisId)`.
 
-Feuille débours : `rDeboursPreview()`. Bloc dans le devis principal : `.dp-debours-block`.
+### Tarif horaire override
 
-## Compta & au noir vs déclaré
+Input `tarifHOverride` dans Prestations (à côté du dropdown catalogue). Si renseigné, `totals()` l'utilise comme **tarif horaire absolu** (bypass `cat.p` + ajustements declare/blackMode). Persisté dans `snapshotMission` — **ne pas stripper au save**, c'est un choix utilisateur. `pickObject(k)` n'efface PAS l'override.
 
-L'app distingue deux flux d'argent par entry Suivi :
+### Workflow relance Gmail
 
-- `e.montant` = total réellement encaissé (toujours rempli)
-- `e.ca` = part **déclarée** uniquement (0 si au noir)
-- `e.ursaf` = 0 sur les entries au noir
-- `e.salaire` / `e.tresorerie` = remplis quel que soit le statut fiscal (le photographe encaisse / met de côté la même chose)
+Dissociation explicite ouverture / marquage. Cliquer ✉ Relance (`gmailRelanceForDevis`) ouvre Gmail mais **ne stampe rien**. Bouton ✓ dédié (`relanceMark`) pose `lastRelance = now` après envoi confirmé. Tag « ↻ Relancé le DD/MM/YYYY ✕ » → clic = `relanceUndo`. Filtre « À relancer » Accueil utilise `max(dateMin, lastRelance)` pour le seuil 7j.
 
-Dans `bilanCompute()`, deux colonnes distinctes :
-- **Payé** = somme de `e.montant` (déclaré + au noir)
-- **CA** = somme de `e.ca` (déclaré seulement, sert aux seuils micro-BNC / TVA)
+`buildGmailUrl(to, subject, body)` retourne `https://accounts.google.com/AccountChooser?continue=<gmail_compose_url>` (force le sélecteur de compte). Toujours fullscreen (limite Google ~2018, pas contournable). **Ne pas revenir à `mailto:`** : route vers Outlook par défaut sur Edge/Windows. Templates dans `S.prefs.gmailTemplates`, placeholders `{contact} {ref} {date} {client} {name}`.
 
-⚠ **Ne jamais utiliser `montant - frais` comme fallback pour `ca` quand `ca = 0`**. Une entry avec `ca=0` et `montant>0` = volontairement au noir, pas une donnée manquante. Promouvoir ça en CA déclaré = faute fiscale.
+### Auth mobile
 
-Chaque devis a `S.mission.declare` (true par défaut, false = au noir). `suiviAdd()` câble automatiquement la décomposition à l'archivage :
-- URSSAF = `montant × urssafPct` (0 si au noir)
-- Trésorerie = `montant × (tauxAvecSecurite / tarifH)` — fraction du tarif horaire qui finance matos+abos+sécurité
-- Salaire net = `montant − URSSAF − Trésorerie`
-- CA = `montant` si déclaré, `0` si au noir
+`signInWithRedirect` sur mobile (UA), `signInWithPopup` sur desktop. Google bloque popup OAuth sur navigateurs mobiles. `isInAppWebView()` détecte WebViews intégrées (Messenger/Instagram/FB/Twitter) et affiche un écran « Ouvre dans Safari/Chrome » au lieu de tenter (échec `disallowed_useragent`).
 
-**Plage de mois affichée** : `bilanCompute()` génère TOUS les mois entre la première activité (entry / début abo / achat matériel) et aujourd'hui — pas seulement les mois avec entries Suivi. Sinon les mois sans encaissement mais avec abos/amort actifs sont oubliés et le sous-total annuel des charges fixes est faux. Filtre final élide uniquement les mois "vraiment vides" (zéro partout).
+### Archivage et impression
 
-## Archivage et impression
+**Un seul bouton d'archivage** : `rDevisPaneFooterInner` (sticky bas onglet Devis). Aucun bouton dans les previews live. `suiviAdd()` (nouveau) crée 2 entries + 2 snapshots HTML. `suiviUpdateSnapshot()` (existant modifié) met à jour les 2 + recrée entries si manquantes.
 
-- **Un seul bouton d'archivage** : `rDevisPaneFooterInner` (sticky en bas de l'onglet Devis). Aucun bouton dans les previews. Le bouton enregistre **devis + débours** en une seule action.
-- `suiviAdd()` (nouveau devis) → crée 2 entries Suivi (acompte + reste) + 2 snapshots HTML (`snapshotHtml` + `snapshotDeboursHtml`).
-- `suiviUpdateSnapshot()` (devis existant modifié) → met à jour les 2 snapshots + recrée les entries si manquantes.
-- **Impression UNIQUEMENT depuis Suivi**. Modal `rViewDevisModal` avec onglets *Devis | Débours* (Débours visible si `snapshotDeboursHtml` non vide). Le bouton imprimer adapte son label et le nom de fichier PDF (`computePrintFilename`).
-- Pas de bouton « Imprimer » dans les previews live (`rDevisPreview` / `rDeboursPreview`).
+**Impression UNIQUEMENT depuis Suivi**. Modal `rViewDevisModal` avec onglets *Devis | Débours*. `computePrintFilename` adapte le nom PDF.
 
-## Méthode de travail attendue
+## Pièges connus
 
-- **Découpage en phases** pour toute tâche non triviale : audit / proposition / exécution. Arrêt explicite à la fin de chaque phase, attente de mon "OK" avant de passer à la suivante.
-- **Audit en UI pour les grosses refontes** : pour les phases d'audit (Phase 1) sur des features complexes, injecter aussi le diagramme/audit **dans l'app** (bloc `<details>` collapsible). Permet à l'utilisateur de valider visuellement le diagnostic avant Phase 2. Le bloc se retire à la fin de la refonte (étape dédiée).
-- **Audit + proposition obligatoires (même en auto mode)** pour toute opération qui : touche la navigation/menu · modifie le schéma de `S` · supprime > 50 lignes · utilise `sed` ou un Edit multi-zones. Pas d'exécution sans "OK" explicite.
-- **Challenger bienvenu** : tu es autorisé — et encouragé — à proposer des améliorations, questions, ou alternatives auxquelles je n'aurais pas pensé. Sépare-les clairement de ce que j'ai demandé. Pour chacune, indique : à faire maintenant / plus tard / juste à noter.
-- **Demander plutôt que deviner** sur les points métier (statut fiscal, conventions, intentions produit). Mieux vaut une question qu'une supposition.
-- **Sanity check après gros édit** : lancer `./check.sh` après tout `sed` ou Edit multi-zones, **avant** `git commit`.
-- **Navigation par ancres** dans `index.html` : pour localiser une fonction, `grep "^// ▼ <nom>"` plutôt que les numéros de ligne du TOC. Lister toutes les ancres : `grep -n "^// ▼ " index.html`. Quand tu ajoutes une fonction-clé (renderer `rXX`, helper exposé, modal), pose une ancre au format `// ▼ <nom> — <description courte>` au-dessus.
-- **Grep avant Edit sur `index.html`** : avant tout `Edit`, vérifier l'unicité de `old_string` (`grep -c` ou `grep -n`). Sur un fichier de 9 000 lignes, beaucoup de patterns courts collisionnent (`esc(...)`, `${...}`, `S.mission.client.name`). Si non unique, élargir le contexte ou cibler via une ancre voisine.
-- **Reads serrés via ancres** : ne pas `Read` 200 lignes par sécurité. Pour bosser sur une fonction, `grep -n "^// ▼ <nom>"` puis `Read offset=<L> limit=80`. Ne charger plus large QUE si la fonction appelle des helpers que je ne connais pas.
-- **CLAUDE.md mis à jour proactivement, pas seulement au Kenavo** : dès qu'une convention nouvelle ou non-évidente est introduite (architecture, pattern de sync, naming, piège récurrent), ajouter le bullet au CLAUDE.md **dans la même PR/le même cycle**. Ne pas attendre la fin de session : si on oublie, le tour suivant peut casser la convention. Le Kenavo reste pour la consolidation finale (revue + nettoyage).
+- **Jamais `render()` depuis un `oninput`** sur input texte → perte focus garantie. OK depuis `onchange` toggle/select et click button.
+- **Filtre sticky pendant édition** : item édité via volet déplié doit être exempté des filtres en cours (`g.devisId === sticky || <predicate>`). Voir `suiviExpandedDevis`, `accueilExpandedDevis`. Reset sticky quand l'user change explicitement de filtre. **Piège** : le sticky doit exempter UNE condition dynamique (statut, late, restant) **dans une section où le devis appartient déjà**, pas l'appartenance globale. Toujours pré-filtrer l'appartenance en amont (ex. « ce devis est-il accepté ? ») AVANT le `|| sticky`, sinon il fuit dans une section voisine (ex. devis `envoye` ouvert depuis « À relancer » apparaît vide dans « En attente de paiement »).
+- **Dropdown ancré à un `<th>`** : `position:absolute` dans `<th>` se retrouve sous `<tbody>` (stacking pénalisant). Solution : menu HORS table en `position:fixed`, coords via `getBoundingClientRect()`. Voir `positionThMenu()` + `suiviDateMenuHtml()` (call dans `requestAnimationFrame`).
+- **Tooltip dans `.edit-section`** : utiliser le pattern portal (`position:fixed` dans `<body>`), pas tooltip CSS-only. La section parente a `overflow:hidden`. Helper générique `showInfo(event, "key")` + `INFO_HTML[key]` + portail `_paiementTooltipEl`.
+- **Opacité sur `<td>`** : rend la cellule entière translucide → si la ligne a un fond personnalisé (`tr.subtotal`, `tr.grandtotal`), trou visuel. Pattern : envelopper dans `<span>` enfant et appliquer l'opacité au span. Voir `.hist td.cp-zero > span`.
+- **Firestore : `update()` PAS `set + merge:true`** — `set+merge` deep-merge silencieusement, donc `delete dv.lastRelance` local n'est jamais répercuté → ré-injection au `onSnapshot` suivant. Fallback `set(payload)` (sans merge) uniquement si doc inexistant (`error.code === "not-found"`).
+- **Réconciliation `_localChangeTs`** — `save()` bump le timestamp. Lu par `loadFromCloud` (boot) ET `subscribeWorkspaceData` (live) : si `cloud._localChangeTs < S._localChangeTs` → SKIP merge cloud + PUSH local. Évite la perte de modifs faites avant l'expiration du debounce save (200ms) sur reload rapide.
+- **Beforeunload/pagehide flush** : `flushSaveBeforeUnload` clear `cloudT` et appelle `saveToCloud()` synchrone (best-effort). Combiné au timestamp + debounce 200ms, fenêtre de perte quasi-nulle.
+- **`recomputeRef`** : régénère ref si format obsolète OU si client courant a un num qui ne match pas. Protection : si la ref correspond à un devis archivé ET son format reflète le client courant, on ne touche pas.
 
-## Commandes utiles
+## Hors-périmètre
 
-À utiliser au lieu de redécouvrir l'incantation à chaque session.
+**Ne JAMAIS modifier sans valider explicitement avec moi** :
 
-```bash
-./check.sh                                # sanity check (regen SCHEMA.md inclus)
-py gen-schema.py                          # régénère SCHEMA.md depuis DEFAULT_S
-grep -n "^// ▼ " index.html               # liste toutes les ancres (renderers, helpers, modals)
-grep -nE "^function r[A-Z]" index.html    # liste tous les renderers (rXX)
-grep -n "TABLE DES MATIÈRES" index.html   # localise le TOC
-python3 -m http.server 8000               # serveur local pour itérer
-```
+- `OWNER_EMAIL` (hardcodé `saintilan.romain@gmail.com`). Si changé : code + Firestore Rules console + supprimer `workspace_ids/<ancien-email>`.
+- Suffixe `SK` (`devis-photo-data-v2`) — casse tous les caches utilisateurs.
+- Migration Firebase v8 → v9 modulaire.
+- Firestore Security Rules (en console, pas dans le repo).
+- `DEFAULT_S` schéma → toute modif impose mise à jour `loadFromCloud` + `saveToCloud` + `gen-schema.py` régénéré.
+- Suppression de champs persistés sur entries Suivi historiques.
+
+## Méthode de travail
+
+- **Découpage en phases** pour toute tâche non triviale : audit / proposition / exécution. Stop explicite à la fin de chaque phase, attente "OK".
+- **Audit en UI pour grosses refontes** : injecter aussi le diagramme/audit dans l'app (bloc `<details>` collapsible). Retirer à la fin.
+- **Audit + proposition obligatoires (même en auto mode)** pour : navigation/menu, schéma `S`, suppression > 50 lignes, `sed` ou Edit multi-zones.
+- **Challenger** bienvenu : propose alternatives/questions, sépare clairement de ce que je demande, indique : maintenant / plus tard / juste à noter.
+- **Demander plutôt que deviner** sur les points métier (statut fiscal, conventions, intentions produit).
+- **Sanity check** : `./check.sh` après tout `sed` ou Edit multi-zones, **avant** `git commit`.
+- **Grep avant Edit sur `index.html`** : vérifier l'unicité de `old_string` (`grep -c`). Beaucoup de patterns courts collisionnent. Si non unique, élargir contexte ou cibler via ancre voisine.
+- **Reads serrés via ancres** : `grep -n "^// ▼ <nom>"` puis `Read offset=<L> limit=80`. Pas 200 lignes par sécurité.
+
+## Auto-maintenance
+
+Règles que je suis à chaque session sur ce CLAUDE.md.
+
+- **Auto-alimentation** : en fin de tâche, si une convention non documentée, un piège, ou une commande non triviale est apparu → l'ajouter ici en 1–2 lignes max, dans la bonne section. Pas attendre la fin de session.
+- **Critère d'ajout strict** : une info entre dans CLAUDE.md uniquement si **(a)** elle n'est pas déductible du code en < 30 s, **ET (b)** elle resservira dans une future session. Sinon, je n'écris rien.
+- **Diagnostic périodique** : tous les ~10 commits, je relance la Phase 1 (audit obsolescence/doublons/verbeux/trivial) et propose un nettoyage avant exécution.
+- **Nettoyage** : je supprime sans hésiter ce qui est obsolète, redondant ou trivial. Court et juste > long et flou.
+- **Format** : phrases courtes, listes à puces, code en `backticks`. Pas de « il est important de noter que », « par ailleurs », « en effet ».
+- **Délégation** : si l'info est dans `SCHEMA.md`, `check.sh`, ou `gen-schema.py` → référencer le fichier, ne pas dupliquer.
+
+## Efficacité
+
+### Lecture & économie
+
+- **Grep/glob avant `read`**. Fichier entier seulement si nécessaire — sur `index.html` (~9000 lignes), 50 lignes ciblées via ancre suffisent presque toujours.
+- **Résumer plutôt que citer**. Pas de réaffichage de gros blocs sans nécessité.
+- **Grouper les modifs liées dans un seul tour** (un seul `Edit` ou un seul commit cohérent).
+
+### Code
+
+- **Types/signatures explicites sur le code public** (TS strict, type hints Python). Sur ce projet : vanilla JS sans types — privilégier des noms parlants + JSDoc seulement quand le contrat est non-trivial.
+- **Linter + formatter** configurés et exécutés avant qu'une tâche soit déclarée finie. Sur ce projet : `./check.sh` tient ce rôle.
+
+### Navigation
+
+- **Maintenir un `ARCHITECTURE.md` à la racine** dès que l'archi se complexifie au-delà du mono-fichier : carte des modules, points d'entrée, flux de données. À jour quand l'archi bouge.
+- **`CLAUDE.md` locaux** dans les sous-dossiers complexes plutôt que tout entasser à la racine.
+- **Lister les dossiers générés à ignorer** s'ils ne sont pas évidents (`build/`, `dist/`, `.next/`, `coverage/`…). Ici : aucun (mono-fichier).
+- **Glossaire métier** si le projet a son jargon. Ici : *au noir / déclaré*, *débours / frais accessoires*, *Maj Trame / Réviser*, *snapshot / legacy*, *sticky filter*, *workspace / owner / member* — tous définis dans § Schéma & sémantique métier ou § Workflows.
+
+### Outils & MCP
+
+- **Outils projet** : maintenir la liste linters/formatters/tests à jour (ici `check.sh` + `gen-schema.py`), les exécuter avant de déclarer une tâche finie.
+- **MCP & skills** : ~1x/semaine en usage actif, vérifier si un nouveau MCP server ou une skill Anthropic réduirait coût ou améliorerait qualité sur les tâches récurrentes. Si oui, proposer.
+- **Audit trimestriel** : ~3 mois, proposer une revue — quelles règles du CLAUDE.md me ralentissent, quels nouveaux outils existent côté Claude Code.
 
 ## Fin de session
 
-Mot-clé de fin de session : **« Kenavo ! »** (au revoir en breton). Quand l'utilisateur écrit ce mot, répondre **avant** toute autre chose par la question :
+Mot-clé : **« Kenavo ! »**. Quand l'utilisateur l'écrit, répondre **avant** toute autre chose par :
 
 > Au vu de ce qu'on vient de faire, qu'est-ce qui mériterait d'être ajouté au CLAUDE.md pour qu'une prochaine session démarre mieux ? Propose des ajouts précis avec leur emplacement dans le fichier.
 
-Objectif : capturer les conventions, pièges et contextes nouveaux apparus pendant la session avant que l'utilisateur ne `/clear`. La proposition doit être **précise** : nouveau point de bullet, nouvelle sous-section, ou modification d'une règle existante, avec **l'emplacement exact** (section + position dans le fichier).
-
-Une fois la réponse donnée et les ajouts validés (ou refusés), l'utilisateur fera `/clear` lui-même.
+Précis = nouveau bullet, sous-section ou modif d'une règle, avec emplacement exact (section + position). Une fois validé/refusé, l'user fait `/clear`.
