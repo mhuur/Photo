@@ -8224,9 +8224,44 @@ function suiviRecomputeRefs() {
   }
 }
 
+// ▼ missionStripForCompare — sérialise une mission en ignorant les champs
+// qui changent à chaque enregistrement même sans modification réelle :
+// dateEmission, ref, revisesDevisId, objectDate. Permet de détecter une
+// révision « no-op » dans suiviAdd.
+function missionStripForCompare(m) {
+  const x = JSON.parse(JSON.stringify(m));
+  delete x.dateEmission;
+  delete x.ref;
+  delete x.revisesDevisId;
+  delete x.objectDate;
+  // Les ids des lignes peuvent différer si l'utilisateur a recréé une ligne
+  // mais avec les mêmes champs ; on les neutralise pour ne pas induire de
+  // faux positifs de modification. Les autres champs des lignes restent.
+  if (Array.isArray(x.lignes)) {
+    for (const l of x.lignes) delete l.id;
+  }
+  return JSON.stringify(x);
+}
+
 // ▼ suiviAdd — archive le devis : 2 entries Suivi + 2 snapshots
 function suiviAdd() {
   const m = S.mission;
+  // Garde-fou révision no-op : si on revise un devis et que rien n'a
+  // changé (ou seules les dates), on n'incrémente pas la version. Évite
+  // de créer une V<N+1> identique à V<N> et d'annuler V<N> pour rien.
+  if (m.revisesDevisId) {
+    const dvPrev = S.suivi.devis && S.suivi.devis[m.revisesDevisId];
+    if (dvPrev && dvPrev.snapshotMission) {
+      const sameAsPrev = missionStripForCompare(m) === missionStripForCompare(dvPrev.snapshotMission);
+      if (sameAsPrev) {
+        alert("Aucune modification détectée par rapport à la version précédente.\n\nAucune nouvelle révision créée. Le devis original reste tel quel.");
+        delete m.revisesDevisId;
+        save();
+        render();
+        return;
+      }
+    }
+  }
   const cat = (S.tarifs.catalog || DEFAULT_CATALOG).find(c => c.k === m.object);
   const t = totals();
   const hoursTotal = (m.lignes || []).filter(l => l.type === "heures").reduce((s, l) => s + num(l.duree) * (l.unit === "j" ? HOURS_PER_DAY : 1), 0);
