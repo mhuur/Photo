@@ -722,8 +722,8 @@
 
   /* Ligne 2 (extra) : repliée par défaut, déployée au focus-within ou has-content */
   .bug-form-extra{max-height:0;opacity:0;overflow:hidden;transition:max-height .25s ease,opacity .2s ease,margin-top .25s ease,padding-top .25s ease;display:flex;flex-direction:column;gap:8px}
-  .bug-form:focus-within .bug-form-extra,.bug-form.has-content .bug-form-extra{max-height:280px;opacity:1;margin-top:8px;padding-top:8px;border-top:1px solid var(--border-soft)}
-  .bug-form-text-quick{padding:8px 10px;border:1px solid var(--border-light);border-radius:6px;background:var(--bg-2);color:var(--text);font:inherit;font-size:13px;font-family:inherit;resize:vertical;min-height:50px}
+  .bug-form:focus-within .bug-form-extra,.bug-form.has-content .bug-form-extra{max-height:600px;opacity:1;margin-top:8px;padding-top:8px;border-top:1px solid var(--border-soft)}
+  .bug-form-text-quick{padding:10px 12px;border:1px solid var(--border-light);border-radius:6px;background:var(--bg-2);color:var(--text);font:inherit;font-size:13px;font-family:inherit;resize:vertical;min-height:140px;line-height:1.5}
   .bug-form-text-quick:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 2px var(--primary-soft)}
   .bug-form-text-quick::placeholder{color:var(--text-dim)}
   .bug-form-next-num{display:inline-flex;align-items:center;justify-content:center;height:28px;padding:0 10px;background:var(--surface-2);color:var(--text-muted);font-size:11px;font-weight:700;border-radius:6px;flex-shrink:0;letter-spacing:.02em}
@@ -13328,7 +13328,7 @@ function rBG() {
       <button class="bug-form-add-btn" onclick="bugAdd()" title="Ajouter (Entrée)" aria-label="Ajouter">＋</button>
     </div>
     <div class="bug-form-extra">
-      <textarea class="bug-form-text-quick" rows="2" placeholder="Description (optionnelle)…" oninput="bugDraftSet('text', this.value)">${esc(bugDraft.text || "")}</textarea>
+      <textarea class="bug-form-text-quick" rows="6" placeholder="Description (optionnelle) — étapes pour reproduire, ce qui s'est passé, ce que tu attendais…" oninput="bugDraftSet('text', this.value)">${esc(bugDraft.text || "")}</textarea>
       <div class="bug-form-hint">
         💡 <strong>Captures :</strong> prends ta capture maintenant, nomme-la <code>note-${nextNum}.png</code> (ou <code>note-${nextNum}-1.png</code>, <code>note-${nextNum}-2.png</code>) et envoie-la par mail. Le numéro <strong>#${nextNum}</strong> sera attribué à cette remarque.
       </div>
