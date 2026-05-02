@@ -50,6 +50,7 @@ Source : `index.html` (bloc `const DEFAULT_S = { ... };`).
   - **declare**: boolean _(default `true`)_
   - **blackMode**: string _(default `"reduit"`)_
   - **urssafPct**: string _(default `"22"`)_
+  - **tarifHOverride**: string _(default `""`)_
   - **remisePct**: string _(default `"0"`)_
   - **notes**: string _(default `""`)_
   - **contratHorsEtab**: boolean _(default `false`)_

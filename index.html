@@ -2157,6 +2157,7 @@ const DEFAULT_S = {
     declare: true,
     blackMode: "reduit",
     urssafPct: "22",
+    tarifHOverride: "",
     remisePct: "0",
     notes: "",
     contratHorsEtab: false,
@@ -2949,6 +2950,9 @@ function refreshRefDisplay() {
 
 function pickObject(k) {
   S.mission.object = k;
+  // Sélectionner explicitement une prestation efface l'override legacy :
+  // l'utilisateur veut désormais le tarif catalogue.
+  if (S.mission.tarifHOverride) S.mission.tarifHOverride = "";
   const item = (S.tarifs.catalog || DEFAULT_CATALOG).find(c => c.k === k);
   if (item && item.p) S.mission.prod.rate = String(item.p);
   save();
@@ -3106,6 +3110,8 @@ function missionNew(presetClient) {
   // Ajustements
   m.remisePct = "0";
   m.contratHorsEtab = false;
+  // Override tarif (legacy reconstruction) : spécifique au devis, pas config.
+  m.tarifHOverride = "";
   // Marker transient (cas reviseDevisStart pas finalisé) nettoyé
   delete m.revisesDevisId;
   // Régénère la ref auto
@@ -5283,18 +5289,26 @@ function reconstructMissionFromSuivi(devisId, opts) {
       recovered.push("montant forfaitaire");
     } else {
       // Mode édition (Réviser) : type heures pour reprendre un workflow
-      // standard. Le tarif × heures pourra différer du montant original
-      // (légitime : V2 = nouveau document, l'utilisateur ajuste).
+      // standard. On synthétise un tarifH = totalMontant / totalHeures pour
+      // que la ligne affiche le montant V1 dès l'ouverture (sans cela la
+      // ligne serait à 0 € faute de match catalogue). L'override est posé
+      // dans S.mission.tarifHOverride (effacé dès que l'utilisateur pick
+      // une prestation dans le dropdown — cf pickObject).
       const noteMontant = totalMontant > 0
         ? `Montant total des paiements (V1) : ${totalMontant.toFixed(2).replace(".", ",")} €. `
         : "";
+      const dureeForLine = totalHeures > 0 ? totalHeures : 1;
+      if (totalMontant > 0) {
+        fresh.tarifHOverride = (totalMontant / dureeForLine).toFixed(2);
+        recovered.push("tarif horaire (synthétisé)");
+      }
       fresh.lignes = [{
         id: uid(),
         type: "heures",
         intitule: fallbackLabel,
-        duree: totalHeures > 0 ? totalHeures.toFixed(2) : "",
+        duree: dureeForLine.toFixed(2),
         unit: "h",
-        description: `${noteMontant}Reconstitué depuis le suivi.`
+        description: `${noteMontant}Reconstitué depuis le suivi. Sélectionne une prestation pour utiliser le tarif catalogue.`
       }];
       recovered.push("heures totales");
     }
@@ -5546,7 +5560,11 @@ function totals() {
   // Au black, the photographer can pass the URSSAF saved as a discount to the client:
   //   tarif au black = gross × (1 - URSSAF%) — équivalent net
   const cat = (S.tarifs.catalog || DEFAULT_CATALOG).find(c => c.k === d.object);
-  const _baseTotal = cat ? num(cat.p) : 0;
+  // Override de tarif horaire posé par la reconstruction legacy (Réviser sur
+  // un devis sans catalogue match). Effacé dès que l'utilisateur sélectionne
+  // une prestation dans le dropdown (cf. pickObject).
+  const _override = num(d.tarifHOverride);
+  const _baseTotal = _override > 0 ? _override : (cat ? num(cat.p) : 0);
   const _isDecTot = d.declare !== false;
   const _urssafFactorTot = 1 - (num(d.urssafPct ?? 22)) / 100; // e.g., 0.78 for 22%
   // Tarif horaire :
