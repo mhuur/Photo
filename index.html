@@ -2983,7 +2983,10 @@ async function loadFromCloud(ownerUid) {
       if (cloudCts > 0 && localCts > 0 && cloudCts < localCts) {
         console.log("[boot] localStorage plus récent que cloud — skip merge boot, push local au cloud.");
         // Pas d'override : on garde S tel qu'il était (chargé depuis localStorage).
-        // On déclenche une sauvegarde immédiate pour rattraper le cloud.
+        // Mais on doit AUSSI tenter le cleanup ici — sinon le saveToCloud va
+        // échouer silencieusement avec « exceeds maximum size » et la sync
+        // restera bloquée. autoCleanupDoc allège S avant le push.
+        await autoCleanupDoc();
         clearTimeout(cloudT);
         saveToCloud();
         render();
