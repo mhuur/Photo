@@ -189,6 +189,10 @@
   .suv-expanded-panel{padding:14px 18px 16px;display:flex;flex-direction:column;gap:10px}
   .suv-expanded-actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding-bottom:8px;border-bottom:1px solid var(--border-soft)}
   .suv-expanded-print{display:flex;gap:6px;flex-wrap:wrap;align-items:center;padding-top:8px;border-top:1px solid var(--border-soft)}
+  .suv-last-relance{display:inline-flex;align-items:center;gap:4px;font-size:11px;color:var(--text-dim);background:rgba(34,197,94,.10);border:1px solid rgba(34,197,94,.25);border-radius:6px;padding:3px 8px;cursor:pointer;transition:all .15s}
+  .suv-last-relance:hover{background:rgba(239,68,68,.10);border-color:rgba(239,68,68,.35);color:#dc2626}
+  .suv-last-relance-undo{font-size:10px;opacity:.6}
+  .suv-last-relance:hover .suv-last-relance-undo{opacity:1}
   /* Indicateur révision (↻ / ↺) à côté de la ref dans la ligne tableau */
   .suv-revision-ico{display:inline-block;margin-left:6px;font-size:13px;color:var(--accent);cursor:help;font-weight:600}
   /* Bloc détail révision dans le volet expanded (cf Q4 option C) */
@@ -3474,8 +3478,29 @@ function gmailRelanceForDevis(devisId, kind) {
     if (!confirm("Aucun email de contact trouvé pour ce client. Ouvrir Gmail sans destinataire ?")) return;
   }
   openGmailCompose(to, subject, body);
+  // Marque le devis comme relancé maintenant : le compteur 7j de l'Accueil
+  // « À relancer » repart de zéro. Hypothèse pragmatique : si l'utilisateur
+  // a cliqué le bouton Gmail, il va envoyer le mail. Si finalement il ne
+  // l'envoie pas, il peut undo via le bouton « Annuler relance » sur le devis.
+  if (!S.suivi.devis) S.suivi.devis = {};
+  if (!S.suivi.devis[devisId]) S.suivi.devis[devisId] = { ref };
+  S.suivi.devis[devisId].lastRelance = new Date().toISOString();
+  save();
+  render();
 }
 window.gmailRelanceForDevis = gmailRelanceForDevis;
+
+// ▼ relanceUndo — efface le timestamp lastRelance pour faire réapparaître
+// le devis dans « À relancer » immédiatement (cas où l'utilisateur a ouvert
+// Gmail mais finalement pas envoyé).
+function relanceUndo(devisId) {
+  const dv = S.suivi && S.suivi.devis && S.suivi.devis[devisId];
+  if (!dv || !dv.lastRelance) return;
+  delete dv.lastRelance;
+  save();
+  render();
+}
+window.relanceUndo = relanceUndo;
 
 // Update SIRET in S.identite + refresh status indicator without losing focus.
 window.updSiretWithCheck = function(raw) {
@@ -8978,7 +9003,12 @@ function suiviExpandedPanelHtml(g) {
         else if (statutPrin === "en_cours" || statutPrin === "attente") kind = "paiement";
         if (!kind) return "";
         const lbl = kind === "paiement" ? "Relance paiement" : "Relance devis";
-        return `<button class="btn ghost suv-gmail-btn" onclick="${stop}gmailRelanceForDevis('${g.devisId}','${kind}')" title="Ouvrir Gmail avec un template de relance pré-rempli">✉ ${esc(lbl)}</button>`;
+        const dv = S.suivi.devis && S.suivi.devis[g.devisId];
+        const lastRel = dv && dv.lastRelance;
+        const lastRelHtml = lastRel
+          ? `<span class="suv-last-relance" title="Cliquer pour annuler la relance et faire réapparaître le devis dans « À relancer »" onclick="${stop}relanceUndo('${g.devisId}')">↻ Relancé le ${esc(dateFR(lastRel.slice(0,10)))} <span class="suv-last-relance-undo">✕</span></span>`
+          : "";
+        return `<button class="btn ghost suv-gmail-btn" onclick="${stop}gmailRelanceForDevis('${g.devisId}','${kind}')" title="Ouvrir Gmail avec un template de relance pré-rempli. Met à jour la date de dernière relance (compteur 7j Accueil reset).">✉ ${esc(lbl)}</button>${lastRelHtml}`;
       })()}
       <button class="btn ghost" onclick="${stop}viewDevisOpen('${g.devisId}')">🖨 Devis</button>
       ${(() => {
@@ -11049,16 +11079,22 @@ function rAC() {
     const lignes = [...g.lignes].sort((a, b) => (a.date || "").localeCompare(b.date || ""));
     const total = lignes.reduce((s, e) => s + num(e.montant), 0);
     const dates = lignes.map(e => e.date || "").filter(Boolean);
-    const ref = (S.suivi.devis && S.suivi.devis[g.devisId] && S.suivi.devis[g.devisId].ref) || "";
+    const dv = (S.suivi.devis && S.suivi.devis[g.devisId]) || {};
+    const ref = dv.ref || "";
     const lead = lignes[0] || {};
-    return { ...g, total, ref, client: lead.client || "", dateMin: dates[0] || "", dateMax: dates[dates.length - 1] || "" };
+    return { ...g, total, ref, client: lead.client || "", dateMin: dates[0] || "", dateMax: dates[dates.length - 1] || "", lastRelance: dv.lastRelance || "" };
   });
 
+  // « À relancer » : compteur basé sur max(dateMin, lastRelance). Cliquer
+  // l'icône Gmail pose lastRelance=now (cf. gmailRelanceForDevis), donc le
+  // devis disparaît temporairement et reprend après seuil jours.
   const aRelancer = groups
     .filter(g => g.statutPrin === "envoye")
     .map(g => {
-      const d = g.dateMin ? new Date(g.dateMin + "T00:00:00").getTime() : 0;
-      return { ...g, late: d > 0 && (ms - d) > seuilMs };
+      const dEmi = g.dateMin ? new Date(g.dateMin + "T00:00:00").getTime() : 0;
+      const dRel = g.lastRelance ? new Date(g.lastRelance).getTime() : 0;
+      const dRef = Math.max(dEmi, dRel);
+      return { ...g, late: dRef > 0 && (ms - dRef) > seuilMs };
     })
     .filter(g => g.late)
     .sort((a, b) => (a.dateMin || "").localeCompare(b.dateMin || ""));
