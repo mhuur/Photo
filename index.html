@@ -4954,6 +4954,7 @@ window.bugCardEditStart = function(id) {
   requestAnimationFrame(() => {
     const ta = document.querySelector(`.fb-card[data-bug-id="${id}"] .bug-card-text`);
     if (ta) {
+      bugAutoResize(ta);
       ta.focus();
       try { ta.setSelectionRange(ta.value.length, ta.value.length); } catch (e) {}
     }
@@ -4962,6 +4963,12 @@ window.bugCardEditStart = function(id) {
 window.bugCardEditEnd = function() {
   bugCardEditingId = null;
   render();
+};
+// Auto-grow textarea selon le contenu — appelé au focus + à chaque oninput.
+window.bugAutoResize = function(el) {
+  if (!el) return;
+  el.style.height = "auto";
+  el.style.height = (el.scrollHeight + 4) + "px";
 };
 
 // Render avec préservation focus pour la recherche (évite de perdre le caret
@@ -13416,7 +13423,7 @@ function rBG() {
     // textarea au clic. Si vide et pas en édition → bouton discret « + ».
     let descHtml;
     if (editing) {
-      descHtml = `<textarea class="bug-card-text" rows="2" placeholder="Description…" oninput="bugUpdateText('${it.id}',this.value)" onblur="bugCardEditEnd()">${esc(it.text || "")}</textarea>`;
+      descHtml = `<textarea class="bug-card-text" rows="3" placeholder="Description…" oninput="bugUpdateText('${it.id}',this.value);bugAutoResize(this)" onfocus="bugAutoResize(this)" onblur="bugCardEditEnd()">${esc(it.text || "")}</textarea>`;
     } else if (it.text && it.text.trim()) {
       descHtml = `<div class="bug-card-text-display" onclick="bugCardEditStart('${it.id}')" title="Modifier">${esc(it.text)}</div>`;
     } else {
