@@ -3212,21 +3212,36 @@ function formatSiret(siret) {
   return s;
 }
 
-// === Helpers Gmail compose ===
-// Construit une URL Gmail compose. Tente le format tf=cm (legacy) qui peut
-// ouvrir en popup chez certains comptes Gmail. Si ne marche pas, le fallback
-// recommandé est de configurer Gmail comme handler mailto: dans Chrome.
+// === Helpers compose mail ===
+// On utilise le format mailto: qui respecte le handler mail par défaut du
+// navigateur. Si Gmail est configuré comme handler mailto dans Chrome
+// (icône losange dans la barre d'URL en visitant gmail.com → Autoriser),
+// le clic ouvre Gmail en popup compose, ce qui est l'expérience souhaitée.
+// Sinon : ouverture du client mail système (Outlook, Mail.app, etc.).
 function buildGmailUrl(to, subject, body) {
-  return "https://mail.google.com/mail/u/0/?tf=cm"
-    + (to      ? "&to=" + encodeURIComponent(to) : "")
-    + (subject ? "&su=" + encodeURIComponent(subject) : "")
-    + (body    ? "&body=" + encodeURIComponent(body) : "");
+  // Encode aussi les espaces en %20 et les sauts de ligne en %0A pour mailto.
+  const params = [];
+  if (subject) params.push("subject=" + encodeURIComponent(subject));
+  if (body)    params.push("body=" + encodeURIComponent(body));
+  return "mailto:" + encodeURIComponent(to || "")
+    + (params.length ? "?" + params.join("&") : "");
 }
 
+// Déclenche un mailto sans quitter la page : crée un <a> caché, le clique,
+// puis le retire. Le navigateur passe au handler mailto (Gmail si configuré).
 function openGmailCompose(to, subject, body) {
-  window.open(buildGmailUrl(to, subject, body), "_blank", "noopener");
+  triggerMailto(buildGmailUrl(to, subject, body));
 }
 window.openGmailCompose = openGmailCompose;
+
+function triggerMailto(url) {
+  const a = document.createElement("a");
+  a.href = url;
+  a.style.display = "none";
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(() => { try { document.body.removeChild(a); } catch (_) {} }, 100);
+}
 
 // Retrouve le client lié à un devis archivé. 4 stratégies :
 //   1. snapshotMission.client.id (le plus fiable, devis post-feature snapshot)
@@ -4792,9 +4807,10 @@ const INFO_HTML = {
     <ol style="margin:0 0 8px;padding-left:18px;font-size:12px;line-height:1.55">
       <li>Click ce bouton → entre en mode sélection.</li>
       <li>Click sur les lignes que tu veux inclure.</li>
-      <li>Click « Envoyer (BCC) » → Gmail s'ouvre avec tous les emails déjà en BCC.</li>
-      <li>Tu écris ton sujet et ton message dans Gmail, puis tu envoies.</li>
+      <li>Click « Envoyer (BCC) » → ouvre ton client mail (Gmail si configuré comme handler par défaut).</li>
+      <li>Tu écris ton sujet et ton message, puis tu envoies.</li>
     </ol>
+    <p style="margin:0 0 6px;font-size:12px;line-height:1.5;color:var(--text-muted)">Pour que Gmail s'ouvre en popup : visiter <a href="https://mail.google.com" target="_blank" style="color:var(--primary)">gmail.com</a>, cliquer sur l'icône en forme de losange dans la barre d'URL Chrome, puis « Autoriser » Gmail à gérer les liens email.</p>
     <p style="margin:0;font-size:12px;line-height:1.5;color:var(--text-muted)">Si un client sélectionné n'a pas d'email, il sera ignoré (avec confirmation).</p>
   `
 };
@@ -9081,8 +9097,10 @@ function clientsBulkEmail() {
     const msg = `${emails.length} email${emails.length > 1 ? "s" : ""} récupéré${emails.length > 1 ? "s" : ""}.\n\n${noEmail.length} client${noEmail.length > 1 ? "s" : ""} sans email seront ignoré${noEmail.length > 1 ? "s" : ""} :\n• ${noEmail.slice(0, 6).join("\n• ")}${noEmail.length > 6 ? `\n• … et ${noEmail.length - 6} autre${noEmail.length - 6 > 1 ? "s" : ""}` : ""}\n\nContinuer ?`;
     if (!confirm(msg)) return;
   }
-  const url = "https://mail.google.com/mail/u/0/?tf=cm&bcc=" + encodeURIComponent(emails.join(","));
-  window.open(url, "_blank", "noopener");
+  // mailto: avec BCC. Encode chaque email pour gérer les caractères spéciaux.
+  const bccList = emails.map(e => encodeURIComponent(e)).join(",");
+  const url = "mailto:?bcc=" + bccList;
+  triggerMailto(url);
   clientsExitSelectMode(); // sortir du mode après envoi réussi
 }
 window.clientsBulkEmail = clientsBulkEmail;
@@ -9456,7 +9474,7 @@ function rCL() {
           <div class="cli-contact">
             <span class="nm">${esc(c.name || "(sans nom)")}</span>
             ${c.phone ? `<a class="ln" href="tel:${esc((c.phone || "").replace(/\s/g, ""))}">${ICONS.phone}${esc(c.phone)}</a>` : ""}
-            ${c.email ? `<a class="ln" href="${esc(buildGmailUrl(c.email, '', ''))}" target="_blank" rel="noopener" title="Composer un mail Gmail à ${esc(c.email)}">${ICONS.send}${esc(c.email)}</a>` : ""}
+            ${c.email ? `<a class="ln" href="${esc(buildGmailUrl(c.email, '', ''))}" title="Composer un mail à ${esc(c.email)} (handler par défaut)">${ICONS.send}${esc(c.email)}</a>` : ""}
           </div>
         `).join(""));
 
