@@ -1990,6 +1990,8 @@
 
   /* Status banner ABOVE the "+ Enregistrer dans Suivi" button — validation + dirty */
   .devis-pane-footer{margin:14px 0 0;display:flex;flex-direction:column;gap:8px;max-width:880px;position:sticky;bottom:0;z-index:50;padding:12px 0;background:linear-gradient(to top,var(--bg) 70%,rgba(0,0,0,0));border-top:1px solid var(--border-soft);backdrop-filter:blur(6px)}
+  .mission-toolbar{display:flex;gap:8px;align-items:center;margin-bottom:14px}
+  .mission-toolbar .btn svg{width:14px;height:14px;vertical-align:-2px;margin-right:5px}
   .devis-banner{font-size:12px;line-height:1.45;padding:8px 10px;border-radius:6px;display:flex;gap:8px;align-items:flex-start}
   .devis-banner.err{background:var(--danger-soft);border:1px solid var(--danger);color:var(--danger)}
   .devis-banner.warn{background:var(--warning-soft);border:1px solid var(--warning);color:var(--warning)}
@@ -3008,6 +3010,91 @@ function recomputeRef() {
     ? `DEVIS-${clientNum}-${ym}-${seq}`
     : `DEVIS-${ym}-${seq}`;
 }
+
+// ▼ missionHasDraft — détecte si le brouillon Mission contient quelque chose
+// de non-trivial (et n'est pas déjà archivé dans Suivi). Sert au garde-fou
+// avant de clear pour démarrer un nouveau devis.
+function missionHasDraft() {
+  if (typeof devisCurrentSuiviEntry === "function" && devisCurrentSuiviEntry()) return false;
+  const m = S.mission || {};
+  if (m.client && (m.client.id || (m.client.name || "").trim())) return true;
+  if (Array.isArray(m.lignes) && m.lignes.length > 0) return true;
+  if (m.prep && num(m.prep.hours) > 0) return true;
+  if (m.prod && num(m.prod.hours) > 0) return true;
+  if (m.postprod && num(m.postprod.hours) > 0) return true;
+  if (m.deplacement && (num(m.deplacement.km) > 0 || num(m.deplacement.peages) > 0
+       || num(m.deplacement.trajetH) > 0 || num(m.deplacement.ticket) > 0)) return true;
+  if (m.autres && ((m.autres.desc || "").trim() || num(m.autres.montant) > 0)) return true;
+  if ((m.objectText || "").trim() || (m.objectLieu || "").trim() || (m.object || "").trim()) return true;
+  return false;
+}
+
+// ▼ missionNew — démarre un nouveau devis. Clear les champs spécifiques au
+// devis, garde la config (taux, paiement, CGV, urssaf, etc.). Si presetClient
+// est fourni (ex. depuis « Nouveau devis pour ce client »), pré-remplit avec.
+// Retourne false si l'utilisateur annule la confirmation.
+function missionNew(presetClient) {
+  if (missionHasDraft()) {
+    if (!confirm("Tu as un brouillon en cours dans Mission qui n'a pas été enregistré dans Suivi.\n\n"
+      + "Démarrer un nouveau devis va effacer le contenu actuel (heures, lignes, client, etc.).\n\n"
+      + "Continuer ?")) return false;
+  }
+  const m = S.mission;
+  const dm = DEFAULT_S.mission;
+  // Champs identification / prestation
+  m.ref = "";
+  m.dateEmission = new Date().toISOString().slice(0, 10);
+  m.datePrestation = "";
+  m.object = "";
+  m.objectText = "";
+  m.objectDate = "";
+  m.objectLieu = "";
+  // Client : preset (depuis fiche client) sinon vide. Type = défaut profil.
+  const defaultType = (S.identite && S.identite.clienteleType) || "mixte";
+  if (presetClient) {
+    m.client = { ...dm.client, ...presetClient, type: presetClient.type || defaultType };
+  } else {
+    m.client = { ...dm.client, type: defaultType };
+  }
+  // Heures (garde les rates custom)
+  if (m.prep) m.prep.hours = "0"; else m.prep = { hours: "0", rate: "" };
+  if (m.prod) m.prod.hours = "0"; else m.prod = { hours: "0", rate: "" };
+  if (m.postprod) m.postprod.hours = "0"; else m.postprod = { hours: "0", rate: "" };
+  // Déplacement : clear chiffres seulement (garde mode, tauxKm, devis, etc.)
+  if (m.deplacement) {
+    m.deplacement.km = "0";
+    m.deplacement.peages = "0";
+    m.deplacement.trajetH = "0";
+    m.deplacement.ticket = "0";
+  }
+  // Autres
+  m.autres = { desc: "", montant: "0" };
+  // Lignes / échéances vides
+  m.lignes = [];
+  m.echeances = [];
+  // Ajustements
+  m.remisePct = "0";
+  m.contratHorsEtab = false;
+  // Marker transient (cas reviseDevisStart pas finalisé) nettoyé
+  delete m.revisesDevisId;
+  // Régénère la ref auto
+  if (typeof recomputeRef === "function") recomputeRef();
+  save();
+  return true;
+}
+window.missionNew = missionNew;
+
+// Bouton « Nouveau devis » dans l'onglet Mission
+function missionNewClick() {
+  if (missionNew()) render();
+}
+window.missionNewClick = missionNewClick;
+
+// Bouton « + Nouveau devis » sur l'Accueil (clear + switch tab)
+function missionNewFromAccueil() {
+  if (missionNew()) setTab("mission");
+}
+window.missionNewFromAccueil = missionNewFromAccueil;
 
 let urssafUnlocked = false;
 function urssafToggleMenu() {
@@ -6987,6 +7074,9 @@ function rMS() {
 
   return `
     <span id="savedFlash" class="saved" style="position:absolute;top:18px;right:18px"></span>
+    <div class="mission-toolbar">
+      <button class="btn" onclick="missionNewClick()" title="Démarre un nouveau devis vierge. Garde la configuration (taux horaires, URSSAF, paiement, CGV) et efface tout le reste (client, heures, lignes, déplacement, autres prestations).">${ICONS.plus}Nouveau devis</button>
+    </div>
     ${rDevisAccordion()}
     ${rPreviewTabs()}
     <div class="devis-pane-footer">${rDevisPaneFooterInner()}</div>
@@ -9325,7 +9415,7 @@ function clientsNewDevis(id) {
   if (!e) return;
   const validContacts = (e.contacts || []).filter(c => c.name || c.phone || c.email);
   const onlyContact = validContacts.length === 1 ? validContacts[0] : null;
-  S.mission.client = {
+  const presetClient = {
     id: e.id, num: e.num || "", name: e.name || "",
     contact: e.contact || "", address: e.address || "", cityPostal: e.cityPostal || "",
     phone: e.phone || "", email: e.email || "",
@@ -9334,13 +9424,14 @@ function clientsNewDevis(id) {
     phoneSelected: onlyContact ? (onlyContact.phone || "") : "",
     emailSelected: onlyContact ? (onlyContact.email || "") : ""
   };
+  // missionNew gère le clear (avec confirmation si brouillon non vide) puis
+  // pré-remplit le client. Si l'utilisateur annule, on reste sur Clients.
+  if (!missionNew(presetClient)) return;
   if (typeof contactPickerModalOpen !== "undefined") {
     contactPickerModalOpen = validContacts.length > 1;
   }
-  if (typeof recomputeRef === "function") recomputeRef();
   clientsExpanded = null;
   clientsEditing = null;
-  save();
   if (typeof setTab === "function") setTab("mission"); else render();
 }
 window.clientsNewDevis = clientsNewDevis;
@@ -10536,7 +10627,7 @@ function rAC() {
     </div>
 
     <div class="ac-cta">
-      <button class="btn" onclick="setTab('mission')">+ Nouveau devis</button>
+      <button class="btn" onclick="missionNewFromAccueil()">${ICONS.plus}Nouveau devis</button>
     </div>
 
     <div class="ac-section">
