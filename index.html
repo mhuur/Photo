@@ -655,6 +655,58 @@
   .fb-copy-btn:hover{border-color:var(--primary);color:var(--primary);background:var(--primary-soft)}
   .fb-copy-btn.copied{border-color:var(--success);color:var(--success);background:var(--success-soft)}
 
+  /* === Bug report formulaire détaillé === */
+  .bug-form{max-width:720px;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:14px 16px;margin-bottom:16px;display:flex;flex-direction:column;gap:12px}
+  .bug-form-row{display:flex;gap:12px;flex-wrap:wrap}
+  .bug-form-field{display:flex;flex-direction:column;gap:5px;flex:1;min-width:160px}
+  .bug-form-field-wide{flex:2}
+  .bug-form-field label{font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.04em}
+  .bug-form-field input,.bug-form-field select,.bug-form-field textarea{padding:8px 10px;border:1px solid var(--border-light);border-radius:6px;background:var(--bg-2);color:var(--text);font:inherit;font-size:13px}
+  .bug-form-field input:focus,.bug-form-field select:focus,.bug-form-field textarea:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 3px var(--primary-soft)}
+  .bug-form-field textarea{resize:vertical;min-height:60px;font-family:inherit}
+  .bug-form-actions{display:flex;justify-content:flex-end}
+  .bug-shot-zone{border:1.5px dashed var(--border-light);border-radius:6px;padding:12px;background:var(--bg-2);transition:all .15s;display:flex;flex-direction:column;gap:10px}
+  .bug-shot-zone.drag-over{border-color:var(--primary);background:var(--primary-soft)}
+  .bug-shot-zone:focus-within{border-color:var(--primary)}
+  .bug-shot-grid{display:flex;gap:8px;flex-wrap:wrap}
+  .bug-shot-thumb,.bug-card-shot{position:relative;width:120px;height:80px;border-radius:6px;overflow:hidden;border:1px solid var(--border-light);background:var(--bg-3)}
+  .bug-shot-thumb img,.bug-card-shot img{width:100%;height:100%;object-fit:cover;display:block}
+  .bug-card-shot img{cursor:zoom-in}
+  .bug-shot-del{position:absolute;top:4px;right:4px;width:20px;height:20px;border-radius:50%;background:rgba(0,0,0,.65);color:#fff;border:0;cursor:pointer;font-size:10px;display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity .12s;padding:0}
+  .bug-shot-thumb:hover .bug-shot-del,.bug-card-shot:hover .bug-shot-del{opacity:1}
+  .bug-shot-del:hover{background:var(--danger)}
+  .bug-shot-hint{font-size:12px;color:var(--text-muted);line-height:1.5}
+  .bug-shot-hint strong{color:var(--text);font-weight:600}
+  .bug-shot-hint.bug-shot-full{color:var(--warning);font-style:italic}
+  .bug-shot-file-btn{color:var(--primary);cursor:pointer;text-decoration:underline;font-weight:600}
+  .bug-shot-meta{font-size:11px;color:var(--text-dim);margin-top:4px}
+
+  /* Cartes enrichies */
+  .bug-card-main{flex:1;display:flex;flex-direction:column;gap:4px;min-width:0}
+  .bug-card-meta{display:flex;align-items:center;gap:6px}
+  .bug-tab-badge{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;padding:2px 8px;border-radius:10px;background:var(--primary-soft);color:var(--primary)}
+  .bug-tab-badge.bug-tab-autres{background:var(--surface-2);color:var(--text-muted)}
+  .bug-card-title{font-weight:700;font-size:13px}
+  .bug-card-text{flex:1;border:0;background:transparent;color:var(--text-muted);font:inherit;font-size:13px;outline:none;padding:5px 7px;border-radius:4px;min-width:0;resize:vertical;font-family:inherit;min-height:32px}
+  .bug-card-text:hover{background:rgba(74,158,255,.06)}
+  .bug-card-text:focus{background:rgba(74,158,255,.10);color:var(--text)}
+  .bug-card-actions{display:flex;flex-direction:column;gap:4px;flex-shrink:0}
+  .bug-card-copy{border:1px solid var(--border-light);background:var(--surface);color:var(--text-muted);cursor:pointer;font-size:13px;width:30px;height:28px;border-radius:5px;display:flex;align-items:center;justify-content:center;transition:all .15s;padding:0}
+  .bug-card-copy:hover{border-color:var(--primary);color:var(--primary);background:var(--primary-soft)}
+  .bug-card-copy.copied{border-color:var(--success);color:var(--success);background:var(--success-soft)}
+  .bug-card-shots{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0 4px 38px}
+
+  /* Lightbox bug screenshot */
+  .bug-lb-overlay{background:rgba(8,15,28,.92);cursor:zoom-out;align-items:center;justify-content:center}
+  .bug-lb-img{max-width:92vw;max-height:88vh;object-fit:contain;border-radius:6px;box-shadow:0 16px 48px rgba(0,0,0,.6);cursor:default}
+  .bug-lb-close{position:fixed;top:18px;right:18px;width:38px;height:38px;border-radius:50%;background:rgba(255,255,255,.1);color:#fff;border:0;cursor:pointer;font-size:18px;font-weight:600;display:flex;align-items:center;justify-content:center;transition:background .12s;z-index:10000;padding:0}
+  .bug-lb-close:hover{background:rgba(255,255,255,.2)}
+  .bug-lb-nav{position:fixed;top:50%;transform:translateY(-50%);width:48px;height:48px;border-radius:50%;background:rgba(255,255,255,.1);color:#fff;border:0;cursor:pointer;font-size:32px;font-weight:300;line-height:1;display:flex;align-items:center;justify-content:center;transition:background .12s;z-index:10000;padding:0}
+  .bug-lb-nav:hover{background:rgba(255,255,255,.2)}
+  .bug-lb-nav.prev{left:18px}
+  .bug-lb-nav.next{right:18px}
+  .bug-lb-counter{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);color:#fff;font-size:13px;font-weight:600;background:rgba(0,0,0,.5);padding:6px 14px;border-radius:14px;z-index:10000}
+
   /* Prestation row with rate beside */
   .presta-row{display:flex;gap:10px;align-items:stretch}
   .presta-row select{flex:1;min-width:0}
@@ -2476,6 +2528,13 @@ if (S.bugs.items.length === 0 && typeof S.bugs.html === "string" && S.bugs.html.
   }
   delete S.bugs.html;
 }
+// Migration schema enrichi : ajoute tab, title, screenshots aux items
+// existants. Le champ legacy `text` reste utilisé comme description.
+S.bugs.items.forEach(it => {
+  if (typeof it.tab !== "string") it.tab = "";
+  if (typeof it.title !== "string") it.title = "";
+  if (!Array.isArray(it.screenshots)) it.screenshots = [];
+});
 if (S.mission) {
   S.mission = { ...DEFAULT_S.mission, ...S.mission,
     deplacement: { ...DEFAULT_S.mission.deplacement, ...(S.mission.deplacement || {}) }
@@ -4715,22 +4774,148 @@ let bugQ = "";
 function bugQSet(v) { bugQ = v; }
 window.bugQSet = bugQSet;
 
+// ============ BUG REPORT — formulaire détaillé ============
+// Schéma item étendu : { id, createdAt, validated, tab, title, text,
+// screenshots: [{ id, dataUrl, addedAt }], steps: [] }
+// State du formulaire de saisie (tout-en-un, persiste tant que pas submit).
+let bugDraft = { tab: "", title: "", text: "", screenshots: [] };
+let lastTabBeforeBugs = null; // capté par setTab pour pré-remplir bugDraft.tab
+
+const BUG_TAB_OPTIONS = [
+  ["accueil", "Accueil"],
+  ["mission", "Mission"],
+  ["suivi",   "Suivi & paiements"],
+  ["tarifs",  "Frais & Tarifs"],
+  ["clients", "Clients"],
+  ["compta",  "Comptabilité"],
+  ["profil",  "Profil"],
+  ["bugs",    "Notes / Bugs"],
+  ["autres",  "Autres"]
+];
+
+function bugTabLabel(k) {
+  const found = BUG_TAB_OPTIONS.find(o => o[0] === k);
+  return found ? found[1] : "—";
+}
+
+function bugDraftSet(field, val) {
+  bugDraft[field] = val;
+  // Pas de render() (perte focus) — l'input garde sa valeur via le DOM.
+}
+window.bugDraftSet = bugDraftSet;
+
+const BUG_SCREENSHOT_MAX = 3;
+const BUG_SCREENSHOT_MAX_DIM = 1280; // largeur max
+const BUG_SCREENSHOT_QUALITY = 0.8;  // JPEG quality
+
+// Compresse un File image en data URL JPEG, max BUG_SCREENSHOT_MAX_DIM de large.
+function bugCompressImage(file) {
+  return new Promise((resolve, reject) => {
+    const fr = new FileReader();
+    fr.onload = () => {
+      const img = new Image();
+      img.onload = () => {
+        let w = img.width, h = img.height;
+        if (w > BUG_SCREENSHOT_MAX_DIM) {
+          h = Math.round(h * BUG_SCREENSHOT_MAX_DIM / w);
+          w = BUG_SCREENSHOT_MAX_DIM;
+        }
+        const c = document.createElement("canvas");
+        c.width = w; c.height = h;
+        c.getContext("2d").drawImage(img, 0, 0, w, h);
+        try {
+          resolve(c.toDataURL("image/jpeg", BUG_SCREENSHOT_QUALITY));
+        } catch (e) { reject(e); }
+      };
+      img.onerror = reject;
+      img.src = fr.result;
+    };
+    fr.onerror = reject;
+    fr.readAsDataURL(file);
+  });
+}
+
+async function bugDraftAddImageFile(file) {
+  if (!file || !file.type || !file.type.startsWith("image/")) return;
+  if (bugDraft.screenshots.length >= BUG_SCREENSHOT_MAX) {
+    uiAlert(`Maximum ${BUG_SCREENSHOT_MAX} captures par remarque. Supprime-en une avant d'en ajouter une autre.`, { kind: "warn" });
+    return;
+  }
+  try {
+    const dataUrl = await bugCompressImage(file);
+    bugDraft.screenshots.push({ id: uid(), dataUrl, addedAt: Date.now() });
+    render();
+  } catch (e) {
+    uiAlert("Impossible de lire cette image.", { kind: "danger" });
+  }
+}
+
+window.bugDraftPaste = function(event) {
+  const items = event.clipboardData && event.clipboardData.items;
+  if (!items) return;
+  for (const it of items) {
+    if (it.kind === "file" && it.type.startsWith("image/")) {
+      event.preventDefault();
+      const file = it.getAsFile();
+      if (file) bugDraftAddImageFile(file);
+    }
+  }
+};
+
+window.bugDraftDrop = function(event) {
+  event.preventDefault();
+  event.currentTarget.classList.remove("drag-over");
+  const files = event.dataTransfer && event.dataTransfer.files;
+  if (!files) return;
+  for (const f of files) {
+    if (f.type && f.type.startsWith("image/")) bugDraftAddImageFile(f);
+  }
+};
+
+window.bugDraftDragOver = function(event) {
+  event.preventDefault();
+  event.currentTarget.classList.add("drag-over");
+};
+
+window.bugDraftDragLeave = function(event) {
+  event.currentTarget.classList.remove("drag-over");
+};
+
+window.bugDraftFileInput = function(input) {
+  for (const f of input.files || []) {
+    if (f.type && f.type.startsWith("image/")) bugDraftAddImageFile(f);
+  }
+  input.value = "";
+};
+
+window.bugDraftRemoveImage = function(imgId) {
+  bugDraft.screenshots = bugDraft.screenshots.filter(s => s.id !== imgId);
+  render();
+};
+
 function bugAdd() {
-  const t = bugQ.trim();
-  if (!t) return;
+  const title = (bugDraft.title || "").trim();
+  const text = (bugDraft.text || "").trim();
+  if (!title && !text) {
+    uiAlert("Renseigne au moins un nom ou une description.", { kind: "warn" });
+    return;
+  }
   if (!Array.isArray(S.bugs.items)) S.bugs.items = [];
   S.bugs.items.unshift({
     id: uid(),
-    text: t,
+    tab: bugDraft.tab || lastTabBeforeBugs || "autres",
+    title,
+    text,
+    screenshots: bugDraft.screenshots.slice(),
     steps: [],
     validated: false,
     createdAt: Date.now()
   });
-  bugQ = "";
+  bugDraft = { tab: "", title: "", text: "", screenshots: [] };
   save();
   render();
   requestAnimationFrame(() => {
-    const el = document.getElementById("bugInput");
+    const el = document.getElementById("bugTitleInput");
     if (el) el.focus();
   });
 }
@@ -4742,6 +4927,71 @@ function bugDel(id) {
   render();
 }
 window.bugDel = bugDel;
+
+function bugUpdateTitle(id, v) {
+  const it = (S.bugs.items || []).find(x => x.id === id);
+  if (!it) return;
+  it.title = v;
+  save();
+}
+window.bugUpdateTitle = bugUpdateTitle;
+
+function bugUpdateTab(id, v) {
+  const it = (S.bugs.items || []).find(x => x.id === id);
+  if (!it) return;
+  it.tab = v;
+  save();
+  render();
+}
+window.bugUpdateTab = bugUpdateTab;
+
+function bugRemoveScreenshot(id, imgId) {
+  const it = (S.bugs.items || []).find(x => x.id === id);
+  if (!it || !Array.isArray(it.screenshots)) return;
+  it.screenshots = it.screenshots.filter(s => s.id !== imgId);
+  save();
+  render();
+}
+window.bugRemoveScreenshot = bugRemoveScreenshot;
+
+// Lightbox plein écran pour visualiser un screenshot
+let bugLightbox = null; // { itemId, imgIdx }
+
+window.bugLightboxOpen = function(itemId, imgIdx) {
+  bugLightbox = { itemId, imgIdx: parseInt(imgIdx, 10) || 0 };
+  render();
+};
+window.bugLightboxClose = function() {
+  bugLightbox = null;
+  render();
+};
+window.bugLightboxNav = function(delta) {
+  if (!bugLightbox) return;
+  const it = (S.bugs.items || []).find(x => x.id === bugLightbox.itemId);
+  if (!it || !it.screenshots || !it.screenshots.length) return;
+  const n = it.screenshots.length;
+  bugLightbox.imgIdx = ((bugLightbox.imgIdx + delta) % n + n) % n;
+  render();
+};
+
+function rBugLightbox() {
+  if (!bugLightbox) return "";
+  const it = (S.bugs.items || []).find(x => x.id === bugLightbox.itemId);
+  if (!it || !Array.isArray(it.screenshots) || !it.screenshots.length) return "";
+  const img = it.screenshots[bugLightbox.imgIdx];
+  if (!img) return "";
+  const total = it.screenshots.length;
+  const navHtml = total > 1
+    ? `<button class="bug-lb-nav prev" onclick="event.stopPropagation();bugLightboxNav(-1)" title="Précédent">‹</button>
+       <button class="bug-lb-nav next" onclick="event.stopPropagation();bugLightboxNav(1)" title="Suivant">›</button>
+       <div class="bug-lb-counter">${bugLightbox.imgIdx + 1} / ${total}</div>`
+    : "";
+  return `<div class="modal-overlay bug-lb-overlay" onclick="if(event.target===this)bugLightboxClose()">
+    <button class="bug-lb-close" onclick="bugLightboxClose()" title="Fermer (Échap)">✕</button>
+    ${navHtml}
+    <img class="bug-lb-img" src="${esc(img.dataUrl)}" alt="capture">
+  </div>`;
+}
 
 function bugToggleValid(id) {
   const it = (S.bugs.items || []).find(x => x.id === id);
@@ -4791,19 +5041,51 @@ function bugDelStep(id, idx) {
 }
 window.bugDelStep = bugDelStep;
 
-function bugBuildText() {
-  const items = ((S.bugs && S.bugs.items) || []).filter(it => !it.validated && (it.text || "").trim());
-  if (!items.length) return "";
-  let txt = "";
-  items.forEach((it, i) => {
-    txt += `${i + 1}. ${(it.text || "").trim()}\n`;
-    (it.steps || []).forEach(s => {
-      const st = (s || "").trim();
-      if (st) txt += `   - ${st}\n`;
-    });
+// Formate UN item bug en texte (pour copy single ou copy all).
+function bugItemToText(it, idx) {
+  const lines = [];
+  const head = it.title ? it.title.trim() : (it.text || "").trim().split("\n")[0].slice(0, 80) || "(sans titre)";
+  const tabLbl = it.tab ? bugTabLabel(it.tab) : "";
+  const prefix = (typeof idx === "number") ? `${idx + 1}. ` : "";
+  lines.push(`${prefix}${head}${tabLbl ? ` [${tabLbl}]` : ""}`);
+  if (it.text && it.title && it.text.trim()) {
+    it.text.trim().split("\n").forEach(l => lines.push(`   ${l}`));
+  } else if (it.text && !it.title) {
+    // text seul, déjà dans le head si pas de title — rien à ajouter
+  }
+  (it.steps || []).forEach(s => {
+    const st = (s || "").trim();
+    if (st) lines.push(`   - ${st}`);
   });
-  return txt.trimEnd();
+  const nImg = Array.isArray(it.screenshots) ? it.screenshots.length : 0;
+  if (nImg > 0) lines.push(`   📎 ${nImg} capture${nImg > 1 ? "s" : ""} jointe${nImg > 1 ? "s" : ""}`);
+  return lines.join("\n");
 }
+
+function bugBuildText() {
+  const items = ((S.bugs && S.bugs.items) || []).filter(it => !it.validated && ((it.title || "").trim() || (it.text || "").trim()));
+  if (!items.length) return "";
+  return items.map((it, i) => bugItemToText(it, i)).join("\n");
+}
+
+window.bugCopyOne = function(id) {
+  const it = ((S.bugs && S.bugs.items) || []).find(x => x.id === id);
+  if (!it) return;
+  const txt = bugItemToText(it);
+  const btn = document.querySelector(`[data-bug-copy="${id}"]`);
+  const flash = () => {
+    if (!btn) return;
+    const old = btn.textContent;
+    btn.textContent = "✓";
+    btn.classList.add("copied");
+    setTimeout(() => { btn.textContent = old; btn.classList.remove("copied"); }, 1500);
+  };
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(txt).then(flash).catch(() => bugCopyFallback(txt, flash));
+  } else {
+    bugCopyFallback(txt, flash);
+  }
+};
 
 function bugCopy() {
   const txt = bugBuildText();
@@ -6216,6 +6498,7 @@ function render() {
     ${rViewDevisModal()}
     ${rViewFactureModal()}
     ${rClientInfoModal()}
+    ${rBugLightbox()}
     ${rPrintTipModal()}
 `;
 }
@@ -12442,16 +12725,64 @@ function rShareSection() {
 // ▼ rBG — RENDERER onglet Notes/bugs
 function rBG() {
   if (!S.bugs || !Array.isArray(S.bugs.items)) S.bugs = { items: [] };
+  // Pré-remplit l'onglet du formulaire avec lastTabBeforeBugs si vide.
+  const draftTab = bugDraft.tab || lastTabBeforeBugs || "";
+  const tabOptions = BUG_TAB_OPTIONS.map(([k, lbl]) =>
+    `<option value="${esc(k)}" ${k === draftTab ? "selected" : ""}>${esc(lbl)}</option>`
+  ).join("");
+
   let h = `<h2>Notes <span id="savedFlash" class="saved"></span></h2>`;
   h += `<div class="fb-bar">
     <div class="fb-title">Notes & Remarques</div>
-    <button class="fb-copy-btn" onclick="bugCopy()" id="bug-copy-btn">📋 Copier les actions en cours</button>
+    <button class="fb-copy-btn" onclick="bugCopy()" id="bug-copy-btn">📋 Copier toutes les actions en cours</button>
   </div>`;
-  h += `<div class="fb-subtitle">Note ici les remarques ou bugs à transmettre à Claude. Chaque action peut recevoir des étapes complémentaires, être validée ou supprimée.</div>`;
-  h += `<div class="fb-add-row">
-    <input id="bugInput" placeholder="Nouvelle action / remarque…" value="${esc(bugQ || "")}" oninput="bugQSet(this.value)" onkeydown="if(event.key==='Enter'){event.preventDefault();bugAdd()}">
-    <button onclick="bugAdd()">＋</button>
+  h += `<div class="fb-subtitle">Note ici les remarques ou bugs à transmettre à Claude. Chaque remarque peut être détaillée (onglet, captures), copiée individuellement, validée ou supprimée.</div>`;
+
+  // ===== Formulaire de saisie détaillé =====
+  const screenshotsHtml = bugDraft.screenshots.map(s => `
+    <div class="bug-shot-thumb">
+      <img src="${esc(s.dataUrl)}" alt="capture">
+      <button class="bug-shot-del" onclick="bugDraftRemoveImage('${esc(s.id)}')" title="Retirer">✕</button>
+    </div>`).join("");
+  const remaining = BUG_SCREENSHOT_MAX - bugDraft.screenshots.length;
+
+  h += `<div class="bug-form">
+    <div class="bug-form-row">
+      <div class="bug-form-field">
+        <label>Onglet concerné</label>
+        <select onchange="bugDraftSet('tab', this.value)">
+          <option value="" ${!draftTab ? "selected" : ""}>— Choisir —</option>
+          ${tabOptions}
+        </select>
+      </div>
+      <div class="bug-form-field bug-form-field-wide">
+        <label>Nom (titre court)</label>
+        <input id="bugTitleInput" type="text" placeholder="Ex : « Le bouton ne réagit pas au clic »" value="${esc(bugDraft.title || "")}" oninput="bugDraftSet('title', this.value)">
+      </div>
+    </div>
+    <div class="bug-form-field">
+      <label>Description</label>
+      <textarea rows="3" placeholder="Ce qui s'est passé, ce que tu attendais, étapes pour reproduire…" oninput="bugDraftSet('text', this.value)" onpaste="bugDraftPaste(event)">${esc(bugDraft.text || "")}</textarea>
+    </div>
+    <div class="bug-form-field">
+      <label>Captures d'écran (${bugDraft.screenshots.length} / ${BUG_SCREENSHOT_MAX})</label>
+      <div class="bug-shot-zone" onpaste="bugDraftPaste(event)" ondragover="bugDraftDragOver(event)" ondragleave="bugDraftDragLeave(event)" ondrop="bugDraftDrop(event)" tabindex="0">
+        ${bugDraft.screenshots.length > 0 ? `<div class="bug-shot-grid">${screenshotsHtml}</div>` : ""}
+        ${remaining > 0
+          ? `<div class="bug-shot-hint">
+              <strong>Ctrl+V</strong> pour coller une capture, glisse une image, ou
+              <label class="bug-shot-file-btn">choisir un fichier<input type="file" accept="image/*" multiple style="display:none" onchange="bugDraftFileInput(this)"></label>
+              <div class="bug-shot-meta">JPEG/PNG, ${remaining} restante${remaining > 1 ? "s" : ""} (max ${BUG_SCREENSHOT_MAX}, compressées en 1280×… JPEG q.0.8)</div>
+            </div>`
+          : `<div class="bug-shot-hint bug-shot-full">Limite ${BUG_SCREENSHOT_MAX} captures atteinte. Retire-en une pour en ajouter une autre.</div>`}
+      </div>
+    </div>
+    <div class="bug-form-actions">
+      <button class="btn" onclick="bugAdd()">＋ Ajouter la remarque</button>
+    </div>
   </div>`;
+
+  // ===== Liste des cartes =====
   const items = [...S.bugs.items].sort((a, b) => {
     if (!!a.validated !== !!b.validated) return a.validated ? 1 : -1;
     return (b.createdAt || 0) - (a.createdAt || 0);
@@ -12460,12 +12791,32 @@ function rBG() {
     h += `<div class="empty">Aucune note pour l'instant.</div>`;
   }
   items.forEach(it => {
-    h += `<div class="fb-card ${it.validated ? "fb-done" : ""}">`;
-    h += `<div class="fb-hd">`;
-    h += `<button class="fb-check ${it.validated ? "on" : ""}" onclick="bugToggleValid('${it.id}')" title="${it.validated ? "Marquer en cours" : "Valider"}">✓</button>`;
-    h += `<input class="fb-text" value="${esc(it.text || "")}" placeholder="Note…" oninput="bugUpdateText('${it.id}',this.value)">`;
-    h += `<button class="fb-del" onclick="bugDel('${it.id}')" title="Supprimer">×</button>`;
-    h += `</div>`;
+    const tabBadge = it.tab && it.tab !== "autres"
+      ? `<span class="bug-tab-badge bug-tab-${esc(it.tab)}">${esc(bugTabLabel(it.tab))}</span>`
+      : (it.tab === "autres" ? `<span class="bug-tab-badge bug-tab-autres">Autres</span>` : "");
+    const shotsHtml = (Array.isArray(it.screenshots) && it.screenshots.length > 0)
+      ? `<div class="bug-card-shots">
+          ${it.screenshots.map((s, i) => `
+            <div class="bug-card-shot">
+              <img src="${esc(s.dataUrl)}" alt="capture" onclick="bugLightboxOpen('${esc(it.id)}',${i})">
+              <button class="bug-shot-del" onclick="event.stopPropagation();bugRemoveScreenshot('${esc(it.id)}','${esc(s.id)}')" title="Retirer">✕</button>
+            </div>`).join("")}
+         </div>`
+      : "";
+    h += `<div class="fb-card ${it.validated ? "fb-done" : ""}">
+      <div class="fb-hd">
+        <button class="fb-check ${it.validated ? "on" : ""}" onclick="bugToggleValid('${it.id}')" title="${it.validated ? "Marquer en cours" : "Valider"}">✓</button>
+        <div class="bug-card-main">
+          <div class="bug-card-meta">${tabBadge}</div>
+          <input class="fb-text bug-card-title" value="${esc(it.title || "")}" placeholder="Titre…" oninput="bugUpdateTitle('${it.id}',this.value)">
+          <textarea class="bug-card-text" rows="2" placeholder="Description…" oninput="bugUpdateText('${it.id}',this.value)">${esc(it.text || "")}</textarea>
+        </div>
+        <div class="bug-card-actions">
+          <button class="bug-card-copy" data-bug-copy="${it.id}" onclick="bugCopyOne('${it.id}')" title="Copier cette remarque">📋</button>
+          <button class="fb-del" onclick="bugDel('${it.id}')" title="Supprimer">×</button>
+        </div>
+      </div>
+      ${shotsHtml}`;
     (it.steps || []).forEach((st, idx) => {
       h += `<div class="fb-step">
         <span class="fb-step-bul">↳</span>
@@ -12479,7 +12830,13 @@ function rBG() {
   return h;
 }
 
-window.setTab = k => { tab = k; render(); };
+window.setTab = k => {
+  // Tracker le dernier onglet avant Notes/bugs pour pré-remplir
+  // automatiquement le formulaire « Onglet concerné ».
+  if (k === "bugs" && tab && tab !== "bugs") lastTabBeforeBugs = tab;
+  tab = k;
+  render();
+};
 window.signIn = () => auth.signInWithPopup(new firebase.auth.GoogleAuthProvider()).catch(err => uiAlert(err.message, { title: "Erreur de connexion", kind: "danger" }));
 window.signOut = () => auth.signOut();
 
