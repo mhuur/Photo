@@ -2606,12 +2606,27 @@ async function saveToCloud() {
 
 // ▼ loadFromCloud — lit users/<ownerUid> et merge dans S (avec DEFAULT_S en fallback).
 // ownerUid passé explicitement (peut différer de user.uid si on est membre).
+// Réconciliation timestamp : si localStorage a un _localChangeTs plus récent
+// que cloud, on SKIP le merge (le local porte des modifs pas encore sync) et
+// on PUSH au cloud à la place. Évite de perdre les modifs faites avant un
+// reload rapide qui aurait coupé le debounce save (cf saveToCloud).
 async function loadFromCloud(ownerUid) {
   if (!ownerUid) return;
   try {
     const snap = await db.collection("users").doc(ownerUid).get();
     if (snap.exists) {
       const d = snap.data();
+      const cloudCts = num(d._localChangeTs);
+      const localCts = num(S._localChangeTs);
+      if (cloudCts > 0 && localCts > 0 && cloudCts < localCts) {
+        console.log("[boot] localStorage plus récent que cloud — skip merge boot, push local au cloud.");
+        // Pas d'override : on garde S tel qu'il était (chargé depuis localStorage).
+        // On déclenche une sauvegarde immédiate pour rattraper le cloud.
+        clearTimeout(cloudT);
+        saveToCloud();
+        render();
+        return;
+      }
       if (d.mission) {
         const m = d.mission, dm = DEFAULT_S.mission;
         S.mission = {
@@ -2646,6 +2661,10 @@ async function loadFromCloud(ownerUid) {
       suiviMigrate();
       migrateClientNums();
       recomputeRef();
+      // Adopte le timestamp cloud comme nouveau référentiel local (sinon
+      // notre prochain save aurait un localCts plus ancien que le cloud
+      // alors qu'on vient de tout merger).
+      if (cloudCts > 0) S._localChangeTs = cloudCts;
       localStorage.setItem(SK, JSON.stringify(S));
     }
   } catch (err) { console.error("loadFromCloud", err); }
