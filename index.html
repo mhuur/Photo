@@ -9809,11 +9809,21 @@ window.clientInfoModalClose = function() {
 window.clientInfoModalGoToFiche = function() {
   const client = findClientForDevis(clientInfoModalDevisId);
   clientInfoModalDevisId = null;
-  if (client && client.id) {
-    clientsExpanded = client.id;
-    clientsEditing = null;
+  if (!client || !client.id) {
+    setTab("clients");
+    return;
   }
+  // Reset filtre + sortie du mode sélection sinon la fiche pourrait être
+  // masquée par une recherche active ou un mode multi-sélection.
+  clientsSearchQuery = "";
+  clientsSelectMode = false;
+  clientsExpanded = client.id;
+  clientsEditing = null;
   setTab("clients");
+  // Scroll vers la fiche après le render() déclenché par setTab.
+  if (typeof clientsScrollAndFocus === "function") {
+    clientsScrollAndFocus(client.id);
+  }
 };
 
 function rClientInfoModal() {
