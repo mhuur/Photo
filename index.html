@@ -280,7 +280,10 @@
   .ac-section h3{margin:0 0 10px;font-size:14px;font-weight:600;color:var(--text);display:flex;align-items:center;gap:8px}
   .ac-section h3 .ac-count{font-size:11px;font-weight:600;color:var(--text-muted);background:var(--surface);border:1px solid var(--border-light);padding:2px 8px;border-radius:10px}
   .ac-list{display:flex;flex-direction:column;gap:6px;max-width:880px}
-  .ac-row{display:grid;grid-template-columns:80px 1fr 170px 100px;gap:12px;align-items:center;padding:8px 14px;background:var(--surface);border:1px solid var(--border-light);border-radius:8px;cursor:pointer;transition:background .12s,border-color .12s;font-size:13px}
+  .ac-row{display:grid;grid-template-columns:80px 1fr 170px 100px 36px;gap:12px;align-items:center;padding:8px 14px;background:var(--surface);border:1px solid var(--border-light);border-radius:8px;cursor:pointer;transition:background .12s,border-color .12s;font-size:13px}
+  .ac-row-gmail{background:transparent;border:1px solid var(--border-soft);color:var(--text-dim);width:30px;height:30px;border-radius:6px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;transition:all .12s;padding:0}
+  .ac-row-gmail svg{width:14px;height:14px}
+  .ac-row-gmail:hover{background:var(--primary-soft);color:var(--primary);border-color:var(--primary)}
   .ac-row:hover{background:var(--surface-hi);border-color:var(--text-muted)}
   .ac-row-date{font-size:11px;color:var(--text-muted);font-variant-numeric:tabular-nums;white-space:nowrap}
   .ac-row-client{font-weight:500;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px}
@@ -2460,7 +2463,8 @@ const ICONS = {
   plus:      _ICO('<path d="M5 12h14"/><path d="M12 5v14"/>'),
   download:  _ICO('<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/>'),
   trash:     _ICO('<path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>'),
-  edit:      _ICO('<path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>')
+  edit:      _ICO('<path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>'),
+  send:      _ICO('<line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>')
 };
 
 const TABS = [
@@ -3169,6 +3173,93 @@ function formatSiret(siret) {
   }
   return s;
 }
+
+// === Helpers Gmail compose ===
+// Construit une URL Gmail compose. Ouverture dans un nouvel onglet → l'utilisateur
+// arrive sur la fenêtre de rédaction Gmail avec destinataire/sujet/corps pré-remplis.
+function buildGmailUrl(to, subject, body) {
+  return "https://mail.google.com/mail/?view=cm&fs=1"
+    + (to      ? "&to=" + encodeURIComponent(to) : "")
+    + (subject ? "&su=" + encodeURIComponent(subject) : "")
+    + (body    ? "&body=" + encodeURIComponent(body) : "");
+}
+
+function openGmailCompose(to, subject, body) {
+  window.open(buildGmailUrl(to, subject, body), "_blank", "noopener");
+}
+window.openGmailCompose = openGmailCompose;
+
+// Retrouve le client lié à un devis archivé (par snapshotMission.client.id, sinon par nom)
+function findClientForDevis(devisId) {
+  const dv = S.suivi && S.suivi.devis && S.suivi.devis[devisId];
+  if (!dv || !S.clients || !Array.isArray(S.clients.entries)) return null;
+  if (dv.snapshotMission && dv.snapshotMission.client && dv.snapshotMission.client.id) {
+    const found = S.clients.entries.find(c => c.id === dv.snapshotMission.client.id);
+    if (found) return found;
+  }
+  const name = (dv.snapshotClient || "").trim();
+  if (name) {
+    const lower = name.toLowerCase();
+    return S.clients.entries.find(c => (c.name || "").trim().toLowerCase() === lower) || null;
+  }
+  return null;
+}
+
+// 1er email valide parmi les contacts d'un client
+function clientPrimaryEmail(client) {
+  if (!client || !Array.isArray(client.contacts)) return "";
+  for (const c of client.contacts) {
+    if (c.email && c.email.includes("@")) return c.email.trim();
+  }
+  return "";
+}
+
+// 1er nom de contact non vide
+function clientPrimaryContactName(client) {
+  if (!client || !Array.isArray(client.contacts)) return "";
+  for (const c of client.contacts) {
+    if (c.name && c.name.trim()) return c.name.trim();
+  }
+  return "";
+}
+
+// Ouvre Gmail avec un template de relance pré-rempli pour un devis donné.
+// kind = "devis" (pas de réponse) | "paiement" (en attente d'encaissement)
+function gmailRelanceForDevis(devisId, kind) {
+  const dv = S.suivi && S.suivi.devis && S.suivi.devis[devisId];
+  if (!dv) { alert("Devis introuvable."); return; }
+  const ref = dv.ref || "";
+  const dateEmi = (dv.snapshotMission && dv.snapshotMission.dateEmission) || "";
+  const dateFr = dateEmi ? dateEmi.split("-").reverse().join("/") : "";
+  const client = findClientForDevis(devisId);
+  const to = clientPrimaryEmail(client);
+  const contactName = clientPrimaryContactName(client);
+  const firstName = contactName ? contactName.split(/\s+/)[0] : "";
+  const id = S.identite || {};
+  const myName = ((id.prenom || "") + " " + (id.nom || "")).trim() || (id.denomination || "");
+
+  let subject, body;
+  if (kind === "paiement") {
+    subject = `Relance paiement — Devis ${ref}`;
+    body = `Bonjour${firstName ? " " + firstName : ""},\n\n`
+         + `Je me permets de revenir vers vous concernant le devis ${ref}${dateFr ? " (émis le " + dateFr + ")" : ""}, dont le règlement reste en attente.\n\n`
+         + `Pourriez-vous me confirmer la date prévue de votre paiement ?\n\n`
+         + `Reste à votre disposition pour toute question.\n\n`
+         + `Cordialement,\n${myName}`;
+  } else {
+    subject = `Relance — Devis ${ref}`;
+    body = `Bonjour${firstName ? " " + firstName : ""},\n\n`
+         + `Je me permets de revenir vers vous concernant le devis ${ref}${dateFr ? " envoyé le " + dateFr : ""}.\n\n`
+         + `Avez-vous eu l'occasion de l'examiner ?\n\n`
+         + `Reste à votre disposition pour toute question.\n\n`
+         + `Cordialement,\n${myName}`;
+  }
+  if (!to) {
+    if (!confirm("Aucun email de contact trouvé pour ce client. Ouvrir Gmail sans destinataire ?")) return;
+  }
+  openGmailCompose(to, subject, body);
+}
+window.gmailRelanceForDevis = gmailRelanceForDevis;
 
 // Update SIRET in S.identite + refresh status indicator without losing focus.
 window.updSiretWithCheck = function(raw) {
@@ -8221,6 +8312,15 @@ function suiviExpandedRowHtml(g) {
       ${devisLevelAction ? `<div class="suv-expanded-actions">${devisLevelAction}</div>` : ''}
       <div class="suv-tl">${lignes.map(suiviTimelineStepHtml).join("")}</div>
       <div class="suv-expanded-print">
+        ${(() => {
+          // Bouton Relance Gmail selon le statut du devis
+          let kind = null;
+          if (statutPrin === "envoye") kind = "devis";
+          else if (statutPrin === "en_cours" || statutPrin === "attente") kind = "paiement";
+          if (!kind) return "";
+          const lbl = kind === "paiement" ? "Relance paiement" : "Relance devis";
+          return `<button class="btn ghost suv-gmail-btn" onclick="${stop}gmailRelanceForDevis('${g.devisId}','${kind}')" title="Ouvrir Gmail avec un template de relance pré-rempli">✉ ${esc(lbl)}</button>`;
+        })()}
         <button class="btn ghost" onclick="${stop}viewDevisOpen('${g.devisId}')">🖨 Devis</button>
         <button class="btn ghost" onclick="${stop}viewDeboursOpen('${g.devisId}')">🖨 Débours</button>
         ${(() => {
@@ -9153,7 +9253,7 @@ function rCL() {
           <div class="cli-contact">
             <span class="nm">${esc(c.name || "(sans nom)")}</span>
             ${c.phone ? `<a class="ln" href="tel:${esc((c.phone || "").replace(/\s/g, ""))}">${ICONS.phone}${esc(c.phone)}</a>` : ""}
-            ${c.email ? `<a class="ln" href="mailto:${esc(c.email)}">${ICONS.mail}${esc(c.email)}</a>` : ""}
+            ${c.email ? `<a class="ln" href="${esc(buildGmailUrl(c.email, '', ''))}" target="_blank" rel="noopener" title="Composer un mail Gmail à ${esc(c.email)}">${ICONS.send}${esc(c.email)}</a>` : ""}
           </div>
         `).join(""));
 
@@ -10158,12 +10258,17 @@ function rAC() {
     }))
     .sort((a, b) => (a.dateMax || "").localeCompare(b.dateMax || ""));
 
-  const renderRow = (g, late) => `<div class="ac-row ${late ? 'ac-late' : ''}" onclick="accueilOpenDevis('${g.devisId}')">
-    <div class="ac-row-date">${esc(dateFR(g.dateMin || g.dateMax))}</div>
-    <div class="ac-row-client">${esc(cleanClientLabel(g.client)) || "—"}</div>
-    <div class="ac-row-ref">${esc(g.ref) || "—"}</div>
-    <div class="ac-row-amt">${fmt(late ? g.total : g.restant)}</div>
-  </div>`;
+  const stop = "event.stopPropagation();";
+  const renderRow = (g, late) => {
+    const kind = late ? "devis" : "paiement";
+    return `<div class="ac-row ${late ? 'ac-late' : ''}" onclick="accueilOpenDevis('${g.devisId}')">
+      <div class="ac-row-date">${esc(dateFR(g.dateMin || g.dateMax))}</div>
+      <div class="ac-row-client">${esc(cleanClientLabel(g.client)) || "—"}</div>
+      <div class="ac-row-ref">${esc(g.ref) || "—"}</div>
+      <div class="ac-row-amt">${fmt(late ? g.total : g.restant)}</div>
+      <button class="ac-row-gmail" onclick="${stop}gmailRelanceForDevis('${g.devisId}','${kind}')" title="${late ? 'Relancer ce devis par Gmail' : 'Relancer le paiement par Gmail'}">${ICONS.send}</button>
+    </div>`;
+  };
 
   return `
     <h2>Accueil <span id="savedFlash" class="saved"></span></h2>
