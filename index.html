@@ -649,8 +649,9 @@
   .fb-step-del{border:0;background:transparent;color:var(--text-dim);cursor:pointer;font-size:13px;flex-shrink:0;padding:2px 5px;border-radius:3px;opacity:0;transition:all .12s}
   .fb-step:hover .fb-step-del{opacity:1}
   .fb-step-del:hover{color:var(--danger);background:var(--danger-soft)}
-  .fb-add-step{margin:5px 0 0 28px;border:0;background:transparent;color:var(--primary);font-family:inherit;font-size:13px;cursor:pointer;padding:4px 10px;border-radius:4px;font-weight:600;transition:all .12s}
-  .fb-add-step:hover{background:var(--primary-soft)}
+  .fb-add-step{margin:4px 0 0 28px;border:0;background:transparent;color:var(--text-dim);font-family:inherit;font-size:11px;cursor:pointer;padding:2px 8px;border-radius:4px;font-weight:500;transition:all .12s;opacity:0}
+  .fb-card:hover .fb-add-step{opacity:.6}
+  .fb-add-step:hover{opacity:1!important;background:var(--primary-soft);color:var(--primary)}
   .fb-copy-btn{display:inline-flex;align-items:center;gap:5px;padding:6px 14px;border-radius:6px;border:1px solid var(--border-light);background:var(--surface);color:var(--text-muted);font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;transition:all .15s}
   .fb-copy-btn:hover{border-color:var(--primary);color:var(--primary);background:var(--primary-soft)}
   .fb-copy-btn.copied{border-color:var(--success);color:var(--success);background:var(--success-soft)}
@@ -747,8 +748,8 @@
   .bug-shot-file-btn{color:var(--primary);cursor:pointer;text-decoration:underline;font-weight:600}
   .bug-shot-meta{font-size:11px;color:var(--text-dim);margin-top:4px}
 
-  /* Cartes enrichies (Phase 2) */
-  .fb-card.bug-card-v2{padding:12px 14px;animation:bugCardIn .25s ease}
+  /* Cartes enrichies (Phase 2) — layout compact */
+  .fb-card.bug-card-v2{padding:8px 12px;animation:bugCardIn .25s ease}
   @keyframes bugCardIn{from{opacity:0;transform:translateY(-3px)}to{opacity:1;transform:none}}
   .bug-card-main{flex:1;display:flex;flex-direction:column;gap:4px;min-width:0}
   .bug-card-meta{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
@@ -781,9 +782,16 @@
   .fb-card.fb-done .bug-card-cover{opacity:.5}
 
   .bug-card-title{font-weight:700;font-size:13px}
-  .bug-card-text{flex:1;border:0;background:transparent;color:var(--text-muted);font:inherit;font-size:13px;outline:none;padding:5px 7px;border-radius:4px;min-width:0;resize:vertical;font-family:inherit;min-height:32px}
-  .bug-card-text:hover{background:rgba(74,158,255,.06)}
-  .bug-card-text:focus{background:rgba(74,158,255,.10);color:var(--text)}
+  /* Description en mode lecture (compact, line-clamp 2 lignes) */
+  .bug-card-text-display{font-size:13px;color:var(--text-muted);line-height:1.45;padding:3px 7px;border-radius:4px;cursor:text;display:-webkit-box;-webkit-line-clamp:2;line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;text-overflow:ellipsis;white-space:pre-wrap;word-break:break-word}
+  .bug-card-text-display:hover{background:rgba(74,158,255,.06)}
+  /* Bouton « + description » discret quand description vide */
+  .bug-card-text-add{align-self:flex-start;background:transparent;border:0;color:var(--text-dim);font:inherit;font-size:11px;cursor:pointer;padding:3px 7px;border-radius:4px;font-style:italic;opacity:0;transition:opacity .15s,color .12s}
+  .fb-card:hover .bug-card-text-add{opacity:1}
+  .bug-card-text-add:hover{color:var(--primary);background:var(--primary-soft)}
+  /* Description en mode édition (textarea visible) */
+  .bug-card-text{flex:1;border:1px solid var(--border-light);background:var(--bg-2);color:var(--text);font:inherit;font-size:13px;outline:none;padding:6px 8px;border-radius:4px;min-width:0;resize:vertical;font-family:inherit;min-height:50px}
+  .bug-card-text:focus{border-color:var(--primary);box-shadow:0 0 0 2px var(--primary-soft)}
   .bug-card-actions{display:flex;flex-direction:column;gap:4px;flex-shrink:0}
   .bug-card-copy{border:1px solid var(--border-light);background:var(--surface);color:var(--text-muted);cursor:pointer;font-size:13px;width:30px;height:28px;border-radius:5px;display:flex;align-items:center;justify-content:center;transition:all .15s;padding:0}
   .bug-card-copy:hover{border-color:var(--primary);color:var(--primary);background:var(--primary-soft)}
@@ -4877,6 +4885,26 @@ let lastTabBeforeBugs = null; // capté par setTab pour pré-remplir bugDraft.ta
 
 // State des filtres de la liste (tab actif, recherche, afficher validées).
 let bugFilters = { tab: "all", q: "", showValidated: false };
+
+// Carte en cours d'édition de description (passe la zone description en
+// textarea ; sinon affichage compact en lecture). Une seule à la fois.
+let bugCardEditingId = null;
+
+window.bugCardEditStart = function(id) {
+  bugCardEditingId = id;
+  render();
+  requestAnimationFrame(() => {
+    const ta = document.querySelector(`.fb-card[data-bug-id="${id}"] .bug-card-text`);
+    if (ta) {
+      ta.focus();
+      try { ta.setSelectionRange(ta.value.length, ta.value.length); } catch (e) {}
+    }
+  });
+};
+window.bugCardEditEnd = function() {
+  bugCardEditingId = null;
+  render();
+};
 
 // Render avec préservation focus pour la recherche (évite de perdre le caret
 // à chaque caractère tapé puisque le filtre déclenche un render complet).
@@ -13050,6 +13078,19 @@ function rBG() {
             </div>`).join("")}
          </div>`
       : "";
+    const editing = bugCardEditingId === it.id;
+    // Description : en lecture compacte par défaut (1-2 lignes tronquées),
+    // textarea au clic. Si vide et pas en édition → bouton discret « + ».
+    let descHtml;
+    if (editing) {
+      descHtml = `<textarea class="bug-card-text" rows="2" placeholder="Description…" oninput="bugUpdateText('${it.id}',this.value)" onblur="bugCardEditEnd()">${esc(it.text || "")}</textarea>`;
+    } else if (it.text && it.text.trim()) {
+      descHtml = `<div class="bug-card-text-display" onclick="bugCardEditStart('${it.id}')" title="Modifier">${esc(it.text)}</div>`;
+    } else {
+      descHtml = `<button class="bug-card-text-add" onclick="bugCardEditStart('${it.id}')" title="Ajouter une description">＋ description</button>`;
+    }
+    const steps = (it.steps || []).filter(s => (s || "").trim());
+    const hasSteps = steps.length > 0;
     h += `<div class="fb-card bug-card-v2 ${it.validated ? "fb-done" : ""}" data-bug-id="${esc(it.id)}">
       <div class="fb-hd">
         <button class="fb-check ${it.validated ? "on" : ""}" onclick="bugToggleValid('${it.id}')" title="${it.validated ? "Marquer en cours" : "Valider"}">✓</button>
@@ -13057,7 +13098,7 @@ function rBG() {
         <div class="bug-card-main">
           <div class="bug-card-meta">${tabBadge}${statusPill}${dateRel}</div>
           <input class="fb-text bug-card-title" value="${esc(it.title || "")}" placeholder="Titre…" oninput="bugUpdateTitle('${it.id}',this.value)">
-          <textarea class="bug-card-text" rows="2" placeholder="Description…" oninput="bugUpdateText('${it.id}',this.value)">${esc(it.text || "")}</textarea>
+          ${descHtml}
         </div>
         <div class="bug-card-actions">
           <button class="bug-card-copy" data-bug-copy="${it.id}" onclick="bugCopyOne('${it.id}')" title="Copier cette remarque">📋</button>
@@ -13065,14 +13106,18 @@ function rBG() {
         </div>
       </div>
       ${extraShotsHtml}`;
-    (it.steps || []).forEach((st, idx) => {
-      h += `<div class="fb-step">
-        <span class="fb-step-bul">↳</span>
-        <input class="fb-step-text" data-bug-step="${it.id}-${idx}" value="${esc(st || "")}" placeholder="Étape complémentaire…" oninput="bugUpdateStep('${it.id}',${idx},this.value)" onkeydown="if(event.key==='Enter'){event.preventDefault();bugAddStep('${it.id}')}">
-        <button class="fb-step-del" onclick="bugDelStep('${it.id}',${idx})" title="Supprimer étape">✕</button>
-      </div>`;
-    });
-    h += `<button class="fb-add-step" onclick="bugAddStep('${it.id}')">＋ étape</button>`;
+    // Steps existants affichés en lecture/édition uniquement s'il y en a.
+    if (hasSteps) {
+      (it.steps || []).forEach((st, idx) => {
+        h += `<div class="fb-step">
+          <span class="fb-step-bul">↳</span>
+          <input class="fb-step-text" data-bug-step="${it.id}-${idx}" value="${esc(st || "")}" placeholder="Étape complémentaire…" oninput="bugUpdateStep('${it.id}',${idx},this.value)" onkeydown="if(event.key==='Enter'){event.preventDefault();bugAddStep('${it.id}')}">
+          <button class="fb-step-del" onclick="bugDelStep('${it.id}',${idx})" title="Supprimer étape">✕</button>
+        </div>`;
+      });
+    }
+    // Bouton « + étape » : discret, visible au hover de la carte uniquement.
+    h += `<button class="fb-add-step" onclick="bugAddStep('${it.id}')" title="Ajouter une étape complémentaire">＋ étape</button>`;
     h += `</div>`;
   });
   return h;
