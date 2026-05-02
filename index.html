@@ -6112,14 +6112,13 @@ window.editSectionToggle = function(key) {
 // - une .edit-section (toggle/édition normale)
 // - un overlay/modal/portail (picker client, tooltip, picker contact, etc.)
 document.addEventListener("click", (ev) => {
-  if (!S || S.tab !== "M") return;
+  if (typeof tab === "undefined" || tab !== "mission") return;
   const t = ev.target;
   if (!t || t.nodeType !== 1) return;
   if (t.closest(".edit-section")) return;
   if (t.closest(".modal,.modal-overlay,.lg-info-portal,.tarif-tooltip,.client-picker,.contact-picker,.text-editor-modal,.print-tip-modal,.tooltip-portal")) return;
-  let changed = false;
   _MISSION_SECTION_KEYS.forEach(k => {
-    if (_editSectionOpen[k]) { _editSectionOpen[k] = false; changed = true; _editSectionApplyDom(k); }
+    if (_editSectionOpen[k]) { _editSectionOpen[k] = false; _editSectionApplyDom(k); }
   });
 });
 
