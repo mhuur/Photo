@@ -3231,10 +3231,16 @@ function subscribeWorkspaceData(ownerUid) {
     if (d.bugs)    S.bugs    = { items: Array.isArray(d.bugs.items) ? d.bugs.items : [] };
     if (d.prefs)   S.prefs   = { ...DEFAULT_S.prefs, ...d.prefs };
     // migrateLegacyReconstructedFlag() DÉSACTIVÉ ici aussi (cf. loadFromCloud).
+    // Migration phones (idempotente, ne corrige que ce qui a 9 chiffres FR
+    // sans 0 initial). Tourne sur chaque snapshot live pour rattraper le cas
+    // où le boot loadFromCloud n'a pas suffi (ex : data injectée depuis un
+    // autre device ou ancienne corruption).
+    const phonesFixedLive = migratePhoneLeadingZero();
     // Adopte le timestamp cloud comme nouveau référentiel local (sinon
     // notre prochain save aurait un localCts plus ancien que le cloud).
     if (cloudCts > 0) S._localChangeTs = cloudCts;
     localStorage.setItem(SK, JSON.stringify(S));
+    if (phonesFixedLive) saveToCloud();
     // Préserve le focus de l'input courant pendant le re-render
     const active = document.activeElement;
     const id = active && active.id;
@@ -8993,18 +8999,27 @@ window.markAsLegacy = function(devisId) {
 
 // ▼ migratePhoneLeadingZero — réajoute le "0" initial des numéros français
 // qui l'ont perdu (probable conversion Number() externe via Excel ou autre).
-// Pattern : 9 chiffres commençant par 1-9 (numéro FR sans le 0). On rajoute
-// le 0. Conserve les phones internationaux ou déjà corrects.
-// Synchronise aussi le champ legacy c.phone via syncClientLegacy.
+// Tolère les séparateurs (espaces, points, tirets) : si on extrait 9 chiffres
+// et que le 1er n'est pas 0, on préfixe la chaîne d'origine par "0".
+// Ex : "6 12 34 56 78" → "06 12 34 56 78", "6.12.34.56.78" → "0 6.12.34.56.78"
+// Conserve les phones internationaux (commence par +) ou déjà corrects (10
+// chiffres ou plus). Synchronise aussi le champ legacy c.phone.
 function migratePhoneLeadingZero() {
-  const re = /^[1-9]\d{8}$/;
   let changed = false;
   for (const c of (S.clients && S.clients.entries) || []) {
     if (!Array.isArray(c.contacts)) continue;
     let clientChanged = false;
     for (const ct of c.contacts) {
-      if (typeof ct.phone === "string" && re.test(ct.phone.trim())) {
-        ct.phone = "0" + ct.phone.trim();
+      if (typeof ct.phone !== "string") continue;
+      const trimmed = ct.phone.trim();
+      if (!trimmed) continue;
+      // Skip explicit international format
+      if (trimmed.startsWith("+") || trimmed.startsWith("00")) continue;
+      const digits = trimmed.replace(/\D/g, "");
+      // Numéro FR à 9 chiffres (sans le 0 initial), 1er chiffre 1-9
+      // (mobile, fixe régional, numéros spéciaux).
+      if (digits.length === 9 && /^[1-9]/.test(digits)) {
+        ct.phone = "0" + trimmed;
         clientChanged = true;
       }
     }
