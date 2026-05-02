@@ -70,6 +70,29 @@
   .login{display:flex;align-items:center;justify-content:center;height:100vh;flex-direction:column;gap:20px;background:linear-gradient(180deg,var(--bg) 0%,var(--bg-3) 100%)}
   .login h1{font-size:32px;font-weight:700;letter-spacing:-.02em;background:linear-gradient(135deg,var(--primary) 0%,var(--accent) 100%);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;margin:0}
   .login .btn{padding:12px 22px;font-size:13px;font-weight:600;box-shadow:0 4px 14px rgba(74,158,255,.35)}
+  /* === Workspace screens (login / pending / denied / loading) === */
+  .ws-screen{display:flex;align-items:center;justify-content:center;min-height:100vh;background:linear-gradient(180deg,var(--bg) 0%,var(--bg-3) 100%);padding:24px}
+  .ws-card{background:var(--surface);border:1px solid var(--border-soft);border-radius:14px;padding:36px 32px;max-width:460px;width:100%;text-align:center;box-shadow:0 8px 32px rgba(0,0,0,.25)}
+  .ws-card h1{font-size:28px;font-weight:700;letter-spacing:-.02em;background:linear-gradient(135deg,var(--primary) 0%,var(--accent,#22c55e) 100%);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;margin:0 0 8px}
+  .ws-sub{color:var(--text-muted);margin:0 0 24px;font-size:14px}
+  .ws-google-btn{padding:12px 22px;font-size:14px;font-weight:600;box-shadow:0 4px 14px rgba(74,158,255,.35);display:inline-flex;align-items:center}
+  .ws-user{margin:0 0 22px;padding:14px;background:var(--surface-2);border-radius:8px}
+  .ws-user strong{display:block;color:var(--text);font-size:15px}
+  .ws-status{padding:18px;border-radius:8px;font-size:14px;text-align:left}
+  .ws-status.pending{background:var(--warning-soft);color:var(--text);border:1px solid var(--warning)}
+  .ws-status.denied{background:var(--danger-soft);color:var(--text);border:1px solid var(--danger)}
+  .ws-status p{margin:8px 0 0;font-size:13px;color:var(--text-muted);line-height:1.5}
+  /* === Section Partage dans Profil === */
+  .ws-list{display:flex;flex-direction:column;gap:8px;max-width:780px}
+  .ws-row{display:flex;align-items:center;gap:14px;padding:12px 14px;background:var(--surface);border:1px solid var(--border-soft);border-radius:8px}
+  .ws-row.pending{border-color:var(--warning);background:rgba(245,158,11,.04)}
+  .ws-row-info{flex:1;display:flex;flex-direction:column;gap:2px;min-width:0}
+  .ws-row-info strong{font-size:14px;color:var(--text);font-weight:600}
+  .ws-row-info .ws-mail{font-size:12.5px;color:var(--text-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .ws-row-info .ws-date{font-size:11.5px;color:var(--text-dim)}
+  .ws-row .btn{padding:6px 12px;font-size:13px;flex-shrink:0}
+  .ws-row .btn svg{width:13px;height:13px;vertical-align:-2px;margin-right:4px}
+  .ws-empty{padding:14px;text-align:center;color:var(--text-dim);font-size:13px;font-style:italic;background:var(--surface);border:1px dashed var(--border-soft);border-radius:8px}
   .saved{font-size:13px;color:var(--success);margin-left:12px;font-weight:normal}
   .empty{background:transparent;border:1px solid var(--border-soft);border-radius:6px;padding:20px;text-align:center;color:var(--text-dim);font-size:13px}
   .totals{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:14px 18px;margin-top:24px;box-shadow:var(--shadow-sm)}
@@ -375,14 +398,86 @@
   .toolbar .spacer{flex:1}
   .toolbar .search{flex:1;min-width:200px;max-width:340px;padding:8px 12px;border:1px solid var(--border-light);border-radius:6px;font:inherit;background:var(--surface);color:var(--text)}
   .toolbar .search:focus{outline:none;border-color:var(--primary)}
-  table.hist tr.cli-row.clickable{cursor:pointer}
-  table.hist tr.cli-row.clickable:hover td{background:var(--surface-2)}
-  table.hist tr.cli-row.clickable.expanded td{background:var(--primary-soft)}
-  table.hist tr.cli-detail td{background:var(--surface-2);padding:0;border-bottom:1px solid var(--border)}
-  .cli-panel{padding:14px 18px}
-  .cli-info{display:flex;gap:14px;padding:4px 0;font-size:13px}
-  .cli-label{min-width:130px;color:var(--text-muted);font-size:13px;text-transform:uppercase;letter-spacing:.04em;align-self:center}
-  .cli-actions{display:flex;gap:8px;margin-top:12px}
+  /* === Onglet Clients — design minimal, inspiration Stripe/Linear === */
+  /* Toolbar avec recherche dédiée */
+  .cli-toolbar{display:flex;gap:10px;align-items:center;margin:14px 0 18px;flex-wrap:wrap}
+  .cli-toolbar .cli-spacer{flex:1}
+  .cli-toolbar .btn svg{width:14px;height:14px;vertical-align:-2px;margin-right:5px}
+  .cli-search-wrap{position:relative;flex:1;min-width:280px;max-width:520px}
+  .cli-search-wrap > svg{position:absolute;left:14px;top:50%;transform:translateY(-50%);width:16px;height:16px;color:var(--text-dim);pointer-events:none}
+  .cli-search-wrap > input{width:100%;padding:11px 14px 11px 40px;border:1px solid var(--border-light);border-radius:8px;font:inherit;font-size:14px;background:var(--surface);color:var(--text);transition:border-color .12s,box-shadow .12s;box-sizing:border-box}
+  .cli-search-wrap > input:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 3px var(--primary-soft)}
+  /* Table épurée — pas de bordures de cellules, juste un séparateur fin entre lignes */
+  table.cli-table{width:100%;border-collapse:collapse}
+  table.cli-table thead th{text-align:left;padding:10px 14px;font-size:11px;color:var(--text-dim);text-transform:uppercase;letter-spacing:.06em;font-weight:600;border-bottom:1px solid var(--border-soft);user-select:none}
+  table.cli-table thead th.cli-sortable{cursor:pointer;transition:color .12s}
+  table.cli-table thead th.cli-sortable:hover{color:var(--text-muted)}
+  table.cli-table thead th .cli-sort-ind{display:inline-block;margin-left:4px;font-size:9px;opacity:.4;vertical-align:1px;letter-spacing:0}
+  table.cli-table thead th.sorted{color:var(--text)}
+  table.cli-table thead th.sorted .cli-sort-ind{opacity:1;color:var(--primary)}
+  table.cli-table tbody td{padding:14px;border-bottom:1px solid var(--border-soft);vertical-align:middle;font-size:14px}
+  table.cli-table tr.cli-row.clickable{cursor:pointer;transition:background .1s}
+  table.cli-table tr.cli-row.clickable:hover td{background:var(--surface-2)}
+  table.cli-table tr.cli-row.expanded td{background:var(--primary-soft)}
+  table.cli-table td.cli-num{font-variant-numeric:tabular-nums;color:var(--text-dim);font-size:13px;width:80px}
+  table.cli-table td.cli-name{font-weight:600;color:var(--text)}
+  table.cli-table td.cli-city{color:var(--text-muted);font-size:13px;width:200px}
+  table.cli-table td.cli-city.dim{color:var(--text-dim)}
+  /* Detail panel : pas d'encadrés, juste un fond surface-2 et de l'espace */
+  table.cli-table tr.cli-detail td{padding:0;background:var(--surface-2);border-bottom:1px solid var(--border)}
+  .cli-panel{padding:24px 28px}
+  .cli-panel-head{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;padding-bottom:18px;border-bottom:1px solid var(--border-soft);margin-bottom:20px}
+  .cli-panel-head h3{margin:0;font-size:18px;font-weight:600;color:var(--text);line-height:1.2}
+  .cli-panel-head .cli-meta{font-size:13px;color:var(--text-dim);font-variant-numeric:tabular-nums}
+  .cli-panel-head .cli-city{font-size:13px;color:var(--text-muted);width:100%;margin-top:2px}
+  /* En mode édition : champs Nom + N° en haut du panneau, en gros */
+  .cli-panel-head.edit{padding-bottom:20px;margin-bottom:22px}
+  .cli-panel-head.edit .cli-head-fields{width:100%;display:grid;grid-template-columns:1fr 110px;gap:14px}
+  .cli-panel-head.edit label{display:block;font-size:11px;font-weight:600;color:var(--text-dim);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px}
+  .cli-panel-head.edit input{width:100%;padding:10px 12px;border:1px solid var(--border-light);border-radius:6px;background:var(--surface);color:var(--text);font:inherit;font-size:15px;box-sizing:border-box;transition:border-color .12s,box-shadow .12s}
+  .cli-panel-head.edit input::placeholder{color:var(--text-dim);opacity:.7}
+  .cli-panel-head.edit input:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 3px var(--primary-soft)}
+  .cli-panel-head.edit .cli-head-name input{font-weight:600}
+  .cli-panel-head.edit .cli-head-num input{font-variant-numeric:tabular-nums;text-align:center}
+  /* Grid 2 colonnes Contacts | Informations — sans bordure */
+  .cli-panel-grid{display:grid;grid-template-columns:1fr 1fr;gap:36px;align-items:start}
+  @media (max-width:900px){ .cli-panel-grid{grid-template-columns:1fr;gap:24px} }
+  .cli-section h4{margin:0 0 14px;font-size:11px;font-weight:600;color:var(--text-dim);text-transform:uppercase;letter-spacing:.06em}
+  /* Contact card — pas d'encadré, juste de l'espace + ligne fine */
+  .cli-contact{padding:8px 0;border-bottom:1px dashed var(--border-soft)}
+  .cli-contact:last-child{border-bottom:0}
+  .cli-contact .nm{font-weight:600;color:var(--text);font-size:14px;display:block;margin-bottom:3px}
+  .cli-contact .ln{display:flex;align-items:center;gap:7px;font-size:13px;color:var(--text-muted);padding:2px 0;text-decoration:none}
+  .cli-contact a.ln:hover{color:var(--primary)}
+  .cli-contact .ln svg{width:13px;height:13px;flex-shrink:0;opacity:.7}
+  .cli-add-contact{margin-top:12px;background:transparent;border:1px dashed var(--border-light);color:var(--text-muted);padding:7px 12px;border-radius:6px;cursor:pointer;font:inherit;font-size:13px;transition:all .12s;width:100%}
+  .cli-add-contact:hover{border-color:var(--primary);color:var(--primary);background:var(--primary-soft)}
+  /* Definition list — Apple Settings style */
+  .cli-dl{display:grid;grid-template-columns:90px 1fr;gap:8px 16px;font-size:13.5px;align-items:baseline}
+  .cli-dl dt{color:var(--text-dim);font-size:12px;text-transform:uppercase;letter-spacing:.04em;font-weight:500;align-self:center}
+  .cli-dl dd{margin:0;color:var(--text);min-height:1.5em}
+  .cli-dl dd.dim{color:var(--text-dim)}
+  .cli-dl input{padding:6px 10px;border:1px solid var(--border-light);border-radius:5px;font:inherit;font-size:13px;background:var(--surface);color:var(--text);width:100%;box-sizing:border-box;transition:border-color .12s,box-shadow .12s}
+  .cli-dl input::placeholder{color:var(--text-dim);opacity:.6;font-style:italic}
+  .cli-dl input:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 2px var(--primary-soft)}
+  /* Edit-mode contacts */
+  .cli-contact-edit{display:flex;align-items:flex-start;gap:8px;padding:8px 0;border-bottom:1px dashed var(--border-soft)}
+  .cli-contact-edit:last-child{border-bottom:0}
+  .cli-contact-edit-num{flex-shrink:0;width:22px;height:22px;display:flex;align-items:center;justify-content:center;background:var(--primary-soft);color:var(--primary);border-radius:50%;font-size:11px;font-weight:700;font-variant-numeric:tabular-nums;margin-top:5px}
+  .cli-contact-edit-fields{flex:1;display:flex;flex-direction:column;gap:5px;min-width:0}
+  .cli-contact-edit-fields input{padding:6px 10px;border:1px solid var(--border-soft);border-radius:5px;background:var(--surface);color:var(--text);font:inherit;font-size:13px;transition:border-color .12s}
+  .cli-contact-edit-fields input:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 2px var(--primary-soft)}
+  .cli-contact-edit-del{background:transparent;border:0;color:var(--text-dim);cursor:pointer;font-size:14px;line-height:1;padding:4px 7px;border-radius:4px;align-self:flex-start;margin-top:5px;transition:all .12s}
+  .cli-contact-edit-del:hover{background:var(--danger-soft);color:var(--danger)}
+  /* Footer actions */
+  .cli-actions{display:flex;align-items:center;gap:8px;margin-top:24px;padding-top:18px;border-top:1px solid var(--border-soft);flex-wrap:wrap}
+  .cli-actions .spacer{flex:1}
+  .cli-actions .btn svg{width:14px;height:14px;vertical-align:-2px;margin-right:5px}
+  /* Bouton Supprimer plus lisible : contour rouge au repos, fond plein au hover */
+  .cli-actions .btn.btn-danger-ghost{color:var(--danger);border:1px solid var(--danger);background:transparent}
+  .cli-actions .btn.btn-danger-ghost:hover{background:var(--danger);color:#fff;border-color:var(--danger);box-shadow:0 2px 6px rgba(239,68,68,.35)}
+  /* Empty state */
+  .cli-empty{padding:40px 20px;text-align:center;color:var(--text-dim);font-size:14px;background:transparent;border:1px dashed var(--border-soft);border-radius:8px}
   .stats{display:flex;gap:8px;flex-wrap:wrap;margin:14px 0 4px}
   .stat{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:10px 14px;font-size:13px;color:var(--text-muted);min-width:120px;box-shadow:var(--shadow-sm)}
   .stat strong{display:block;font-size:15px;color:var(--text);font-weight:600;margin-top:2px;font-variant-numeric:tabular-nums}
@@ -1951,6 +2046,24 @@ firebase.initializeApp({
 const auth = firebase.auth();
 const db = firebase.firestore();
 
+// Email du propriétaire du workspace partagé. Tous les membres validés écrivent
+// sur le doc users/<ownerUid>. Le mapping email→uid est résolu via workspace_ids/.
+const OWNER_EMAIL = "saintilan.romain@gmail.com";
+
+// État du workspace : "loading" | "owner" | "member" | "pending" | "denied"
+// ownerUid = uid du propriétaire (résolu via workspace_ids/<email>).
+// members + pendingRequests = miroir live du doc workspaces/<ownerUid>.
+const workspaceState = {
+  role: "loading",
+  ownerUid: null,
+  ownerEmail: OWNER_EMAIL,
+  members: {},          // { uid: { email, name, addedAt } }
+  pendingRequests: {},  // { uid: { email, name, requestedAt } }
+};
+let wsUnsubscribeData = null;     // unsubscribe de onSnapshot users/<ownerUid>
+let wsUnsubscribeMeta = null;     // unsubscribe de onSnapshot workspaces/<ownerUid>
+let _lastLocalSaveTs = 0;         // timestamp du dernier save local (anti-écho)
+
 const DEFAULT_CATALOG = [
   { k:"shoot_solo_dehors",   l:"SHOOT SOLO - DEHORS",                       p:60  },
   { k:"shoot_solo_prive",    l:"SHOOT SOLO - LIEU PRIVÉ",                   p:65  },
@@ -2049,6 +2162,46 @@ const DEFAULT_S = {
   bugs: { items: [] },
   prefs: { relanceJours: 7 }
 };
+
+// ▼ migrateClientNums — passe de cohérence sur la numérotation des clients :
+//   (1) Normalise : tout ce qui n'est pas un entier ≥ 1 est reset à "" (ex: "11A", " 12 ", "0").
+//   (2) Dédoublonne : si 2+ fiches partagent le même num, on garde la 1re par ordre d'apparition.
+//   (3) Attribue : pour chaque fiche sans num (post-1+2), assigne max(num existants) + 1, +2…
+//       Tri alpha pour stabilité.
+// Idempotent. Appelée au boot et après loadFromCloud (pour aussi corriger la donnée cloud).
+function migrateClientNums() {
+  if (!S.clients || !Array.isArray(S.clients.entries)) return;
+  // (1) Normalisation
+  for (const c of S.clients.entries) {
+    const trimmed = String(c.num || "").trim();
+    if (!/^\d+$/.test(trimmed) || parseInt(trimmed, 10) < 1) {
+      c.num = "";
+    } else {
+      c.num = String(parseInt(trimmed, 10)); // strip leading zeros, normalise
+    }
+  }
+  // (2) Dédoublonnage
+  const seen = new Set();
+  for (const c of S.clients.entries) {
+    if (!c.num) continue;
+    if (seen.has(c.num)) c.num = "";
+    else seen.add(c.num);
+  }
+  // (3) Attribution aux fiches sans num
+  const maxNum = S.clients.entries.reduce((m, c) => {
+    const n = parseInt(c.num, 10);
+    return !isNaN(n) && n > m ? n : m;
+  }, 0);
+  const noNum = S.clients.entries
+    .filter(c => !c.num)
+    .sort((a, b) => (a.name || "").localeCompare(b.name || "", "fr"));
+  let next = maxNum + 1;
+  for (const c of noNum) {
+    c.num = String(next);
+    next++;
+  }
+}
+
 let S = JSON.parse(localStorage.getItem(SK) || "null") || JSON.parse(JSON.stringify(DEFAULT_S));
 if (!S.suivi || !Array.isArray(S.suivi.entries)) S.suivi = { entries: [], devis: {} };
 if (!S.suivi.devis || typeof S.suivi.devis !== "object") S.suivi.devis = {};
@@ -2076,6 +2229,7 @@ S.clients.entries.forEach(c => {
     }
   }
 });
+migrateClientNums();
 if (!S.abonnements || !Array.isArray(S.abonnements.entries)) S.abonnements = { ...DEFAULT_S.abonnements };
 if (!S.investissements || !Array.isArray(S.investissements.entries)) S.investissements = { ...DEFAULT_S.investissements };
 if (!S.tarifs || !Array.isArray(S.tarifs.catalog) || !S.tarifs.catalog.length) S.tarifs = { catalog: JSON.parse(JSON.stringify(DEFAULT_CATALOG)), heuresAnnuelles: "900", facteurSecurite: "0" };
@@ -2299,7 +2453,14 @@ const ICONS = {
   users:     _ICO('<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>'),
   barChart:  _ICO('<path d="M3 3v18h18"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/>'),
   user:      _ICO('<path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>'),
-  bug:       _ICO('<path d="m8 2 1.88 1.88"/><path d="M14.12 3.88 16 2"/><path d="M9 7.13v-1a3.003 3.003 0 1 1 6 0v1"/><path d="M12 20c-3.3 0-6-2.7-6-6v-3a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v3c0 3.3-2.7 6-6 6"/><path d="M12 20v-9"/><path d="M6.53 9C4.6 8.8 3 7.1 3 5"/><path d="M6 13H2"/><path d="M3 21c0-2.1 1.7-3.9 3.8-4"/><path d="M20.97 5c0 2.1-1.6 3.8-3.5 4"/><path d="M22 13h-4"/><path d="M17.2 17c2.1.1 3.8 1.9 3.8 4"/>')
+  bug:       _ICO('<path d="m8 2 1.88 1.88"/><path d="M14.12 3.88 16 2"/><path d="M9 7.13v-1a3.003 3.003 0 1 1 6 0v1"/><path d="M12 20c-3.3 0-6-2.7-6-6v-3a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v3c0 3.3-2.7 6-6 6"/><path d="M12 20v-9"/><path d="M6.53 9C4.6 8.8 3 7.1 3 5"/><path d="M6 13H2"/><path d="M3 21c0-2.1 1.7-3.9 3.8-4"/><path d="M20.97 5c0 2.1-1.6 3.8-3.5 4"/><path d="M22 13h-4"/><path d="M17.2 17c2.1.1 3.8 1.9 3.8 4"/>'),
+  phone:     _ICO('<path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>'),
+  mail:      _ICO('<rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/>'),
+  search:    _ICO('<circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>'),
+  plus:      _ICO('<path d="M5 12h14"/><path d="M12 5v14"/>'),
+  download:  _ICO('<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/>'),
+  trash:     _ICO('<path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>'),
+  edit:      _ICO('<path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>')
 };
 
 const TABS = [
@@ -2319,17 +2480,21 @@ const num = v => { const n = parseFloat(String(v).replace(",", ".")); return isF
 const fmt = v => num(v).toFixed(2).replace(".", ",") + " €";
 
 // ▼ save() — flush localStorage + déclenche saveToCloud (debounce 800ms)
+// Bloqué tant que le workspace n'est pas résolu (sinon on écraserait avec des défauts).
 function save() {
+  if (workspaceState.role !== "owner" && workspaceState.role !== "member") return;
   localStorage.setItem(SK, JSON.stringify(S));
   clearTimeout(cloudT);
   cloudT = setTimeout(saveToCloud, 800);
 }
 
-// ▼ saveToCloud — Firestore set merge (top-level keys de S)
+// ▼ saveToCloud — Firestore set merge sur users/<ownerUid> (workspace partagé)
 async function saveToCloud() {
-  if (!user) return;
+  if (!workspaceState.ownerUid) return;
+  if (workspaceState.role !== "owner" && workspaceState.role !== "member") return;
   try {
-    await db.collection("users").doc(user.uid).set({
+    _lastLocalSaveTs = Date.now();
+    await db.collection("users").doc(workspaceState.ownerUid).set({
       identite: S.identite,
       mission: S.mission,
       devis:   S.devis,
@@ -2340,18 +2505,21 @@ async function saveToCloud() {
       investissements: S.investissements,
       tarifs:  S.tarifs,
       bugs:    S.bugs,
-      prefs:   S.prefs
+      prefs:   S.prefs,
+      _lastWriteBy: user ? user.uid : null,
+      _lastWriteAt: firebase.firestore.FieldValue.serverTimestamp()
     }, { merge: true });
     const e = document.getElementById("savedFlash");
     if (e) { e.textContent = "Enregistré"; setTimeout(() => { if (e && e.textContent === "Enregistré") e.textContent = ""; }, 1500); }
   } catch (err) { console.error("saveToCloud", err); }
 }
 
-// ▼ loadFromCloud — merge Firestore → S avec DEFAULT_S comme fallback
-async function loadFromCloud() {
-  if (!user) return;
+// ▼ loadFromCloud — lit users/<ownerUid> et merge dans S (avec DEFAULT_S en fallback).
+// ownerUid passé explicitement (peut différer de user.uid si on est membre).
+async function loadFromCloud(ownerUid) {
+  if (!ownerUid) return;
   try {
-    const snap = await db.collection("users").doc(user.uid).get();
+    const snap = await db.collection("users").doc(ownerUid).get();
     if (snap.exists) {
       const d = snap.data();
       if (d.mission) {
@@ -2386,12 +2554,251 @@ async function loadFromCloud() {
         S.mission.dateEmission = new Date().toISOString().slice(0, 10);
       }
       suiviMigrate();
+      migrateClientNums();
       recomputeRef();
       localStorage.setItem(SK, JSON.stringify(S));
     }
   } catch (err) { console.error("loadFromCloud", err); }
   render();
 }
+
+// ▼ signInWithGoogle — ouvre popup d'auth Google
+async function signInWithGoogle() {
+  try {
+    const provider = new firebase.auth.GoogleAuthProvider();
+    await auth.signInWithPopup(provider);
+    // onAuthStateChanged prend le relais ensuite
+  } catch (err) {
+    console.error("signInWithGoogle", err);
+    alert("Connexion impossible : " + (err.message || err.code));
+  }
+}
+window.signInWithGoogle = signInWithGoogle;
+
+async function signOut() {
+  try {
+    if (wsUnsubscribeData) { wsUnsubscribeData(); wsUnsubscribeData = null; }
+    if (wsUnsubscribeMeta) { wsUnsubscribeMeta(); wsUnsubscribeMeta = null; }
+    workspaceState.role = "loading";
+    workspaceState.ownerUid = null;
+    workspaceState.members = {};
+    workspaceState.pendingRequests = {};
+    await auth.signOut();
+  } catch (err) { console.error("signOut", err); }
+}
+window.signOut = signOut;
+
+// ▼ initWorkspace — détermine le rôle de l'user authentifié et lance load/sync
+async function initWorkspace(u) {
+  user = u;
+  if (!u) {
+    workspaceState.role = "denied"; // pas authentifié → écran de login
+    workspaceState.ownerUid = null;
+    render();
+    return;
+  }
+  workspaceState.role = "loading";
+  render();
+
+  try {
+    // Cas 1 : c'est l'owner
+    if (u.email && u.email.toLowerCase() === OWNER_EMAIL.toLowerCase()) {
+      workspaceState.ownerUid = u.uid;
+      await ensureOwnerWorkspace(u);
+      workspaceState.role = "owner";
+      await loadFromCloud(u.uid);
+      subscribeWorkspaceData(u.uid);
+      subscribeWorkspaceMeta(u.uid);
+      render();
+      return;
+    }
+
+    // Cas 2 : autre user → résoudre l'ownerUid via workspace_ids
+    const aliasSnap = await db.collection("workspace_ids").doc(OWNER_EMAIL.toLowerCase()).get();
+    if (!aliasSnap.exists) {
+      // Le owner n'a jamais initialisé son workspace → personne ne peut entrer
+      workspaceState.role = "denied";
+      render();
+      return;
+    }
+    const ownerUid = aliasSnap.data().ownerUid;
+    workspaceState.ownerUid = ownerUid;
+
+    const wsSnap = await db.collection("workspaces").doc(ownerUid).get();
+    if (!wsSnap.exists) {
+      workspaceState.role = "denied";
+      render();
+      return;
+    }
+    const ws = wsSnap.data();
+    workspaceState.members = ws.members || {};
+    workspaceState.pendingRequests = ws.pendingRequests || {};
+
+    if (workspaceState.members[u.uid]) {
+      // Membre validé → load + sync
+      workspaceState.role = "member";
+      await loadFromCloud(ownerUid);
+      subscribeWorkspaceData(ownerUid);
+      subscribeWorkspaceMeta(ownerUid);
+      render();
+      return;
+    }
+
+    if (workspaceState.pendingRequests[u.uid]) {
+      // Déjà en attente
+      workspaceState.role = "pending";
+      subscribeWorkspaceMeta(ownerUid); // écoute pour passer "member" si validé
+      render();
+      return;
+    }
+
+    // Inconnu → on ajoute la demande
+    await db.collection("workspaces").doc(ownerUid).update({
+      [`pendingRequests.${u.uid}`]: {
+        email: u.email || "",
+        name: u.displayName || "",
+        requestedAt: new Date().toISOString()
+      }
+    });
+    workspaceState.role = "pending";
+    subscribeWorkspaceMeta(ownerUid);
+    render();
+  } catch (err) {
+    console.error("initWorkspace", err);
+    workspaceState.role = "denied";
+    render();
+  }
+}
+
+// ▼ ensureOwnerWorkspace — crée workspace_ids/<email> + workspaces/<uid> si manquants
+async function ensureOwnerWorkspace(u) {
+  const aliasRef = db.collection("workspace_ids").doc(OWNER_EMAIL.toLowerCase());
+  const aliasSnap = await aliasRef.get();
+  if (!aliasSnap.exists || aliasSnap.data().ownerUid !== u.uid) {
+    await aliasRef.set({ ownerUid: u.uid, ownerEmail: u.email || OWNER_EMAIL });
+  }
+  const wsRef = db.collection("workspaces").doc(u.uid);
+  const wsSnap = await wsRef.get();
+  if (!wsSnap.exists) {
+    await wsRef.set({
+      ownerEmail: OWNER_EMAIL.toLowerCase(),
+      members: {},
+      pendingRequests: {}
+    });
+  }
+}
+
+// ▼ subscribeWorkspaceData — live sync sur users/<ownerUid>
+// Quand un autre user save, on merge ses changements dans S et on rerender.
+// On ignore les événements provenant de notre propre save (anti-écho via _lastLocalSaveTs).
+function subscribeWorkspaceData(ownerUid) {
+  if (wsUnsubscribeData) { wsUnsubscribeData(); wsUnsubscribeData = null; }
+  wsUnsubscribeData = db.collection("users").doc(ownerUid).onSnapshot(snap => {
+    if (!snap.exists) return;
+    const d = snap.data();
+    // Anti-écho : si c'est notre propre écriture (lastWriteBy = nous, et < 2s depuis lastLocalSaveTs), ignore.
+    if (d._lastWriteBy === (user && user.uid) && Date.now() - _lastLocalSaveTs < 2000) return;
+    // Merge dans S (logique calquée sur loadFromCloud, sans le re-render brutal)
+    if (d.mission) {
+      const dm = DEFAULT_S.mission;
+      S.mission = { ...dm, ...d.mission,
+        client:      { ...dm.client,      ...(d.mission.client      || {}) },
+        prep:        { ...dm.prep,        ...(d.mission.prep        || {}) },
+        prod:        { ...dm.prod,        ...(d.mission.prod        || {}) },
+        postprod:    { ...dm.postprod,    ...(d.mission.postprod    || {}) },
+        deplacement: { ...dm.deplacement, ...(d.mission.deplacement || {}) },
+        autres:      { ...dm.autres,      ...(d.mission.autres      || {}) }
+      };
+    }
+    if (d.identite) {
+      S.identite = { ...DEFAULT_S.identite, ...d.identite,
+        rcPro:     { ...DEFAULT_S.identite.rcPro,     ...(d.identite.rcPro     || {}) },
+        mediateur: { ...DEFAULT_S.identite.mediateur, ...(d.identite.mediateur || {}) },
+        bank:      { ...DEFAULT_S.identite.bank,      ...(d.identite.bank      || {}) }
+      };
+    }
+    if (d.devis)   S.devis   = Object.assign({}, DEFAULT_S.devis,   d.devis);
+    if (d.suivi)   S.suivi   = { ...DEFAULT_S.suivi, ...d.suivi, entries: Array.isArray(d.suivi.entries) ? d.suivi.entries : [], devis: (d.suivi.devis && typeof d.suivi.devis === "object") ? d.suivi.devis : {} };
+    if (d.clients) S.clients = { ...DEFAULT_S.clients, ...d.clients, entries: Array.isArray(d.clients.entries) ? d.clients.entries : [] };
+    if (d.compta)  S.compta  = Object.assign({}, DEFAULT_S.compta,  d.compta);
+    if (d.abonnements) S.abonnements = { ...DEFAULT_S.abonnements, ...d.abonnements, entries: Array.isArray(d.abonnements.entries) ? d.abonnements.entries : [] };
+    if (d.investissements) S.investissements = { ...DEFAULT_S.investissements, ...d.investissements, entries: Array.isArray(d.investissements.entries) ? d.investissements.entries : [] };
+    if (d.tarifs && Array.isArray(d.tarifs.catalog) && d.tarifs.catalog.length) S.tarifs = { catalog: d.tarifs.catalog, heuresAnnuelles: d.tarifs.heuresAnnuelles || S.tarifs.heuresAnnuelles || "900", facteurSecurite: d.tarifs.facteurSecurite || S.tarifs.facteurSecurite || "0" };
+    if (d.bugs)    S.bugs    = { items: Array.isArray(d.bugs.items) ? d.bugs.items : [] };
+    if (d.prefs)   S.prefs   = { ...DEFAULT_S.prefs, ...d.prefs };
+    localStorage.setItem(SK, JSON.stringify(S));
+    // Préserve le focus de l'input courant pendant le re-render
+    const active = document.activeElement;
+    const id = active && active.id;
+    const start = active && active.selectionStart;
+    const end = active && active.selectionEnd;
+    render();
+    if (id) {
+      const el = document.getElementById(id);
+      if (el) {
+        el.focus();
+        try { if (start != null && end != null) el.setSelectionRange(start, end); } catch(e) {}
+      }
+    }
+  }, err => console.error("subscribeWorkspaceData", err));
+}
+
+// ▼ subscribeWorkspaceMeta — live sync sur workspaces/<ownerUid>
+// Met à jour membres + demandes en attente. Si pending → member, on relance loadFromCloud.
+function subscribeWorkspaceMeta(ownerUid) {
+  if (wsUnsubscribeMeta) { wsUnsubscribeMeta(); wsUnsubscribeMeta = null; }
+  wsUnsubscribeMeta = db.collection("workspaces").doc(ownerUid).onSnapshot(snap => {
+    if (!snap.exists) return;
+    const ws = snap.data();
+    workspaceState.members = ws.members || {};
+    workspaceState.pendingRequests = ws.pendingRequests || {};
+    // Si l'user était pending et vient d'être validé → bascule member + load
+    if (user && workspaceState.role === "pending" && workspaceState.members[user.uid]) {
+      workspaceState.role = "member";
+      loadFromCloud(ownerUid).then(() => subscribeWorkspaceData(ownerUid));
+      return;
+    }
+    // Si l'user était member et a été retiré → bascule denied
+    if (user && workspaceState.role === "member" && !workspaceState.members[user.uid]) {
+      if (wsUnsubscribeData) { wsUnsubscribeData(); wsUnsubscribeData = null; }
+      workspaceState.role = "denied";
+      render();
+      return;
+    }
+    render();
+  }, err => console.error("subscribeWorkspaceMeta", err));
+}
+
+// ▼ approveRequest — owner valide une demande (pending → members)
+async function approveRequest(uid) {
+  if (workspaceState.role !== "owner" || !workspaceState.ownerUid) return;
+  const req = workspaceState.pendingRequests[uid];
+  if (!req) return;
+  await db.collection("workspaces").doc(workspaceState.ownerUid).update({
+    [`members.${uid}`]: { email: req.email, name: req.name, addedAt: new Date().toISOString() },
+    [`pendingRequests.${uid}`]: firebase.firestore.FieldValue.delete()
+  });
+}
+window.approveRequest = approveRequest;
+
+async function rejectRequest(uid) {
+  if (workspaceState.role !== "owner" || !workspaceState.ownerUid) return;
+  if (!confirm("Refuser cette demande d'accès ?")) return;
+  await db.collection("workspaces").doc(workspaceState.ownerUid).update({
+    [`pendingRequests.${uid}`]: firebase.firestore.FieldValue.delete()
+  });
+}
+window.rejectRequest = rejectRequest;
+
+async function removeMember(uid) {
+  if (workspaceState.role !== "owner" || !workspaceState.ownerUid) return;
+  const m = workspaceState.members[uid];
+  if (!confirm(`Retirer l'accès à ${(m && m.email) || uid} ?`)) return;
+  await db.collection("workspaces").doc(workspaceState.ownerUid).update({
+    [`members.${uid}`]: firebase.firestore.FieldValue.delete()
+  });
+}
+window.removeMember = removeMember;
 
 // ▼ upd — point d'entrée unique pour mutation de S
 function upd(path, val) {
@@ -2484,35 +2891,47 @@ function updDeplDevis(val) {
 window.updDeplDevis = updDeplDevis;
 
 // Compute the next chronologically-unique reference for the current mission.
-// Format : DEVIS-YYYY-MM-NNN, NNN reset chaque mois (arrêté 3 déc. 1987).
-// La séquence cherche le NNN max parmi les devis déjà émis (S.suivi.devis) du mois courant
+// Format : DEVIS-NUM-YYYY-MM-NNN (NUM = n° client, NNN = séquence reset chaque mois).
+// Sans n° client (ex: client non sélectionné) → DEVIS-YYYY-MM-NNN.
+// La séquence cherche le NNN max parmi les devis déjà émis ce mois (tous clients confondus, tous formats)
 // et ajoute 1 — sauf si la mission elle-même est déjà dans le suivi (auquel cas on garde son ref).
-// ▼ recomputeRef — génère DEVIS-YYYY-MM-NNN
+// ▼ recomputeRef — génère DEVIS-NUM-YYYY-MM-NNN
 function recomputeRef() {
   const date = S.mission.dateEmission || "";
   if (!date || date.length < 7) {
     S.mission.ref = "";
     return;
   }
-  // Si la mission est déjà finalisée (dans suivi), ne pas écraser sa référence.
+  const clientNum = (S.mission.client && String(S.mission.client.num || "").trim()) || "";
+  const currentRef = S.mission.ref || "";
   const existing = (S.suivi && S.suivi.devis && typeof S.suivi.devis === "object") ? S.suivi.devis : {};
-  for (const k of Object.keys(existing)) {
-    const r = existing[k] && existing[k].ref;
-    if (r && r === S.mission.ref && S.mission.ref) return;
+  // Protection : si la ref de la mission correspond à un devis déjà archivé ET
+  // que son format reflète le client courant, on ne la régénère pas. Sinon
+  // (changement de client, ancien format sans num, etc.), on génère une neuve.
+  const isInSuivi = !!currentRef && Object.values(existing).some(d => d && d.ref === currentRef);
+  if (isInSuivi) {
+    const matchesClient = clientNum
+      ? currentRef.startsWith(`DEVIS-${clientNum}-`)
+      : /^DEVIS-\d{4}-\d{2}-\d+$/.test(currentRef);
+    if (matchesClient) return;
   }
   const ym = date.slice(0, 7); // "YYYY-MM"
-  const re = new RegExp("^DEVIS-" + ym.replace("-", "\\-") + "-(\\d+)$");
+  // Regex tolérante : accepte "DEVIS-YYYY-MM-NNN" et "DEVIS-NUM-YYYY-MM-NNN"
+  const re = /^DEVIS-(?:\d+-)?(\d{4})-(\d{2})-(\d+)$/;
   let maxN = 0;
   for (const k of Object.keys(existing)) {
     const r = (existing[k] && existing[k].ref) || "";
     const m = r.match(re);
-    if (m) {
-      const n = parseInt(m[1], 10);
+    if (m && `${m[1]}-${m[2]}` === ym) {
+      const n = parseInt(m[3], 10);
       if (n > maxN) maxN = n;
     }
   }
   const next = maxN + 1;
-  S.mission.ref = "DEVIS-" + ym + "-" + String(next).padStart(3, "0");
+  const seq = String(next).padStart(3, "0");
+  S.mission.ref = clientNum
+    ? `DEVIS-${clientNum}-${ym}-${seq}`
+    : `DEVIS-${ym}-${seq}`;
 }
 
 let urssafUnlocked = false;
@@ -3560,12 +3979,18 @@ function cliPickPositionPortal() {
 function cliPickRenderPortal() {
   const p = cliPickEnsurePortal();
   const q = cliPickQuery.trim().toLowerCase();
-  const matches = q ? S.clients.entries.filter(e =>
-    (e.name||"").toLowerCase().includes(q) ||
-    (e.num||"").toLowerCase().includes(q) ||
-    (e.contact||"").toLowerCase().includes(q) ||
-    (e.email||"").toLowerCase().includes(q)
-  ).slice(0, 200) : S.clients.entries.slice(0, 200);
+  const matches = q ? S.clients.entries.filter(e => {
+    if ((e.name || "").toLowerCase().includes(q)) return true;
+    if ((e.num || "").toLowerCase().includes(q)) return true;
+    // Cherche dans contacts[] structurés (pas seulement les legacy joinés)
+    const cs = Array.isArray(e.contacts) ? e.contacts : [];
+    for (const c of cs) {
+      if ((c.name || "").toLowerCase().includes(q)) return true;
+      if ((c.phone || "").toLowerCase().includes(q)) return true;
+      if ((c.email || "").toLowerCase().includes(q)) return true;
+    }
+    return false;
+  }).slice(0, 200) : S.clients.entries.slice(0, 200);
   const showCreate = q && !S.clients.entries.some(e => (e.name||"").toLowerCase() === q);
   const html =
     (matches.length === 0 && !showCreate ? `<div class="empty">${q ? "Aucun client trouvé. Tape un nom puis « Créer »…" : "Aucun client enregistré. Tape pour créer le premier."}</div>` : "") +
@@ -4670,17 +5095,43 @@ function totalsHtml(t) {
 
 // ▼ render — DISPATCHER : recompose app.innerHTML par onglet
 function render() {
+  // Pas connecté Google → écran de login
   if (!user) {
-    app.innerHTML = `<div class="login"><h1>🌊 Devis Photo</h1><button class="btn" onclick="signIn()">Se connecter avec Google</button></div>`;
+    app.innerHTML = rLoginScreen();
     return;
   }
+  // Workspace en cours de résolution → spinner
+  if (workspaceState.role === "loading") {
+    app.innerHTML = rLoadingScreen();
+    return;
+  }
+  // Demande en attente → écran d'attente
+  if (workspaceState.role === "pending") {
+    app.innerHTML = rPendingScreen();
+    return;
+  }
+  // Refusé / accès retiré
+  if (workspaceState.role === "denied") {
+    app.innerHTML = rDeniedScreen();
+    return;
+  }
+  // owner / member → app normale
   const renderers = { accueil: rAC, mission: rMS, profil: rPF, suivi: rSV, clients: rCL, tarifs: rTR, compta: rCP, bugs: rBG };
   const view = (renderers[tab] || (() => ""))();
+  // Badge "owner" ou "membre" en bas de la sidebar
+  const pendingCount = Object.keys(workspaceState.pendingRequests || {}).length;
+  const roleLabel = workspaceState.role === "owner"
+    ? `Propriétaire${pendingCount ? ` · <span style="color:var(--warning);font-weight:600">${pendingCount} demande${pendingCount > 1 ? "s" : ""}</span>` : ""}`
+    : "Membre";
   app.innerHTML = `
     <aside class="sb">
       <h1>🌊 Devis Photo</h1>
       ${TABS.map(([k,l,ico]) => `<button class="tab ${tab===k?"active":""}" onclick="setTab('${k}')"><span class="tab-icon">${ICONS[ico]||""}</span>${esc(l)}</button>`).join("")}
-      <div class="user">${esc(user.email)}<br><a href="#" onclick="signOut();return false">Déconnexion</a></div>
+      <div class="user">
+        ${esc(user.email)}
+        <div style="font-size:11px;color:var(--text-dim);margin-top:2px">${roleLabel}</div>
+        <a href="#" onclick="signOut();return false">Déconnexion</a>
+      </div>
     </aside>
     <main>${view}</main>
     ${rTextEditorModal()}
@@ -4688,6 +5139,72 @@ function render() {
     ${rViewFactureModal()}
     ${rPrintTipModal()}
 `;
+}
+
+// ▼ rLoginScreen — écran de connexion (user non authentifié)
+function rLoginScreen() {
+  return `<div class="ws-screen">
+    <div class="ws-card">
+      <h1>🌊 Devis Photo</h1>
+      <p class="ws-sub">Application de gestion de devis pour photographe.</p>
+      <button class="btn ws-google-btn" onclick="signInWithGoogle()">
+        <svg width="18" height="18" viewBox="0 0 48 48" style="vertical-align:-3px;margin-right:8px"><path fill="#FFC107" d="M43.611 20.083H42V20H24v8h11.303c-1.649 4.657-6.08 8-11.303 8-6.627 0-12-5.373-12-12s5.373-12 12-12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4 12.955 4 4 12.955 4 24s8.955 20 20 20 20-8.955 20-20c0-1.341-.138-2.65-.389-3.917z"/><path fill="#FF3D00" d="m6.306 14.691 6.571 4.819C14.655 15.108 18.961 12 24 12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4 16.318 4 9.656 8.337 6.306 14.691z"/><path fill="#4CAF50" d="M24 44c5.166 0 9.86-1.977 13.409-5.192l-6.19-5.238A11.91 11.91 0 0 1 24 36c-5.202 0-9.619-3.317-11.283-7.946l-6.522 5.025C9.505 39.556 16.227 44 24 44z"/><path fill="#1976D2" d="M43.611 20.083H42V20H24v8h11.303a12.04 12.04 0 0 1-4.087 5.571l.003-.002 6.19 5.238C36.971 39.205 44 34 44 24c0-1.341-.138-2.65-.389-3.917z"/></svg>
+        Se connecter avec Google
+      </button>
+    </div>
+  </div>`;
+}
+
+// ▼ rLoadingScreen — workspace en cours de résolution
+function rLoadingScreen() {
+  return `<div class="ws-screen">
+    <div class="ws-card">
+      <h1>🌊 Devis Photo</h1>
+      <p class="ws-sub">Chargement…</p>
+    </div>
+  </div>`;
+}
+
+// ▼ rPendingScreen — user authentifié, demande en attente d'approbation
+function rPendingScreen() {
+  const u = user || {};
+  return `<div class="ws-screen">
+    <div class="ws-card">
+      <h1>🌊 Devis Photo</h1>
+      <div class="ws-user">
+        <strong>${esc(u.displayName || u.email || "")}</strong>
+        ${u.email ? `<div style="font-size:13px;color:var(--text-dim)">${esc(u.email)}</div>` : ""}
+      </div>
+      <div class="ws-status pending">
+        ⏳ <strong>Demande d'accès envoyée</strong>
+        <p>Vous pourrez vous connecter dès que ${esc(OWNER_EMAIL)} aura validé votre demande. Cette page se mettra à jour automatiquement.</p>
+      </div>
+      <div style="display:flex;gap:8px;justify-content:center;margin-top:18px">
+        <button class="btn ghost" onclick="signOut()">Se déconnecter</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+// ▼ rDeniedScreen — accès refusé (workspace non initialisé, ou membre retiré)
+function rDeniedScreen() {
+  const u = user || {};
+  return `<div class="ws-screen">
+    <div class="ws-card">
+      <h1>🌊 Devis Photo</h1>
+      <div class="ws-user">
+        <strong>${esc(u.displayName || u.email || "")}</strong>
+        ${u.email ? `<div style="font-size:13px;color:var(--text-dim)">${esc(u.email)}</div>` : ""}
+      </div>
+      <div class="ws-status denied">
+        ❌ <strong>Accès refusé</strong>
+        <p>Votre compte n'a pas accès à ce workspace. Contactez ${esc(OWNER_EMAIL)} si vous pensez qu'il s'agit d'une erreur.</p>
+      </div>
+      <div style="display:flex;gap:8px;justify-content:center;margin-top:18px">
+        <button class="btn ghost" onclick="signOut()">Se déconnecter</button>
+      </div>
+    </div>
+  </div>`;
 }
 
 // State: track if picker is force-opened (e.g. after user clicks "Changer de contact")
@@ -8197,181 +8714,62 @@ window.viewDeboursOpen = function(devisId) {
 
 let clientsExpanded = null;
 let clientsEditing = null;
+let clientsSearchQuery = "";
+let clientsSort = { key: "num", dir: "asc" };
 
+// Calcule le prochain n° client : max(num existants entiers) + 1.
+// Pas de réutilisation des trous : si on supprime le n°50, le suivant créé
+// reste max+1. Plus prévisible et aligné avec la convention CRM.
+function clientsNextNum() {
+  const maxNum = S.clients.entries.reduce((m, c) => {
+    const n = parseInt(c.num, 10);
+    return !isNaN(n) && n > m ? n : m;
+  }, 0);
+  return String(maxNum + 1);
+}
+
+// Création d'un client vide. Pas de pré-remplissage depuis S.mission.client :
+// l'utilisateur a sa fiche du devis en cours via le picker (avec « Créer ») ;
+// ici l'intention est toujours de partir de zéro. Le n° est auto-attribué.
 function clientsAdd() {
-  const c = S.mission.client;
   const id = uid();
-  // Build initial contact from mission's selected client
-  const initial = (c.name || c.contact || c.phone || c.email) ? [{
-    id: uid(),
-    name: c.contact || "",
-    phone: c.phone || "",
-    email: c.email || ""
-  }] : [{ id: uid(), name: "", phone: "", email: "" }];
-  S.clients.entries.unshift({
+  const entry = {
     id,
-    num:        c.num     || "",
-    name:       c.name    || "",
-    contacts:   initial,
-    contact:    c.contact || "",
-    address:    c.address || "",
+    num:        clientsNextNum(),
+    name:       "",
+    contacts:   [{ id: uid(), name: "", phone: "", email: "" }],
+    contact:    "",
+    address:    "",
     cityPostal: "",
-    phone:      c.phone   || "",
-    email:      c.email   || "",
-    rencontre:  ""
-  });
+    phone:      "",
+    email:      "",
+    rencontre:  "",
+    siret:      "",
+    tvaIntra:   ""
+  };
+  S.clients.entries.unshift(entry);
   clientsExpanded = id;
   clientsEditing  = id;
   save();
   render();
+  clientsScrollAndFocus(id);
 }
 window.clientsAdd = clientsAdd;
 
-// Import unique clients from SUIVI_SEED + S.suivi.entries
-// Parse contacts from a Tosma-like cell: "Cyrille VANHULLE Théophile NOGRIX" → 2 contacts
-// Heuristic: split on patterns where a Last name (UPPERCASE word) is followed by a Firstname (capitalized word)
-function parseMultiContactNames(raw) {
-  if (!raw) return [];
-  const s = raw.trim();
-  // First try: split on common separators (newlines, slashes, semicolons, commas)
-  if (/[\n;\/]/.test(s) || s.includes(",")) {
-    return s.split(/[\n,;\/]+/).map(x => x.trim()).filter(Boolean);
-  }
-  // Second try: detect "[Firstname] [LASTNAME] [Firstname] [LASTNAME]" pattern
-  // A LASTNAME (all upper) followed by a Firstname (cap+lower) means a new contact starts
-  const tokens = s.split(/\s+/);
-  if (tokens.length < 4) return [s]; // too short to be multi-contact
-  const groups = [];
-  let current = [];
-  for (let i = 0; i < tokens.length; i++) {
-    current.push(tokens[i]);
-    // If current token is ALL UPPERCASE (lastname) and next token starts with capital + lowercase (firstname),
-    // we have a contact boundary
-    const tk = tokens[i];
-    const next = tokens[i + 1];
-    const isLastname = tk.length >= 2 && tk === tk.toUpperCase() && /[A-ZÀ-Ÿ]/.test(tk);
-    const nextIsFirstname = next && /^[A-ZÀ-Ÿ][a-zà-ÿ]/.test(next);
-    if (isLastname && nextIsFirstname) {
-      groups.push(current.join(" "));
-      current = [];
+// Après render : scroll la nouvelle fiche en vue + focus sur l'input "Nom".
+// Sans ça la fiche est cachée en bas (tri num asc → num vide en fin de liste).
+function clientsScrollAndFocus(id) {
+  requestAnimationFrame(() => {
+    const row = document.getElementById("cli-row-" + id);
+    if (row) row.scrollIntoView({ behavior: "smooth", block: "center" });
+    // Focus l'input "Nom" dans le panneau déplié (ligne suivante)
+    const detail = row && row.nextElementSibling;
+    if (detail) {
+      const nameInput = detail.querySelector(".cli-head-name input");
+      if (nameInput) nameInput.focus();
     }
-  }
-  if (current.length) groups.push(current.join(" "));
-  return groups.length >= 2 ? groups : [s];
-}
-
-// Parse multi-emails (whitespace-separated emails in one cell)
-function parseMultiEmails(raw) {
-  if (!raw) return [];
-  // First try: split on newlines, commas, semicolons, slashes
-  if (/[\n,;\/]/.test(raw)) {
-    return raw.split(/[\n,;\/]+/).map(x => x.trim()).filter(Boolean);
-  }
-  // Then: split on whitespace if multiple @ are present
-  const atCount = (raw.match(/@/g) || []).length;
-  if (atCount >= 2) {
-    return raw.split(/\s+/).map(x => x.trim()).filter(x => x.includes("@"));
-  }
-  return [raw.trim()];
-}
-
-// Parse multi-phones similarly
-function parseMultiPhones(raw) {
-  if (!raw) return [];
-  if (/[\n,;\/]/.test(raw)) {
-    return raw.split(/[\n,;\/]+/).map(x => x.trim()).filter(Boolean);
-  }
-  return [raw.trim()];
-}
-
-// Build a clean contacts array from raw fields by zipping parsed values
-function buildContactsFromRaw(rawContact, rawPhone, rawEmail) {
-  const names = parseMultiContactNames(rawContact);
-  const phones = parseMultiPhones(rawPhone);
-  const emails = parseMultiEmails(rawEmail);
-  const max = Math.max(names.length, phones.length, emails.length, 1);
-  const contacts = [];
-  for (let i = 0; i < max; i++) {
-    contacts.push({
-      id: uid(),
-      name: names[i] || "",
-      phone: phones[i] || "",
-      email: emails[i] || ""
-    });
-  }
-  // Don't return entirely-empty array; ensure at least one slot
-  return contacts.length ? contacts : [{ id: uid(), name: "", phone: "", email: "" }];
-}
-
-function clientsImportFromSuivi() {
-  // Use CLIENTS_SEED (real data extracted from Excel) as authoritative source.
-  // Fallback to SUIVI_SEED parsing only if CLIENTS_SEED unavailable.
-  const seed = (typeof CLIENTS_SEED !== "undefined" && Array.isArray(CLIENTS_SEED)) ? CLIENTS_SEED : null;
-  if (!seed) {
-    alert("Seed clients indisponible (CLIENTS_SEED manquant).");
-    return;
-  }
-  const existing = S.clients.entries;
-  // Decide for each seed entry: skip (exists) / import (new) / update (exists but contacts empty)
-  let added = 0, updated = 0, skipped = 0;
-  for (const c of seed) {
-    if (!c.name && !c.num) continue;
-    // Match by num first, then by exact name (case-insensitive)
-    const found = existing.find(x =>
-      (c.num && (x.num || "").trim() === c.num)
-      || (c.name && (x.name || "").trim().toLowerCase() === c.name.toLowerCase())
-    );
-    if (found) {
-      // Existing client — only fill missing data, never overwrite user's edits
-      const hasContent = Array.isArray(found.contacts) && found.contacts.some(k => k.name || k.phone || k.email);
-      if (!hasContent && (c.contact || c.phone || c.email)) {
-        found.contacts = buildContactsFromRaw(c.contact, c.phone, c.email);
-        if (!found.address) found.address = c.address || "";
-        if (!found.cityPostal) found.cityPostal = c.cityPostal || "";
-        if (!found.rencontre) found.rencontre = c.via || "";
-        if (!found.num) found.num = c.num || "";
-        // Sync legacy
-        syncClientLegacy(found);
-        updated++;
-      } else {
-        skipped++;
-      }
-    } else {
-      // New client
-      const contacts = buildContactsFromRaw(c.contact, c.phone, c.email);
-      const newClient = {
-        id: uid(),
-        num: c.num || "",
-        name: c.name || "",
-        contacts,
-        contact: "", phone: "", email: "",
-        address: c.address || "",
-        cityPostal: c.cityPostal || "",
-        rencontre: c.via || ""
-      };
-      syncClientLegacy(newClient);
-      S.clients.entries.push(newClient);
-      added++;
-    }
-  }
-  // Sort clients by num then name for tidiness
-  S.clients.entries.sort((a, b) => {
-    const an = parseInt(a.num, 10);
-    const bn = parseInt(b.num, 10);
-    if (!isNaN(an) && !isNaN(bn) && an !== bn) return an - bn;
-    if (!isNaN(an) && isNaN(bn)) return -1;
-    if (isNaN(an) && !isNaN(bn)) return 1;
-    return (a.name || "").localeCompare(b.name || "", "fr");
   });
-  save();
-  render();
-  const parts = [];
-  if (added) parts.push(`${added} ajouté${added > 1 ? "s" : ""}`);
-  if (updated) parts.push(`${updated} complété${updated > 1 ? "s" : ""}`);
-  if (skipped) parts.push(`${skipped} déjà à jour`);
-  alert(parts.length ? `Import terminé : ${parts.join(", ")}.` : "Aucun changement.");
 }
-window.clientsImportFromSuivi = clientsImportFromSuivi;
 
 function clientsToggle(id) {
   if (clientsExpanded === id) {
@@ -8398,15 +8796,27 @@ function clientsEditDone() {
 }
 window.clientsEditDone = clientsEditDone;
 
+// Mémorise la requête puis applique le filtre DOM. Le stocker dans clientsSearchQuery
+// permet de ré-appliquer après render() (sinon perdu à l'ouverture/édition d'une fiche).
 function clientsFilter(q) {
-  const term = (q || "").trim().toLowerCase();
+  clientsSearchQuery = q || "";
+  clientsApplyFilters();
+}
+window.clientsFilter = clientsFilter;
+
+// Applique la recherche texte sur les lignes en place + bascule l'empty-state.
+// Appelée au render via setTimeout(0) pour restaurer un filtre actif.
+function clientsApplyFilters() {
   const list = document.getElementById("clientsList");
   const noRes = document.getElementById("clientsNoResults");
   if (!list) return;
+  const q = clientsSearchQuery.trim().toLowerCase();
   let visible = 0;
+  let totalRows = 0;
   list.querySelectorAll("tr.cli-row").forEach(tr => {
+    totalRows++;
     const hay = (tr.dataset.search || "").toLowerCase();
-    const show = !term || hay.includes(term);
+    const show = !q || hay.includes(q);
     tr.style.display = show ? "" : "none";
     const detail = tr.nextElementSibling;
     if (detail && detail.classList.contains("cli-detail")) {
@@ -8415,8 +8825,8 @@ function clientsFilter(q) {
     if (show) visible++;
   });
   if (noRes) {
-    if (term && visible === 0) {
-      noRes.querySelectorAll(".term").forEach(el => el.textContent = q);
+    if (q && visible === 0 && totalRows > 0) {
+      noRes.querySelectorAll(".term").forEach(el => el.textContent = clientsSearchQuery);
       noRes.style.display = "";
       list.style.display = "none";
     } else {
@@ -8425,7 +8835,38 @@ function clientsFilter(q) {
     }
   }
 }
-window.clientsFilter = clientsFilter;
+window.clientsApplyFilters = clientsApplyFilters;
+
+function clientsSortBy(key) {
+  if (clientsSort.key === key) {
+    clientsSort.dir = clientsSort.dir === "asc" ? "desc" : "asc";
+  } else {
+    clientsSort = { key, dir: "asc" };
+  }
+  render();
+}
+window.clientsSortBy = clientsSortBy;
+
+// Tri en mémoire selon clientsSort.key/dir
+function clientsSorted() {
+  const list = [...S.clients.entries];
+  const dir = clientsSort.dir === "asc" ? 1 : -1;
+  const key = clientsSort.key;
+  list.sort((a, b) => {
+    if (key === "num") {
+      const an = parseInt(a.num, 10);
+      const bn = parseInt(b.num, 10);
+      if (!isNaN(an) && !isNaN(bn) && an !== bn) return (an - bn) * dir;
+      if (!isNaN(an) && isNaN(bn)) return -1 * dir;
+      if (isNaN(an) && !isNaN(bn)) return 1 * dir;
+      return (a.name || "").localeCompare(b.name || "", "fr") * dir;
+    }
+    if (key === "name") return (a.name || "").localeCompare(b.name || "", "fr") * dir;
+    if (key === "city") return (a.cityPostal || "").localeCompare(b.cityPostal || "", "fr") * dir;
+    return 0;
+  });
+  return list;
+}
 
 function clientsCreateFromSearch() {
   const inp = document.getElementById("clientsSearchInput");
@@ -8433,14 +8874,18 @@ function clientsCreateFromSearch() {
   if (!name) return;
   const id = uid();
   S.clients.entries.unshift({
-    id, num: "", name,
-    contact: "", address: "", cityPostal: "", phone: "", email: "", rencontre: ""
+    id, num: clientsNextNum(), name,
+    contacts: [{ id: uid(), name: "", phone: "", email: "" }],
+    contact: "", address: "", cityPostal: "", phone: "", email: "", rencontre: "",
+    siret: "", tvaIntra: ""
   });
   clientsExpanded = id;
   clientsEditing  = id;
+  clientsSearchQuery = "";
   if (inp) inp.value = "";
   save();
   render();
+  clientsScrollAndFocus(id);
 }
 window.clientsCreateFromSearch = clientsCreateFromSearch;
 
@@ -8451,15 +8896,89 @@ function clientsDel(id) {
 }
 window.clientsDel = clientsDel;
 
+// Debounce timer pour la vérif doublon du n° client (déclenchée 800ms après
+// la dernière frappe, sinon on alerte à chaque caractère "1", "11", "11 7"...).
+let _clientsNumCheckTimer = null;
+
 function clientsUpd(id, field, val) {
   const e = S.clients.entries.find(x => x.id === id);
   if (!e) return;
   e[field] = val;
+  if (field === "num") {
+    clearTimeout(_clientsNumCheckTimer);
+    _clientsNumCheckTimer = setTimeout(() => {
+      const trimmed = String(val || "").trim();
+      if (!trimmed) return;
+      const dup = S.clients.entries.find(x => x.id !== id && String(x.num || "").trim() === trimmed);
+      if (dup) alert(`⚠ Le n° ${trimmed} est déjà utilisé par « ${dup.name || "(sans nom)"} ».`);
+    }, 800);
+  }
   save();
 }
 window.clientsUpd = clientsUpd;
 
-// Sync legacy fields from contacts array (for backward compat with display elsewhere)
+// Quick-action : pré-sélectionne ce client dans S.mission et bascule sur l'onglet Mission.
+// Calque cliPickSelect : si un seul contact valide, le pré-pique automatiquement.
+function clientsNewDevis(id) {
+  const e = S.clients.entries.find(x => x.id === id);
+  if (!e) return;
+  const validContacts = (e.contacts || []).filter(c => c.name || c.phone || c.email);
+  const onlyContact = validContacts.length === 1 ? validContacts[0] : null;
+  S.mission.client = {
+    id: e.id, num: e.num || "", name: e.name || "",
+    contact: e.contact || "", address: e.address || "", cityPostal: e.cityPostal || "",
+    phone: e.phone || "", email: e.email || "",
+    contactId: onlyContact ? onlyContact.id : "",
+    contactSelected: onlyContact ? (onlyContact.name || "") : "",
+    phoneSelected: onlyContact ? (onlyContact.phone || "") : "",
+    emailSelected: onlyContact ? (onlyContact.email || "") : ""
+  };
+  if (typeof contactPickerModalOpen !== "undefined") {
+    contactPickerModalOpen = validContacts.length > 1;
+  }
+  if (typeof recomputeRef === "function") recomputeRef();
+  clientsExpanded = null;
+  clientsEditing = null;
+  save();
+  if (typeof setTab === "function") setTab("mission"); else render();
+}
+window.clientsNewDevis = clientsNewDevis;
+
+// Export CSV de la liste clients (séparateur ';', virgule décimale, BOM UTF-8 — Excel-FR)
+function clientsExportCSV() {
+  const entries = S.clients.entries;
+  if (!entries.length) { alert("Aucun client à exporter."); return; }
+  const headers = ["Num", "Nom", "Contacts", "Telephones", "Emails", "Adresse", "CP-Ville", "Rencontre", "SIRET", "TVA"];
+  const escCsv = v => {
+    const s = String(v == null ? "" : v);
+    return /[";\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+  };
+  const lines = [headers.join(";")];
+  for (const e of entries) {
+    const valid = Array.isArray(e.contacts) ? e.contacts.filter(c => c.name || c.phone || c.email) : [];
+    const names  = valid.map(c => c.name).filter(Boolean).join(" | ");
+    const phones = valid.map(c => c.phone).filter(Boolean).join(" | ");
+    const emails = valid.map(c => c.email).filter(Boolean).join(" | ");
+    lines.push([
+      escCsv(e.num), escCsv(e.name),
+      escCsv(names), escCsv(phones), escCsv(emails),
+      escCsv(e.address), escCsv(e.cityPostal),
+      escCsv(e.rencontre), escCsv(e.siret), escCsv(e.tvaIntra)
+    ].join(";"));
+  }
+  const blob = new Blob(["﻿" + lines.join("\n")], { type: "text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `clients-${new Date().toISOString().slice(0, 10)}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+window.clientsExportCSV = clientsExportCSV;
+
+// Sync legacy fields from contacts array (backward compat with display elsewhere).
 function syncClientLegacy(client) {
   if (!Array.isArray(client.contacts)) return;
   client.contact = client.contacts.map(c => c.name).filter(Boolean).join("\n");
@@ -8506,124 +9025,179 @@ window.clientContactUpd = clientContactUpd;
 
 // ▼ rCL — RENDERER onglet Clients
 function rCL() {
-  const entries = S.clients.entries;
+  const entries = clientsSorted();
+  const total = entries.length;
   const stop = "event.stopPropagation();";
+
+  const sortInd = key => {
+    if (clientsSort.key !== key) return `<span class="cli-sort-ind">▴▾</span>`;
+    return clientsSort.dir === "asc" ? `<span class="cli-sort-ind">▴</span>` : `<span class="cli-sort-ind">▾</span>`;
+  };
+  const thCls = key => "cli-sortable" + (clientsSort.key === key ? " sorted" : "");
 
   const rowsHtml = entries.map(e => {
     const expanded = clientsExpanded === e.id;
     const editing  = clientsEditing  === e.id;
-    const contactCount = Array.isArray(e.contacts) ? e.contacts.filter(c => c.name || c.phone || c.email).length : 0;
-    const search = [e.num, e.name, e.contact, e.phone, e.email, e.address, e.cityPostal, e.rencontre,
+    const validContacts = Array.isArray(e.contacts) ? e.contacts.filter(c => c.name || c.phone || c.email) : [];
+    const search = [e.num, e.name, e.contact, e.phone, e.email, e.address, e.cityPostal, e.rencontre, e.siret, e.tvaIntra,
       ...(Array.isArray(e.contacts) ? e.contacts.flatMap(c => [c.name, c.phone, c.email]) : [])]
       .map(v => v || "").join(" ");
 
+    // En édition comme en lecture, la ligne du tableau est read-only :
+    // la saisie de Nom/N° se fait dans l'en-tête du panneau déplié.
     const summary = editing ? `
-      <tr class="cli-row cli-editing" data-search="${esc(search)}">
-        <td><input value="${esc(e.num)}" oninput="clientsUpd('${e.id}','num',this.value)"></td>
-        <td><input value="${esc(e.name)}" oninput="clientsUpd('${e.id}','name',this.value)"></td>
-        <td style="text-align:center;color:var(--text-muted);font-size:13px">${contactCount > 0 ? `${contactCount} contact${contactCount > 1 ? "s" : ""}` : "—"}</td>
-        <td class="actions"><button title="Supprimer" onclick="${stop}if(confirm('Supprimer ce client ?'))clientsDel('${e.id}')">×</button></td>
+      <tr class="cli-row expanded" id="cli-row-${e.id}" data-search="${esc(search)}">
+        <td class="cli-num">${esc(e.num) || "—"}</td>
+        <td class="cli-name">${esc(e.name) || `<span style="color:var(--text-dim);font-style:italic;font-weight:400">(à remplir)</span>`}</td>
+        <td class="cli-city${e.cityPostal ? "" : " dim"}">${esc(e.cityPostal) || "—"}</td>
       </tr>` : `
-      <tr class="cli-row clickable ${expanded ? "expanded" : ""}" data-search="${esc(search)}" onclick="clientsToggle('${e.id}')">
-        <td>${esc(e.num) || "—"}</td>
-        <td><strong>${esc(e.name) || "—"}</strong></td>
-        <td style="text-align:center">${contactCount > 0
-          ? `<span style="background:var(--primary-soft);color:var(--primary);padding:2px 10px;border-radius:10px;font-size:13px;font-weight:600">${contactCount}</span>`
-          : `<span style="color:var(--text-dim)">—</span>`}</td>
-        <td class="actions"><button title="Supprimer" onclick="${stop}if(confirm('Supprimer ce client ?'))clientsDel('${e.id}')">×</button></td>
+      <tr class="cli-row clickable ${expanded ? "expanded" : ""}" id="cli-row-${e.id}" data-search="${esc(search)}" onclick="clientsToggle('${e.id}')">
+        <td class="cli-num">${esc(e.num) || "—"}</td>
+        <td class="cli-name">${esc(e.name) || "—"}</td>
+        <td class="cli-city${e.cityPostal ? "" : " dim"}">${esc(e.cityPostal) || "—"}</td>
       </tr>`;
 
     let detail = "";
     if (expanded) {
       const contacts = Array.isArray(e.contacts) ? e.contacts : [];
-      const body = editing ? `
-        <div class="row">
-          <div class="field lg" style="max-width:none">
-            <label>Contacts <span style="font-weight:400;color:var(--text-dim)">(${contacts.length})</span></label>
-            <div class="contacts-edit">
-              ${contacts.map((c, i) => `
-                <div class="contact-row">
-                  <div class="contact-row-num">${i + 1}</div>
-                  <div class="contact-row-fields">
-                    <input placeholder="Nom du contact" value="${esc(c.name || "")}" oninput="clientContactUpd('${e.id}','${c.id}','name',this.value)">
-                    <input placeholder="📞 Téléphone" value="${esc(c.phone || "")}" oninput="clientContactUpd('${e.id}','${c.id}','phone',this.value)">
-                    <input type="email" placeholder="✉ Email" value="${esc(c.email || "")}" oninput="clientContactUpd('${e.id}','${c.id}','email',this.value)">
-                  </div>
-                  <button class="contact-row-del" onclick="clientContactDel('${e.id}','${c.id}')" title="Supprimer ce contact">×</button>
-                </div>
-              `).join("")}
+
+      const contactsHtml = editing ? `
+        ${contacts.map((c, i) => `
+          <div class="cli-contact-edit">
+            <div class="cli-contact-edit-num">${i + 1}</div>
+            <div class="cli-contact-edit-fields">
+              <input placeholder="Nom du contact" value="${esc(c.name || "")}" oninput="clientContactUpd('${e.id}','${c.id}','name',this.value)">
+              <input placeholder="Téléphone" value="${esc(c.phone || "")}" oninput="clientContactUpd('${e.id}','${c.id}','phone',this.value)">
+              <input type="email" placeholder="Email" value="${esc(c.email || "")}" oninput="clientContactUpd('${e.id}','${c.id}','email',this.value)">
             </div>
-            <button class="btn ghost" onclick="clientContactAdd('${e.id}')" style="font-size:13px;margin-top:8px">+ Ajouter un contact</button>
+            <button class="cli-contact-edit-del" onclick="clientContactDel('${e.id}','${c.id}')" title="Supprimer ce contact">×</button>
           </div>
-        </div>
-        <div class="row">
-          <div class="field"><label>Adresse</label><input value="${esc(e.address)}" oninput="clientsUpd('${e.id}','address',this.value)"></div>
-          <div class="field"><label>CP - Ville</label><input value="${esc(e.cityPostal)}" oninput="clientsUpd('${e.id}','cityPostal',this.value)"></div>
-        </div>
-        <div class="row">
-          <div class="field"><label>Rencontré via</label><input value="${esc(e.rencontre)}" oninput="clientsUpd('${e.id}','rencontre',this.value)"></div>
-        </div>
-        <div class="row">
-          <div class="field"><label>SIRET <span style="color:var(--text-dim);font-size:11px">(B2B uniquement)</span></label><input value="${esc(e.siret || "")}" oninput="clientsUpd('${e.id}','siret',this.value)" placeholder="123 456 789 00012" style="font-variant-numeric:tabular-nums"></div>
-          <div class="field"><label>N° TVA intra <span style="color:var(--text-dim);font-size:11px">(B2B uniquement)</span></label><input value="${esc(e.tvaIntra || "")}" oninput="clientsUpd('${e.id}','tvaIntra',this.value)" placeholder="FR12345678901" style="font-variant-numeric:tabular-nums;text-transform:uppercase"></div>
-        </div>
-        <div class="cli-actions">
-          <button class="btn" onclick="clientsEditDone()">Terminer</button>
-          <button class="btn ghost" onclick="clientsToggle('${e.id}')">Fermer</button>
+        `).join("")}
+        <button class="cli-add-contact" onclick="clientContactAdd('${e.id}')">+ Ajouter un contact</button>
+      ` : (validContacts.length === 0 ? `<div class="cli-dl"><dd class="dim">Aucun contact renseigné</dd></div>` :
+        validContacts.map(c => `
+          <div class="cli-contact">
+            <span class="nm">${esc(c.name || "(sans nom)")}</span>
+            ${c.phone ? `<a class="ln" href="tel:${esc((c.phone || "").replace(/\s/g, ""))}">${ICONS.phone}${esc(c.phone)}</a>` : ""}
+            ${c.email ? `<a class="ln" href="mailto:${esc(c.email)}">${ICONS.mail}${esc(c.email)}</a>` : ""}
+          </div>
+        `).join(""));
+
+      const infosHtml = editing ? `
+        <div class="cli-dl">
+          <dt>Adresse</dt>
+          <dd><input value="${esc(e.address)}" oninput="clientsUpd('${e.id}','address',this.value)" placeholder="N°, rue, complément…"></dd>
+          <dt>CP - Ville</dt>
+          <dd><input value="${esc(e.cityPostal)}" oninput="clientsUpd('${e.id}','cityPostal',this.value)" placeholder="44000 Nantes"></dd>
+          <dt>Rencontré via</dt>
+          <dd><input list="rencontreSuggestions" value="${esc(e.rencontre)}" oninput="clientsUpd('${e.id}','rencontre',this.value)" placeholder="Instagram, bouche à oreille…"></dd>
+          <dt>SIRET</dt>
+          <dd><input value="${esc(e.siret || "")}" oninput="clientsUpd('${e.id}','siret',this.value)" placeholder="123 456 789 00012" style="font-variant-numeric:tabular-nums"></dd>
+          <dt>TVA intra</dt>
+          <dd><input value="${esc(e.tvaIntra || "")}" oninput="clientsUpd('${e.id}','tvaIntra',this.value)" placeholder="FR12345678901" style="font-variant-numeric:tabular-nums;text-transform:uppercase"></dd>
         </div>
       ` : `
-        ${(() => {
-          const valid = contacts.filter(c => c.name || c.phone || c.email);
-          if (valid.length === 0) return `<div class="cli-info"><span class="cli-label">Contacts</span><span>—</span></div>`;
-          return `<div class="cli-info" style="align-items:flex-start">
-            <span class="cli-label">Contacts (${valid.length})</span>
-            <span style="display:flex;flex-direction:column;gap:6px">
-              ${valid.map(c => `<span style="display:flex;flex-direction:column;gap:2px;padding-bottom:6px;border-bottom:1px solid var(--border-soft)">
-                <strong style="color:var(--text)">${esc(c.name || "(sans nom)")}</strong>
-                ${c.phone ? `<span style="font-size:13px;color:var(--text-muted)">📞 ${esc(c.phone)}</span>` : ""}
-                ${c.email ? `<span style="font-size:13px;color:var(--text-muted)">✉ ${esc(c.email)}</span>` : ""}
-              </span>`).join("")}
-            </span>
-          </div>`;
-        })()}
-        <div class="cli-info"><span class="cli-label">Adresse</span><span>${esc(e.address) || "—"}</span></div>
-        <div class="cli-info"><span class="cli-label">CP - Ville</span><span>${esc(e.cityPostal) || "—"}</span></div>
-        <div class="cli-info"><span class="cli-label">Rencontré via</span><span>${esc(e.rencontre) || "—"}</span></div>
-        ${e.siret ? `<div class="cli-info"><span class="cli-label">SIRET</span><span>${esc(formatSiret(e.siret))}</span></div>` : ""}
-        ${e.tvaIntra ? `<div class="cli-info"><span class="cli-label">TVA intra</span><span>${esc(e.tvaIntra)}</span></div>` : ""}
-        <div class="cli-actions">
-          <button class="btn" onclick="clientsEdit('${e.id}')">Modifier</button>
-          <button class="btn ghost" onclick="clientsToggle('${e.id}')">Fermer</button>
-        </div>
+        <dl class="cli-dl">
+          <dt>Adresse</dt>
+          <dd class="${e.address ? "" : "dim"}">${esc(e.address) || "—"}</dd>
+          <dt>CP - Ville</dt>
+          <dd class="${e.cityPostal ? "" : "dim"}">${esc(e.cityPostal) || "—"}</dd>
+          <dt>Rencontre</dt>
+          <dd class="${e.rencontre ? "" : "dim"}">${esc(e.rencontre) || "—"}</dd>
+          ${e.siret ? `<dt>SIRET</dt><dd>${esc(formatSiret(e.siret))}</dd>` : ""}
+          ${e.tvaIntra ? `<dt>TVA intra</dt><dd>${esc(e.tvaIntra)}</dd>` : ""}
+        </dl>
       `;
-      detail = `<tr class="cli-detail"><td colspan="4"><div class="cli-panel">${body}</div></td></tr>`;
+
+      const cityLine = (e.cityPostal || "").trim();
+      const headerHtml = editing ? `
+        <div class="cli-panel-head edit">
+          <div class="cli-head-fields">
+            <div class="cli-head-name">
+              <label>Nom / Société</label>
+              <input value="${esc(e.name)}" oninput="clientsUpd('${e.id}','name',this.value)" placeholder="Nom du client ou de la société">
+            </div>
+            <div class="cli-head-num">
+              <label>N°</label>
+              <input value="${esc(e.num)}" oninput="clientsUpd('${e.id}','num',this.value)" placeholder="ex: 117">
+            </div>
+          </div>
+        </div>
+      ` : `
+        <div class="cli-panel-head">
+          <h3>${esc(e.name) || "(sans nom)"}</h3>
+          <span class="cli-meta">N° ${esc(e.num) || "—"}</span>
+          ${cityLine ? `<span class="cli-city">${esc(cityLine)}</span>` : ""}
+        </div>`;
+
+      const actions = editing ? `
+        <button class="btn" onclick="clientsEditDone()">Terminer</button>
+        <button class="btn ghost" onclick="clientsToggle('${e.id}')">Fermer</button>
+        <span class="spacer"></span>
+        <button class="btn btn-danger-ghost" onclick="${stop}if(confirm('Supprimer ce client ?'))clientsDel('${e.id}')">${ICONS.trash}Supprimer</button>
+      ` : `
+        <button class="btn" onclick="clientsNewDevis('${e.id}')">${ICONS.camera}Nouveau devis</button>
+        <button class="btn ghost" onclick="clientsEdit('${e.id}')">${ICONS.edit}Modifier</button>
+        <button class="btn ghost" onclick="clientsToggle('${e.id}')">Fermer</button>
+        <span class="spacer"></span>
+        <button class="btn btn-danger-ghost" onclick="${stop}if(confirm('Supprimer ce client ?'))clientsDel('${e.id}')">${ICONS.trash}Supprimer</button>
+      `;
+
+      detail = `
+        <tr class="cli-detail"><td colspan="3"><div class="cli-panel">
+          ${headerHtml}
+          <div class="cli-panel-grid">
+            <div class="cli-section">
+              <h4>Contacts${(editing || validContacts.length) ? ` · ${editing ? contacts.length : validContacts.length}` : ""}</h4>
+              ${contactsHtml}
+            </div>
+            <div class="cli-section">
+              <h4>Informations</h4>
+              ${infosHtml}
+            </div>
+          </div>
+          <div class="cli-actions">${actions}</div>
+        </div></td></tr>`;
     }
 
     return summary + detail;
   }).join("");
 
-  return `
-    <h2>Clients <span id="savedFlash" class="saved"></span></h2>
+  // Suggestions distinctes pour le datalist "Rencontré via"
+  const rencontreOpts = [...new Set(S.clients.entries.map(c => (c.rencontre || "").trim()).filter(Boolean))]
+    .sort((a, b) => a.localeCompare(b, "fr"));
 
-    <div class="toolbar">
-      <button class="btn" onclick="clientsAdd()">+ Ajouter un client</button>
-      <button class="btn ghost" onclick="clientsImportFromSuivi()" title="Crée / complète les fiches clients à partir du fichier Excel embarqué (119 clients)">↓ Importer depuis le fichier Excel</button>
-      <input id="clientsSearchInput" class="search" type="text" placeholder="Rechercher…" oninput="clientsFilter(this.value)" autocomplete="off">
+  // Restore filtre texte après chaque render
+  setTimeout(() => clientsApplyFilters(), 0);
+
+  return `
+    <h2>Clients <span style="color:var(--text-dim);font-weight:400;font-size:0.7em">— ${total}</span> <span id="savedFlash" class="saved"></span></h2>
+
+    <div class="cli-toolbar">
+      <button class="btn" onclick="clientsAdd()">${ICONS.plus}Ajouter</button>
+      <span class="cli-spacer"></span>
+      <button class="btn ghost" onclick="clientsExportCSV()" title="Exporter la liste en CSV">${ICONS.download}CSV</button>
     </div>
 
-    <div id="clientsNoResults" class="empty" style="display:none">
+    <div class="cli-search-wrap">
+      ${ICONS.search}
+      <input id="clientsSearchInput" type="text" placeholder="Rechercher un client par nom, contact, email…" value="${esc(clientsSearchQuery)}" oninput="clientsFilter(this.value)" autocomplete="off">
+    </div>
+
+    <datalist id="rencontreSuggestions">${rencontreOpts.map(v => `<option value="${esc(v)}"></option>`).join("")}</datalist>
+
+    <div id="clientsNoResults" class="cli-empty" style="display:none">
       Aucun contact ne correspond à « <span class="term"></span> ».
       <div style="margin-top:12px"><button class="btn" onclick="clientsCreateFromSearch()">+ Créer un contact « <span class="term"></span> »</button></div>
     </div>
 
-    ${entries.length === 0 ? `<div class="empty">Aucun client enregistré. Cliquez sur « + Ajouter un client » pour commencer.</div>` : `
-    <table class="hist" id="clientsList">
+    ${entries.length === 0 ? `<div class="cli-empty">Aucun client enregistré. Cliquez sur « Ajouter » pour commencer.</div>` : `
+    <table class="cli-table" id="clientsList">
       <thead>
         <tr>
-          <th style="width:80px">N°</th>
-          <th>Nom / Société</th>
-          <th style="width:140px;text-align:center">Contacts</th>
-          <th></th>
+          <th class="${thCls('num')}" style="width:80px" onclick="clientsSortBy('num')">N° ${sortInd('num')}</th>
+          <th class="${thCls('name')}" onclick="clientsSortBy('name')">Nom / Société ${sortInd('name')}</th>
+          <th class="${thCls('city')}" style="width:200px" onclick="clientsSortBy('city')">Ville ${sortInd('city')}</th>
         </tr>
       </thead>
       <tbody>${rowsHtml}</tbody>
@@ -9748,6 +10322,66 @@ function rPF() {
         <div class="hint" style="margin-top:4px;font-size:11px">Un devis envoyé sans réponse depuis plus de N jours apparaît dans la liste « À relancer » de l'Accueil.</div>
       </div>
     </div>
+
+    ${workspaceState.role === "owner" ? rShareSection() : ""}
+  `;
+}
+
+// ▼ rShareSection — bloc « Partage » visible uniquement par l'owner
+function rShareSection() {
+  const members = workspaceState.members || {};
+  const pending = workspaceState.pendingRequests || {};
+  const memberKeys = Object.keys(members);
+  const pendingKeys = Object.keys(pending);
+
+  const memberRows = memberKeys.length === 0
+    ? `<div class="ws-empty">Aucun membre pour l'instant.</div>`
+    : memberKeys.map(uid => {
+        const m = members[uid];
+        const added = m.addedAt ? m.addedAt.slice(0, 10) : "";
+        return `<div class="ws-row">
+          <div class="ws-row-info">
+            <strong>${esc(m.name || "(sans nom)")}</strong>
+            <span class="ws-mail">${esc(m.email || "")}</span>
+            ${added ? `<span class="ws-date">ajouté le ${esc(added)}</span>` : ""}
+          </div>
+          <button class="btn btn-danger-ghost" onclick="removeMember('${esc(uid)}')">${ICONS.trash}Retirer</button>
+        </div>`;
+      }).join("");
+
+  const pendingRows = pendingKeys.length === 0
+    ? `<div class="ws-empty">Aucune demande en attente.</div>`
+    : pendingKeys.map(uid => {
+        const r = pending[uid];
+        const ts = r.requestedAt ? r.requestedAt.slice(0, 10) : "";
+        return `<div class="ws-row pending">
+          <div class="ws-row-info">
+            <strong>${esc(r.name || "(sans nom)")}</strong>
+            <span class="ws-mail">${esc(r.email || "")}</span>
+            ${ts ? `<span class="ws-date">demandé le ${esc(ts)}</span>` : ""}
+          </div>
+          <div style="display:flex;gap:6px">
+            <button class="btn" onclick="approveRequest('${esc(uid)}')">Approuver</button>
+            <button class="btn ghost" onclick="rejectRequest('${esc(uid)}')">Refuser</button>
+          </div>
+        </div>`;
+      }).join("");
+
+  return `
+    <h3 style="margin-top:32px">Partage du workspace</h3>
+    <div class="hint" style="margin-bottom:14px;max-width:780px">
+      Les personnes invitées peuvent lire et modifier toutes les données (devis, suivi, clients, comptabilité). Tu seules valides les demandes d'accès.
+    </div>
+
+    <h4 style="margin:18px 0 10px;font-size:13px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;font-weight:600">
+      Demandes en attente${pendingKeys.length ? ` <span style="color:var(--warning)">· ${pendingKeys.length}</span>` : ""}
+    </h4>
+    <div class="ws-list">${pendingRows}</div>
+
+    <h4 style="margin:24px 0 10px;font-size:13px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;font-weight:600">
+      Membres actifs${memberKeys.length ? ` · ${memberKeys.length}` : ""}
+    </h4>
+    <div class="ws-list">${memberRows}</div>
   `;
 }
 
@@ -9806,12 +10440,14 @@ window.addEventListener('resize', () => {
 });
 
 auth.onAuthStateChanged(async u => {
-  user = u;
-  if (u) await loadFromCloud(); else render();
+  await initWorkspace(u);
 });
 
 try {
   suiviMigrate();
+  // Recalcule la ref de la mission au boot (au cas où le format aurait changé
+  // ou que le client a un num désormais : ancien DEVIS-YYYY-MM-NNN → DEVIS-NUM-YYYY-MM-NNN)
+  if (typeof recomputeRef === "function") recomputeRef();
   render();
 } catch (e) {
   document.body.innerHTML = '<div style="padding:30px;font:13px/1.5 monospace;color:#900;background:#fee;border:2px solid #c00;border-radius:8px;margin:20px;white-space:pre-wrap">❌ Erreur au démarrage:\n\n' + (e.stack || e.message) + '</div>';
