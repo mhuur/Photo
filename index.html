@@ -4579,6 +4579,45 @@ window.hideRemiseInfo = function() {
   if (_paiementTooltipEl) _paiementTooltipEl.style.display = "none";
 };
 
+// Tooltip explicatif du format de la référence devis. Pattern portal pour
+// éviter le clipping par overflow:hidden de la section accordéon.
+window.showRefInfo = function(evt) {
+  const el = _ensureTooltipEl();
+  el.innerHTML = `
+    <div class="tt-title" style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:8px">Format de la référence</div>
+    <p style="margin:0 0 8px;font-size:12px;line-height:1.5">
+      <code style="font-family:monospace;background:var(--surface-2);padding:1px 6px;border-radius:3px">DEVIS-NUM-YYYY-MM-NNN</code>
+    </p>
+    <ul style="margin:0 0 8px;padding-left:18px;font-size:12px;line-height:1.6">
+      <li><strong>DEVIS</strong> — préfixe (toujours)</li>
+      <li><strong>NUM</strong> — n° du client (ex : 7 pour Clément Bretaud)</li>
+      <li><strong>YYYY-MM</strong> — année et mois d'émission</li>
+      <li><strong>NNN</strong> — séquence du mois, tous clients confondus (001, 002, 003…)</li>
+    </ul>
+    <p style="margin:0;font-size:12px;line-height:1.5;color:var(--text-muted)">
+      Exemple : <code style="font-family:monospace">DEVIS-7-2026-05-003</code> = 3<sup>e</sup> devis de mai 2026 émis pour le client n°7. Si le client n'a pas de numéro, le segment NUM est omis.
+    </p>
+  `;
+  el.style.display = "block";
+  const target = evt.currentTarget || evt.target;
+  const rect = target.getBoundingClientRect();
+  const tooltipW = 380;
+  const margin = 12;
+  let left = rect.right + 8;
+  if (left + tooltipW > window.innerWidth - margin) left = Math.max(margin, rect.left - tooltipW - 8);
+  let top = rect.top - 4;
+  requestAnimationFrame(() => {
+    const h = el.offsetHeight;
+    if (top + h > window.innerHeight - margin) top = Math.max(margin, window.innerHeight - h - margin);
+    el.style.top = top + "px";
+  });
+  el.style.left = left + "px";
+  el.style.top = top + "px";
+};
+window.hideRefInfo = function() {
+  if (_paiementTooltipEl) _paiementTooltipEl.style.display = "none";
+};
+
 // ▼ rLigne — rendu d'une ligne (heures/matériel/cession)
 function rLigne(l) {
   const isExpanded = expandedLignes.has(l.id);
@@ -6762,17 +6801,8 @@ function rDevisSectionIdentification() {
     <div class="row">
       <div class="field"><label style="display:inline-flex;align-items:center;gap:6px">
         Référence (auto)
-        <button type="button" class="tarif-info" tabindex="0" aria-label="Format de la référence du devis">i<div class="tarif-tooltip" role="tooltip">
-          <div class="tt-title">Format de la référence</div>
-          <p style="margin:0 0 8px;font-size:12px;line-height:1.5"><code style="font-family:monospace;background:var(--surface-2);padding:1px 6px;border-radius:3px">DEVIS-NUM-YYYY-MM-NNN</code></p>
-          <ul style="margin:0 0 8px;padding-left:18px;font-size:12px;line-height:1.6">
-            <li><strong>DEVIS</strong> — préfixe (toujours)</li>
-            <li><strong>NUM</strong> — n° du client (ex : 7 pour Clément Bretaud)</li>
-            <li><strong>YYYY-MM</strong> — année et mois d'émission</li>
-            <li><strong>NNN</strong> — séquence du mois, tous clients confondus (001, 002, 003…)</li>
-          </ul>
-          <p style="margin:0;font-size:12px;line-height:1.5;color:var(--text-muted)">Exemple : <code style="font-family:monospace">DEVIS-7-2026-05-003</code> = 3<sup>e</sup> devis de mai 2026 émis pour le client n°7. Si le client n'a pas de numéro, le segment NUM est omis.</p>
-        </div></button>
+        <button type="button" class="lg-info-icon" tabindex="0" aria-label="Format de la référence du devis"
+          onmouseenter="showRefInfo(event)" onmouseleave="hideRefInfo()" onfocus="showRefInfo(event)" onblur="hideRefInfo()">i</button>
       </label>
         <input type="text" value="${esc(d.ref || "")}" disabled style="opacity:.7;font-variant-numeric:tabular-nums">
       </div>
