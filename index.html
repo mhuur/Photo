@@ -10343,8 +10343,141 @@ function rPF() {
     </div>
 
     ${workspaceState.role === "owner" ? rShareSection() : ""}
+
+    ${rBackupSection()}
   `;
 }
+
+// ▼ rBackupSection — export/import JSON complet du workspace
+// Export accessible à tous (chacun peut faire sa copie). Import owner only
+// (écrase toutes les données pour tous les membres via live sync).
+function rBackupSection() {
+  const isOwner = workspaceState.role === "owner";
+  return `
+    <h3 style="margin-top:32px">Sauvegarde</h3>
+    <div class="hint" style="margin-bottom:14px;max-width:780px">
+      Exporte un fichier JSON contenant toutes les données du workspace (devis, clients, suivi, comptabilité, profil…). À archiver régulièrement sur Drive/Dropbox/clé USB. ${isOwner ? "L'import écrase tout pour tous les membres — réservé au propriétaire." : ""}
+    </div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+      <button class="btn" onclick="backupExportAll()">${ICONS.download}Exporter tout (JSON)</button>
+      ${isOwner ? `
+        <button class="btn ghost" onclick="document.getElementById('backupImportInput').click()">↑ Importer un backup</button>
+        <input id="backupImportInput" type="file" accept=".json,application/json" style="display:none" onchange="backupImport(this)">
+      ` : ""}
+    </div>
+  `;
+}
+
+function backupExportAll() {
+  const payload = {
+    version: "v2",
+    exportedAt: new Date().toISOString(),
+    ownerEmail: workspaceState.ownerEmail || OWNER_EMAIL,
+    data: {
+      identite:        S.identite,
+      mission:         S.mission,
+      devis:           S.devis,
+      suivi:           S.suivi,
+      clients:         S.clients,
+      compta:          S.compta,
+      abonnements:     S.abonnements,
+      investissements: S.investissements,
+      tarifs:          S.tarifs,
+      bugs:            S.bugs,
+      prefs:           S.prefs
+    }
+  };
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `backup-devis-photo-${new Date().toISOString().slice(0, 10)}.json`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+window.backupExportAll = backupExportAll;
+
+async function backupImport(input) {
+  if (workspaceState.role !== "owner") {
+    alert("Import réservé au propriétaire du workspace.");
+    return;
+  }
+  const file = input.files && input.files[0];
+  if (!file) return;
+  let payload;
+  try {
+    const text = await file.text();
+    payload = JSON.parse(text);
+  } catch (e) {
+    alert("Fichier invalide : impossible de parser le JSON.");
+    input.value = "";
+    return;
+  }
+  if (!payload || typeof payload !== "object" || !payload.data || typeof payload.data !== "object") {
+    alert("Fichier invalide : structure de backup non reconnue.");
+    input.value = "";
+    return;
+  }
+  if (payload.version && payload.version !== "v2") {
+    if (!confirm(`Version du backup : ${payload.version} (attendu : v2). Continuer quand même ?`)) {
+      input.value = "";
+      return;
+    }
+  }
+  const expectedAt = payload.exportedAt ? new Date(payload.exportedAt).toLocaleString("fr-FR") : "?";
+  const sure = confirm(
+    `⚠ ATTENTION ⚠\n\n` +
+    `Importer ce backup va ÉCRASER toutes les données actuelles du workspace ` +
+    `(devis, clients, suivi, comptabilité…) pour TOUS les membres.\n\n` +
+    `Backup exporté le : ${expectedAt}\n\n` +
+    `Cette action est IRRÉVERSIBLE. Continuer ?`
+  );
+  if (!sure) {
+    input.value = "";
+    return;
+  }
+  // Merge dans S avec DEFAULT_S en fallback (calque loadFromCloud)
+  const d = payload.data;
+  if (d.mission) {
+    const dm = DEFAULT_S.mission;
+    S.mission = { ...dm, ...d.mission,
+      client:      { ...dm.client,      ...(d.mission.client      || {}) },
+      prep:        { ...dm.prep,        ...(d.mission.prep        || {}) },
+      prod:        { ...dm.prod,        ...(d.mission.prod        || {}) },
+      postprod:    { ...dm.postprod,    ...(d.mission.postprod    || {}) },
+      deplacement: { ...dm.deplacement, ...(d.mission.deplacement || {}) },
+      autres:      { ...dm.autres,      ...(d.mission.autres      || {}) }
+    };
+  }
+  if (d.identite) {
+    S.identite = { ...DEFAULT_S.identite, ...d.identite,
+      rcPro:     { ...DEFAULT_S.identite.rcPro,     ...(d.identite.rcPro     || {}) },
+      mediateur: { ...DEFAULT_S.identite.mediateur, ...(d.identite.mediateur || {}) },
+      bank:      { ...DEFAULT_S.identite.bank,      ...(d.identite.bank      || {}) }
+    };
+  }
+  if (d.devis)           S.devis           = Object.assign({}, DEFAULT_S.devis,   d.devis);
+  if (d.suivi)           S.suivi           = { ...DEFAULT_S.suivi, ...d.suivi, entries: Array.isArray(d.suivi.entries) ? d.suivi.entries : [], devis: (d.suivi.devis && typeof d.suivi.devis === "object") ? d.suivi.devis : {} };
+  if (d.clients)         S.clients         = { ...DEFAULT_S.clients, ...d.clients, entries: Array.isArray(d.clients.entries) ? d.clients.entries : [] };
+  if (d.compta)          S.compta          = Object.assign({}, DEFAULT_S.compta, d.compta);
+  if (d.abonnements)     S.abonnements     = { ...DEFAULT_S.abonnements, ...d.abonnements, entries: Array.isArray(d.abonnements.entries) ? d.abonnements.entries : [] };
+  if (d.investissements) S.investissements = { ...DEFAULT_S.investissements, ...d.investissements, entries: Array.isArray(d.investissements.entries) ? d.investissements.entries : [] };
+  if (d.tarifs && Array.isArray(d.tarifs.catalog) && d.tarifs.catalog.length) {
+    S.tarifs = { catalog: d.tarifs.catalog, heuresAnnuelles: d.tarifs.heuresAnnuelles || "900", facteurSecurite: d.tarifs.facteurSecurite || "0" };
+  }
+  if (d.bugs)  S.bugs  = { items: Array.isArray(d.bugs.items) ? d.bugs.items : [] };
+  if (d.prefs) S.prefs = { ...DEFAULT_S.prefs, ...d.prefs };
+  // Re-passe les migrations par sécurité
+  if (typeof migrateClientNums === "function") migrateClientNums();
+  if (typeof recomputeRef === "function") recomputeRef();
+  save();
+  render();
+  input.value = "";
+  alert(`✓ Backup importé avec succès (${expectedAt}).`);
+}
+window.backupImport = backupImport;
 
 // ▼ rShareSection — bloc « Partage » visible uniquement par l'owner
 function rShareSection() {
