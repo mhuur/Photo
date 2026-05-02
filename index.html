@@ -655,6 +655,34 @@
   .fb-copy-btn:hover{border-color:var(--primary);color:var(--primary);background:var(--primary-soft)}
   .fb-copy-btn.copied{border-color:var(--success);color:var(--success);background:var(--success-soft)}
 
+  /* === Bug report — barre de stats + filtres === */
+  .bug-stats-bar{display:flex;align-items:center;gap:8px;max-width:720px;margin-bottom:14px;flex-wrap:wrap}
+  .bug-stat{display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border-radius:18px;background:var(--primary-soft);color:var(--primary);font-size:13px;font-weight:600;border:1px solid transparent}
+  .bug-stat .bug-stat-num{font-size:14px;font-weight:700}
+  .bug-stat-toggle{display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border-radius:18px;background:var(--surface);color:var(--text-muted);font-size:13px;font-weight:500;border:1px solid var(--border-light);cursor:pointer;font-family:inherit;transition:all .12s}
+  .bug-stat-toggle:hover{border-color:var(--success);color:var(--success)}
+  .bug-stat-toggle.active{background:var(--success-soft);color:var(--success);border-color:var(--success)}
+  .bug-stat-toggle .bug-stat-num{font-size:14px;font-weight:700}
+
+  .bug-filter-bar{display:flex;align-items:center;gap:10px;max-width:720px;margin-bottom:12px;flex-wrap:wrap}
+  .bug-filter-chips{display:flex;gap:6px;flex-wrap:wrap;flex:1;min-width:0}
+  .bug-chip{display:inline-flex;align-items:center;gap:5px;padding:5px 12px;border-radius:14px;background:transparent;color:var(--text-muted);font-size:12px;font-weight:600;border:1px solid var(--border-light);cursor:pointer;font-family:inherit;transition:all .12s;white-space:nowrap}
+  .bug-chip:hover{border-color:var(--primary);color:var(--primary)}
+  .bug-chip.active{background:var(--primary);color:#fff;border-color:var(--primary)}
+  .bug-chip-n{font-size:11px;font-weight:700;background:rgba(255,255,255,.18);padding:1px 7px;border-radius:8px;color:inherit}
+  .bug-chip:not(.active) .bug-chip-n{background:var(--surface-2);color:var(--text-dim)}
+  .bug-search{padding:7px 12px;border:1px solid var(--border-light);border-radius:6px;background:var(--bg-2);color:var(--text);font:inherit;font-size:13px;width:200px;flex-shrink:0}
+  .bug-search:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 3px var(--primary-soft)}
+  .bug-search::placeholder{color:var(--text-dim)}
+
+  /* Empty state contextuel */
+  .bug-empty{max-width:720px;text-align:center;padding:42px 24px;background:var(--surface);border:1px dashed var(--border-light);border-radius:8px;color:var(--text-muted)}
+  .bug-empty-icon{font-size:42px;margin-bottom:10px;opacity:.7}
+  .bug-empty-title{font-size:14px;font-weight:600;color:var(--text);margin-bottom:6px}
+  .bug-empty-hint{font-size:13px;line-height:1.5}
+  .bug-empty-action{background:transparent;border:0;color:var(--primary);font:inherit;font-size:13px;font-weight:600;cursor:pointer;text-decoration:underline;padding:0}
+  .bug-empty-action:hover{color:var(--primary-dark)}
+
   /* === Bug report formulaire détaillé === */
   .bug-form{max-width:720px;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:14px 16px;margin-bottom:16px;display:flex;flex-direction:column;gap:12px}
   .bug-form-row{display:flex;gap:12px;flex-wrap:wrap}
@@ -4780,6 +4808,67 @@ window.bugQSet = bugQSet;
 // State du formulaire de saisie (tout-en-un, persiste tant que pas submit).
 let bugDraft = { tab: "", title: "", text: "", screenshots: [] };
 let lastTabBeforeBugs = null; // capté par setTab pour pré-remplir bugDraft.tab
+
+// State des filtres de la liste (tab actif, recherche, afficher validées).
+let bugFilters = { tab: "all", q: "", showValidated: false };
+
+// Render avec préservation focus pour la recherche (évite de perdre le caret
+// à chaque caractère tapé puisque le filtre déclenche un render complet).
+function bugRenderPreserveSearch() {
+  const active = document.activeElement;
+  const isSearch = active && active.id === "bugSearchInput";
+  const start = isSearch ? active.selectionStart : null;
+  const end = isSearch ? active.selectionEnd : null;
+  render();
+  if (isSearch) {
+    requestAnimationFrame(() => {
+      const el = document.getElementById("bugSearchInput");
+      if (el) {
+        el.focus();
+        try { el.setSelectionRange(start, end); } catch (e) {}
+      }
+    });
+  }
+}
+
+window.bugFilterSetTab = function(k) {
+  bugFilters.tab = k || "all";
+  render();
+};
+window.bugFilterSetQ = function(v) {
+  bugFilters.q = v || "";
+  bugRenderPreserveSearch();
+};
+window.bugFilterToggleValidated = function() {
+  bugFilters.showValidated = !bugFilters.showValidated;
+  render();
+};
+
+// Calcule le nombre d'items par onglet (parmi les non-validées) pour les chips.
+function bugTabCounts() {
+  const counts = {};
+  for (const it of (S.bugs && S.bugs.items) || []) {
+    if (it.validated) continue;
+    const t = it.tab || "autres";
+    counts[t] = (counts[t] || 0) + 1;
+  }
+  return counts;
+}
+
+// Filtre les items selon bugFilters.
+function bugFilteredItems() {
+  const items = (S.bugs && S.bugs.items) || [];
+  const q = (bugFilters.q || "").toLowerCase().trim();
+  return items.filter(it => {
+    if (!bugFilters.showValidated && it.validated) return false;
+    if (bugFilters.tab !== "all" && (it.tab || "autres") !== bugFilters.tab) return false;
+    if (q) {
+      const hay = ((it.title || "") + " " + (it.text || "") + " " + (it.steps || []).join(" ")).toLowerCase();
+      if (!hay.includes(q)) return false;
+    }
+    return true;
+  });
+}
 
 const BUG_TAB_OPTIONS = [
   ["accueil", "Accueil"],
@@ -12731,12 +12820,27 @@ function rBG() {
     `<option value="${esc(k)}" ${k === draftTab ? "selected" : ""}>${esc(lbl)}</option>`
   ).join("");
 
+  // ===== Compteurs globaux =====
+  const allItems = S.bugs.items;
+  const nOpen = allItems.filter(it => !it.validated).length;
+  const nDone = allItems.filter(it => it.validated).length;
+
   let h = `<h2>Notes <span id="savedFlash" class="saved"></span></h2>`;
   h += `<div class="fb-bar">
-    <div class="fb-title">Notes & Remarques</div>
+    <div class="fb-title">Notes &amp; Remarques</div>
     <button class="fb-copy-btn" onclick="bugCopy()" id="bug-copy-btn">📋 Copier toutes les actions en cours</button>
   </div>`;
   h += `<div class="fb-subtitle">Note ici les remarques ou bugs à transmettre à Claude. Chaque remarque peut être détaillée (onglet, captures), copiée individuellement, validée ou supprimée.</div>`;
+
+  // ===== Barre de stats + toggle validées =====
+  h += `<div class="bug-stats-bar">
+    <div class="bug-stat ${!bugFilters.showValidated ? "active" : ""}">
+      <span class="bug-stat-num">${nOpen}</span> en cours
+    </div>
+    <button class="bug-stat-toggle ${bugFilters.showValidated ? "active" : ""}" onclick="bugFilterToggleValidated()" title="${bugFilters.showValidated ? "Masquer les validées" : "Afficher les validées"}">
+      <span class="bug-stat-num">${nDone}</span> validée${nDone > 1 ? "s" : ""} ${bugFilters.showValidated ? "👁" : "👁‍🗨"}
+    </button>
+  </div>`;
 
   // ===== Formulaire de saisie détaillé =====
   const screenshotsHtml = bugDraft.screenshots.map(s => `
@@ -12782,13 +12886,53 @@ function rBG() {
     </div>
   </div>`;
 
+  // ===== Barre de filtres (chips onglet + recherche) =====
+  if (allItems.length > 0) {
+    const counts = bugTabCounts();
+    const totalOpen = nOpen;
+    const usedTabs = BUG_TAB_OPTIONS.filter(([k]) => counts[k] > 0).map(([k, lbl]) => ({ k, lbl, n: counts[k] }));
+    h += `<div class="bug-filter-bar">
+      <div class="bug-filter-chips">
+        <button class="bug-chip ${bugFilters.tab === "all" ? "active" : ""}" onclick="bugFilterSetTab('all')">Toutes <span class="bug-chip-n">${totalOpen}</span></button>
+        ${usedTabs.map(t => `
+          <button class="bug-chip bug-chip-${esc(t.k)} ${bugFilters.tab === t.k ? "active" : ""}" onclick="bugFilterSetTab('${esc(t.k)}')">${esc(t.lbl)} <span class="bug-chip-n">${t.n}</span></button>
+        `).join("")}
+      </div>
+      <input id="bugSearchInput" class="bug-search" type="text" placeholder="Rechercher…" value="${esc(bugFilters.q || "")}" oninput="bugFilterSetQ(this.value)">
+    </div>`;
+  }
+
   // ===== Liste des cartes =====
-  const items = [...S.bugs.items].sort((a, b) => {
+  const items = [...bugFilteredItems()].sort((a, b) => {
     if (!!a.validated !== !!b.validated) return a.validated ? 1 : -1;
     return (b.createdAt || 0) - (a.createdAt || 0);
   });
   if (!items.length) {
-    h += `<div class="empty">Aucune note pour l'instant.</div>`;
+    if (allItems.length === 0) {
+      h += `<div class="bug-empty">
+        <div class="bug-empty-icon">📝</div>
+        <div class="bug-empty-title">Aucune remarque pour l'instant</div>
+        <div class="bug-empty-hint">Utilise le formulaire ci-dessus pour signaler un bug ou noter une idée d'amélioration. Tu peux coller une capture d'écran avec Ctrl+V.</div>
+      </div>`;
+    } else if (bugFilters.q) {
+      h += `<div class="bug-empty">
+        <div class="bug-empty-icon">🔎</div>
+        <div class="bug-empty-title">Aucun résultat pour « ${esc(bugFilters.q)} »</div>
+        <div class="bug-empty-hint"><button class="bug-empty-action" onclick="bugFilterSetQ('')">Effacer la recherche</button></div>
+      </div>`;
+    } else if (bugFilters.tab !== "all") {
+      h += `<div class="bug-empty">
+        <div class="bug-empty-icon">📂</div>
+        <div class="bug-empty-title">Aucune remarque pour ${esc(bugTabLabel(bugFilters.tab))}</div>
+        <div class="bug-empty-hint"><button class="bug-empty-action" onclick="bugFilterSetTab('all')">Voir toutes les remarques</button></div>
+      </div>`;
+    } else {
+      h += `<div class="bug-empty">
+        <div class="bug-empty-icon">✓</div>
+        <div class="bug-empty-title">Toutes les remarques sont validées</div>
+        <div class="bug-empty-hint"><button class="bug-empty-action" onclick="bugFilterToggleValidated()">Afficher les validées</button></div>
+      </div>`;
+    }
   }
   items.forEach(it => {
     const tabBadge = it.tab && it.tab !== "autres"
