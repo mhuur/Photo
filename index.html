@@ -3959,10 +3959,14 @@ async function gmailRelanceForDevis(devisId, kind) {
     if (!await uiConfirm("Aucun email de contact trouvé pour ce client. Ouvrir Gmail sans destinataire ?", { title: "Pas de destinataire", kind: "info" })) return;
   }
   openGmailCompose(to, subject, body);
-  // NB : on NE stampe PAS lastRelance ici. L'utilisateur peut ouvrir Gmail
-  // sans finalement envoyer (annuler le brouillon). Pour confirmer l'envoi
-  // effectif, il y a un bouton dédié « ✓ Marquer comme relancé » dans le
-  // panneau Suivi — cf. relanceMark / relanceUndo.
+  // Stamp lastRelance immédiatement à l'ouverture de Gmail. Si l'utilisateur
+  // annule finalement le brouillon, il peut cliquer ✕ sur le tag de date
+  // dans le panneau Suivi (relanceUndo) pour retirer le stamp.
+  if (!S.suivi.devis) S.suivi.devis = {};
+  if (!S.suivi.devis[devisId]) S.suivi.devis[devisId] = { ref: dv.ref || "" };
+  S.suivi.devis[devisId].lastRelance = new Date().toISOString();
+  save();
+  render();
 }
 window.gmailRelanceForDevis = gmailRelanceForDevis;
 
@@ -9776,7 +9780,14 @@ async function suiviAdd() {
   // déjà refusé par le client reste refusé, info commerciale conservée).
   const v1Id = m.revisesDevisId;
   if (v1Id && S.suivi.devis[v1Id]) {
-    S.suivi.devis[v1Id].replacedBy = devisId;
+    const v1 = S.suivi.devis[v1Id];
+    v1.replacedBy = devisId;
+    // Hérite le lastRelance de V1 sur V2 : le client a déjà été relancé sur
+    // cette mission, peu importe la version. Réviser ne reset pas le
+    // compteur 7j « À relancer » de l'Accueil.
+    if (v1.lastRelance && S.suivi.devis[devisId]) {
+      S.suivi.devis[devisId].lastRelance = v1.lastRelance;
+    }
     const v1Entries = S.suivi.entries.filter(e => e.devisId === v1Id);
     const allEnvoye = v1Entries.length > 0 && v1Entries.every(e => entryStatut(e) === "envoye");
     if (allEnvoye) {
@@ -10461,12 +10472,12 @@ function suiviExpandedPanelHtml(g) {
         const lbl = kind === "paiement" ? "Relance paiement" : "Relance devis";
         const dv = S.suivi.devis && S.suivi.devis[g.devisId];
         const lastRel = dv && dv.lastRelance;
-        // Si déjà relancé : tag vert (cliquable pour annuler).
-        // Sinon : bouton « ✓ Marquer comme relancé » à côté du Gmail.
-        const stampHtml = lastRel
-          ? `<span class="suv-last-relance" title="Cliquer pour annuler la relance et faire réapparaître le devis dans « À relancer »" onclick="${stop}relanceUndo('${g.devisId}')">↻ Relancé le ${esc(dateFR(lastRel.slice(0,10)))} <span class="suv-last-relance-undo">✕</span></span>`
-          : `<button class="btn ghost suv-mark-relance" title="Marquer comme relancé (à cliquer après envoi effectif du mail). Reset le compteur 7j de l'Accueil." onclick="${stop}relanceMark('${g.devisId}')">✓</button>`;
-        return `<button class="btn ghost suv-gmail-btn" onclick="${stop}gmailRelanceForDevis('${g.devisId}','${kind}')" title="Ouvrir Gmail avec un template de relance pré-rempli. Ne marque PAS le devis comme relancé — utilise le bouton ✓ à droite après envoi effectif.">✉ ${esc(lbl)}</button>${stampHtml}`;
+        // Bouton unique : ✉ Relancer ouvre Gmail ET stamp la date.
+        // Si déjà relancé : tag vert avec ✕ pour annuler la dernière relance.
+        if (lastRel) {
+          return `<span class="suv-last-relance" title="Cliquer pour annuler la relance et faire réapparaître le devis dans « À relancer »" onclick="${stop}relanceUndo('${g.devisId}')">↻ Relancé le ${esc(dateFR(lastRel.slice(0,10)))} <span class="suv-last-relance-undo">✕</span></span>`;
+        }
+        return `<button class="btn ghost suv-gmail-btn" onclick="${stop}gmailRelanceForDevis('${g.devisId}','${kind}')" title="Ouvrir Gmail avec un template de relance pré-rempli + marquer le devis comme relancé. Si tu annules le brouillon, clique ✕ sur la date pour retirer le stamp.">✉ ${esc(lbl)}</button>`;
       })()}
       <button class="btn ghost" onclick="${stop}viewDevisOpen('${g.devisId}')">🖨 Devis</button>
       ${(() => {
