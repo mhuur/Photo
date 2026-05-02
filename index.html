@@ -2805,16 +2805,17 @@ async function loadFromCloud(ownerUid) {
       }
       suiviMigrate();
       migrateClientNums();
-      const legacyFixed = migrateLegacyReconstructedFlag();
+      // migrateLegacyReconstructedFlag() DÉSACTIVÉ : faux positifs sur les
+      // devis legacy édités via « 💾 Enregistrer les modifications »
+      // (suiviUpdateSnapshot), qui remplace snapshotHtml par le live (sans
+      // bandeau de reconstitution) mais laisse legacyReconstructed=true.
+      // La migration nettoyait à tort ces devis.
       recomputeRef();
       // Adopte le timestamp cloud comme nouveau référentiel local (sinon
       // notre prochain save aurait un localCts plus ancien que le cloud
       // alors qu'on vient de tout merger).
       if (cloudCts > 0) S._localChangeTs = cloudCts;
       localStorage.setItem(SK, JSON.stringify(S));
-      // Si la migration a nettoyé des flags stale, propage au cloud pour
-      // que le fix soit définitif (sinon ça se rejouerait à chaque reload).
-      if (legacyFixed) saveToCloud();
     }
   } catch (err) { console.error("loadFromCloud", err); }
   render();
@@ -3044,14 +3045,11 @@ function subscribeWorkspaceData(ownerUid) {
     if (d.tarifs && Array.isArray(d.tarifs.catalog) && d.tarifs.catalog.length) S.tarifs = { catalog: d.tarifs.catalog, heuresAnnuelles: d.tarifs.heuresAnnuelles || S.tarifs.heuresAnnuelles || "900", facteurSecurite: d.tarifs.facteurSecurite || S.tarifs.facteurSecurite || "0" };
     if (d.bugs)    S.bugs    = { items: Array.isArray(d.bugs.items) ? d.bugs.items : [] };
     if (d.prefs)   S.prefs   = { ...DEFAULT_S.prefs, ...d.prefs };
-    // Migration défensive : si le cloud renvoie encore des flags
-    // legacyReconstructed stale (avant fix sync), on les nettoie ici aussi.
-    const legacyFixed = migrateLegacyReconstructedFlag();
+    // migrateLegacyReconstructedFlag() DÉSACTIVÉ ici aussi (cf. loadFromCloud).
     // Adopte le timestamp cloud comme nouveau référentiel local (sinon
     // notre prochain save aurait un localCts plus ancien que le cloud).
     if (cloudCts > 0) S._localChangeTs = cloudCts;
     localStorage.setItem(SK, JSON.stringify(S));
-    if (legacyFixed) saveToCloud();
     // Préserve le focus de l'input courant pendant le re-render
     const active = document.activeElement;
     const id = active && active.id;
@@ -8449,6 +8447,32 @@ function migrateLegacyReconstructedFlag() {
   }
   return changed;
 }
+
+// ▼ markAsLegacy — outil console (F12) pour repositionner le flag
+// `legacyReconstructed=true` sur un devis donné. Sert à corriger les
+// devis dont le flag a été nettoyé à tort par la migration désactivée
+// ci-dessus, ou pour forcer manuellement l'affichage du bouton Maj Trame.
+// Usage : markAsLegacy("DEVIS-ID") ou markAsLegacy() pour lister.
+window.markAsLegacy = function(devisId) {
+  const devisMap = (S.suivi && S.suivi.devis) || {};
+  if (!devisId) {
+    console.log("Devis disponibles (id : ref) :");
+    for (const id in devisMap) {
+      const dv = devisMap[id];
+      console.log(`  ${id} : ${(dv && dv.ref) || "(sans ref)"} — legacyReconstructed=${dv && dv.legacyReconstructed}`);
+    }
+    console.log("\nUsage : markAsLegacy(\"<devisId>\")");
+    return;
+  }
+  const dv = devisMap[devisId];
+  if (!dv) {
+    console.warn(`Devis ${devisId} introuvable.`);
+    return;
+  }
+  dv.legacyReconstructed = true;
+  save();
+  console.log(`✓ ${devisId} marqué legacyReconstructed=true. Reload pour que le bouton « Maj Trame » réapparaisse.`);
+};
 
 function suiviMigrate() {
   if (!S.suivi.devis) S.suivi.devis = {};
