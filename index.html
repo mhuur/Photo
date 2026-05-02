@@ -726,9 +726,11 @@
   .bug-form-text-quick{padding:8px 10px;border:1px solid var(--border-light);border-radius:6px;background:var(--bg-2);color:var(--text);font:inherit;font-size:13px;font-family:inherit;resize:vertical;min-height:50px}
   .bug-form-text-quick:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 2px var(--primary-soft)}
   .bug-form-text-quick::placeholder{color:var(--text-dim)}
-  .bug-form-thumbs{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
-  .bug-form-thumbs-meta{font-size:11px;color:var(--text-dim);font-weight:600;margin-left:auto}
-  .bug-form-thumbs-empty{font-size:11px;color:var(--text-dim);font-style:italic;padding:4px 0}
+  .bug-form-next-num{display:inline-flex;align-items:center;justify-content:center;height:28px;padding:0 10px;background:var(--surface-2);color:var(--text-muted);font-size:11px;font-weight:700;border-radius:6px;flex-shrink:0;letter-spacing:.02em}
+  .bug-form-hint{font-size:12px;color:var(--text-muted);line-height:1.55;padding:8px 12px;background:rgba(74,158,255,.08);border-radius:6px;border-left:3px solid var(--primary)}
+  .bug-form-hint code{background:var(--bg-3);color:var(--accent);padding:1px 6px;border-radius:3px;font-size:11px;font-family:monospace}
+  .bug-form-hint strong{color:var(--primary);font-weight:700}
+  .bug-num-badge{font-size:11px;font-weight:700;padding:2px 8px;border-radius:10px;background:var(--bg-3);color:var(--accent);font-variant-numeric:tabular-nums;cursor:help}
 
   /* Anciennes classes laissées au cas où — non utilisées dans le formulaire compact */
   .bug-shot-zone{border:1.5px dashed var(--border-light);border-radius:6px;padding:12px;background:var(--bg-2);transition:all .15s;display:flex;flex-direction:column;gap:10px}
@@ -4926,7 +4928,9 @@ window.bugQSet = bugQSet;
 // Schéma item étendu : { id, createdAt, validated, tab, title, text,
 // screenshots: [{ id, dataUrl, addedAt }], steps: [] }
 // State du formulaire de saisie (tout-en-un, persiste tant que pas submit).
-let bugDraft = { tab: "", title: "", text: "", screenshots: [] };
+// Plus de screenshots inline (cause de doc Firestore > 1MB) : à la place,
+// un numéro auto-attribué + convention de nommage pour les captures externes.
+let bugDraft = { tab: "", title: "", text: "" };
 let lastTabBeforeBugs = null; // capté par setTab pour pré-remplir bugDraft.tab
 
 // State des filtres de la liste (tab actif, recherche, afficher validées).
@@ -5213,7 +5217,13 @@ window.stripLogosFromSnapshots = async function() {
 // Notifie l'utilisateur du résultat avec uiAlert.
 async function autoCleanupDoc() {
   const before = JSON.stringify(S).length;
-  if (before <= 900 * 1024) return false;
+  // Purge inconditionnelle des screenshots de bugs (feature retirée pour
+  // éviter la limite Firestore 1 MB) — sans condition de taille.
+  let purgedScreenshots = purgeAllBugScreenshots();
+  if (before <= 900 * 1024) {
+    if (purgedScreenshots > 0) save();
+    return purgedScreenshots > 0;
+  }
   // 1. Orphans
   const devisIds = Object.keys((S.suivi && S.suivi.devis) || {});
   const entriesIds = new Set(((S.suivi && S.suivi.entries) || []).map(e => e.devisId));
@@ -5414,17 +5424,25 @@ function bugAdd() {
     return;
   }
   if (!Array.isArray(S.bugs.items)) S.bugs.items = [];
+  // Numéro auto-incrémenté : max num existant + 1 (jamais réutilisé même
+  // après suppression, pour cohérence avec les captures déjà nommées).
+  const maxNum = S.bugs.items.reduce((m, it) => {
+    const n = parseInt(it.num, 10);
+    return isFinite(n) && n > m ? n : m;
+  }, S.bugs.lastNum || 0);
+  const newNum = maxNum + 1;
+  S.bugs.lastNum = newNum;
   S.bugs.items.unshift({
     id: uid(),
+    num: newNum,
     tab: bugDraft.tab || lastTabBeforeBugs || "autres",
     title,
     text,
-    screenshots: bugDraft.screenshots.slice(),
     steps: [],
     validated: false,
     createdAt: Date.now()
   });
-  bugDraft = { tab: "", title: "", text: "", screenshots: [] };
+  bugDraft = { tab: "", title: "", text: "" };
   save();
   render();
   requestAnimationFrame(() => {
@@ -5568,18 +5586,16 @@ function bugItemToText(it, idx) {
   const head = it.title ? it.title.trim() : (it.text || "").trim().split("\n")[0].slice(0, 80) || "(sans titre)";
   const tabLbl = it.tab ? bugTabLabel(it.tab) : "";
   const prefix = (typeof idx === "number") ? `${idx + 1}. ` : "";
-  lines.push(`${prefix}${head}${tabLbl ? ` [${tabLbl}]` : ""}`);
+  const numTag = it.num ? `#${it.num} ` : "";
+  lines.push(`${prefix}${numTag}${head}${tabLbl ? ` [${tabLbl}]` : ""}`);
   if (it.text && it.title && it.text.trim()) {
     it.text.trim().split("\n").forEach(l => lines.push(`   ${l}`));
-  } else if (it.text && !it.title) {
-    // text seul, déjà dans le head si pas de title — rien à ajouter
   }
   (it.steps || []).forEach(s => {
     const st = (s || "").trim();
     if (st) lines.push(`   - ${st}`);
   });
-  const nImg = Array.isArray(it.screenshots) ? it.screenshots.length : 0;
-  if (nImg > 0) lines.push(`   📎 ${nImg} capture${nImg > 1 ? "s" : ""} jointe${nImg > 1 ? "s" : ""}`);
+  if (it.num) lines.push(`   📎 captures éventuelles : note-${it.num}*.png`);
   return lines.join("\n");
 }
 
@@ -13289,39 +13305,33 @@ function rBG() {
     </div>` : ""}
   </div>`;
 
-  // ===== Formulaire de saisie détaillé =====
-  const screenshotsHtml = bugDraft.screenshots.map(s => `
-    <div class="bug-shot-thumb">
-      <img src="${esc(s.dataUrl)}" alt="capture">
-      <button class="bug-shot-del" onclick="bugDraftRemoveImage('${esc(s.id)}')" title="Retirer">✕</button>
-    </div>`).join("");
-  const remaining = BUG_SCREENSHOT_MAX - bugDraft.screenshots.length;
+  // ===== Formulaire compact (replié) qui s'étend au focus =====
+  // Plus de captures inline (poids Firestore). À la place, un numéro
+  // auto-attribué + convention de nommage `note-{N}.png` pour les captures
+  // externes que l'user envoie par mail.
+  const hasDraftContent = !!(bugDraft.title || bugDraft.text);
+  // Numéro qui sera attribué au prochain ajout (utile pour pré-nommer la
+  // capture avant de cliquer +).
+  const nextNum = ((S.bugs && S.bugs.items) || []).reduce((m, it) => {
+    const n = parseInt(it.num, 10);
+    return isFinite(n) && n > m ? n : m;
+  }, (S.bugs && S.bugs.lastNum) || 0) + 1;
 
-  // Le formulaire est replié par défaut (1 ligne). S'étend au :focus-within
-  // ou si le draft a déjà du contenu (pour ne pas perdre la saisie au blur).
-  const hasDraftContent = !!(bugDraft.title || bugDraft.text || bugDraft.screenshots.length);
-  const nShots = bugDraft.screenshots.length;
-  h += `<div class="bug-form ${hasDraftContent ? "has-content" : ""}" onpaste="bugDraftPaste(event)" ondragover="bugDraftDragOver(event)" ondragleave="bugDraftDragLeave(event)" ondrop="bugDraftDrop(event)">
+  h += `<div class="bug-form ${hasDraftContent ? "has-content" : ""}">
     <div class="bug-form-quick">
       <select class="bug-form-tab-quick" onchange="bugDraftSet('tab', this.value)" title="Onglet concerné">
         <option value="" ${!draftTab ? "selected" : ""}>📂 —</option>
         ${tabOptions}
       </select>
       <input id="bugTitleInput" class="bug-form-title-quick" type="text" placeholder="Nouvelle remarque…  (Alt+N)" title="Raccourci : Alt+N" value="${esc(bugDraft.title || "")}" oninput="bugDraftSet('title', this.value)" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();bugAdd()}">
-      <label class="bug-form-attach" title="Joindre une capture (ou Ctrl+V)">
-        📎${nShots > 0 ? `<span class="bug-form-attach-n">${nShots}</span>` : ""}
-        <input type="file" accept="image/*" multiple style="display:none" onchange="bugDraftFileInput(this)">
-      </label>
+      <span class="bug-form-next-num" title="Numéro qui sera attribué">#${nextNum}</span>
       <button class="bug-form-add-btn" onclick="bugAdd()" title="Ajouter (Entrée)" aria-label="Ajouter">＋</button>
     </div>
     <div class="bug-form-extra">
-      <textarea class="bug-form-text-quick" rows="2" placeholder="Description (optionnelle, Ctrl+V pour coller une image)…" oninput="bugDraftSet('text', this.value)">${esc(bugDraft.text || "")}</textarea>
-      ${nShots > 0
-        ? `<div class="bug-form-thumbs">
-            ${screenshotsHtml}
-            <div class="bug-form-thumbs-meta">${nShots}/${BUG_SCREENSHOT_MAX}</div>
-          </div>`
-        : `<div class="bug-form-thumbs-empty">📎 Ctrl+V, glisse une image ou utilise le bouton 📎 — ${remaining} capture${remaining > 1 ? "s" : ""} possible${remaining > 1 ? "s" : ""}</div>`}
+      <textarea class="bug-form-text-quick" rows="2" placeholder="Description (optionnelle)…" oninput="bugDraftSet('text', this.value)">${esc(bugDraft.text || "")}</textarea>
+      <div class="bug-form-hint">
+        💡 <strong>Captures :</strong> prends ta capture maintenant, nomme-la <code>note-${nextNum}.png</code> (ou <code>note-${nextNum}-1.png</code>, <code>note-${nextNum}-2.png</code>) et envoie-la par mail. Le numéro <strong>#${nextNum}</strong> sera attribué à cette remarque.
+      </div>
     </div>
   </div>`;
 
@@ -13376,28 +13386,12 @@ function rBG() {
   items.forEach(it => {
     const tabKey = it.tab || "autres";
     const tabBadge = `<span class="bug-tab-badge bug-tab-${esc(tabKey)}">${esc(bugTabLabel(tabKey))}</span>`;
+    const numBadge = it.num ? `<span class="bug-num-badge" title="Pour les captures associées : note-${it.num}.png">#${it.num}</span>` : "";
     const statusPill = it.validated
       ? `<span class="bug-status-pill bug-status-done">✓ Validée</span>`
       : `<span class="bug-status-pill bug-status-open">À traiter</span>`;
     const dateRel = it.createdAt
       ? `<span class="bug-card-date" title="${esc(new Date(it.createdAt).toLocaleString("fr-FR"))}">${esc(bugRelativeTime(it.createdAt))}</span>`
-      : "";
-    // Cover image : 1ʳᵉ capture en bandeau gauche (cliquable → lightbox).
-    const cover = (Array.isArray(it.screenshots) && it.screenshots.length > 0)
-      ? `<div class="bug-card-cover" onclick="bugLightboxOpen('${esc(it.id)}',0)" title="Voir la capture">
-          <img src="${esc(it.screenshots[0].dataUrl)}" alt="capture">
-          ${it.screenshots.length > 1 ? `<span class="bug-card-cover-count">+${it.screenshots.length - 1}</span>` : ""}
-         </div>`
-      : "";
-    // Captures additionnelles (à partir de la 2e), juste si on en a > 1.
-    const extraShotsHtml = (Array.isArray(it.screenshots) && it.screenshots.length > 1)
-      ? `<div class="bug-card-shots">
-          ${it.screenshots.slice(1).map((s, i) => `
-            <div class="bug-card-shot">
-              <img src="${esc(s.dataUrl)}" alt="capture" onclick="bugLightboxOpen('${esc(it.id)}',${i + 1})">
-              <button class="bug-shot-del" onclick="event.stopPropagation();bugRemoveScreenshot('${esc(it.id)}','${esc(s.id)}')" title="Retirer">✕</button>
-            </div>`).join("")}
-         </div>`
       : "";
     const editing = bugCardEditingId === it.id;
     // Description : en lecture compacte par défaut (1-2 lignes tronquées),
@@ -13415,9 +13409,8 @@ function rBG() {
     h += `<div class="fb-card bug-card-v2 ${it.validated ? "fb-done" : ""}" data-bug-id="${esc(it.id)}">
       <div class="fb-hd">
         <button class="fb-check ${it.validated ? "on" : ""}" onclick="bugToggleValid('${it.id}')" title="${it.validated ? "Marquer en cours" : "Valider"}">✓</button>
-        ${cover}
         <div class="bug-card-main">
-          <div class="bug-card-meta">${tabBadge}${statusPill}${dateRel}</div>
+          <div class="bug-card-meta">${numBadge}${tabBadge}${statusPill}${dateRel}</div>
           <input class="fb-text bug-card-title" value="${esc(it.title || "")}" placeholder="Titre…" oninput="bugUpdateTitle('${it.id}',this.value)">
           ${descHtml}
         </div>
@@ -13425,8 +13418,7 @@ function rBG() {
           <button class="bug-card-copy" data-bug-copy="${it.id}" onclick="bugCopyOne('${it.id}')" title="Copier cette remarque">📋</button>
           <button class="fb-del" onclick="bugDel('${it.id}')" title="Supprimer">×</button>
         </div>
-      </div>
-      ${extraShotsHtml}`;
+      </div>`;
     // Steps existants affichés en lecture/édition uniquement s'il y en a.
     if (hasSteps) {
       (it.steps || []).forEach((st, idx) => {
