@@ -1,0 +1,13 @@
+# Config locale Claude Code (permissions, settings perso)
+.claude/
+
+# OS / éditeurs
+.DS_Store
+Thumbs.db
+*.swp
+.vscode/
+.idea/
+
+# Logs / temp
+*.log
+*.tmp

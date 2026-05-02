@@ -2624,45 +2624,64 @@ async function initWorkspace(u) {
     const ownerUid = aliasSnap.data().ownerUid;
     workspaceState.ownerUid = ownerUid;
 
-    const wsSnap = await db.collection("workspaces").doc(ownerUid).get();
-    if (!wsSnap.exists) {
-      workspaceState.role = "denied";
-      render();
-      return;
+    // Tentative de lecture du workspace. Avec les règles renforcées, un user
+    // qui n'est ni membre ni pending ne peut PAS lire ce doc → on attrape
+    // l'erreur permission-denied et on passe directement à l'écriture aveugle
+    // de sa demande d'accès.
+    let wsSnap = null;
+    try {
+      wsSnap = await db.collection("workspaces").doc(ownerUid).get();
+    } catch (readErr) {
+      if (readErr && readErr.code === "permission-denied") {
+        wsSnap = null;
+      } else {
+        throw readErr;
+      }
     }
-    const ws = wsSnap.data();
-    workspaceState.members = ws.members || {};
-    workspaceState.pendingRequests = ws.pendingRequests || {};
 
-    if (workspaceState.members[u.uid]) {
-      // Membre validé → load + sync
-      workspaceState.role = "member";
-      await loadFromCloud(ownerUid);
-      subscribeWorkspaceData(ownerUid);
+    if (wsSnap && wsSnap.exists) {
+      const ws = wsSnap.data();
+      workspaceState.members = ws.members || {};
+      workspaceState.pendingRequests = ws.pendingRequests || {};
+
+      if (workspaceState.members[u.uid]) {
+        // Membre validé → load + sync
+        workspaceState.role = "member";
+        await loadFromCloud(ownerUid);
+        subscribeWorkspaceData(ownerUid);
+        subscribeWorkspaceMeta(ownerUid);
+        render();
+        return;
+      }
+
+      if (workspaceState.pendingRequests[u.uid]) {
+        // Déjà en attente
+        workspaceState.role = "pending";
+        subscribeWorkspaceMeta(ownerUid);
+        render();
+        return;
+      }
+    }
+
+    // Lecture refusée OU pas dans le doc → on tente l'écriture de la demande.
+    // L'écriture est autorisée par les règles tant qu'on ne touche QUE notre
+    // propre clé dans pendingRequests. Si elle échoue, c'est un vrai refus.
+    try {
+      await db.collection("workspaces").doc(ownerUid).update({
+        [`pendingRequests.${u.uid}`]: {
+          email: u.email || "",
+          name: u.displayName || "",
+          requestedAt: new Date().toISOString()
+        }
+      });
+      workspaceState.role = "pending";
       subscribeWorkspaceMeta(ownerUid);
       render();
-      return;
-    }
-
-    if (workspaceState.pendingRequests[u.uid]) {
-      // Déjà en attente
-      workspaceState.role = "pending";
-      subscribeWorkspaceMeta(ownerUid); // écoute pour passer "member" si validé
+    } catch (writeErr) {
+      console.error("initWorkspace pending write", writeErr);
+      workspaceState.role = "denied";
       render();
-      return;
     }
-
-    // Inconnu → on ajoute la demande
-    await db.collection("workspaces").doc(ownerUid).update({
-      [`pendingRequests.${u.uid}`]: {
-        email: u.email || "",
-        name: u.displayName || "",
-        requestedAt: new Date().toISOString()
-      }
-    });
-    workspaceState.role = "pending";
-    subscribeWorkspaceMeta(ownerUid);
-    render();
   } catch (err) {
     console.error("initWorkspace", err);
     workspaceState.role = "denied";
