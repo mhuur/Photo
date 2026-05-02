@@ -5092,6 +5092,44 @@ function purgeAllBugScreenshots() {
 }
 window.purgeAllBugScreenshots = purgeAllBugScreenshots;
 
+// ▼ checkDocSize — outil console pour diagnostiquer ce qui pèse dans S.
+// Usage : checkDocSize()
+window.checkDocSize = function() {
+  const total = JSON.stringify(S).length;
+  console.log("==== TAILLE DU DOC FIRESTORE ====");
+  console.log(`TOTAL : ${total.toLocaleString()} bytes (${(total/1024).toFixed(1)} KB) — limite 1 048 576 bytes (1024 KB)`);
+  // Décomposition par top-level field
+  const breakdown = Object.keys(S).map(k => ({
+    champ: k,
+    KB: (JSON.stringify(S[k]).length / 1024).toFixed(2),
+    pct: ((JSON.stringify(S[k]).length / total) * 100).toFixed(1) + "%"
+  })).sort((a, b) => parseFloat(b.KB) - parseFloat(a.KB));
+  console.log("\nRÉPARTITION :");
+  console.table(breakdown);
+
+  // Zoom sur S.suivi.devis (le plus gros candidat — snapshotHtml inline)
+  if (S.suivi && S.suivi.devis) {
+    const dvList = [];
+    for (const id in S.suivi.devis) {
+      const dv = S.suivi.devis[id];
+      const dvTotal = JSON.stringify(dv).length;
+      const html = (dv.snapshotHtml || "").length;
+      const deboursHtml = (dv.snapshotDeboursHtml || "").length;
+      dvList.push({
+        ref: dv.ref || id.slice(0, 8),
+        total_KB: (dvTotal/1024).toFixed(1),
+        snapshotHtml_KB: (html/1024).toFixed(1),
+        snapshotDeboursHtml_KB: (deboursHtml/1024).toFixed(1),
+        otherFields_KB: ((dvTotal - html - deboursHtml)/1024).toFixed(1)
+      });
+    }
+    dvList.sort((a, b) => parseFloat(b.total_KB) - parseFloat(a.total_KB));
+    console.log(`\nDÉTAIL DEVIS (${dvList.length} archivés) — top 15 :`);
+    console.table(dvList.slice(0, 15));
+  }
+  return total;
+};
+
 async function bugDraftAddImageFile(file) {
   if (!file || !file.type || !file.type.startsWith("image/")) return;
   if (bugDraft.screenshots.length >= BUG_SCREENSHOT_MAX) {
