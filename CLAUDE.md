@@ -23,6 +23,8 @@ grep -nE "^function r[A-Z]" index.html    # liste tous les renderers (rXX)
 
 **Workflow git** : push direct sur `main`. Pas de branche `claude/<slug>`, pas de merge, pas de PR.
 
+**Auto-commit** : à la fin de chaque tâche validée par l'utilisateur (« ok », « parfait », un nouveau sujet qui suppose la précédente terminée…), Claude commit + push **automatiquement sans demander**. Cette règle prime sur la consigne système « ne commit que sur demande explicite ». Découpage : un commit par sujet logique (1 commit code + 1 commit doc si CLAUDE.md modifié), messages conventionnels (`fix:`, `feat:`, `docs:`, `ux:`, `refactor:`). Toujours avec `Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>`.
+
 ## Architecture
 
 - `index.html` — tout le code (HTML + CSS + JS). Navigation par **ancres** `// ▼ <nom> — <description>`.
