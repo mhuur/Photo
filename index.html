@@ -3028,9 +3028,11 @@ async function loadFromCloud(ownerUid) {
       // (suiviUpdateSnapshot), qui remplace snapshotHtml par le live (sans
       // bandeau de reconstitution) mais laisse legacyReconstructed=true.
       // La migration nettoyait à tort ces devis.
+      // Auto-cleanup si le doc approche la limite Firestore 1 MB.
+      const cleanedUp = await autoCleanupDoc();
       recomputeRef();
-      // Si la migration a réajouté des 0, propage au cloud.
-      if (phonesFixed) saveToCloud();
+      // Si la migration phones a corrigé OU le cleanup a libéré, propage au cloud.
+      if (phonesFixed || cleanedUp) saveToCloud();
       // Adopte le timestamp cloud comme nouveau référentiel local (sinon
       // notre prochain save aurait un localCts plus ancien que le cloud
       // alors qu'on vient de tout merger).
@@ -5199,6 +5201,72 @@ window.stripLogosFromSnapshots = async function() {
   save();
   return stripped;
 };
+
+// ▼ autoCleanupDoc — nettoyage automatique au boot si le doc dépasse 900 KB.
+// Étapes en cascade, sûres :
+//   1. Supprime les devis orphelins (S.suivi.devis sans entry Suivi)
+//   2. Strip les data URLs d'image des snapshots archivés (logos dupliqués)
+// Le logo se ré-affiche à l'impression depuis S.mission.logoUrl courant.
+// Notifie l'utilisateur du résultat avec uiAlert.
+async function autoCleanupDoc() {
+  const before = JSON.stringify(S).length;
+  if (before <= 900 * 1024) return false;
+  // 1. Orphans
+  const devisIds = Object.keys((S.suivi && S.suivi.devis) || {});
+  const entriesIds = new Set(((S.suivi && S.suivi.entries) || []).map(e => e.devisId));
+  const orphans = devisIds.filter(id => !entriesIds.has(id));
+  let orphansFreed = 0;
+  for (const id of orphans) {
+    orphansFreed += JSON.stringify(S.suivi.devis[id]).length;
+    delete S.suivi.devis[id];
+  }
+  // 2. Strip logos dans snapshots
+  const re = /src="data:image\/[^"]+"/g;
+  let logosStripped = 0;
+  let logosFreed = 0;
+  const remainingDevis = (S.suivi && S.suivi.devis) || {};
+  for (const id in remainingDevis) {
+    const dv = remainingDevis[id];
+    if (typeof dv.snapshotHtml === "string") {
+      const matches = dv.snapshotHtml.match(re) || [];
+      if (matches.length) {
+        for (const m of matches) logosFreed += m.length;
+        dv.snapshotHtml = dv.snapshotHtml.replace(re, 'src=""');
+        logosStripped += matches.length;
+      }
+    }
+    if (typeof dv.snapshotDeboursHtml === "string") {
+      const matches = dv.snapshotDeboursHtml.match(re) || [];
+      if (matches.length) {
+        for (const m of matches) logosFreed += m.length;
+        dv.snapshotDeboursHtml = dv.snapshotDeboursHtml.replace(re, 'src=""');
+        logosStripped += matches.length;
+      }
+    }
+    if (dv.snapshotMission && typeof dv.snapshotMission.logoUrl === "string" && dv.snapshotMission.logoUrl.startsWith("data:")) {
+      logosFreed += dv.snapshotMission.logoUrl.length;
+      dv.snapshotMission.logoUrl = "";
+    }
+  }
+  const after = JSON.stringify(S).length;
+  const totalFreedKB = ((before - after) / 1024).toFixed(0);
+  if (orphans.length > 0 || logosStripped > 0) {
+    console.warn(`[auto-cleanup] doc ${(before/1024).toFixed(0)}KB → ${(after/1024).toFixed(0)}KB (libéré ${totalFreedKB}KB) : ${orphans.length} orphelins, ${logosStripped} logos.`);
+    save();
+    if (typeof uiAlert === "function") {
+      uiAlert(
+        `Le doc Firestore approchait la limite 1 Mo (${(before/1024).toFixed(0)} KB).\n\n` +
+        `Nettoyage automatique :\n` +
+        `• ${orphans.length} devis orphelin${orphans.length > 1 ? "s" : ""} supprimé${orphans.length > 1 ? "s" : ""} (= sans entry Suivi associée, donc invisible${orphans.length > 1 ? "s" : ""} dans l'app)\n` +
+        `• ${logosStripped} logo${logosStripped > 1 ? "s" : ""} dupliqué${logosStripped > 1 ? "s" : ""} retiré${logosStripped > 1 ? "s" : ""} des archives (logo réinjecté à l'impression)\n\n` +
+        `Doc : ${(after/1024).toFixed(0)} KB (-${totalFreedKB} KB).`,
+        { title: "Sync optimisée", kind: "info" }
+      );
+    }
+    return true;
+  }
+  return false;
+}
 
 window.cleanOrphanDevis = async function() {
   const devisIds = Object.keys((S.suivi && S.suivi.devis) || {});
