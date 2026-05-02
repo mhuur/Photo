@@ -2576,14 +2576,21 @@ function flushSaveBeforeUnload() {
 window.addEventListener("beforeunload", flushSaveBeforeUnload);
 window.addEventListener("pagehide", flushSaveBeforeUnload);
 
-// ▼ saveToCloud — Firestore set merge sur users/<ownerUid> (workspace partagé)
+// ▼ saveToCloud — Firestore update sur users/<ownerUid> (workspace partagé).
+// /!\ On utilise update() et NON set({...}, { merge: true }). La raison : avec
+// merge:true, Firestore fait un deep-merge qui PRÉSERVE les sous-champs que
+// l'on n'envoie pas — donc une suppression locale (ex: delete dv.lastRelance)
+// n'est jamais répercutée au cloud. update() remplace chaque top-level field
+// entièrement (suivi, mission, etc.), ce qui propage correctement les
+// suppressions de sous-champs.
 async function saveToCloud() {
   if (!workspaceState.ownerUid) return;
   if (workspaceState.role !== "owner" && workspaceState.role !== "member") return;
   try {
     _lastLocalSaveTs = Date.now();
     const localChangeTs = S._localChangeTs || _lastLocalSaveTs;
-    await db.collection("users").doc(workspaceState.ownerUid).set({
+    const docRef = db.collection("users").doc(workspaceState.ownerUid);
+    const payload = {
       identite: S.identite,
       mission: S.mission,
       devis:   S.devis,
@@ -2598,7 +2605,18 @@ async function saveToCloud() {
       _lastWriteBy: user ? user.uid : null,
       _lastWriteAt: firebase.firestore.FieldValue.serverTimestamp(),
       _localChangeTs: localChangeTs
-    }, { merge: true });
+    };
+    try {
+      await docRef.update(payload);
+    } catch (errUpd) {
+      // Document inexistant (1ère écriture, cas très rare car ensureOwnerWorkspace
+      // l'a normalement créé) → fallback set sans merge pour le créer.
+      if (errUpd && errUpd.code === "not-found") {
+        await docRef.set(payload);
+      } else {
+        throw errUpd;
+      }
+    }
     const e = document.getElementById("savedFlash");
     if (e) { e.textContent = "Enregistré"; setTimeout(() => { if (e && e.textContent === "Enregistré") e.textContent = ""; }, 1500); }
   } catch (err) { console.error("saveToCloud", err); }
