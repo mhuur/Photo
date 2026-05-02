@@ -13,6 +13,8 @@ App web personnelle pour générer des devis photographe.
 - **Cache local** : `localStorage["devis-photo-data-v2"]` (constante `SK`). Changer le suffixe casse tous les caches.
 - **Hébergement** : page statique servie depuis `main` (GitHub Pages).
 - **Pour itérer en local** : `python3 -m http.server 8000`.
+- **Workspace partagé multi-user** : un seul doc Firestore `users/<ownerUid>` partagé entre tous les membres validés. Owner défini par `OWNER_EMAIL` hardcodé (`saintilan.romain@gmail.com`). Membres listés dans `workspaces/<ownerUid>.members` (map indexée par uid). Live sync via `onSnapshot` avec preserve focus + caret. Anti-écho via `_lastWriteBy` + fenêtre 2s. **Si l'OWNER_EMAIL change** : updater code + Firestore Rules en console + supprimer manuellement `workspace_ids/<ancien-email>`.
+- **Firestore Security Rules** stockées en console Firebase, **pas dans le repo**. Restrictives : `users/<ownerUid>` accessible par owner + members ; `workspaces/<ownerUid>` accessible par owner + members + pendingRequests ; `workspace_ids/<email>` get-only public.
 
 ## Patterns de code
 
@@ -29,8 +31,13 @@ App web personnelle pour générer des devis photographe.
   Exception : champs purement runtime posés sur des entries existantes (ex. `e.pmtTs` = timestamp de paiement, lu par `suiviDevisUndo` pour cibler le dernier paiement). Pas dans `DEFAULT_S`, pas de migration. À nettoyer (`delete e.pmtTs`) à la transition inverse pour rester propre.
 - **Filtre sticky pendant l'édition** : quand l'utilisateur édite un item via un volet déplié (ex. `suiviExpandedDevis` dans rSV), l'item doit être exempté des filtres en cours pour qu'il ne disparaisse pas sous lui quand son statut change. Pattern : `g.devisId === sticky || <predicate>` dans chaque branche `.filter()`. Reset du sticky quand l'user change explicitement de filtre.
 - **Dropdown ancré à un `<th>`** : dans une `<table>`, un menu `position:absolute` à l'intérieur d'un `<th>` se retrouve **sous** les cellules du `<tbody>` (stacking thead/tbody pénalisant en HTML). Solution : rendre le menu HORS de la table en `position:fixed`, avec coordonnées calculées via `getBoundingClientRect()` du `<th>` cible après render. Voir `positionThMenu()` + `suiviDateMenuHtml()` pour le template (call dans `requestAnimationFrame` après chaque action qui modifie le menu).
-- **Tooltip dans une section accordéon `.edit-section`** : utiliser le pattern portal (`position:fixed` dans `<body>` via JS, ex. `_paiementTooltipEl` / `showPaiementInfo` / `showRemiseInfo`), pas un tooltip CSS-only en `position:absolute`. La section parente a `overflow:hidden` qui clippe les tooltips classiques.
+- **Tooltip dans une section accordéon `.edit-section`** : utiliser le pattern portal (`position:fixed` dans `<body>` via JS), pas un tooltip CSS-only en `position:absolute`. La section parente a `overflow:hidden` qui clippe les tooltips classiques. **Helper générique** : `showInfo(event, "key")` lit `INFO_HTML[key]` et affiche dans le portail partagé `_paiementTooltipEl`. Pour ajouter un tooltip d'aide : (1) ajouter une entrée dans `INFO_HTML`, (2) `<button class="lg-info-icon" onmouseenter="showInfo(event, 'maKey')" onmouseleave="hideInfo()">i</button>`. Helpers spécifiques préexistants (`showPaiementInfo`, `showRemiseInfo`) restent valides — ils calculent leur contenu dynamiquement.
 - **Opacité sur cellule de tableau** : `opacity` sur un `<td>` rend la cellule **entière** translucide — si la ligne a un fond personnalisé (`tr.subtotal { background:var(--surface-2) }`, `tr.grandtotal`, etc.), la cellule devient un "trou" qui laisse passer le fond de la page. Pattern : envelopper le contenu dans un `<span>` enfant et appliquer l'opacité au span. Voir `.hist td.cp-zero > span` (cellule "—" du bilan Compta).
+- **Renumérotation / rename d'un client** : si tu modifies `S.clients.entries[].num`, propage le mapping ancien→nouveau à **5 endroits** : (a) `S.mission.client.num` si la mission est liée, (b) `S.suivi.devis[].ref` (regex `^DEVIS-NUM-YYYY-MM-NNN$`), (c) `S.suivi.devis[].snapshotMission.client.num`, (d) `S.suivi.entries[].client` (legacy format `#NUM Nom`). Voir `clientsRenumberAll()` pour le pattern. Toute nouvelle référence client à introduire DOIT être ajoutée à cette propagation, sinon désync silencieux.
+- **`missionNew(presetClient?)`** : démarre un nouveau devis. **Garde** la config (taux horaires, urssafPct, paiement.delai/marges, **echeances**, CGV, déplacement.mode/tauxKm). **Efface** les données spécifiques (heures, lignes, client, déplacement chiffres, autres, remise, contratHorsEtab, datePrestation, object*). Si tu ajoutes un champ à `S.mission`, décide de quelle catégorie il relève et ajoute-le à `missionNew()`.
+- **Lookup client depuis devis** : `findClientForDevis(devisId)` essaie 3 stratégies en cascade — `snapshotMission.client.id`, puis `snapshotClient` cleané du préfixe `#NUM`, puis 1ère entry Suivi du devis. Robuste pour les devis legacy. Toujours utiliser ce helper, pas un lookup ad hoc.
+- **Auth mobile** : `signInWithRedirect` sur mobile (détection UA), `signInWithPopup` sur desktop. Google bloque le popup OAuth sur la plupart des navigateurs mobiles (politique « secure browsers »). `isInAppWebView()` détecte les WebViews intégrées (Messenger, Instagram, FB, Twitter, etc.) et affiche un écran d'instructions « Ouvre dans Safari/Chrome » au lieu de tenter l'auth (qui échouerait avec `disallowed_useragent`).
+- **Compose mail Gmail** : `buildGmailUrl(to, subject, body)` retourne URL Gmail compose qui s'ouvre **toujours en fullscreen** (limitation Google ~2018, pas contournable via URL). `mailto:` route vers le handler par défaut du navigateur — chez Edge/Windows c'est Outlook, donc à éviter pour ce cas. Pour bulk : `bcc=...` pour préserver la confidentialité (BCC = blind carbon copy). Templates relance dans `S.prefs.gmailTemplates` éditables dans Profil ; placeholders `{contact} {ref} {date} {client} {name}`.
 
 ## Schéma de données
 
@@ -56,7 +63,9 @@ App web personnelle pour générer des devis photographe.
 
 ### `S.mission` (devis en cours, brouillon)
 
-Champs clés : `ref` (DEVIS-YYYY-MM-NNN, généré par `recomputeRef`), `dateEmission`, `dureeValidite` (jours, défaut 30), `client: { type: "mixte"|"b2c"|"b2b" }`, `contratHorsEtab` (déclenche rétractation 14j), `lignes[]`, `echeances[]`, `paiement: { delai }`, `cgvSections[]`.
+Champs clés : `ref` (**`DEVIS-NUM-YYYY-MM-NNN`** si client a un n°, sinon `DEVIS-YYYY-MM-NNN` ; généré par `recomputeRef`. NUM = `S.mission.client.num`), `dateEmission`, `dureeValidite` (jours, défaut 30), `client: { type: "mixte"|"b2c"|"b2b" }`, `contratHorsEtab` (déclenche rétractation 14j), `lignes[]`, `echeances[]`, `paiement: { delai }`, `cgvSections[]`.
+
+**`recomputeRef`** régénère la ref si elle est dans un format obsolète (ancien `DEVIS-YYYY-MM-NNN` sans num client) ou si le client courant a un num qui ne match pas le préfixe actuel. Protection : si la ref correspond à un devis archivé ET que son format reflète le client courant, on ne touche pas (évite d'écraser une ref figée). Appelé au boot (post-loadFromCloud) pour aligner les missions héritées.
 
 ### `S.mission.lignes[]` — 3 types
 
@@ -87,6 +96,20 @@ Pas d'état intermédiaire `accepte` (fusionné dans `attente` lors de la refont
 - `e.statutAvantRefus` / `e.statutAvantAnnul` — snapshot du statut précédent pour permettre le revert depuis `refuse` / `annule`.
 
 **Mapping legacy** (dans `STATUT_LEGACY`) : `paye → termine`, `accepte → attente`. Migré silencieusement par `suiviMigrate()` au prochain `loadFromCloud`.
+
+### `S.prefs`
+
+```js
+{
+  relanceJours: 7,                              // seuil "À relancer" Accueil
+  gmailTemplates: {
+    devis:    { subject, body },                // template relance "pas de réponse"
+    paiement: { subject, body }                 // template relance "en attente paiement"
+  }
+}
+```
+
+Templates Gmail éditables dans Profil → « Modèles de relance Gmail ». Placeholders supportés (substitution simple) : `{contact}` (prénom), `{ref}` (réf devis), `{date}` (FR), `{client}` (nom complet), `{name}` (toi, depuis `S.identite`).
 
 ## Débours
 
