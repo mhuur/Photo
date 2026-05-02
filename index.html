@@ -1839,6 +1839,27 @@
   .ui-dialog-btn-danger{background:var(--danger);color:#fff;border:1px solid var(--danger)}
   .ui-dialog-btn-danger:hover{background:var(--danger-dark);border-color:var(--danger-dark)}
 
+  /* Client info modal — fiche lecture seule depuis Accueil/Suivi */
+  .client-info-modal{max-width:560px;animation:uiDialogIn .14s ease}
+  .ci-header{padding-bottom:14px;border-bottom:1px solid var(--border-soft);margin-bottom:14px}
+  .ci-name{font-size:18px;font-weight:700;color:var(--text);line-height:1.3;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+  .ci-num{font-size:13px;font-weight:600;color:var(--primary);background:var(--primary-soft);padding:2px 8px;border-radius:4px;letter-spacing:.02em}
+  .ci-addr{font-size:13px;color:var(--text-muted);margin-top:6px;line-height:1.5}
+  .ci-section-title{font-size:11px;font-weight:600;color:var(--text-dim);text-transform:uppercase;letter-spacing:.06em;margin:14px 0 8px;border:0;padding:0}
+  .ci-contacts{width:100%;border-collapse:collapse;font-size:13px}
+  .ci-contacts th{font-weight:600;color:var(--text-muted);text-align:left;padding:6px 10px 6px 0;border-bottom:1px solid var(--border-soft);font-size:11px;text-transform:uppercase;letter-spacing:.04em}
+  .ci-contacts td{padding:8px 10px 8px 0;color:var(--text);border-bottom:1px solid var(--border-soft);vertical-align:top}
+  .ci-contacts tr:last-child td{border-bottom:0}
+  .ci-contacts a{color:var(--primary);text-decoration:none}
+  .ci-contacts a:hover{text-decoration:underline}
+  .ci-biz{display:flex;flex-direction:column;gap:4px;font-size:13px;color:var(--text)}
+  .ci-meta{font-size:13px;color:var(--text);margin-top:10px}
+  .ci-lbl{font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.04em;margin-right:8px}
+
+  /* Nom client cliquable (Accueil + Suivi) */
+  .client-link{cursor:pointer;transition:color .12s}
+  .client-link:hover{color:var(--primary);text-decoration:underline}
+
   .contact-list{display:flex;flex-direction:column;gap:6px}
   .contact-list-item{display:flex;flex-direction:column;align-items:flex-start;gap:4px;background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:10px 14px;cursor:pointer;text-align:left;font:inherit;color:var(--text);transition:all .12s}
   .contact-list-item:hover{background:var(--surface-hi);border-color:var(--primary)}
@@ -6191,6 +6212,7 @@ function render() {
     ${rTextEditorModal()}
     ${rViewDevisModal()}
     ${rViewFactureModal()}
+    ${rClientInfoModal()}
     ${rPrintTipModal()}
 `;
 }
@@ -9771,6 +9793,86 @@ window.viewFacturePrint = function() {
   window.print();
 };
 
+// ▼ rClientInfoModal — modal lecture seule des infos client
+// Ouverte au clic sur le nom du client dans Accueil et Suivi.
+// État : clientInfoModalDevisId (résolu via findClientForDevis).
+let clientInfoModalDevisId = null;
+
+window.clientInfoModalOpen = function(devisId) {
+  clientInfoModalDevisId = devisId;
+  render();
+};
+window.clientInfoModalClose = function() {
+  clientInfoModalDevisId = null;
+  render();
+};
+window.clientInfoModalGoToFiche = function() {
+  const client = findClientForDevis(clientInfoModalDevisId);
+  clientInfoModalDevisId = null;
+  if (client && client.id) {
+    clientsExpanded = client.id;
+    clientsEditing = null;
+  }
+  setTab("clients");
+};
+
+function rClientInfoModal() {
+  if (!clientInfoModalDevisId) return "";
+  const client = findClientForDevis(clientInfoModalDevisId);
+  if (!client) {
+    return `<div class="modal-overlay" onclick="if(event.target===this)clientInfoModalClose()">
+      <div class="modal-card modal-dialog">
+        <div class="ui-dialog-head">
+          <span class="ui-dialog-icon ui-dialog-icon-warn">${ICONS.alertTriangle}</span>
+          <div class="ui-dialog-text">
+            <div class="ui-dialog-title">Client introuvable</div>
+            <div class="ui-dialog-msg">Aucune fiche client n'est liée à ce devis. Le devis pourrait être un legacy sans lien client résolu.</div>
+          </div>
+        </div>
+        <div class="modal-actions">
+          <button class="btn" onclick="clientInfoModalClose()">Fermer</button>
+        </div>
+      </div>
+    </div>`;
+  }
+  const contacts = Array.isArray(client.contacts) ? client.contacts.filter(c => c.name || c.phone || c.email) : [];
+  const contactsHtml = contacts.length > 0
+    ? `<table class="ci-contacts">
+        <thead><tr><th>Nom</th><th>Email</th><th>Téléphone</th></tr></thead>
+        <tbody>${contacts.map(c => `<tr>
+          <td>${esc(c.name) || "<span class=\"muted\">—</span>"}</td>
+          <td>${c.email ? `<a href="${esc(buildGmailUrl(c.email,'',''))}" target="_blank" rel="noopener">${esc(c.email)}</a>` : "<span class=\"muted\">—</span>"}</td>
+          <td>${c.phone ? esc(c.phone) : "<span class=\"muted\">—</span>"}</td>
+        </tr>`).join("")}</tbody>
+      </table>`
+    : `<div class="hint" style="font-style:italic">Aucun contact renseigné.</div>`;
+  const addr = [esc(client.address || ""), esc(client.cityPostal || "")].filter(Boolean).join(" · ");
+  const numLabel = client.num ? `<span class="ci-num">#${esc(client.num)}</span>` : "";
+  const bizHtml = (client.siret || client.tvaIntra)
+    ? `<div class="ci-biz">
+        ${client.siret ? `<div><span class="ci-lbl">SIRET</span> ${esc(client.siret)}</div>` : ""}
+        ${client.tvaIntra ? `<div><span class="ci-lbl">TVA Intra</span> ${esc(client.tvaIntra)}</div>` : ""}
+       </div>`
+    : "";
+  const rencontre = client.rencontre ? `<div class="ci-meta"><span class="ci-lbl">Rencontre</span> ${esc(client.rencontre)}</div>` : "";
+  return `<div class="modal-overlay" onclick="if(event.target===this)clientInfoModalClose()">
+    <div class="modal-card client-info-modal">
+      <div class="ci-header">
+        <div class="ci-name">${esc(client.name) || "<span class=\"muted\">(sans nom)</span>"} ${numLabel}</div>
+        ${addr ? `<div class="ci-addr">${addr}</div>` : ""}
+      </div>
+      <h4 class="ci-section-title">Contacts</h4>
+      ${contactsHtml}
+      ${bizHtml ? `<h4 class="ci-section-title">Identification</h4>${bizHtml}` : ""}
+      ${rencontre}
+      <div class="modal-actions">
+        <button class="btn ghost" onclick="clientInfoModalGoToFiche()">Voir la fiche complète →</button>
+        <button class="btn" onclick="clientInfoModalClose()">Fermer</button>
+      </div>
+    </div>
+  </div>`;
+}
+
 function suiviSortKey(field) {
   if (suiviSort.field === field) {
     suiviSort.dir = suiviSort.dir === "asc" ? "desc" : "asc";
@@ -10084,7 +10186,7 @@ function rSV() {
             return "";
           })()}</td>
           <td class="suv-nowrap">
-            <strong>${esc(cleanClientLabel(g.client)) || "—"}</strong>
+            <strong class="client-link" onclick="${stop}clientInfoModalOpen('${g.devisId}')" title="Voir les infos client">${esc(cleanClientLabel(g.client)) || "—"}</strong>
           </td>
           <td class="amt">${fmt(g.total)}</td>
         </tr>
@@ -11686,7 +11788,7 @@ function rAC() {
     return `<div class="ac-row-wrap${isExpanded ? ' expanded' : ''}">
       <div class="ac-row ${late ? 'ac-late' : ''}${isExpanded ? ' ac-row-active' : ''}" onclick="accueilOpenDevis('${g.devisId}')">
         <div class="ac-row-date">${esc(dateFR(g.dateMin || g.dateMax))}</div>
-        <div class="ac-row-client">${esc(cleanClientLabel(g.client)) || "—"}</div>
+        <div class="ac-row-client client-link" onclick="${stop}clientInfoModalOpen('${g.devisId}')" title="Voir les infos client">${esc(cleanClientLabel(g.client)) || "—"}</div>
         <div class="ac-row-ref">${esc(g.ref) || "—"}${(() => {
           const rev = computeRevisionNumber(g.devisId);
           return rev > 0 ? ` <span class="suv-rev-tag">rev${rev}</span>` : "";
