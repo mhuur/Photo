@@ -5565,26 +5565,45 @@ let _authBoucleRedirect = false;
 
 // ▼ rLoginScreen — écran de connexion (user non authentifié)
 function rLoginScreen() {
-  // Boucle de redirect détectée (mobile Safari ITP, cookies cross-domain bloqués)
+  // Boucle de redirect détectée (cookies cross-domain bloqués entre
+  // firebaseapp.com et notre origin). Affiche les instructions adaptées à l'OS.
   if (_authBoucleRedirect) {
     _authBoucleRedirect = false; // affiche une seule fois
+    const ua = navigator.userAgent || "";
+    const isIOS = /iPhone|iPad|iPod/i.test(ua);
+    const isAndroid = /Android/i.test(ua);
+    const iosSteps = `
+      <strong>iPhone / iPad (Safari ou Chrome) :</strong>
+      <ol style="margin:8px 0 12px;padding-left:18px">
+        <li>Ouvre <strong>Réglages</strong> iOS (l'app, pas Safari)</li>
+        <li>Descends jusqu'à <strong>Safari</strong></li>
+        <li>Section « Confidentialité et sécurité »</li>
+        <li>Désactive <strong>« Empêcher le suivi entre sites »</strong></li>
+        <li>Reviens sur cette page, recharge, retente la connexion</li>
+      </ol>
+      <p style="margin:0 0 12px;font-size:12px;color:var(--text-muted)">Sur iPhone, Chrome utilise le même moteur que Safari → ce réglage Safari s'applique aussi à Chrome.</p>`;
+    const androidSteps = `
+      <strong>Android (Chrome) :</strong>
+      <ol style="margin:8px 0 12px;padding-left:18px">
+        <li>Dans Chrome, tape sur les <strong>3 points</strong> en haut à droite</li>
+        <li><strong>Paramètres</strong> → <strong>Confidentialité et sécurité</strong></li>
+        <li><strong>Cookies tiers</strong> → choisis <strong>« Autoriser les cookies tiers »</strong></li>
+        <li>Recharge cette page, retente la connexion</li>
+      </ol>`;
+    let helpHtml;
+    if (isIOS) helpHtml = iosSteps;
+    else if (isAndroid) helpHtml = androidSteps;
+    else helpHtml = iosSteps + androidSteps;
     return `<div class="ws-screen">
       <div class="ws-card">
         <h1>🌊 Devis Photo</h1>
         <div class="ws-status denied">
           ⚠ <strong>Connexion bloquée par ton navigateur</strong>
-          <p>La connexion Google a réussi mais ton navigateur (probablement Safari sur iPhone) a bloqué la session entre Google et l'app à cause de la protection « Empêcher le suivi entre sites ».</p>
+          <p>La connexion Google a réussi mais ton navigateur a bloqué la session de retour à cause de la protection des cookies tiers.</p>
         </div>
         <div style="margin-top:18px;padding:14px;background:var(--surface-2);border-radius:8px;text-align:left;font-size:13px;line-height:1.6">
-          <strong>Solution iPhone (~30 secondes) :</strong>
-          <ol style="margin:8px 0 0;padding-left:18px">
-            <li>Ouvre <strong>Réglages</strong> iOS</li>
-            <li>Descends jusqu'à <strong>Safari</strong></li>
-            <li>Section « Confidentialité et sécurité »</li>
-            <li>Désactive <strong>« Empêcher le suivi entre sites »</strong></li>
-            <li>Reviens dans Safari, recharge cette page, retente la connexion</li>
-          </ol>
-          <p style="margin:10px 0 0;font-size:12px;color:var(--text-muted)">Tu peux réactiver cette option après la 1ʳᵉ connexion : ta session est gardée.</p>
+          ${helpHtml}
+          <p style="margin:0;font-size:12px;color:var(--text-muted)">Tu peux réactiver les protections après la 1ʳᵉ connexion : ta session sera gardée.</p>
         </div>
         <div style="margin-top:14px;display:flex;gap:8px;justify-content:center">
           <button class="btn ws-google-btn" onclick="signInWithGoogle()">Réessayer</button>
