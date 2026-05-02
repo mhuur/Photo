@@ -2551,14 +2551,30 @@ const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt
 const num = v => { const n = parseFloat(String(v).replace(",", ".")); return isFinite(n) ? n : 0; };
 const fmt = v => num(v).toFixed(2).replace(".", ",") + " €";
 
-// ▼ save() — flush localStorage + déclenche saveToCloud (debounce 800ms)
+// ▼ save() — flush localStorage + déclenche saveToCloud (debounce 200ms).
 // Bloqué tant que le workspace n'est pas résolu (sinon on écraserait avec des défauts).
+// Bump S._localChangeTs : timestamp logique du dernier changement local. Comparé
+// dans onSnapshot pour détecter si le cloud est plus ancien que le local et
+// éviter qu'un snapshot stale n'écrase des modifs locales pas encore sync.
 function save() {
   if (workspaceState.role !== "owner" && workspaceState.role !== "member") return;
+  S._localChangeTs = Date.now();
   localStorage.setItem(SK, JSON.stringify(S));
   clearTimeout(cloudT);
-  cloudT = setTimeout(saveToCloud, 800);
+  cloudT = setTimeout(saveToCloud, 200);
 }
+
+// Flush sync (sur beforeunload / pagehide) — meilleur effort, le navigateur
+// ne garantit pas l'envoi mais Firebase v8 utilise fetch keepalive en sous-marin.
+function flushSaveBeforeUnload() {
+  if (cloudT) {
+    clearTimeout(cloudT);
+    cloudT = null;
+    saveToCloud(); // fire-and-forget, peut être tronqué selon le navigateur
+  }
+}
+window.addEventListener("beforeunload", flushSaveBeforeUnload);
+window.addEventListener("pagehide", flushSaveBeforeUnload);
 
 // ▼ saveToCloud — Firestore set merge sur users/<ownerUid> (workspace partagé)
 async function saveToCloud() {
@@ -2566,6 +2582,7 @@ async function saveToCloud() {
   if (workspaceState.role !== "owner" && workspaceState.role !== "member") return;
   try {
     _lastLocalSaveTs = Date.now();
+    const localChangeTs = S._localChangeTs || _lastLocalSaveTs;
     await db.collection("users").doc(workspaceState.ownerUid).set({
       identite: S.identite,
       mission: S.mission,
@@ -2579,7 +2596,8 @@ async function saveToCloud() {
       bugs:    S.bugs,
       prefs:   S.prefs,
       _lastWriteBy: user ? user.uid : null,
-      _lastWriteAt: firebase.firestore.FieldValue.serverTimestamp()
+      _lastWriteAt: firebase.firestore.FieldValue.serverTimestamp(),
+      _localChangeTs: localChangeTs
     }, { merge: true });
     const e = document.getElementById("savedFlash");
     if (e) { e.textContent = "Enregistré"; setTimeout(() => { if (e && e.textContent === "Enregistré") e.textContent = ""; }, 1500); }
@@ -2817,6 +2835,19 @@ function subscribeWorkspaceData(ownerUid) {
     const d = snap.data();
     // Anti-écho : si c'est notre propre écriture (lastWriteBy = nous, et < 2s depuis lastLocalSaveTs), ignore.
     if (d._lastWriteBy === (user && user.uid) && Date.now() - _lastLocalSaveTs < 2000) return;
+    // Réconciliation timestamp : si le cloud est plus ancien que notre état
+    // local (modifs faites avant que la sauvegarde cloud n'ait pu débouncer
+    // ou pendant un reload rapide), on SKIP le merge et on PUSH notre état.
+    // Évite que le snapshot stale n'écrase des modifs Maj Trame, lastRelance,
+    // etc. faites juste avant un reload.
+    const cloudCts = num(d._localChangeTs);
+    const localCts = num(S._localChangeTs);
+    if (cloudCts > 0 && localCts > 0 && cloudCts < localCts) {
+      console.log("[sync] Cloud snapshot older than local — skipping merge, re-pushing local state.");
+      clearTimeout(cloudT);
+      saveToCloud();
+      return;
+    }
     // Merge dans S (logique calquée sur loadFromCloud, sans le re-render brutal)
     if (d.mission) {
       const dm = DEFAULT_S.mission;
@@ -2845,6 +2876,9 @@ function subscribeWorkspaceData(ownerUid) {
     if (d.tarifs && Array.isArray(d.tarifs.catalog) && d.tarifs.catalog.length) S.tarifs = { catalog: d.tarifs.catalog, heuresAnnuelles: d.tarifs.heuresAnnuelles || S.tarifs.heuresAnnuelles || "900", facteurSecurite: d.tarifs.facteurSecurite || S.tarifs.facteurSecurite || "0" };
     if (d.bugs)    S.bugs    = { items: Array.isArray(d.bugs.items) ? d.bugs.items : [] };
     if (d.prefs)   S.prefs   = { ...DEFAULT_S.prefs, ...d.prefs };
+    // Adopte le timestamp cloud comme nouveau référentiel local (sinon
+    // notre prochain save aurait un localCts plus ancien que le cloud).
+    if (cloudCts > 0) S._localChangeTs = cloudCts;
     localStorage.setItem(SK, JSON.stringify(S));
     // Préserve le focus de l'input courant pendant le re-render
     const active = document.activeElement;
