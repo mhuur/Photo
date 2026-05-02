@@ -5182,17 +5182,16 @@ function ensureFactureForDevis(devisId, type) {
 }
 
 // ▼ canReviseDevis — un devis peut-il être révisé (clone + V1 annulé) ?
-// Returns { ok: true } ou { ok: false, reason: "…" }
+// Returns { ok: true, partial?: bool } ou { ok: false, reason: "…" }
 // Conditions :
-//   - snapshotMission présent (devis archivé après l'introduction du flow)
 //   - aucune entry du devis en "termine" (paiement encaissé = avoir nécessaire)
 //   - aucune facture émise (FA / FS) — facture émise = écriture comptable figée
+// Si snapshotMission est absent (ancien devis pré-feature), partial=true :
+// reviseDevisStart fera une reconstruction best-effort à partir des données
+// disponibles (client, entries, snapshotPaiementDelai, snapshotDatePrestation).
 function canReviseDevis(devisId) {
   const dv = S.suivi.devis && S.suivi.devis[devisId];
   if (!dv) return { ok: false, reason: "Devis introuvable." };
-  if (!dv.snapshotMission) {
-    return { ok: false, reason: "Devis trop ancien pour être révisé (snapshot mission absent). Pour les nouveaux devis, la révision sera disponible." };
-  }
   const ents = (S.suivi.entries || []).filter(e => e.devisId === devisId);
   const anyPaid = ents.some(e => entryStatut(e) === "termine");
   if (anyPaid) {
@@ -5201,7 +5200,7 @@ function canReviseDevis(devisId) {
   if (Array.isArray(dv.factures) && dv.factures.length > 0) {
     return { ok: false, reason: "Impossible : une facture a déjà été émise pour ce devis. Une facture émise est une écriture comptable figée." };
   }
-  return { ok: true };
+  return { ok: true, partial: !dv.snapshotMission };
 }
 
 // ▼ reviseDevisStart — démarre le flow de révision pour un devis donné.
@@ -5228,10 +5227,76 @@ window.reviseDevisStart = function(devisId) {
       `Le charger DEVIS ${dv.ref || devisId} va écraser ce brouillon.\n\nContinuer ?`);
     if (!ok) return;
   }
-  // Clone profond du snapshotMission pour ne pas partager la référence
-  const cloned = JSON.parse(JSON.stringify(dv.snapshotMission));
-  // Remplacement complet de S.mission (on ne garde rien du brouillon courant)
-  S.mission = cloned;
+  const recovered = [];
+  if (dv.snapshotMission) {
+    // Cas standard : clone profond du snapshot structuré.
+    S.mission = JSON.parse(JSON.stringify(dv.snapshotMission));
+  } else {
+    // Cas legacy : pas de snapshot structuré. On reconstruit à partir des
+    // données disponibles (entries Suivi + champs snapshot* sur le devis).
+    // Reset complet via DEFAULT_S, puis on garde la config courante (taux,
+    // urssaf, paiement, cgv, identité bancaire) qui ne change pas par devis.
+    const dm = DEFAULT_S.mission;
+    const cur = S.mission || dm;
+    const fresh = JSON.parse(JSON.stringify(dm));
+    // Préserve la config (rates, modalités, CGV, etc.)
+    fresh.urssafPct      = cur.urssafPct      ?? dm.urssafPct;
+    fresh.dureeValidite  = cur.dureeValidite  ?? dm.dureeValidite;
+    fresh.declare        = cur.declare        ?? dm.declare;
+    fresh.blackMode      = cur.blackMode      ?? dm.blackMode;
+    fresh.paiement       = JSON.parse(JSON.stringify(cur.paiement || dm.paiement));
+    fresh.echeances      = JSON.parse(JSON.stringify(cur.echeances || dm.echeances));
+    fresh.cgvSections    = JSON.parse(JSON.stringify(cur.cgvSections || dm.cgvSections));
+    fresh.cgv            = cur.cgv            ?? dm.cgv;
+    fresh.cgvPreambule   = cur.cgvPreambule   ?? dm.cgvPreambule;
+    fresh.signatureBlock = cur.signatureBlock ?? dm.signatureBlock;
+    fresh.deplacement.mode    = cur.deplacement?.mode    ?? dm.deplacement.mode;
+    fresh.deplacement.tauxKm  = cur.deplacement?.tauxKm  ?? dm.deplacement.tauxKm;
+    fresh.prep.rate     = cur.prep?.rate     ?? "";
+    fresh.prod.rate     = cur.prod?.rate     ?? "";
+    fresh.postprod.rate = cur.postprod?.rate ?? "";
+    S.mission = fresh;
+    // Récupération client (3 stratégies cascade — voir findClientForDevis)
+    const client = findClientForDevis(devisId);
+    if (client) {
+      const defaultType = (S.identite && S.identite.clienteleType) || "mixte";
+      S.mission.client = { ...dm.client, ...client, type: client.type || defaultType };
+      recovered.push("client");
+    }
+    // Délai de paiement archivé (si capturé par snapshot)
+    if (dv.snapshotPaiementDelai) {
+      S.mission.paiement.delai = dv.snapshotPaiementDelai;
+      recovered.push("délai paiement");
+    }
+    // Date de prestation archivée (si capturée par snapshot)
+    if (dv.snapshotDatePrestation) {
+      S.mission.datePrestation = dv.snapshotDatePrestation;
+      recovered.push("date prestation");
+    }
+    // Reconstruction d'une ligne "heures" cumulée à partir des entries
+    const ents = (S.suivi.entries || []).filter(e => e.devisId === devisId);
+    const totalHeures = ents.reduce((s, e) => s + num(e.heures), 0);
+    if (totalHeures > 0) {
+      S.mission.lignes = [{
+        id: uid(),
+        type: "heures",
+        intitule: "(à compléter — récupéré du devis archivé)",
+        duree: totalHeures.toFixed(2),
+        unit: "h",
+        description: ""
+      }];
+      recovered.push("heures totales (regroupées sur 1 ligne)");
+    }
+    // Type de prestation (object) via lookup catalogue par libellé
+    const firstEnt = ents[0];
+    if (firstEnt && firstEnt.prestation) {
+      const cat = (S.tarifs.catalog || DEFAULT_CATALOG).find(c => c.l === firstEnt.prestation);
+      if (cat) {
+        S.mission.object = cat.k;
+        recovered.push("type de prestation");
+      }
+    }
+  }
   // Date d'émission = aujourd'hui (V2 est un nouveau document)
   S.mission.dateEmission = new Date().toISOString().slice(0, 10);
   // Reset ref pour qu'elle soit recalculée à la prochaine séquence
@@ -5242,6 +5307,13 @@ window.reviseDevisStart = function(devisId) {
   save();
   tab = "mission";
   render();
+  if (check.partial) {
+    setTimeout(() => alert(
+      "Devis ancien sans snapshot complet : reconstruction partielle.\n\n" +
+      "Récupéré : " + (recovered.length ? recovered.join(", ") : "rien d'exploitable") + ".\n\n" +
+      "Complète manuellement les lignes (matériel, cession, déplacement détaillé), les durées par poste si nécessaire, et autres champs avant d'enregistrer."
+    ), 50);
+  }
 };
 
 // Standard French payment delays (B2B/B2C). Default for B2B = 30j fin de mois.
