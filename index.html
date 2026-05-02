@@ -5119,6 +5119,87 @@ window.analyzeDevisArchive = function() {
 // ▼ cleanOrphanDevis — supprime les devis archivés (S.suivi.devis[id]) qui
 // n'ont AUCUNE entry Suivi associée. Sûr : sans entry, le devis n'apparaît
 // nulle part dans l'app, donc rien à perdre. Sauve au cloud à la fin.
+// ▼ analyzeLogoInSnapshots — combien pèsent les logos data URL dupliqués
+// dans les snapshots devis (snapshotHtml et snapshotMission.logoUrl).
+window.analyzeLogoInSnapshots = function() {
+  const devis = (S.suivi && S.suivi.devis) || {};
+  let countHtml = 0, sizeHtml = 0;
+  let countMission = 0, sizeMission = 0;
+  // Pattern data URL d'image dans le HTML : src="data:image/...;base64,..."
+  const dataUrlInHtml = /src="(data:image\/[^"]+)"/g;
+  for (const id in devis) {
+    const dv = devis[id];
+    if (typeof dv.snapshotHtml === "string") {
+      let m;
+      while ((m = dataUrlInHtml.exec(dv.snapshotHtml)) !== null) {
+        countHtml++;
+        sizeHtml += m[1].length;
+      }
+      dataUrlInHtml.lastIndex = 0;
+    }
+    if (typeof dv.snapshotDeboursHtml === "string") {
+      let m;
+      while ((m = dataUrlInHtml.exec(dv.snapshotDeboursHtml)) !== null) {
+        countHtml++;
+        sizeHtml += m[1].length;
+      }
+      dataUrlInHtml.lastIndex = 0;
+    }
+    if (dv.snapshotMission && typeof dv.snapshotMission.logoUrl === "string" && dv.snapshotMission.logoUrl.startsWith("data:")) {
+      countMission++;
+      sizeMission += dv.snapshotMission.logoUrl.length;
+    }
+  }
+  const currentLogo = (S.mission && S.mission.logoUrl && S.mission.logoUrl.startsWith("data:")) ? S.mission.logoUrl.length : 0;
+  console.log(`Logo courant S.mission.logoUrl : ${(currentLogo/1024).toFixed(1)} KB`);
+  console.log(`Logos dans snapshotHtml/snapshotDeboursHtml : ${countHtml} → ${(sizeHtml/1024).toFixed(1)} KB`);
+  console.log(`Logos dans snapshotMission.logoUrl : ${countMission} → ${(sizeMission/1024).toFixed(1)} KB`);
+  console.log(`TOTAL logos dans archives : ${((sizeHtml+sizeMission)/1024).toFixed(1)} KB`);
+  return { countHtml, sizeHtml, countMission, sizeMission };
+};
+
+// ▼ stripLogosFromSnapshots — retire les data URLs d'image des snapshots
+// archivés (snapshotHtml + snapshotDeboursHtml + snapshotMission.logoUrl).
+// Le logo sera re-injecté à l'affichage depuis S.mission.logoUrl courant.
+window.stripLogosFromSnapshots = async function() {
+  const devis = (S.suivi && S.suivi.devis) || {};
+  const ids = Object.keys(devis);
+  if (!ids.length) { console.log("Aucun devis archivé."); return 0; }
+  const before = JSON.stringify(devis).length;
+  // Confirmation
+  if (typeof uiConfirm === "function") {
+    const ok = await uiConfirm(
+      `Retirer les logos data URL inline des ${ids.length} snapshots archivés ?\n\nLes snapshots gardent leur structure ; le logo sera ré-affiché depuis S.mission.logoUrl courant à l'impression.\n\nÇa libère typiquement plusieurs centaines de KB.`,
+      { title: "Strip logos snapshots", confirmLabel: "Strip", kind: "warn" }
+    );
+    if (!ok) return 0;
+  }
+  // Pattern : <img ... src="data:image/...">  →  <img ... src="">
+  // Plus prudent : remplace juste le contenu du src=data: par src=""
+  const re = /src="data:image\/[^"]+"/g;
+  let stripped = 0;
+  for (const id of ids) {
+    const dv = devis[id];
+    if (typeof dv.snapshotHtml === "string" && re.test(dv.snapshotHtml)) {
+      dv.snapshotHtml = dv.snapshotHtml.replace(re, 'src=""');
+      stripped++;
+    }
+    re.lastIndex = 0;
+    if (typeof dv.snapshotDeboursHtml === "string" && re.test(dv.snapshotDeboursHtml)) {
+      dv.snapshotDeboursHtml = dv.snapshotDeboursHtml.replace(re, 'src=""');
+    }
+    re.lastIndex = 0;
+    if (dv.snapshotMission && typeof dv.snapshotMission.logoUrl === "string" && dv.snapshotMission.logoUrl.startsWith("data:")) {
+      dv.snapshotMission.logoUrl = "";
+    }
+  }
+  const after = JSON.stringify(devis).length;
+  const freedKB = ((before - after) / 1024).toFixed(1);
+  console.log(`✓ ${stripped} snapshotHtml stripped, ${freedKB} KB libérés.`);
+  save();
+  return stripped;
+};
+
 window.cleanOrphanDevis = async function() {
   const devisIds = Object.keys((S.suivi && S.suivi.devis) || {});
   const entriesIds = new Set(((S.suivi && S.suivi.entries) || []).map(e => e.devisId));
