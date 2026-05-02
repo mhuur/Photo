@@ -25,7 +25,7 @@
   ::-webkit-scrollbar-thumb:hover{background:var(--border-light)}
   *{box-sizing:border-box}
   body{margin:0;font-family:'Inter',system-ui,-apple-system,sans-serif;background:linear-gradient(180deg,var(--bg) 0%,var(--bg-3) 100%);background-attachment:fixed;color:var(--text);font-variant-numeric:tabular-nums}
-  #app{display:flex;min-height:100vh}
+  #app{display:flex;min-height:100vh}n revient sur la révision du devis. Le problème c'est que la révision demande de chosir un type de prestation, qui associe un taux horraire. Or, lors de la précédente version du devis, le taux horraire pouvait être différent. Néanmoins, il n'est plus forcément possible de changer le prix pour le client. Il faudrait donc lors de la réédition pouvoir saisir un taux horraire.
   .sb{width:220px;background:var(--bg-2);color:var(--text);border-right:1px solid var(--border);display:flex;flex-direction:column;position:sticky;top:0;height:100vh;overflow-y:auto;flex-shrink:0;z-index:100}
   .sb h1{font-size:13px;padding:18px 16px 10px;margin:0;color:var(--accent);letter-spacing:.05em;text-transform:uppercase;font-weight:700}
   .sb button.tab{display:flex;align-items:center;gap:11px;width:100%;background:none;border:0;color:var(--text-muted);padding:10px 16px;text-align:left;cursor:pointer;font:inherit;font-size:13px;border-left:3px solid transparent}
@@ -236,6 +236,8 @@
   .dp-facture-status.pending{background:var(--warning-soft, rgba(245,158,11,.16));color:var(--warning);border:1px solid var(--warning)}
   .dp-facture-footer{margin:18px 0 0;padding:10px 14px;border-top:1px solid var(--border-soft);font-size:11px;color:var(--text-dim);font-style:italic;line-height:1.5;text-align:center}
   .dp-acompte-note{margin:14px 0;padding:10px 14px;background:var(--surface-2);border-left:3px solid var(--accent);border-radius:4px;font-size:12px;color:var(--text-muted);line-height:1.5}
+  .dp-reconstructed-banner{margin:0 0 12px;padding:8px 12px;background:rgba(245,158,11,.12);border:1px dashed rgba(245,158,11,.55);border-radius:6px;color:#b45309;font-size:11px;line-height:1.4}
+  @media print{.dp-reconstructed-banner{background:#fff;border-color:#999;color:#555}}
   .dp-acomptes-deduits{background:var(--surface-2);border:1px solid var(--border-soft);border-radius:6px;padding:12px 14px;margin:14px 0}
   .dp-facture-debours{background:var(--surface-2);border:1px solid var(--border-soft);border-radius:6px;padding:12px 14px;margin:14px 0}
   /* Sur la facture solde, on superpose un bandeau dp-facture-meta en haut. Le
@@ -5136,13 +5138,26 @@ function findFactureFor(devisId, type) {
   return dv.factures.find(f => f.type === type) || null;
 }
 
+// ▼ isDevisAuNoir — heuristique : devis dont les entries ont toutes ca=0 et
+// montant>0. Un devis au noir n'a pas à émettre de facture (incohérence
+// fiscale : la facture est un document fiscal qui constate du CA déclaré).
+function isDevisAuNoir(devisId) {
+  const ents = (S.suivi.entries || []).filter(e => e.devisId === devisId && num(e.frais) === 0);
+  if (ents.length === 0) return false;
+  const totalMontant = ents.reduce((s, e) => s + num(e.montant), 0);
+  const totalCa      = ents.reduce((s, e) => s + num(e.ca), 0);
+  return totalMontant > 0 && totalCa === 0;
+}
+
 // ▼ isFactureApplicable — peut-on émettre une facture de ce type sur ce devis ?
 // - "acompte" : ≥ 1 entry (hors débours) en statut "termine" (au moins un acompte
 //   versé), ET au moins une entry n'est pas encore "termine" (sinon c'est une
 //   facture de solde, pas d'acompte). Si TOUT est déjà payé, plus d'acompte
 //   éligible — on émet directement la facture de solde.
 // - "solde" : toutes les entries (hors débours) en statut "termine".
+// Bloque l'émission si le devis est au noir (cf isDevisAuNoir).
 function isFactureApplicable(devisId, type) {
+  if (isDevisAuNoir(devisId)) return false;
   const ents = (S.suivi.entries || []).filter(e => e.devisId === devisId && num(e.frais) === 0);
   if (ents.length === 0) return false;
   const allPaid = ents.every(e => entryStatut(e) === "termine");
@@ -5180,6 +5195,223 @@ function ensureFactureForDevis(devisId, type) {
   save();
   return facture;
 }
+
+// ▼ reconstructMissionFromSuivi — helper pur pour devis legacy (sans snapshotMission).
+// Reconstitue un objet `mission` à partir des entries Suivi + champs snapshot* du
+// devis. Ne mute ni S.mission ni le devis. Retourne { mission, recovered: [...] }.
+// Utilisé par : reviseDevisStart (legacy fallback), ensureLegacySnapshot.
+function reconstructMissionFromSuivi(devisId) {
+  const dm = DEFAULT_S.mission;
+  const dv = (S.suivi && S.suivi.devis && S.suivi.devis[devisId]) || {};
+  const ents = (S.suivi.entries || []).filter(e => e.devisId === devisId);
+  const cur = S.mission || dm;
+  const fresh = JSON.parse(JSON.stringify(dm));
+  const recovered = [];
+
+  // Préserve la config courante (rates, modalités, CGV, signature, etc.)
+  fresh.urssafPct      = cur.urssafPct      ?? dm.urssafPct;
+  fresh.dureeValidite  = cur.dureeValidite  ?? dm.dureeValidite;
+  fresh.declare        = cur.declare        ?? dm.declare;
+  fresh.blackMode      = cur.blackMode      ?? dm.blackMode;
+  fresh.paiement       = JSON.parse(JSON.stringify(cur.paiement || dm.paiement));
+  fresh.echeances      = JSON.parse(JSON.stringify(cur.echeances || dm.echeances));
+  fresh.cgvSections    = JSON.parse(JSON.stringify(cur.cgvSections || dm.cgvSections));
+  fresh.cgv            = cur.cgv            ?? dm.cgv;
+  fresh.cgvPreambule   = cur.cgvPreambule   ?? dm.cgvPreambule;
+  fresh.signatureBlock = cur.signatureBlock ?? dm.signatureBlock;
+  fresh.deplacement.mode    = cur.deplacement?.mode    ?? dm.deplacement.mode;
+  fresh.deplacement.tauxKm  = cur.deplacement?.tauxKm  ?? dm.deplacement.tauxKm;
+  fresh.prep.rate     = cur.prep?.rate     ?? "";
+  fresh.prod.rate     = cur.prod?.rate     ?? "";
+  fresh.postprod.rate = cur.postprod?.rate ?? "";
+  fresh.logoUrl       = cur.logoUrl        ?? "";
+
+  // Client : 3 stratégies cascade (cf findClientForDevis), avec fallback
+  // synthétique si rien n'est trouvé (preview rDevisPreview a besoin d'un
+  // hasClient pour ne pas tomber sur le placeholder dp-empty).
+  const client = findClientForDevis(devisId);
+  const defaultType = (S.identite && S.identite.clienteleType) || "mixte";
+  if (client) {
+    fresh.client = { ...dm.client, ...client, type: client.type || defaultType };
+    recovered.push("client");
+  } else {
+    // Synthèse depuis ents[0].client (legacy "#NUM Nom" ou "Nom").
+    const rawName = (ents[0] && String(ents[0].client || "").replace(/^#\d+\s*/, "").trim()) || "";
+    if (rawName) {
+      fresh.client = { ...dm.client, name: rawName, type: defaultType };
+      recovered.push("client (nom seul, non lié au référentiel)");
+    }
+  }
+  if (dv.snapshotPaiementDelai) {
+    fresh.paiement.delai = dv.snapshotPaiementDelai;
+    recovered.push("délai paiement");
+  }
+  if (dv.snapshotDatePrestation) {
+    fresh.datePrestation = dv.snapshotDatePrestation;
+    recovered.push("date prestation");
+  }
+  // Heures cumulées en 1 ligne reconstruite
+  const totalHeures = ents.reduce((s, e) => s + num(e.heures), 0);
+  if (totalHeures > 0) {
+    fresh.lignes = [{
+      id: uid(),
+      type: "heures",
+      intitule: "(reconstitué — issu du suivi)",
+      duree: totalHeures.toFixed(2),
+      unit: "h",
+      description: ""
+    }];
+    recovered.push("heures totales");
+  } else {
+    // Fallback : aucune heure tracée (cas fréquent pour les devis importés
+    // depuis Excel). On pose une ligne « cession » forfaitaire au montant
+    // total des entries (hors débours) pour que le devis ne soit pas vide.
+    const totalMontant = ents.filter(e => num(e.frais) === 0).reduce((s, e) => s + num(e.montant), 0);
+    if (totalMontant > 0) {
+      const fallbackLabel = (ents[0] && ents[0].prestation) || "Prestation reconstituée";
+      fresh.lignes = [{
+        id: uid(),
+        type: "cession",
+        intitule: fallbackLabel,
+        prix: totalMontant.toFixed(2),
+        duree: "",
+        territoire: "",
+        supports: "",
+        exclusivite: "",
+        description: "Forfait reconstitué depuis le suivi des paiements (heures non détaillées)."
+      }];
+      recovered.push("montant forfaitaire");
+    }
+  }
+  // Type de prestation via lookup catalogue
+  const firstEnt = ents[0];
+  if (firstEnt && firstEnt.prestation) {
+    const cat = (S.tarifs.catalog || DEFAULT_CATALOG).find(c => c.l === firstEnt.prestation);
+    if (cat) {
+      fresh.object = cat.k;
+      recovered.push("type de prestation");
+    }
+  }
+  // Date d'émission rétroactive : min(entries.date) si dispo, sinon today.
+  const dates = ents.map(e => e.date).filter(d => d && d.length >= 10).sort();
+  fresh.dateEmission = dates[0] || new Date().toISOString().slice(0, 10);
+
+  // Ref rétroactive au format actuel DEVIS-NUM-YYYY-MM-NNN.
+  // Calcul direct (n'appelle pas recomputeRef qui mute S.mission).
+  const ym = fresh.dateEmission.slice(0, 7);
+  const clientNum = (fresh.client && String(fresh.client.num || "").trim()) || "";
+  const re = /^DEVIS-(?:\d+-)?(\d{4})-(\d{2})-(\d+)$/;
+  let maxN = 0;
+  const allDevis = (S.suivi && S.suivi.devis) || {};
+  for (const k of Object.keys(allDevis)) {
+    if (k === devisId) continue;
+    const r = (allDevis[k] && allDevis[k].ref) || "";
+    const m = r.match(re);
+    if (m && `${m[1]}-${m[2]}` === ym) {
+      const n = parseInt(m[3], 10);
+      if (n > maxN) maxN = n;
+    }
+  }
+  const seq = String(maxN + 1).padStart(3, "0");
+  fresh.ref = clientNum
+    ? `DEVIS-${clientNum}-${ym}-${seq}`
+    : `DEVIS-${ym}-${seq}`;
+
+  return { mission: fresh, recovered };
+}
+
+// ▼ ensureLegacySnapshot — reconstitue un snapshot complet (HTML devis +
+// HTML débours + snapshotMission + méta) pour un devis legacy à partir des
+// entries Suivi. Idempotent : no-op si dv.snapshotHtml existe déjà.
+// Marque dv.legacyReconstructed = true. Retourne dv.
+// Le HTML inclut un bandeau « 📦 Reconstitué » visible aussi à l'impression.
+function ensureLegacySnapshot(devisId) {
+  if (!S.suivi.devis) S.suivi.devis = {};
+  let dv = S.suivi.devis[devisId];
+  if (!dv) dv = S.suivi.devis[devisId] = { ref: "" };
+  if (dv.snapshotHtml) return dv;
+
+  const ents = (S.suivi.entries || []).filter(e => e.devisId === devisId);
+  if (ents.length === 0) return dv;
+
+  // Si un snapshotMission existe déjà (boot-backfill), on s'appuie dessus
+  // (plus fidèle que la reconstruction via entries). Sinon on reconstitue.
+  const synth = dv.snapshotMission
+    ? JSON.parse(JSON.stringify(dv.snapshotMission))
+    : reconstructMissionFromSuivi(devisId).mission;
+
+  // Override date émission avec la min(entries.date) si elle est plus
+  // ancienne. Le boot-backfill peut copier la date du brouillon courant
+  // (souvent « aujourd'hui »), pas la date d'origine du devis.
+  const dates = ents.map(e => e.date).filter(d => d && d.length >= 10).sort();
+  if (dates[0] && (!synth.dateEmission || dates[0] < synth.dateEmission)) {
+    synth.dateEmission = dates[0];
+  }
+
+  // Swap S.mission temporairement pour rendre les previews avec ce contexte.
+  const savedMission = S.mission;
+  S.mission = synth;
+  let snapshotHtml = "";
+  let snapshotDeboursHtml = "";
+  try {
+    const dHtml = rDevisPreview();
+    if (dHtml) {
+      const tmp = document.createElement("div");
+      tmp.innerHTML = dHtml;
+      const inner = tmp.querySelector("#devisPreview") || tmp.firstElementChild;
+      if (inner) {
+        inner.querySelectorAll(".dp-actions").forEach(n => n.remove());
+        snapshotHtml = inner.innerHTML;
+      }
+    }
+    const totalDebours = ents.reduce((s, e) => s + num(e.frais), 0);
+    if (totalDebours > 0) {
+      const dDebours = rDeboursPreview();
+      if (dDebours && !dDebours.includes("dp-empty")) {
+        const tmpD = document.createElement("div");
+        tmpD.innerHTML = dDebours;
+        const innerD = tmpD.querySelector("#deboursPreview") || tmpD.firstElementChild;
+        if (innerD) {
+          innerD.querySelectorAll(".dp-actions").forEach(n => n.remove());
+          snapshotDeboursHtml = innerD.innerHTML;
+        }
+      }
+    }
+  } catch (e) {
+    console.warn("ensureLegacySnapshot render failed", e);
+  } finally {
+    S.mission = savedMission;
+  }
+
+  // Bandeau « reconstitué » injecté en tête (visible à l'impression PDF).
+  const banner = `<div class="dp-reconstructed-banner">📦 Document reconstitué a posteriori — données issues du suivi des paiements.</div>`;
+  if (snapshotHtml) snapshotHtml = banner + snapshotHtml;
+  if (snapshotDeboursHtml) snapshotDeboursHtml = banner + snapshotDeboursHtml;
+
+  // Ref rétroactive si manquante / format non conforme (DEVIS- ou DEVIS-NUM-).
+  if (!dv.ref || !/^DEVIS-(?:\d+-)?\d{4}-\d{2}-\d+$/.test(dv.ref)) {
+    dv.ref = synth.ref || dv.ref || "";
+  }
+
+  const totalHT      = ents.filter(e => num(e.frais) === 0).reduce((s, e) => s + num(e.montant), 0);
+  const totalDebours = ents.reduce((s, e) => s + num(e.frais), 0);
+
+  dv.snapshotHtml         = snapshotHtml;
+  dv.snapshotDeboursHtml  = snapshotDeboursHtml;
+  dv.snapshotMission      = JSON.parse(JSON.stringify(synth));
+  dv.snapshotAt           = dv.snapshotAt || new Date().toISOString();
+  dv.snapshotTotal        = totalHT;
+  dv.snapshotDebours      = totalDebours;
+  dv.snapshotClient       = (synth.client && synth.client.name) || ents[0].client || "";
+  dv.snapshotPaiementDelai   = (synth.paiement && synth.paiement.delai) || "30j_fdm";
+  dv.snapshotDatePrestation  = synth.datePrestation || "";
+  dv.legacyReconstructed  = true;
+  if (!Array.isArray(dv.factures)) dv.factures = [];
+
+  save();
+  return dv;
+}
+window.ensureLegacySnapshot = ensureLegacySnapshot;
 
 // ▼ canReviseDevis — un devis peut-il être révisé (clone + V1 annulé) ?
 // Returns { ok: true, partial?: bool } ou { ok: false, reason: "…" }
@@ -5227,75 +5459,15 @@ window.reviseDevisStart = function(devisId) {
       `Le charger DEVIS ${dv.ref || devisId} va écraser ce brouillon.\n\nContinuer ?`);
     if (!ok) return;
   }
-  const recovered = [];
+  let recovered = [];
   if (dv.snapshotMission) {
     // Cas standard : clone profond du snapshot structuré.
     S.mission = JSON.parse(JSON.stringify(dv.snapshotMission));
   } else {
-    // Cas legacy : pas de snapshot structuré. On reconstruit à partir des
-    // données disponibles (entries Suivi + champs snapshot* sur le devis).
-    // Reset complet via DEFAULT_S, puis on garde la config courante (taux,
-    // urssaf, paiement, cgv, identité bancaire) qui ne change pas par devis.
-    const dm = DEFAULT_S.mission;
-    const cur = S.mission || dm;
-    const fresh = JSON.parse(JSON.stringify(dm));
-    // Préserve la config (rates, modalités, CGV, etc.)
-    fresh.urssafPct      = cur.urssafPct      ?? dm.urssafPct;
-    fresh.dureeValidite  = cur.dureeValidite  ?? dm.dureeValidite;
-    fresh.declare        = cur.declare        ?? dm.declare;
-    fresh.blackMode      = cur.blackMode      ?? dm.blackMode;
-    fresh.paiement       = JSON.parse(JSON.stringify(cur.paiement || dm.paiement));
-    fresh.echeances      = JSON.parse(JSON.stringify(cur.echeances || dm.echeances));
-    fresh.cgvSections    = JSON.parse(JSON.stringify(cur.cgvSections || dm.cgvSections));
-    fresh.cgv            = cur.cgv            ?? dm.cgv;
-    fresh.cgvPreambule   = cur.cgvPreambule   ?? dm.cgvPreambule;
-    fresh.signatureBlock = cur.signatureBlock ?? dm.signatureBlock;
-    fresh.deplacement.mode    = cur.deplacement?.mode    ?? dm.deplacement.mode;
-    fresh.deplacement.tauxKm  = cur.deplacement?.tauxKm  ?? dm.deplacement.tauxKm;
-    fresh.prep.rate     = cur.prep?.rate     ?? "";
-    fresh.prod.rate     = cur.prod?.rate     ?? "";
-    fresh.postprod.rate = cur.postprod?.rate ?? "";
-    S.mission = fresh;
-    // Récupération client (3 stratégies cascade — voir findClientForDevis)
-    const client = findClientForDevis(devisId);
-    if (client) {
-      const defaultType = (S.identite && S.identite.clienteleType) || "mixte";
-      S.mission.client = { ...dm.client, ...client, type: client.type || defaultType };
-      recovered.push("client");
-    }
-    // Délai de paiement archivé (si capturé par snapshot)
-    if (dv.snapshotPaiementDelai) {
-      S.mission.paiement.delai = dv.snapshotPaiementDelai;
-      recovered.push("délai paiement");
-    }
-    // Date de prestation archivée (si capturée par snapshot)
-    if (dv.snapshotDatePrestation) {
-      S.mission.datePrestation = dv.snapshotDatePrestation;
-      recovered.push("date prestation");
-    }
-    // Reconstruction d'une ligne "heures" cumulée à partir des entries
-    const ents = (S.suivi.entries || []).filter(e => e.devisId === devisId);
-    const totalHeures = ents.reduce((s, e) => s + num(e.heures), 0);
-    if (totalHeures > 0) {
-      S.mission.lignes = [{
-        id: uid(),
-        type: "heures",
-        intitule: "(à compléter — récupéré du devis archivé)",
-        duree: totalHeures.toFixed(2),
-        unit: "h",
-        description: ""
-      }];
-      recovered.push("heures totales (regroupées sur 1 ligne)");
-    }
-    // Type de prestation (object) via lookup catalogue par libellé
-    const firstEnt = ents[0];
-    if (firstEnt && firstEnt.prestation) {
-      const cat = (S.tarifs.catalog || DEFAULT_CATALOG).find(c => c.l === firstEnt.prestation);
-      if (cat) {
-        S.mission.object = cat.k;
-        recovered.push("type de prestation");
-      }
-    }
+    // Cas legacy : reconstruction best-effort via le helper partagé.
+    const r = reconstructMissionFromSuivi(devisId);
+    S.mission = r.mission;
+    recovered = r.recovered;
   }
   // Date d'émission = aujourd'hui (V2 est un nouveau document)
   S.mission.dateEmission = new Date().toISOString().slice(0, 10);
@@ -6337,6 +6509,8 @@ function renderLockedTextarea(field, value, label, placeholder) {
 // ===== View-devis modal state (open from Suivi 👁 button) =====
 let viewDevisModal = null; // { devisId, view: "devis"|"debours" }
 window.viewDevisOpen = function(devisId) {
+  // Reconstitution paresseuse pour les devis legacy (pas de snapshot).
+  ensureLegacySnapshot(devisId);
   viewDevisModal = { devisId, view: "devis" };
   render();
 };
@@ -8742,8 +8916,19 @@ function suiviExpandedPanelHtml(g) {
         return `<button class="btn ghost suv-gmail-btn" onclick="${stop}gmailRelanceForDevis('${g.devisId}','${kind}')" title="Ouvrir Gmail avec un template de relance pré-rempli">✉ ${esc(lbl)}</button>`;
       })()}
       <button class="btn ghost" onclick="${stop}viewDevisOpen('${g.devisId}')">🖨 Devis</button>
-      <button class="btn ghost" onclick="${stop}viewDeboursOpen('${g.devisId}')">🖨 Débours</button>
       ${(() => {
+        // Bouton Débours masqué si aucun frais débours sur les entries.
+        // Pour les devis archivés (snapshot existant), on s'aligne sur la
+        // somme des entries Suivi (pour les legacy comme pour les standards).
+        const totalDebours = lignes.reduce((s, e) => s + num(e.frais), 0);
+        if (totalDebours <= 0) return "";
+        return `<button class="btn ghost" onclick="${stop}viewDeboursOpen('${g.devisId}')">🖨 Débours</button>`;
+      })()}
+      ${(() => {
+        // Bloque l'UI facture pour les devis au noir (CA = 0).
+        if (isDevisAuNoir(g.devisId)) {
+          return `<button class="btn ghost" disabled title="Devis au noir (CA déclaré = 0). La facturation est désactivée." style="opacity:.5;cursor:not-allowed">🖨 Facture</button>`;
+        }
         const facA = findFactureFor(g.devisId, "acompte");
         const facS = findFactureFor(g.devisId, "solde");
         const appA = isFactureApplicable(g.devisId, "acompte");
@@ -8910,6 +9095,15 @@ const SUIVI_NUMERIC = new Set(["montant","heures","paiement","ca","salaire","urs
 let viewFactureModal = null; // { devisId, type }
 window.viewFactureOpen = function(devisId, type) {
   type = type || "solde";
+  // Blocage devis au noir : pas de facture pour de l'au noir (incohérence fiscale).
+  if (isDevisAuNoir(devisId)) {
+    alert("Cette prestation n'a pas été déclarée (CA = 0).\n\n" +
+          "Émettre une facture créerait une incohérence fiscale : la facture est un document qui constate du CA déclaré.\n\n" +
+          "Si tu veux la déclarer maintenant, ajuste le champ « CA » des lignes Suivi correspondantes avant de réessayer.");
+    return;
+  }
+  // Reconstitution paresseuse pour les devis legacy (snapshot manquant).
+  ensureLegacySnapshot(devisId);
   // Confirmation explicite avant 1ère émission (pose date + numéro de
   // facture définitifs). Sans cela, l'émission se faisait silencieusement à
   // la 1ère ouverture du modal — flou côté user (« est-ce un brouillon ? »).
@@ -9297,6 +9491,8 @@ function rSV() {
 
 // Ouvre la modal devis sur l'onglet Débours (snapshotDeboursHtml capturé au suiviAdd).
 window.viewDeboursOpen = function(devisId) {
+  // Reconstitution paresseuse pour les devis legacy.
+  ensureLegacySnapshot(devisId);
   const dv = S.suivi.devis && S.suivi.devis[devisId];
   if (!dv) {
     alert("Aucun snapshot disponible. Réenregistre le devis depuis l'onglet Devis (« + Enregistrer dans Suivi »).");
