@@ -774,6 +774,15 @@
   .fb-card.bug-card-v3 .bug-card-actions-row .bug-card-copy{padding:4px 10px;width:auto;height:auto;font-size:11px;font-weight:500;display:inline-flex;align-items:center;gap:4px}
   .fb-card.bug-card-v3 .bug-card-actions-row .fb-del-text{margin-left:auto;background:transparent;border:1px solid transparent;color:var(--text-dim);cursor:pointer;font:inherit;font-size:11px;padding:4px 10px;border-radius:4px;transition:all .12s}
   .fb-card.bug-card-v3 .bug-card-actions-row .fb-del-text:hover{color:var(--danger);background:var(--danger-soft);border-color:var(--danger)}
+  /* Bouton ⋮ pour basculer en mode édition (visible uniquement en déplié) */
+  .bug-card-edit-btn{flex-shrink:0;background:transparent;border:1px solid transparent;color:var(--text-dim);cursor:pointer;font-size:16px;line-height:1;width:24px;height:24px;border-radius:4px;display:inline-flex;align-items:center;justify-content:center;padding:0;transition:all .12s}
+  .bug-card-edit-btn:hover{color:var(--primary);background:var(--primary-soft);border-color:var(--primary)}
+  .bug-card-edit-btn.editing{color:var(--success);border-color:var(--success);background:var(--success-soft);font-size:13px;font-weight:700}
+  /* Description en lecture déplié : tout le texte, sans line-clamp */
+  .bug-card-text-full{font-size:13px;color:var(--text);line-height:1.55;white-space:pre-wrap;word-break:break-word;padding:2px 0}
+  .bug-card-text-empty{font-size:12px;color:var(--text-dim);font-style:italic;padding:2px 0}
+  /* Steps en lecture seule */
+  .fb-step-text-readonly{flex:1;font-size:13px;color:var(--text-muted);padding:3px 6px}
   @keyframes bugCardIn{from{opacity:0;transform:translateY(-3px)}to{opacity:1;transform:none}}
   .bug-card-main{flex:1;display:flex;flex-direction:column;gap:4px;min-width:0}
   .bug-card-meta{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
@@ -13455,30 +13464,41 @@ function rBG() {
       : "";
     const expanded = bugCardExpandedId === it.id;
     const editing = expanded && bugCardEditingId === it.id;
-    // Description : en lecture compacte (line-clamp 2) si déplié sans
-    // édition, textarea auto-grow en édition. Si vide → bouton « + »
-    // au hover. Pas affichée en mode replié (juste titre + badges).
-    let descHtml = "";
-    if (editing) {
-      descHtml = `<textarea class="bug-card-text" rows="3" placeholder="Description…" oninput="bugUpdateText('${it.id}',this.value);bugAutoResize(this)" onfocus="bugAutoResize(this)" onblur="bugCardEditEnd()">${esc(it.text || "")}</textarea>`;
-    } else if (it.text && it.text.trim()) {
-      descHtml = `<div class="bug-card-text-display" onclick="event.stopPropagation();bugCardEditStart('${it.id}')" title="Modifier">${esc(it.text)}</div>`;
-    } else {
-      descHtml = `<button class="bug-card-text-add" onclick="event.stopPropagation();bugCardEditStart('${it.id}')" title="Ajouter une description">＋ description</button>`;
-    }
-    const steps = (it.steps || []).filter(s => (s || "").trim());
     const titleText = (it.title || "").trim() || "(sans titre)";
-    const titleHtml = expanded
+    // Tab badge : select éditable seulement en mode édition, span sinon
+    const tabBadgeReadOnly = `<span class="bug-tab-badge bug-tab-${esc(tabKey)}">${esc(bugTabLabel(tabKey))}</span>`;
+    const tabBadgeFinal = editing ? tabBadge : tabBadgeReadOnly;
+    // Titre : input éditable seulement en édition
+    const titleHtml = editing
       ? `<input class="fb-text bug-card-title" value="${esc(it.title || "")}" placeholder="Titre…" oninput="bugUpdateTitle('${it.id}',this.value)" onclick="event.stopPropagation()">`
       : `<span class="bug-card-title-quick">${esc(titleText)}</span>`;
+    // Description : textarea en édition, div lecture complète en déplié
+    // (pas de line-clamp — on veut tout voir). Vide + édition → textarea.
+    let descHtml = "";
+    if (editing) {
+      descHtml = `<textarea class="bug-card-text" rows="3" placeholder="Description…" oninput="bugUpdateText('${it.id}',this.value);bugAutoResize(this)" onfocus="bugAutoResize(this)">${esc(it.text || "")}</textarea>`;
+    } else if (it.text && it.text.trim()) {
+      descHtml = `<div class="bug-card-text-full">${esc(it.text)}</div>`;
+    } else {
+      descHtml = `<div class="bug-card-text-empty">Aucune description.</div>`;
+    }
+    const steps = (it.steps || []).filter(s => (s || "").trim());
     const chevron = `<span class="bug-card-chevron">${expanded ? "▾" : "▸"}</span>`;
+    // Bouton « modifier » (⋮) — visible uniquement en mode déplié.
+    // En édition : devient « ✓ » pour terminer.
+    const editBtn = expanded
+      ? (editing
+          ? `<button class="bug-card-edit-btn editing" onclick="event.stopPropagation();bugCardEditEnd()" title="Terminer la modification">✓</button>`
+          : `<button class="bug-card-edit-btn" onclick="event.stopPropagation();bugCardEditStart('${it.id}')" title="Modifier">⋮</button>`)
+      : "";
 
-    h += `<div class="fb-card bug-card-v3 ${it.validated ? "fb-done" : ""} ${expanded ? "expanded" : ""}" data-bug-id="${esc(it.id)}">
+    h += `<div class="fb-card bug-card-v3 ${it.validated ? "fb-done" : ""} ${expanded ? "expanded" : ""} ${editing ? "editing" : ""}" data-bug-id="${esc(it.id)}">
       <div class="bug-card-head" onclick="bugCardToggleExpand('${it.id}')">
         <button class="fb-check ${it.validated ? "on" : ""}" onclick="event.stopPropagation();bugToggleValid('${it.id}')" title="${it.validated ? "Marquer en cours" : "Valider"}">✓</button>
         ${numBadge}
-        ${tabBadge}
+        ${tabBadgeFinal}
         ${titleHtml}
+        ${editBtn}
         ${chevron}
       </div>
       ${expanded ? `<div class="bug-card-body" onclick="event.stopPropagation()">
@@ -13490,11 +13510,13 @@ function rBG() {
         ${steps.length ? steps.map((st, idx) => `
           <div class="fb-step">
             <span class="fb-step-bul">↳</span>
-            <input class="fb-step-text" data-bug-step="${it.id}-${idx}" value="${esc(st || "")}" placeholder="Étape complémentaire…" oninput="bugUpdateStep('${it.id}',${idx},this.value)" onkeydown="if(event.key==='Enter'){event.preventDefault();bugAddStep('${it.id}')}">
-            <button class="fb-step-del" onclick="bugDelStep('${it.id}',${idx})" title="Supprimer étape">✕</button>
+            ${editing
+              ? `<input class="fb-step-text" data-bug-step="${it.id}-${idx}" value="${esc(st || "")}" placeholder="Étape complémentaire…" oninput="bugUpdateStep('${it.id}',${idx},this.value)" onkeydown="if(event.key==='Enter'){event.preventDefault();bugAddStep('${it.id}')}">
+                 <button class="fb-step-del" onclick="bugDelStep('${it.id}',${idx})" title="Supprimer étape">✕</button>`
+              : `<span class="fb-step-text-readonly">${esc(st || "")}</span>`}
           </div>`).join("") : ""}
         <div class="bug-card-actions-row">
-          <button class="fb-add-step" onclick="bugAddStep('${it.id}')" title="Ajouter une étape complémentaire">＋ étape</button>
+          ${editing ? `<button class="fb-add-step" onclick="bugAddStep('${it.id}')" title="Ajouter une étape complémentaire">＋ étape</button>` : ""}
           <button class="bug-card-copy" data-bug-copy="${it.id}" onclick="bugCopyOne('${it.id}')" title="Copier cette remarque">📋 Copier</button>
           <button class="fb-del-text" onclick="bugDel('${it.id}')" title="Supprimer">× Supprimer</button>
         </div>
