@@ -5250,38 +5250,31 @@ function reconstructMissionFromSuivi(devisId) {
     fresh.datePrestation = dv.snapshotDatePrestation;
     recovered.push("date prestation");
   }
-  // Heures cumulées en 1 ligne reconstruite
-  const totalHeures = ents.reduce((s, e) => s + num(e.heures), 0);
-  if (totalHeures > 0) {
+  // Reconstruction d'une ligne forfaitaire au montant total des entries.
+  // On utilise type="cession" (forfait) plutôt que "heures" : un devis legacy
+  // n'a pas de tarif horaire fiable (le tarif courant peut différer), donc
+  // heures × tarif donnerait 0 ou un montant erroné. Le forfait reflète
+  // exactement le montant connu via les paiements. Les heures (si dispo)
+  // sont mentionnées en description pour info.
+  const totalHeures  = ents.reduce((s, e) => s + num(e.heures), 0);
+  const totalMontant = ents.filter(e => num(e.frais) === 0).reduce((s, e) => s + num(e.montant), 0);
+  if (totalMontant > 0) {
+    const fallbackLabel = (ents[0] && ents[0].prestation) || "Prestation reconstituée";
+    const heuresMention = totalHeures > 0
+      ? `Volume estimé : ${totalHeures.toFixed(2)} h. `
+      : "";
     fresh.lignes = [{
       id: uid(),
-      type: "heures",
-      intitule: "(reconstitué — issu du suivi)",
-      duree: totalHeures.toFixed(2),
-      unit: "h",
-      description: ""
+      type: "cession",
+      intitule: fallbackLabel,
+      prix: totalMontant.toFixed(2),
+      duree: "",
+      territoire: "",
+      supports: "",
+      exclusivite: "",
+      description: `${heuresMention}Forfait reconstitué depuis le suivi des paiements.`
     }];
-    recovered.push("heures totales");
-  } else {
-    // Fallback : aucune heure tracée (cas fréquent pour les devis importés
-    // depuis Excel). On pose une ligne « cession » forfaitaire au montant
-    // total des entries (hors débours) pour que le devis ne soit pas vide.
-    const totalMontant = ents.filter(e => num(e.frais) === 0).reduce((s, e) => s + num(e.montant), 0);
-    if (totalMontant > 0) {
-      const fallbackLabel = (ents[0] && ents[0].prestation) || "Prestation reconstituée";
-      fresh.lignes = [{
-        id: uid(),
-        type: "cession",
-        intitule: fallbackLabel,
-        prix: totalMontant.toFixed(2),
-        duree: "",
-        territoire: "",
-        supports: "",
-        exclusivite: "",
-        description: "Forfait reconstitué depuis le suivi des paiements (heures non détaillées)."
-      }];
-      recovered.push("montant forfaitaire");
-    }
+    recovered.push("montant forfaitaire");
   }
   // Type de prestation via lookup catalogue
   const firstEnt = ents[0];
@@ -5329,7 +5322,11 @@ function ensureLegacySnapshot(devisId) {
   if (!S.suivi.devis) S.suivi.devis = {};
   let dv = S.suivi.devis[devisId];
   if (!dv) dv = S.suivi.devis[devisId] = { ref: "" };
-  if (dv.snapshotHtml) return dv;
+  // Régénération forcée pour les snapshots reconstitués : la reconstruction
+  // est déterministe, donc régénérer à chaque appel permet de bénéficier
+  // des corrections du helper sans migration explicite. Pour les snapshots
+  // « vrais » (issus de suiviAdd avec un brouillon édité), on ne touche pas.
+  if (dv.snapshotHtml && !dv.legacyReconstructed) return dv;
 
   const ents = (S.suivi.entries || []).filter(e => e.devisId === devisId);
   if (ents.length === 0) return dv;
