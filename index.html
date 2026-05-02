@@ -5568,6 +5568,11 @@ window.reviseDevisStart = function(devisId) {
     // Cas standard : clone profond du snapshot structuré (devis archivé
     // proprement avec snapshotMission posé par suiviAdd / suiviUpdateSnapshot).
     S.mission = JSON.parse(JSON.stringify(dv.snapshotMission));
+    // Réviser = nouvelle proposition commerciale → on part d'une base propre
+    // sans héritage d'un éventuel tarifHOverride (résidu de Maj Trame passée).
+    // Le tarif catalogue prend ainsi le relais dès que l'utilisateur touche
+    // à la prestation, sans devoir cliquer le dropdown deux fois.
+    S.mission.tarifHOverride = "";
   } else {
     // Cas legacy : reconstruction best-effort via le helper partagé en
     // mode "edit" (ligne heures, plus naturel pour la révision).
@@ -8349,6 +8354,9 @@ function suiviAdd() {
       const snapMission = JSON.parse(JSON.stringify(m));
       delete snapMission.revisesDevisId;
       delete snapMission.majTrameDevisId;
+      // Note : on GARDE tarifHOverride dans snapMission Maj Trame in-place,
+      // car re-déclencher Maj Trame plus tard (rare mais possible si on
+      // remet legacyReconstructed=true) en a besoin pour reproduire le total.
       dvOrig.snapshotMission = snapMission;
       // Trame mise à jour proprement → on retire le flag legacy.
       delete dvOrig.legacyReconstructed;
@@ -8446,6 +8454,10 @@ function suiviAdd() {
   // On retire le marqueur transient revisesDevisId du clone (il ne fait pas
   // partie du contenu du devis, c'est juste un drapeau de flow).
   delete snapshotMission.revisesDevisId;
+  delete snapshotMission.majTrameDevisId;
+  // Pas de leak de tarifHOverride : un nouveau devis archivé doit utiliser
+  // le tarif catalogue. L'override est purement transient (Maj Trame).
+  delete snapshotMission.tarifHOverride;
   S.suivi.devis[devisId] = {
     ref: m.ref || "",
     snapshotHtml,
