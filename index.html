@@ -3351,31 +3351,20 @@ function formatSiret(siret) {
 }
 
 // === Helpers compose mail ===
-// Format mailto: pour respecter le handler par défaut du navigateur. Si Gmail
-// est configuré comme handler dans Edge/Chrome (icône à droite de la barre URL
-// en visitant gmail.com → Autoriser), le clic ouvre Gmail en popup compose.
-// Sinon : ouverture du client mail système (Outlook, Mail.app, etc.).
+// On utilise l'URL Gmail compose pour garantir l'ouverture dans Gmail web.
+// Conséquence : le compose s'ouvre en mode fullscreen (limitation Google
+// depuis 2018, le popup compose n'est plus accessible via URL externe).
+// Le format mailto: ouvrirait le handler par défaut, qui peut être Outlook
+// (Edge/Windows par défaut) — pas l'effet souhaité ici.
 function buildGmailUrl(to, subject, body) {
-  const params = [];
-  if (subject) params.push("subject=" + encodeURIComponent(subject));
-  if (body)    params.push("body=" + encodeURIComponent(body));
-  return "mailto:" + encodeURIComponent(to || "")
-    + (params.length ? "?" + params.join("&") : "");
-}
-
-// Déclenche un mailto sans quitter la page : crée un <a> caché, le clique,
-// puis le retire. Le handler mailto prend le relais (Gmail si configuré).
-function triggerMailto(url) {
-  const a = document.createElement("a");
-  a.href = url;
-  a.style.display = "none";
-  document.body.appendChild(a);
-  a.click();
-  setTimeout(() => { try { document.body.removeChild(a); } catch (_) {} }, 100);
+  return "https://mail.google.com/mail/?view=cm&fs=1"
+    + (to      ? "&to=" + encodeURIComponent(to) : "")
+    + (subject ? "&su=" + encodeURIComponent(subject) : "")
+    + (body    ? "&body=" + encodeURIComponent(body) : "");
 }
 
 function openGmailCompose(to, subject, body) {
-  triggerMailto(buildGmailUrl(to, subject, body));
+  window.open(buildGmailUrl(to, subject, body), "_blank", "noopener");
 }
 window.openGmailCompose = openGmailCompose;
 
@@ -4943,7 +4932,7 @@ const INFO_HTML = {
     <ol style="margin:0 0 8px;padding-left:18px;font-size:12px;line-height:1.55">
       <li>Click ce bouton → entre en mode sélection.</li>
       <li>Click sur les lignes que tu veux inclure.</li>
-      <li>Click « Envoyer (BCC) » → ouvre ton client mail (Gmail si configuré comme handler par défaut).</li>
+      <li>Click « Envoyer (BCC) » → ouvre Gmail dans un nouvel onglet (mode fullscreen).</li>
       <li>Tu écris ton sujet et ton message, puis tu envoies.</li>
     </ol>
     <p style="margin:0;font-size:12px;line-height:1.5;color:var(--text-muted)">Si un client sélectionné n'a pas d'email, il sera ignoré (avec confirmation). Note : Gmail s'ouvre en mode plein écran (limitation Google — le compose popup n'est accessible que depuis l'interface Gmail elle-même).</p>
@@ -9683,8 +9672,8 @@ function clientsBulkEmail() {
     const msg = `${emails.length} email${emails.length > 1 ? "s" : ""} récupéré${emails.length > 1 ? "s" : ""}.\n\n${noEmail.length} client${noEmail.length > 1 ? "s" : ""} sans email seront ignoré${noEmail.length > 1 ? "s" : ""} :\n• ${noEmail.slice(0, 6).join("\n• ")}${noEmail.length > 6 ? `\n• … et ${noEmail.length - 6} autre${noEmail.length - 6 > 1 ? "s" : ""}` : ""}\n\nContinuer ?`;
     if (!confirm(msg)) return;
   }
-  const bccList = emails.map(e => encodeURIComponent(e)).join(",");
-  triggerMailto("mailto:?bcc=" + bccList);
+  const url = "https://mail.google.com/mail/?view=cm&fs=1&bcc=" + encodeURIComponent(emails.join(","));
+  window.open(url, "_blank", "noopener");
   clientsExitSelectMode(); // sortir du mode après envoi réussi
 }
 window.clientsBulkEmail = clientsBulkEmail;
