@@ -3069,9 +3069,9 @@ function missionNew(presetClient) {
   }
   // Autres
   m.autres = { desc: "", montant: "0" };
-  // Lignes / échéances vides
+  // Lignes vides. NB : on garde m.echeances (modalités de paiement gardées
+  // intactes selon le réglage utilisateur — acompte/solde split, pourcentages).
   m.lignes = [];
-  m.echeances = [];
   // Ajustements
   m.remisePct = "0";
   m.contratHorsEtab = false;
