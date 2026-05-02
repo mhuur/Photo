@@ -2805,12 +2805,16 @@ async function loadFromCloud(ownerUid) {
       }
       suiviMigrate();
       migrateClientNums();
+      const legacyFixed = migrateLegacyReconstructedFlag();
       recomputeRef();
       // Adopte le timestamp cloud comme nouveau référentiel local (sinon
       // notre prochain save aurait un localCts plus ancien que le cloud
       // alors qu'on vient de tout merger).
       if (cloudCts > 0) S._localChangeTs = cloudCts;
       localStorage.setItem(SK, JSON.stringify(S));
+      // Si la migration a nettoyé des flags stale, propage au cloud pour
+      // que le fix soit définitif (sinon ça se rejouerait à chaque reload).
+      if (legacyFixed) saveToCloud();
     }
   } catch (err) { console.error("loadFromCloud", err); }
   render();
@@ -3040,10 +3044,14 @@ function subscribeWorkspaceData(ownerUid) {
     if (d.tarifs && Array.isArray(d.tarifs.catalog) && d.tarifs.catalog.length) S.tarifs = { catalog: d.tarifs.catalog, heuresAnnuelles: d.tarifs.heuresAnnuelles || S.tarifs.heuresAnnuelles || "900", facteurSecurite: d.tarifs.facteurSecurite || S.tarifs.facteurSecurite || "0" };
     if (d.bugs)    S.bugs    = { items: Array.isArray(d.bugs.items) ? d.bugs.items : [] };
     if (d.prefs)   S.prefs   = { ...DEFAULT_S.prefs, ...d.prefs };
+    // Migration défensive : si le cloud renvoie encore des flags
+    // legacyReconstructed stale (avant fix sync), on les nettoie ici aussi.
+    const legacyFixed = migrateLegacyReconstructedFlag();
     // Adopte le timestamp cloud comme nouveau référentiel local (sinon
     // notre prochain save aurait un localCts plus ancien que le cloud).
     if (cloudCts > 0) S._localChangeTs = cloudCts;
     localStorage.setItem(SK, JSON.stringify(S));
+    if (legacyFixed) saveToCloud();
     // Préserve le focus de l'input courant pendant le re-render
     const active = document.activeElement;
     const id = active && active.id;
@@ -8415,6 +8423,31 @@ function suiviClassifyEcheance(s) {
   if (/reste/.test(t)) return "reste";
   if (/frais|d[ée]bours/.test(t)) return "frais";
   return "other";
+}
+
+// ▼ migrateLegacyReconstructedFlag — nettoie les flags `legacyReconstructed`
+// stale laissés par l'ancien sync (avant fix `update()` du commit 11d6818).
+// Avant ce commit, `delete dvOrig.legacyReconstructed` n'était pas propagé
+// au cloud (deep-merge silencieux), donc Firestore garde `true` même après
+// une Maj Trame réussie → le bouton « Maj Trame » réapparaît au reload.
+// Critère : un vrai snapshot Maj Trame n'a PAS le bandeau de reconstitution
+// dans son HTML. Un snapshot reconstitué (reconstruction live à chaque
+// ouverture) l'a. On nettoie donc tout dv où `legacyReconstructed=true`
+// mais le HTML ne contient pas le bandeau — relique du bug sync.
+function migrateLegacyReconstructedFlag() {
+  const devisMap = (S.suivi && S.suivi.devis) || {};
+  let changed = false;
+  for (const id in devisMap) {
+    const dv = devisMap[id];
+    if (!dv) continue;
+    if (dv.legacyReconstructed === true
+        && dv.snapshotHtml
+        && !dv.snapshotHtml.includes("dp-reconstructed-banner")) {
+      delete dv.legacyReconstructed;
+      changed = true;
+    }
+  }
+  return changed;
 }
 
 function suiviMigrate() {
