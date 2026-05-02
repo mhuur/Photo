@@ -5092,6 +5092,57 @@ function purgeAllBugScreenshots() {
 }
 window.purgeAllBugScreenshots = purgeAllBugScreenshots;
 
+// ▼ analyzeDevisArchive — décompte les devis archivés, refs dupliquées,
+// orphelins (devis dans S.suivi.devis sans aucune entry Suivi associée).
+window.analyzeDevisArchive = function() {
+  const devisIds = Object.keys((S.suivi && S.suivi.devis) || {});
+  const entriesIds = new Set(((S.suivi && S.suivi.entries) || []).map(e => e.devisId));
+  const orphans = devisIds.filter(id => !entriesIds.has(id));
+  const withEntries = devisIds.filter(id => entriesIds.has(id));
+  let orphanSize = 0;
+  for (const id of orphans) orphanSize += JSON.stringify(S.suivi.devis[id]).length;
+  console.log(`Total devis archivés : ${devisIds.length}`);
+  console.log(`Avec entries Suivi : ${withEntries.length}`);
+  console.log(`Orphelins (sans entry, suppressibles) : ${orphans.length} → ${(orphanSize/1024).toFixed(1)} KB`);
+  // Refs dupliquées
+  const refCounts = {};
+  for (const id of devisIds) {
+    const ref = (S.suivi.devis[id] && S.suivi.devis[id].ref) || "(sans ref)";
+    refCounts[ref] = (refCounts[ref] || 0) + 1;
+  }
+  const dupes = Object.entries(refCounts).filter(([, n]) => n > 1).sort((a, b) => b[1] - a[1]);
+  console.log(`\nRéférences dupliquées : ${dupes.length}`);
+  console.table(dupes.slice(0, 30).map(([ref, n]) => ({ ref, count: n })));
+  return { total: devisIds.length, orphans: orphans.length, dupes: dupes.length };
+};
+
+// ▼ cleanOrphanDevis — supprime les devis archivés (S.suivi.devis[id]) qui
+// n'ont AUCUNE entry Suivi associée. Sûr : sans entry, le devis n'apparaît
+// nulle part dans l'app, donc rien à perdre. Sauve au cloud à la fin.
+window.cleanOrphanDevis = async function() {
+  const devisIds = Object.keys((S.suivi && S.suivi.devis) || {});
+  const entriesIds = new Set(((S.suivi && S.suivi.entries) || []).map(e => e.devisId));
+  const orphans = devisIds.filter(id => !entriesIds.has(id));
+  if (!orphans.length) {
+    console.log("Aucun devis orphelin trouvé.");
+    return 0;
+  }
+  let freedBytes = 0;
+  for (const id of orphans) freedBytes += JSON.stringify(S.suivi.devis[id]).length;
+  const freedKB = (freedBytes / 1024).toFixed(1);
+  if (typeof uiConfirm === "function") {
+    const ok = await uiConfirm(
+      `${orphans.length} devis orphelins trouvés (présents dans S.suivi.devis mais sans aucune entry Suivi associée — donc invisibles dans l'app).\n\nLes supprimer libère ${freedKB} KB dans Firestore.`,
+      { title: "Purger les devis orphelins", confirmLabel: "Supprimer", kind: "warn" }
+    );
+    if (!ok) return 0;
+  }
+  for (const id of orphans) delete S.suivi.devis[id];
+  save();
+  console.log(`✓ ${orphans.length} devis orphelins supprimés, ${freedKB} KB libérés.`);
+  return orphans.length;
+};
+
 // ▼ checkDocSize — outil console pour diagnostiquer ce qui pèse dans S.
 // Usage : checkDocSize()
 window.checkDocSize = function() {
