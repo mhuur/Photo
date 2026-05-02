@@ -10345,8 +10345,126 @@ function rPF() {
     ${workspaceState.role === "owner" ? rShareSection() : ""}
 
     ${rBackupSection()}
+
+    ${workspaceState.role === "owner" ? rAdminToolsSection() : ""}
   `;
 }
+
+// ▼ rAdminToolsSection — outils admin (owner only) : renumérotation, etc.
+function rAdminToolsSection() {
+  const total = (S.clients && S.clients.entries) ? S.clients.entries.length : 0;
+  return `
+    <h3 style="margin-top:32px">Outils administrateur</h3>
+    <div class="hint" style="margin-bottom:14px;max-width:780px">
+      Actions de maintenance sur le workspace. Réservées au propriétaire.
+    </div>
+    <div style="display:flex;flex-direction:column;gap:10px;align-items:flex-start;max-width:780px">
+      <div>
+        <button class="btn ghost" onclick="clientsRenumberAll()">Renuméroter tous les clients (1 → ${total})</button>
+        <div class="hint" style="font-size:11.5px;margin-top:4px">
+          Compacte la numérotation client : 1, 2, 3… en suivant l'ordre actuel des n°. Les références de devis archivés au format DEVIS-NUM-… et les libellés du Suivi sont mis à jour pour rester cohérents. Ne touche pas aux factures (FA/FS — pas de num client dans leur format).
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+// ▼ clientsRenumberAll — compacte la numérotation 1..N + propage partout
+async function clientsRenumberAll() {
+  if (workspaceState.role !== "owner") {
+    alert("Action réservée au propriétaire.");
+    return;
+  }
+  const total = (S.clients && S.clients.entries) ? S.clients.entries.length : 0;
+  if (total === 0) { alert("Aucun client à renuméroter."); return; }
+  const ok = confirm(
+    `Renuméroter les ${total} clients de 1 à ${total} ?\n\n` +
+    `• L'ordre actuel des n° est préservé (le plus petit devient 1, le suivant 2, etc.).\n` +
+    `• Les fiches sans n° passent à la fin par ordre alphabétique.\n` +
+    `• Les références de devis archivés (DEVIS-NUM-YYYY-MM-NNN) sont mises à jour.\n` +
+    `• Les libellés clients du Suivi (au format "#NUM Nom") sont mis à jour.\n\n` +
+    `Cette action est IRRÉVERSIBLE (sauf import d'un backup antérieur).`
+  );
+  if (!ok) return;
+
+  // 1. Trie : nums existants triés numériquement, fiches sans num à la fin par alpha
+  const sorted = [...S.clients.entries].sort((a, b) => {
+    const an = parseInt(a.num, 10);
+    const bn = parseInt(b.num, 10);
+    const aValid = !isNaN(an) && an >= 1;
+    const bValid = !isNaN(bn) && bn >= 1;
+    if (aValid && bValid) return an - bn;
+    if (aValid) return -1;
+    if (bValid) return 1;
+    return (a.name || "").localeCompare(b.name || "", "fr");
+  });
+
+  // 2. Mapping ancien_num → nouveau_num (pour propagation)
+  const mapping = {};
+  sorted.forEach((c, i) => {
+    const old = String(c.num || "").trim();
+    const fresh = String(i + 1);
+    if (old && old !== fresh) mapping[old] = fresh;
+    c.num = fresh;
+  });
+
+  // 3. Mission courante
+  if (S.mission && S.mission.client && S.mission.client.id) {
+    const c = S.clients.entries.find(x => x.id === S.mission.client.id);
+    if (c) S.mission.client.num = c.num;
+  }
+
+  // 4. Refs des devis archivés : DEVIS-{oldNum}-YYYY-MM-NNN → DEVIS-{newNum}-YYYY-MM-NNN
+  // + snapshotMission embarqué dans chaque archive
+  let devisRefsUpdated = 0, snapMissionUpdated = 0;
+  if (S.suivi && S.suivi.devis) {
+    for (const devisId of Object.keys(S.suivi.devis)) {
+      const dv = S.suivi.devis[devisId];
+      if (!dv) continue;
+      if (typeof dv.ref === "string") {
+        const m = dv.ref.match(/^DEVIS-(\d+)-(\d{4})-(\d{2})-(\d+)$/);
+        if (m && mapping[m[1]]) {
+          dv.ref = `DEVIS-${mapping[m[1]]}-${m[2]}-${m[3]}-${m[4]}`;
+          devisRefsUpdated++;
+        }
+      }
+      if (dv.snapshotMission && dv.snapshotMission.client && dv.snapshotMission.client.num) {
+        const oldNum = String(dv.snapshotMission.client.num).trim();
+        if (mapping[oldNum]) {
+          dv.snapshotMission.client.num = mapping[oldNum];
+          snapMissionUpdated++;
+        }
+      }
+    }
+  }
+
+  // 5. Libellés Suivi : "#NUM Nom" → "#NEWNUM Nom"
+  let suiviLabelsUpdated = 0;
+  if (S.suivi && Array.isArray(S.suivi.entries)) {
+    for (const e of S.suivi.entries) {
+      if (typeof e.client !== "string") continue;
+      const m = e.client.match(/^#(\d+)(\s.*)?$/);
+      if (m && mapping[m[1]]) {
+        e.client = `#${mapping[m[1]]}${m[2] || ""}`;
+        suiviLabelsUpdated++;
+      }
+    }
+  }
+
+  // 6. Recompute current devis ref (au cas où elle utilisait l'ancien num)
+  if (typeof recomputeRef === "function") recomputeRef();
+
+  save();
+  render();
+  alert(
+    `✓ Renumérotation terminée.\n\n` +
+    `• ${total} clients désormais numérotés 1 à ${total}\n` +
+    `• ${devisRefsUpdated} référence${devisRefsUpdated > 1 ? "s" : ""} de devis mises à jour\n` +
+    `• ${snapMissionUpdated} snapshot${snapMissionUpdated > 1 ? "s" : ""} de mission mis à jour\n` +
+    `• ${suiviLabelsUpdated} libellé${suiviLabelsUpdated > 1 ? "s" : ""} Suivi mis à jour`
+  );
+}
+window.clientsRenumberAll = clientsRenumberAll;
 
 // ▼ rBackupSection — export/import JSON complet du workspace
 // Export accessible à tous (chacun peut faire sa copie). Import owner only
