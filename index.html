@@ -3353,20 +3353,16 @@ function formatSiret(siret) {
 // === Helpers compose mail ===
 // Flow : AccountChooser Google → sélection du compte expéditeur → redirection
 // vers Gmail compose (fullscreen, limitation Google depuis 2018) avec le
-// brouillon pré-rempli. AccountChooser garantit que l'utilisateur choisit
-// explicitement le bon compte (utile s'il est connecté à plusieurs sessions
-// Google) — il prompt la connexion si aucun compte n'est actif.
-// Si S.identite.email est renseigné, on le passe en hint pour pré-sélectionner
-// (mais c'est l'utilisateur qui valide).
+// brouillon pré-rempli. AccountChooser liste tous les comptes Google connectés
+// + « Utiliser un autre compte ». L'utilisateur choisit selon le contexte
+// (compte pro photographe, compte admin, etc.).
 function buildGmailUrl(to, subject, body) {
   const composeUrl = "https://mail.google.com/mail/?view=cm&fs=1"
     + (to      ? "&to=" + encodeURIComponent(to) : "")
     + (subject ? "&su=" + encodeURIComponent(subject) : "")
     + (body    ? "&body=" + encodeURIComponent(body) : "");
-  const fromEmail = (S.identite && S.identite.email ? String(S.identite.email) : "").trim();
   return "https://accounts.google.com/AccountChooser?continue="
-    + encodeURIComponent(composeUrl)
-    + (fromEmail ? "&Email=" + encodeURIComponent(fromEmail) : "");
+    + encodeURIComponent(composeUrl);
 }
 
 function openGmailCompose(to, subject, body) {
@@ -9678,11 +9674,8 @@ function clientsBulkEmail() {
     const msg = `${emails.length} email${emails.length > 1 ? "s" : ""} récupéré${emails.length > 1 ? "s" : ""}.\n\n${noEmail.length} client${noEmail.length > 1 ? "s" : ""} sans email seront ignoré${noEmail.length > 1 ? "s" : ""} :\n• ${noEmail.slice(0, 6).join("\n• ")}${noEmail.length > 6 ? `\n• … et ${noEmail.length - 6} autre${noEmail.length - 6 > 1 ? "s" : ""}` : ""}\n\nContinuer ?`;
     if (!confirm(msg)) return;
   }
-  const fromEmail = (S.identite && S.identite.email ? String(S.identite.email) : "").trim();
   const composeUrl = "https://mail.google.com/mail/?view=cm&fs=1&bcc=" + encodeURIComponent(emails.join(","));
-  const url = "https://accounts.google.com/AccountChooser?continue="
-    + encodeURIComponent(composeUrl)
-    + (fromEmail ? "&Email=" + encodeURIComponent(fromEmail) : "");
+  const url = "https://accounts.google.com/AccountChooser?continue=" + encodeURIComponent(composeUrl);
   window.open(url, "_blank", "noopener");
   clientsExitSelectMode(); // sortir du mode après envoi réussi
 }
