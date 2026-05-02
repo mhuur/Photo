@@ -5199,8 +5199,15 @@ function ensureFactureForDevis(devisId, type) {
 // ▼ reconstructMissionFromSuivi — helper pur pour devis legacy (sans snapshotMission).
 // Reconstitue un objet `mission` à partir des entries Suivi + champs snapshot* du
 // devis. Ne mute ni S.mission ni le devis. Retourne { mission, recovered: [...] }.
-// Utilisé par : reviseDevisStart (legacy fallback), ensureLegacySnapshot.
-function reconstructMissionFromSuivi(devisId) {
+// Param `opts.mode`:
+//   - "edit" (défaut) : ligne reconstituée de type "heures" (éditable normalement
+//     pour la révision — l'utilisateur ajustera l'objet/le tarif).
+//   - "snapshot" : ligne reconstituée de type "cession" forfaitaire au montant
+//     réel des entries (pour le rendu archive : on veut le total exact, pas
+//     un produit heures × tarif courant qui serait incohérent).
+// Utilisé par : reviseDevisStart (mode "edit"), ensureLegacySnapshot (mode "snapshot").
+function reconstructMissionFromSuivi(devisId, opts) {
+  const mode = (opts && opts.mode) || "edit";
   const dm = DEFAULT_S.mission;
   const dv = (S.suivi && S.suivi.devis && S.suivi.devis[devisId]) || {};
   const ents = (S.suivi.entries || []).filter(e => e.devisId === devisId);
@@ -5250,31 +5257,47 @@ function reconstructMissionFromSuivi(devisId) {
     fresh.datePrestation = dv.snapshotDatePrestation;
     recovered.push("date prestation");
   }
-  // Reconstruction d'une ligne forfaitaire au montant total des entries.
-  // On utilise type="cession" (forfait) plutôt que "heures" : un devis legacy
-  // n'a pas de tarif horaire fiable (le tarif courant peut différer), donc
-  // heures × tarif donnerait 0 ou un montant erroné. Le forfait reflète
-  // exactement le montant connu via les paiements. Les heures (si dispo)
-  // sont mentionnées en description pour info.
+  // Reconstruction d'une ligne synthétique selon le mode.
   const totalHeures  = ents.reduce((s, e) => s + num(e.heures), 0);
   const totalMontant = ents.filter(e => num(e.frais) === 0).reduce((s, e) => s + num(e.montant), 0);
-  if (totalMontant > 0) {
+  if (totalMontant > 0 || totalHeures > 0) {
     const fallbackLabel = (ents[0] && ents[0].prestation) || "Prestation reconstituée";
-    const heuresMention = totalHeures > 0
-      ? `Volume estimé : ${totalHeures.toFixed(2)} h. `
-      : "";
-    fresh.lignes = [{
-      id: uid(),
-      type: "cession",
-      intitule: fallbackLabel,
-      prix: totalMontant.toFixed(2),
-      duree: "",
-      territoire: "",
-      supports: "",
-      exclusivite: "",
-      description: `${heuresMention}Forfait reconstitué depuis le suivi des paiements.`
-    }];
-    recovered.push("montant forfaitaire");
+    if (mode === "snapshot") {
+      // Snapshot d'archive : type cession forfaitaire au montant réel.
+      // Évite la dépendance à un tarif horaire courant qui pourrait avoir
+      // changé depuis l'émission du devis original.
+      const heuresMention = totalHeures > 0
+        ? `Volume estimé : ${totalHeures.toFixed(2)} h. `
+        : "";
+      fresh.lignes = [{
+        id: uid(),
+        type: "cession",
+        intitule: fallbackLabel,
+        prix: totalMontant.toFixed(2),
+        duree: "",
+        territoire: "",
+        supports: "",
+        exclusivite: "",
+        description: `${heuresMention}Forfait reconstitué depuis le suivi des paiements.`
+      }];
+      recovered.push("montant forfaitaire");
+    } else {
+      // Mode édition (Réviser) : type heures pour reprendre un workflow
+      // standard. Le tarif × heures pourra différer du montant original
+      // (légitime : V2 = nouveau document, l'utilisateur ajuste).
+      const noteMontant = totalMontant > 0
+        ? `Montant total des paiements (V1) : ${totalMontant.toFixed(2).replace(".", ",")} €. `
+        : "";
+      fresh.lignes = [{
+        id: uid(),
+        type: "heures",
+        intitule: fallbackLabel,
+        duree: totalHeures > 0 ? totalHeures.toFixed(2) : "",
+        unit: "h",
+        description: `${noteMontant}Reconstitué depuis le suivi.`
+      }];
+      recovered.push("heures totales");
+    }
   }
   // Type de prestation via lookup catalogue
   const firstEnt = ents[0];
@@ -5332,10 +5355,11 @@ function ensureLegacySnapshot(devisId) {
   if (ents.length === 0) return dv;
 
   // Si un snapshotMission existe déjà (boot-backfill), on s'appuie dessus
-  // (plus fidèle que la reconstruction via entries). Sinon on reconstitue.
+  // (plus fidèle que la reconstruction via entries). Sinon on reconstitue
+  // en mode "snapshot" : ligne cession forfaitaire au montant réel.
   const synth = dv.snapshotMission
     ? JSON.parse(JSON.stringify(dv.snapshotMission))
-    : reconstructMissionFromSuivi(devisId).mission;
+    : reconstructMissionFromSuivi(devisId, { mode: "snapshot" }).mission;
 
   // Override date émission avec la min(entries.date) si elle est plus
   // ancienne. Le boot-backfill peut copier la date du brouillon courant
@@ -5429,7 +5453,11 @@ function canReviseDevis(devisId) {
   if (Array.isArray(dv.factures) && dv.factures.length > 0) {
     return { ok: false, reason: "Impossible : une facture a déjà été émise pour ce devis. Une facture émise est une écriture comptable figée." };
   }
-  return { ok: true, partial: !dv.snapshotMission };
+  // partial = true pour les devis legacy (snapshot reconstitué OU absent).
+  // Le snapshotMission posé par ensureLegacySnapshot est en mode "snapshot"
+  // (cession forfaitaire) — pour Réviser on veut le mode "edit" (heures).
+  const partial = !dv.snapshotMission || dv.legacyReconstructed === true;
+  return { ok: true, partial };
 }
 
 // ▼ reviseDevisStart — démarre le flow de révision pour un devis donné.
@@ -5457,12 +5485,16 @@ window.reviseDevisStart = function(devisId) {
     if (!ok) return;
   }
   let recovered = [];
-  if (dv.snapshotMission) {
-    // Cas standard : clone profond du snapshot structuré.
+  if (dv.snapshotMission && !dv.legacyReconstructed) {
+    // Cas standard : clone profond du snapshot structuré (devis archivé
+    // proprement avec snapshotMission posé par suiviAdd / suiviUpdateSnapshot).
     S.mission = JSON.parse(JSON.stringify(dv.snapshotMission));
   } else {
-    // Cas legacy : reconstruction best-effort via le helper partagé.
-    const r = reconstructMissionFromSuivi(devisId);
+    // Cas legacy : reconstruction best-effort via le helper partagé en
+    // mode "edit" (ligne heures, plus naturel pour la révision).
+    // Inclut les devis dont snapshotMission a été posé par ensureLegacySnapshot
+    // (mode "snapshot" → ligne cession, pas adapté à l'édition).
+    const r = reconstructMissionFromSuivi(devisId, { mode: "edit" });
     S.mission = r.mission;
     recovered = r.recovered;
   }
@@ -7174,9 +7206,11 @@ function devisSectionSummaries() {
     ? `<span class="amt">${esc(cliName)}</span>`
     : `<span class="warn">Aucun client</span>`;
 
-  // 2. Prestations — compte des lignes facturables (heures + matériel principal)
+  // 2. Prestations — compte des lignes facturables (heures + cession + matériel principal)
   const lignesFact = (d.lignes || []).filter(l =>
-    l.type === "heures" || (l.type === "materiel" && l.devis !== "debours")
+    l.type === "heures" ||
+    l.type === "cession" ||
+    (l.type === "materiel" && l.devis !== "debours")
   ).length;
   const prestaSummary = lignesFact > 0
     ? `<span>${lignesFact} ligne${lignesFact > 1 ? "s" : ""}</span><span class="dot"></span><span class="amt">${fmt(t.lignes)}</span>`
@@ -7252,7 +7286,9 @@ function validateDevis() {
   if (!cliName) errors.push("Aucun client sélectionné");
 
   const lignesFact = (d.lignes || []).filter(l =>
-    l.type === "heures" || (l.type === "materiel" && l.devis !== "debours")
+    l.type === "heures" ||
+    l.type === "cession" ||
+    (l.type === "materiel" && l.devis !== "debours")
   );
   if (lignesFact.length === 0 && t.depl <= 0) errors.push("Aucune prestation facturable");
 
