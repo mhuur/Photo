@@ -5524,8 +5524,36 @@ function render() {
 `;
 }
 
+// Détecte les WebViews in-app (Messenger, Instagram, Facebook, Twitter, etc.)
+// que Google bloque pour OAuth. Liste empirique des UA strings courants.
+function isInAppWebView() {
+  const ua = (navigator.userAgent || "").toLowerCase();
+  return /\b(fban|fbav|fb_iab|fbios|instagram|twitter|line\/|micromessenger|messengerlite|snapchat|tiktok|linkedin|whatsapp|tinder|pinterest)\b/.test(ua);
+}
+
 // ▼ rLoginScreen — écran de connexion (user non authentifié)
 function rLoginScreen() {
+  if (isInAppWebView()) {
+    // WebView in-app → Google bloquera l'OAuth. On affiche les instructions
+    // pour ouvrir dans le vrai navigateur plutôt qu'un bouton qui plantera.
+    return `<div class="ws-screen">
+      <div class="ws-card">
+        <h1>🌊 Devis Photo</h1>
+        <div class="ws-status denied">
+          ⚠ <strong>Navigateur in-app détecté</strong>
+          <p>Tu utilises le navigateur intégré d'une app (Messenger, Instagram, Facebook…). Google interdit la connexion OAuth dans ce contexte pour des raisons de sécurité.</p>
+        </div>
+        <div style="margin-top:18px;padding:14px;background:var(--surface-2);border-radius:8px;text-align:left;font-size:13px;line-height:1.6">
+          <strong>Ouvre ce lien dans Safari ou Chrome :</strong>
+          <ol style="margin:8px 0 0;padding-left:18px">
+            <li>Tape sur les <strong>3 points</strong> en bas à droite de cette fenêtre.</li>
+            <li>Choisis <strong>« Ouvrir dans Safari »</strong> (iPhone) ou <strong>« Ouvrir dans Chrome »</strong> (Android).</li>
+            <li>Tu pourras te connecter normalement.</li>
+          </ol>
+        </div>
+      </div>
+    </div>`;
+  }
   return `<div class="ws-screen">
     <div class="ws-card">
       <h1>🌊 Devis Photo</h1>
