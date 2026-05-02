@@ -3213,10 +3213,11 @@ function formatSiret(siret) {
 }
 
 // === Helpers Gmail compose ===
-// Construit une URL Gmail compose. Ouverture dans un nouvel onglet → l'utilisateur
-// arrive sur la fenêtre de rédaction Gmail avec destinataire/sujet/corps pré-remplis.
+// Construit une URL Gmail compose. Pas de fs=1 → Gmail ouvre la fenêtre de
+// rédaction au format popup (en bas à droite par-dessus la boîte de réception),
+// comme quand on clique « Nouveau message » dans Gmail.
 function buildGmailUrl(to, subject, body) {
-  return "https://mail.google.com/mail/?view=cm&fs=1"
+  return "https://mail.google.com/mail/?view=cm"
     + (to      ? "&to=" + encodeURIComponent(to) : "")
     + (subject ? "&su=" + encodeURIComponent(subject) : "")
     + (body    ? "&body=" + encodeURIComponent(body) : "");
@@ -9080,7 +9081,7 @@ function clientsBulkEmail() {
     const msg = `${emails.length} email${emails.length > 1 ? "s" : ""} récupéré${emails.length > 1 ? "s" : ""}.\n\n${noEmail.length} client${noEmail.length > 1 ? "s" : ""} sans email seront ignoré${noEmail.length > 1 ? "s" : ""} :\n• ${noEmail.slice(0, 6).join("\n• ")}${noEmail.length > 6 ? `\n• … et ${noEmail.length - 6} autre${noEmail.length - 6 > 1 ? "s" : ""}` : ""}\n\nContinuer ?`;
     if (!confirm(msg)) return;
   }
-  const url = "https://mail.google.com/mail/?view=cm&fs=1&bcc=" + encodeURIComponent(emails.join(","));
+  const url = "https://mail.google.com/mail/?view=cm&bcc=" + encodeURIComponent(emails.join(","));
   window.open(url, "_blank", "noopener");
   clientsExitSelectMode(); // sortir du mode après envoi réussi
 }
