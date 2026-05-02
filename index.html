@@ -8203,12 +8203,14 @@ function rDevisSectionModalites() {
   return `
     <h5>Échéances</h5>
     <div class="ech-list">
-      ${(d.echeances || []).map(e => {
+      ${(d.echeances || []).map((e, idx) => {
         const isAcompte = /acompte/i.test(e.label || "");
-        // L'icône (i) apparaît dès que le libellé contient « acompte » : l'info
-        // 30 % minimum reste utile même sans matériel marqué Acompte ni
-        // suggestion > 30 % (rappel du plancher conseillé).
-        const suggestion = isAcompte
+        // Afficher l'icône (i) sur la 1ère ligne dans TOUS les cas (l'utilisateur
+        // peut faire une faute de frappe sur « acompte » ou utiliser un autre mot
+        // — ex. « Réservation »), et sur toute autre ligne dont le libellé
+        // contient « acompte ».
+        const showSuggestion = idx === 0 || isAcompte;
+        const suggestion = showSuggestion
           ? `<button type="button" class="ech-info-icon" tabindex="0"><span class="ech-info-tooltip" role="tooltip">Acompte suggéré : <strong>${suggestedRounded} %</strong> minimum.</span>i</button>`
           : `<div class="ech-info-spacer" aria-hidden="true"></div>`;
         return `<div class="ech-row">
