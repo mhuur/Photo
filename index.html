@@ -691,8 +691,18 @@
   .bug-empty-action{background:transparent;border:0;color:var(--primary);font:inherit;font-size:13px;font-weight:600;cursor:pointer;text-decoration:underline;padding:0}
   .bug-empty-action:hover{color:var(--primary-dark)}
 
+  /* Mini progress bar (validées / total) */
+  .bug-progress{display:inline-flex;align-items:center;gap:8px;flex:1;min-width:120px;cursor:help}
+  .bug-progress-bar{flex:1;height:6px;background:var(--surface-2);border-radius:3px;overflow:hidden;min-width:60px}
+  .bug-progress-fill{height:100%;background:linear-gradient(90deg,var(--success) 0%,#16a34a 100%);transition:width .35s ease}
+  .bug-progress-pct{font-size:11px;font-weight:700;color:var(--text-muted);font-variant-numeric:tabular-nums;min-width:32px;text-align:right}
+
+  /* Animation pulse sur le check au toggle */
+  .fb-check.anim-toggle{animation:bugCheckPulse .4s ease}
+  @keyframes bugCheckPulse{0%{transform:scale(1)}40%{transform:scale(1.25) rotate(8deg)}100%{transform:scale(1) rotate(0)}}
+
   /* === Bug report formulaire détaillé === */
-  .bug-form{max-width:720px;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:14px 16px;margin-bottom:16px;display:flex;flex-direction:column;gap:12px}
+  .bug-form{max-width:720px;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:14px 16px;margin-bottom:16px;display:flex;flex-direction:column;gap:12px;position:sticky;top:8px;z-index:5;box-shadow:0 4px 16px rgba(0,0,0,.18)}
   .bug-form-row{display:flex;gap:12px;flex-wrap:wrap}
   .bug-form-field{display:flex;flex-direction:column;gap:5px;flex:1;min-width:160px}
   .bug-form-field-wide{flex:2}
@@ -5142,6 +5152,14 @@ function bugToggleValid(id) {
   it.validated = !it.validated;
   save();
   render();
+  // Animation de pulse sur le check après toggle (visible 400ms).
+  requestAnimationFrame(() => {
+    const btn = document.querySelector(`.fb-card[data-bug-id="${id}"] .fb-check`);
+    if (btn) {
+      btn.classList.add("anim-toggle");
+      setTimeout(() => btn.classList.remove("anim-toggle"), 400);
+    }
+  });
 }
 window.bugToggleValid = bugToggleValid;
 
@@ -12886,7 +12904,9 @@ function rBG() {
   </div>`;
   h += `<div class="fb-subtitle">Note ici les remarques ou bugs à transmettre à Claude. Chaque remarque peut être détaillée (onglet, captures), copiée individuellement, validée ou supprimée.</div>`;
 
-  // ===== Barre de stats + toggle validées =====
+  // ===== Barre de stats + progress bar + toggle validées =====
+  const totalAll = nOpen + nDone;
+  const progressPct = totalAll > 0 ? Math.round((nDone / totalAll) * 100) : 0;
   h += `<div class="bug-stats-bar">
     <div class="bug-stat ${!bugFilters.showValidated ? "active" : ""}">
       <span class="bug-stat-num">${nOpen}</span> en cours
@@ -12894,6 +12914,10 @@ function rBG() {
     <button class="bug-stat-toggle ${bugFilters.showValidated ? "active" : ""}" onclick="bugFilterToggleValidated()" title="${bugFilters.showValidated ? "Masquer les validées" : "Afficher les validées"}">
       <span class="bug-stat-num">${nDone}</span> validée${nDone > 1 ? "s" : ""} ${bugFilters.showValidated ? "👁" : "👁‍🗨"}
     </button>
+    ${totalAll > 0 ? `<div class="bug-progress" title="${nDone} validée${nDone > 1 ? "s" : ""} sur ${totalAll}">
+      <div class="bug-progress-bar"><div class="bug-progress-fill" style="width:${progressPct}%"></div></div>
+      <span class="bug-progress-pct">${progressPct}%</span>
+    </div>` : ""}
   </div>`;
 
   // ===== Formulaire de saisie détaillé =====
@@ -12915,7 +12939,7 @@ function rBG() {
       </div>
       <div class="bug-form-field bug-form-field-wide">
         <label>Nom (titre court)</label>
-        <input id="bugTitleInput" type="text" placeholder="Ex : « Le bouton ne réagit pas au clic »" value="${esc(bugDraft.title || "")}" oninput="bugDraftSet('title', this.value)">
+        <input id="bugTitleInput" type="text" placeholder="Ex : « Le bouton ne réagit pas au clic »" title="Raccourci : Alt+N" value="${esc(bugDraft.title || "")}" oninput="bugDraftSet('title', this.value)">
       </div>
     </div>
     <div class="bug-form-field">
@@ -12952,7 +12976,7 @@ function rBG() {
           <button class="bug-chip bug-chip-${esc(t.k)} ${bugFilters.tab === t.k ? "active" : ""}" onclick="bugFilterSetTab('${esc(t.k)}')">${esc(t.lbl)} <span class="bug-chip-n">${t.n}</span></button>
         `).join("")}
       </div>
-      <input id="bugSearchInput" class="bug-search" type="text" placeholder="Rechercher…" value="${esc(bugFilters.q || "")}" oninput="bugFilterSetQ(this.value)">
+      <input id="bugSearchInput" class="bug-search" type="text" placeholder="Rechercher…  (/)" title="Raccourci : /" value="${esc(bugFilters.q || "")}" oninput="bugFilterSetQ(this.value)">
     </div>`;
   }
 
@@ -13014,7 +13038,7 @@ function rBG() {
             </div>`).join("")}
          </div>`
       : "";
-    h += `<div class="fb-card bug-card-v2 ${it.validated ? "fb-done" : ""}">
+    h += `<div class="fb-card bug-card-v2 ${it.validated ? "fb-done" : ""}" data-bug-id="${esc(it.id)}">
       <div class="fb-hd">
         <button class="fb-check ${it.validated ? "on" : ""}" onclick="bugToggleValid('${it.id}')" title="${it.validated ? "Marquer en cours" : "Valider"}">✓</button>
         ${cover}
@@ -13051,6 +13075,32 @@ window.setTab = k => {
 };
 window.signIn = () => auth.signInWithPopup(new firebase.auth.GoogleAuthProvider()).catch(err => uiAlert(err.message, { title: "Erreur de connexion", kind: "danger" }));
 window.signOut = () => auth.signOut();
+
+// Raccourcis clavier sur l'onglet Notes :
+//   /     → focus la barre de recherche
+//   Alt+N → focus le champ Nom du formulaire (création remarque)
+//   Esc   → ferme le lightbox screenshot s'il est ouvert
+window.addEventListener("keydown", (ev) => {
+  // Esc lightbox : prioritaire, peu importe l'onglet ou le focus.
+  if (ev.key === "Escape" && bugLightbox) {
+    ev.preventDefault();
+    bugLightboxClose();
+    return;
+  }
+  if (typeof tab === "undefined" || tab !== "bugs") return;
+  // Ne pas voler le focus si on tape déjà dans un input/textarea
+  // (sauf pour Alt+N qui est explicite).
+  const t = ev.target;
+  const isTyping = t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.tagName === "SELECT" || t.isContentEditable);
+  if (ev.key === "/" && !isTyping) {
+    const el = document.getElementById("bugSearchInput");
+    if (el) { ev.preventDefault(); el.focus(); el.select(); }
+  } else if (ev.altKey && (ev.key === "n" || ev.key === "N")) {
+    ev.preventDefault();
+    const el = document.getElementById("bugTitleInput");
+    if (el) { el.focus(); el.select(); }
+  }
+});
 
 // Reposition picker portal on scroll/resize so it tracks the input
 window.addEventListener('scroll', () => {
