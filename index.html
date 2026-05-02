@@ -2922,6 +2922,41 @@ async function saveToCloud() {
       // l'a normalement créé) → fallback set sans merge pour le créer.
       if (errUpd && errUpd.code === "not-found") {
         await docRef.set(payload);
+      } else if (errUpd && errUpd.message && errUpd.message.includes("exceeds the maximum allowed size")) {
+        // Doc > 1 MB : Firestore refuse l'écriture. Cause habituelle : trop de
+        // screenshots inline dans S.bugs.items[]. On purge automatiquement les
+        // captures pour débloquer la sync, puis on retry.
+        const purged = purgeAllBugScreenshots();
+        if (purged > 0) {
+          payload.bugs = S.bugs;
+          try {
+            await docRef.update(payload);
+            localStorage.setItem(SK, JSON.stringify(S));
+            console.warn(`[recovery] doc Firestore > 1MB — ${purged} capture(s) auto-purgée(s) pour débloquer la sync.`);
+            uiAlert(
+              `La synchronisation cloud était bloquée car le doc Firestore dépassait 1 Mo.\n\n` +
+              `${purged} capture${purged > 1 ? "s" : ""} de notes ${purged > 1 ? "ont" : "a"} été supprimée${purged > 1 ? "s" : ""} automatiquement pour débloquer la sync.\n\n` +
+              `Les notes elles-mêmes (titres, descriptions) restent intactes.`,
+              { title: "Captures purgées — sync rétablie", kind: "warn" }
+            );
+            render();
+          } catch (errRetry) {
+            console.error("saveToCloud retry failed", errRetry);
+            uiAlert(
+              `La sync cloud reste bloquée : le doc Firestore dépasse toujours 1 Mo après purge des captures. ` +
+              `Quelqu'un d'autre a probablement ajouté beaucoup de données. Recharge la page pour récupérer le dernier état du cloud.`,
+              { title: "Sync impossible", kind: "danger" }
+            );
+          }
+        } else {
+          // Aucune capture à purger → autre cause de surpoids
+          uiAlert(
+            `La sync cloud est bloquée : le doc Firestore dépasse 1 Mo et aucune capture ` +
+            `de notes n'est trouvée à purger. Le dépassement vient d'une autre source ` +
+            `(suivi, clients, etc.). Contacte Claude pour analyser.`,
+            { title: "Sync impossible", kind: "danger" }
+          );
+        }
       } else {
         throw errUpd;
       }
@@ -5012,8 +5047,9 @@ function bugDraftSet(field, val) {
 window.bugDraftSet = bugDraftSet;
 
 const BUG_SCREENSHOT_MAX = 3;
-const BUG_SCREENSHOT_MAX_DIM = 1280; // largeur max
-const BUG_SCREENSHOT_QUALITY = 0.8;  // JPEG quality
+const BUG_SCREENSHOT_MAX_DIM = 1024; // largeur max (réduite pour éviter doc Firestore > 1MB)
+const BUG_SCREENSHOT_QUALITY = 0.7;  // JPEG quality (réduite idem)
+const FIRESTORE_DOC_LIMIT = 950 * 1024; // marge sous la limite stricte 1 048 576 bytes
 
 // Compresse un File image en data URL JPEG, max BUG_SCREENSHOT_MAX_DIM de large.
 function bugCompressImage(file) {
@@ -5042,6 +5078,20 @@ function bugCompressImage(file) {
   });
 }
 
+// Purge toutes les screenshots des items bugs (libère de la place dans le doc).
+function purgeAllBugScreenshots() {
+  if (!S.bugs || !Array.isArray(S.bugs.items)) return 0;
+  let purged = 0;
+  for (const it of S.bugs.items) {
+    if (Array.isArray(it.screenshots) && it.screenshots.length > 0) {
+      purged += it.screenshots.length;
+      it.screenshots = [];
+    }
+  }
+  return purged;
+}
+window.purgeAllBugScreenshots = purgeAllBugScreenshots;
+
 async function bugDraftAddImageFile(file) {
   if (!file || !file.type || !file.type.startsWith("image/")) return;
   if (bugDraft.screenshots.length >= BUG_SCREENSHOT_MAX) {
@@ -5050,6 +5100,21 @@ async function bugDraftAddImageFile(file) {
   }
   try {
     const dataUrl = await bugCompressImage(file);
+    // Vérifier qu'on ne fait pas exploser le doc Firestore (limite 1 MB).
+    const imgSize = new Blob([dataUrl]).size;
+    const docSize = JSON.stringify(S).length;
+    if (docSize + imgSize > FIRESTORE_DOC_LIMIT) {
+      const docKB = Math.round(docSize / 1024);
+      const imgKB = Math.round(imgSize / 1024);
+      const limKB = Math.round(FIRESTORE_DOC_LIMIT / 1024);
+      uiAlert(
+        `Cette capture (${imgKB} KB) ferait dépasser la limite Firestore (${limKB} KB).\n\n` +
+        `Espace utilisé : ${docKB} KB.\n\n` +
+        `Supprime des captures existantes ou des notes pour libérer de l'espace.`,
+        { title: "Limite Firestore atteinte", kind: "danger" }
+      );
+      return;
+    }
     bugDraft.screenshots.push({ id: uid(), dataUrl, addedAt: Date.now() });
     render();
   } catch (e) {
