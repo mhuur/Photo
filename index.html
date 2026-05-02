@@ -280,6 +280,12 @@
   .ac-section h3{margin:0 0 10px;font-size:14px;font-weight:600;color:var(--text);display:flex;align-items:center;gap:8px}
   .ac-section h3 .ac-count{font-size:11px;font-weight:600;color:var(--text-muted);background:var(--surface);border:1px solid var(--border-light);padding:2px 8px;border-radius:10px}
   .ac-list{display:flex;flex-direction:column;gap:6px;max-width:880px}
+  .ac-row-wrap{display:flex;flex-direction:column;gap:0}
+  .ac-row-wrap.expanded{gap:0}
+  .ac-row-wrap.expanded .ac-row{border-radius:8px 8px 0 0;border-bottom:0}
+  .ac-row-panel{background:var(--surface);border:1px solid var(--border-light);border-top:0;border-radius:0 0 8px 8px;padding:14px 16px;animation:acPanelIn .15s ease-out}
+  @keyframes acPanelIn{from{opacity:0;transform:translateY(-3px)}to{opacity:1;transform:translateY(0)}}
+  .ac-row-active{background:var(--surface-hi)!important;border-color:var(--primary)!important}
   .ac-row{display:grid;grid-template-columns:80px 1fr 170px 100px 36px;gap:12px;align-items:center;padding:8px 14px;background:var(--surface);border:1px solid var(--border-light);border-radius:8px;cursor:pointer;transition:background .12s,border-color .12s;font-size:13px}
   .ac-row-gmail{background:transparent;border:1px solid var(--border-soft);color:var(--text-dim);width:30px;height:30px;border-radius:6px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;transition:all .12s;padding:0}
   .ac-row-gmail svg{width:14px;height:14px}
@@ -8389,8 +8395,9 @@ function devisActionsHtml(g) {
 // Contient le statut de chaque étape, ses actions individuelles, les actions
 // devis-level (accept/refus/annule/undo) et les boutons d'impression.
 // Toutes les actions de l'ancienne modale sont reprises ici.
-function suiviExpandedRowHtml(g) {
-  if (suiviExpandedDevis !== g.devisId) return "";
+// Renvoie le HTML du panneau étendu (sans wrapping table-row). Réutilisable :
+// utilisé dans Suivi (wrappé dans un <tr>) et dans Accueil (wrappé dans un div).
+function suiviExpandedPanelHtml(g) {
   const stop = "event.stopPropagation();";
   const lignes = [...(g.lignes || [])].sort((a, b) => (a.date || "").localeCompare(b.date || ""));
   if (!lignes.length) return "";
@@ -8412,72 +8419,75 @@ function suiviExpandedRowHtml(g) {
     devisLevelAction = undoBtn;
   }
 
-  return `<tr class="suv-expanded-row" onclick="${stop}">
-    <td colspan="6"><div class="suv-expanded-panel">
-      ${devisLevelAction ? `<div class="suv-expanded-actions">${devisLevelAction}</div>` : ''}
-      <div class="suv-tl">${lignes.map(suiviTimelineStepHtml).join("")}</div>
-      <div class="suv-expanded-print">
-        ${(() => {
-          // Bouton Relance Gmail selon le statut du devis
-          let kind = null;
-          if (statutPrin === "envoye") kind = "devis";
-          else if (statutPrin === "en_cours" || statutPrin === "attente") kind = "paiement";
-          if (!kind) return "";
-          const lbl = kind === "paiement" ? "Relance paiement" : "Relance devis";
-          return `<button class="btn ghost suv-gmail-btn" onclick="${stop}gmailRelanceForDevis('${g.devisId}','${kind}')" title="Ouvrir Gmail avec un template de relance pré-rempli">✉ ${esc(lbl)}</button>`;
-        })()}
-        <button class="btn ghost" onclick="${stop}viewDevisOpen('${g.devisId}')">🖨 Devis</button>
-        <button class="btn ghost" onclick="${stop}viewDeboursOpen('${g.devisId}')">🖨 Débours</button>
-        ${(() => {
-          const facA = findFactureFor(g.devisId, "acompte");
-          const facS = findFactureFor(g.devisId, "solde");
-          const appA = isFactureApplicable(g.devisId, "acompte");
-          const appS = isFactureApplicable(g.devisId, "solde");
-          let html = "";
-          if (facA || appA) {
-            const lbl = facA ? "🖨 Acompte " + esc(formatRef(facA.ref, "facture")) : "📄 Émettre acompte";
-            html += `<button class="btn ghost" onclick="${stop}viewFactureOpen('${g.devisId}','acompte')">${lbl}</button>`;
-          }
-          if (facS || appS) {
-            const lbl = facS ? "🖨 Solde " + esc(formatRef(facS.ref, "facture")) : "📄 Émettre solde";
-            html += `<button class="btn ghost" onclick="${stop}viewFactureOpen('${g.devisId}','solde')">${lbl}</button>`;
-          }
-          if (!html) {
-            // Aucune facture émissible (ex. devis envoyé sans paiement) — désactivé pour info
-            html = `<button class="btn ghost" disabled title="Au moins un paiement reçu nécessaire pour émettre une facture" style="opacity:.5;cursor:not-allowed">🖨 Facture</button>`;
-          }
-          return html;
-        })()}
-        ${(() => {
-          // Bouton Réviser : si éligible, bouton actif. Sinon désactivé avec
-          // tooltip explicatif (devis trop ancien / paiement encaissé / facture émise).
-          const check = canReviseDevis(g.devisId);
-          if (check.ok) {
-            return `<button class="btn ghost" onclick="${stop}reviseDevisStart('${g.devisId}')" title="Charge ce devis dans Mission pour en créer une nouvelle version. L'ancienne sera annulée si elle était envoyée.">↻ Réviser</button>`;
-          }
-          return `<button class="btn ghost" disabled title="${esc(check.reason)}" style="opacity:.5;cursor:not-allowed">↻ Réviser</button>`;
-        })()}
-        <span style="flex:1"></span>
-        <button class="btn ghost btn-danger-ghost" title="Supprimer définitivement ce devis (devis créé par erreur)" onclick="${stop}suiviDelDevisConfirm('${g.devisId}')">🗑 Supprimer</button>
-      </div>
+  return `<div class="suv-expanded-panel">
+    ${devisLevelAction ? `<div class="suv-expanded-actions">${devisLevelAction}</div>` : ''}
+    <div class="suv-tl">${lignes.map(suiviTimelineStepHtml).join("")}</div>
+    <div class="suv-expanded-print">
       ${(() => {
-        // Détail révision : liens V1↔V2 (cf Q4 option C — détail dans volet expanded)
-        const dv = S.suivi.devis && S.suivi.devis[g.devisId];
-        if (!dv) return "";
-        const parts = [];
-        if (dv.replaces) {
-          const v1 = S.suivi.devis[dv.replaces];
-          const v1Ref = v1 ? (v1.ref || dv.replaces) : dv.replaces;
-          parts.push(`<div class="suv-revision-link">↺ Remplace <strong>${esc(v1Ref)}</strong> <button class="suv-revision-jump" onclick="${stop}suiviExpandedToggle('${dv.replaces}')" title="Voir l'ancienne version">→</button></div>`);
-        }
-        if (dv.replacedBy) {
-          const v2 = S.suivi.devis[dv.replacedBy];
-          const v2Ref = v2 ? (v2.ref || dv.replacedBy) : dv.replacedBy;
-          parts.push(`<div class="suv-revision-link">↻ Remplacé par <strong>${esc(v2Ref)}</strong> <button class="suv-revision-jump" onclick="${stop}suiviExpandedToggle('${dv.replacedBy}')" title="Voir la nouvelle version">→</button></div>`);
-        }
-        return parts.length ? `<div class="suv-revision-info">${parts.join("")}</div>` : "";
+        // Bouton Relance Gmail selon le statut du devis
+        let kind = null;
+        if (statutPrin === "envoye") kind = "devis";
+        else if (statutPrin === "en_cours" || statutPrin === "attente") kind = "paiement";
+        if (!kind) return "";
+        const lbl = kind === "paiement" ? "Relance paiement" : "Relance devis";
+        return `<button class="btn ghost suv-gmail-btn" onclick="${stop}gmailRelanceForDevis('${g.devisId}','${kind}')" title="Ouvrir Gmail avec un template de relance pré-rempli">✉ ${esc(lbl)}</button>`;
       })()}
-    </div></td>
+      <button class="btn ghost" onclick="${stop}viewDevisOpen('${g.devisId}')">🖨 Devis</button>
+      <button class="btn ghost" onclick="${stop}viewDeboursOpen('${g.devisId}')">🖨 Débours</button>
+      ${(() => {
+        const facA = findFactureFor(g.devisId, "acompte");
+        const facS = findFactureFor(g.devisId, "solde");
+        const appA = isFactureApplicable(g.devisId, "acompte");
+        const appS = isFactureApplicable(g.devisId, "solde");
+        let html = "";
+        if (facA || appA) {
+          const lbl = facA ? "🖨 Acompte " + esc(formatRef(facA.ref, "facture")) : "📄 Émettre acompte";
+          html += `<button class="btn ghost" onclick="${stop}viewFactureOpen('${g.devisId}','acompte')">${lbl}</button>`;
+        }
+        if (facS || appS) {
+          const lbl = facS ? "🖨 Solde " + esc(formatRef(facS.ref, "facture")) : "📄 Émettre solde";
+          html += `<button class="btn ghost" onclick="${stop}viewFactureOpen('${g.devisId}','solde')">${lbl}</button>`;
+        }
+        if (!html) {
+          html = `<button class="btn ghost" disabled title="Au moins un paiement reçu nécessaire pour émettre une facture" style="opacity:.5;cursor:not-allowed">🖨 Facture</button>`;
+        }
+        return html;
+      })()}
+      ${(() => {
+        const check = canReviseDevis(g.devisId);
+        if (check.ok) {
+          return `<button class="btn ghost" onclick="${stop}reviseDevisStart('${g.devisId}')" title="Charge ce devis dans Mission pour en créer une nouvelle version. L'ancienne sera annulée si elle était envoyée.">↻ Réviser</button>`;
+        }
+        return `<button class="btn ghost" disabled title="${esc(check.reason)}" style="opacity:.5;cursor:not-allowed">↻ Réviser</button>`;
+      })()}
+      <span style="flex:1"></span>
+      <button class="btn ghost btn-danger-ghost" title="Supprimer définitivement ce devis (devis créé par erreur)" onclick="${stop}suiviDelDevisConfirm('${g.devisId}')">🗑 Supprimer</button>
+    </div>
+    ${(() => {
+      const dv = S.suivi.devis && S.suivi.devis[g.devisId];
+      if (!dv) return "";
+      const parts = [];
+      if (dv.replaces) {
+        const v1 = S.suivi.devis[dv.replaces];
+        const v1Ref = v1 ? (v1.ref || dv.replaces) : dv.replaces;
+        parts.push(`<div class="suv-revision-link">↺ Remplace <strong>${esc(v1Ref)}</strong> <button class="suv-revision-jump" onclick="${stop}suiviExpandedToggle('${dv.replaces}')" title="Voir l'ancienne version">→</button></div>`);
+      }
+      if (dv.replacedBy) {
+        const v2 = S.suivi.devis[dv.replacedBy];
+        const v2Ref = v2 ? (v2.ref || dv.replacedBy) : dv.replacedBy;
+        parts.push(`<div class="suv-revision-link">↻ Remplacé par <strong>${esc(v2Ref)}</strong> <button class="suv-revision-jump" onclick="${stop}suiviExpandedToggle('${dv.replacedBy}')" title="Voir la nouvelle version">→</button></div>`);
+      }
+      return parts.length ? `<div class="suv-revision-info">${parts.join("")}</div>` : "";
+    })()}
+  </div>`;
+}
+
+function suiviExpandedRowHtml(g) {
+  if (suiviExpandedDevis !== g.devisId) return "";
+  const panel = suiviExpandedPanelHtml(g);
+  if (!panel) return "";
+  return `<tr class="suv-expanded-row" onclick="event.stopPropagation();">
+    <td colspan="6">${panel}</td>
   </tr>`;
 }
 
@@ -10492,12 +10502,17 @@ function rAC() {
   const stop = "event.stopPropagation();";
   const renderRow = (g, late) => {
     const kind = late ? "devis" : "paiement";
-    return `<div class="ac-row ${late ? 'ac-late' : ''}" onclick="accueilOpenDevis('${g.devisId}')">
-      <div class="ac-row-date">${esc(dateFR(g.dateMin || g.dateMax))}</div>
-      <div class="ac-row-client">${esc(cleanClientLabel(g.client)) || "—"}</div>
-      <div class="ac-row-ref">${esc(g.ref) || "—"}</div>
-      <div class="ac-row-amt">${fmt(late ? g.total : g.restant)}</div>
-      <button class="ac-row-gmail" onclick="${stop}gmailRelanceForDevis('${g.devisId}','${kind}')" title="${late ? 'Relancer ce devis par Gmail' : 'Relancer le paiement par Gmail'}">${ICONS.send}</button>
+    const isExpanded = accueilExpandedDevis === g.devisId;
+    const panel = isExpanded ? `<div class="ac-row-panel" onclick="${stop}">${suiviExpandedPanelHtml(g)}</div>` : "";
+    return `<div class="ac-row-wrap${isExpanded ? ' expanded' : ''}">
+      <div class="ac-row ${late ? 'ac-late' : ''}${isExpanded ? ' ac-row-active' : ''}" onclick="accueilOpenDevis('${g.devisId}')">
+        <div class="ac-row-date">${esc(dateFR(g.dateMin || g.dateMax))}</div>
+        <div class="ac-row-client">${esc(cleanClientLabel(g.client)) || "—"}</div>
+        <div class="ac-row-ref">${esc(g.ref) || "—"}</div>
+        <div class="ac-row-amt">${fmt(late ? g.total : g.restant)}</div>
+        <button class="ac-row-gmail" onclick="${stop}gmailRelanceForDevis('${g.devisId}','${kind}')" title="${late ? 'Relancer ce devis par Gmail' : 'Relancer le paiement par Gmail'}">${ICONS.send}</button>
+      </div>
+      ${panel}
     </div>`;
   };
 
@@ -10533,9 +10548,11 @@ function rAC() {
     </div>
   `;
 }
+// devisId du devis dont le panneau est déplié inline dans Accueil, ou null.
+let accueilExpandedDevis = null;
+
 window.accueilOpenDevis = function(devisId) {
-  suiviExpandedDevis = devisId;
-  tab = "suivi";
+  accueilExpandedDevis = (accueilExpandedDevis === devisId) ? null : devisId;
   render();
 };
 
