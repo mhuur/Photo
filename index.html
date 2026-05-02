@@ -2826,12 +2826,15 @@ async function loadFromCloud(ownerUid) {
       }
       suiviMigrate();
       migrateClientNums();
+      const phonesFixed = migratePhoneLeadingZero();
       // migrateLegacyReconstructedFlag() DÉSACTIVÉ : faux positifs sur les
       // devis legacy édités via « 💾 Enregistrer les modifications »
       // (suiviUpdateSnapshot), qui remplace snapshotHtml par le live (sans
       // bandeau de reconstitution) mais laisse legacyReconstructed=true.
       // La migration nettoyait à tort ces devis.
       recomputeRef();
+      // Si la migration a réajouté des 0, propage au cloud.
+      if (phonesFixed) saveToCloud();
       // Adopte le timestamp cloud comme nouveau référentiel local (sinon
       // notre prochain save aurait un localCts plus ancien que le cloud
       // alors qu'on vient de tout merger).
@@ -4532,7 +4535,7 @@ function rClientPicker() {
         <label class="full">Contact<input value="${esc(draft.contact)}" oninput="cliPickDraftSet('contact',this.value)" placeholder="Nom de la personne référente"></label>
         <label class="full">Adresse<input value="${esc(draft.address)}" oninput="cliPickDraftSet('address',this.value)"></label>
         <label>Code postal / Ville<input value="${esc(draft.cityPostal)}" oninput="cliPickDraftSet('cityPostal',this.value)"></label>
-        <label>Téléphone<input value="${esc(draft.phone)}" oninput="cliPickDraftSet('phone',this.value)"></label>
+        <label>Téléphone<input type="tel" inputmode="tel" autocomplete="off" value="${esc(draft.phone)}" oninput="cliPickDraftSet('phone',this.value)"></label>
         <label class="full">Email<input type="email" value="${esc(draft.email)}" oninput="cliPickDraftSet('email',this.value)"></label>
         <label class="full">Rencontre / origine<input value="${esc(draft.rencontre)}" oninput="cliPickDraftSet('rencontre',this.value)" placeholder="Comment avez-vous connu le client ?"></label>
         <label>SIRET <span style="color:var(--text-dim);font-size:11px">(B2B)</span><input value="${esc(draft.siret || "")}" oninput="cliPickDraftSet('siret',this.value)" placeholder="123 456 789 00012" style="font-variant-numeric:tabular-nums"></label>
@@ -8496,6 +8499,31 @@ window.markAsLegacy = function(devisId) {
   console.log(`✓ ${devisId} marqué legacyReconstructed=true. Reload pour que le bouton « Maj Trame » réapparaisse.`);
 };
 
+// ▼ migratePhoneLeadingZero — réajoute le "0" initial des numéros français
+// qui l'ont perdu (probable conversion Number() externe via Excel ou autre).
+// Pattern : 9 chiffres commençant par 1-9 (numéro FR sans le 0). On rajoute
+// le 0. Conserve les phones internationaux ou déjà corrects.
+// Synchronise aussi le champ legacy c.phone via syncClientLegacy.
+function migratePhoneLeadingZero() {
+  const re = /^[1-9]\d{8}$/;
+  let changed = false;
+  for (const c of (S.clients && S.clients.entries) || []) {
+    if (!Array.isArray(c.contacts)) continue;
+    let clientChanged = false;
+    for (const ct of c.contacts) {
+      if (typeof ct.phone === "string" && re.test(ct.phone.trim())) {
+        ct.phone = "0" + ct.phone.trim();
+        clientChanged = true;
+      }
+    }
+    if (clientChanged) {
+      syncClientLegacy(c);
+      changed = true;
+    }
+  }
+  return changed;
+}
+
 function suiviMigrate() {
   if (!S.suivi.devis) S.suivi.devis = {};
 
@@ -10734,7 +10762,7 @@ function rCL() {
             <div class="cli-contact-edit-num">${i + 1}</div>
             <div class="cli-contact-edit-fields">
               <input placeholder="Nom du contact" value="${esc(c.name || "")}" oninput="clientContactUpd('${e.id}','${c.id}','name',this.value)">
-              <input placeholder="Téléphone" value="${esc(c.phone || "")}" oninput="clientContactUpd('${e.id}','${c.id}','phone',this.value)">
+              <input type="tel" inputmode="tel" autocomplete="off" placeholder="Téléphone" value="${esc(c.phone || "")}" oninput="clientContactUpd('${e.id}','${c.id}','phone',this.value)">
               <input type="email" placeholder="Email" value="${esc(c.email || "")}" oninput="clientContactUpd('${e.id}','${c.id}','email',this.value)">
             </div>
             <button class="cli-contact-edit-del" onclick="clientContactDel('${e.id}','${c.id}')" title="Supprimer ce contact">×</button>
