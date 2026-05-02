@@ -683,6 +683,8 @@
   .bug-search{padding:7px 12px;border:1px solid var(--border-light);border-radius:6px;background:var(--bg-2);color:var(--text);font:inherit;font-size:13px;width:200px;flex-shrink:0}
   .bug-search:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 3px var(--primary-soft)}
   .bug-search::placeholder{color:var(--text-dim)}
+  .bug-sort-btn{display:inline-flex;align-items:center;gap:4px;padding:6px 12px;border:1px solid var(--border-light);border-radius:6px;background:var(--bg-2);color:var(--text-muted);font:inherit;font-size:12px;font-weight:600;cursor:pointer;transition:all .12s;flex-shrink:0;white-space:nowrap}
+  .bug-sort-btn:hover{border-color:var(--primary);color:var(--primary);background:var(--primary-soft)}
 
   /* Empty state contextuel */
   .bug-empty{max-width:720px;text-align:center;padding:42px 24px;background:var(--surface);border:1px dashed var(--border-light);border-radius:8px;color:var(--text-muted)}
@@ -4933,8 +4935,9 @@ window.bugQSet = bugQSet;
 let bugDraft = { tab: "", title: "", text: "" };
 let lastTabBeforeBugs = null; // capté par setTab pour pré-remplir bugDraft.tab
 
-// State des filtres de la liste (tab actif, recherche, afficher validées).
-let bugFilters = { tab: "all", q: "", showValidated: false };
+// State des filtres de la liste (tab actif, recherche, afficher validées,
+// tri par date — "desc" = récent en haut, "asc" = ancien en haut).
+let bugFilters = { tab: "all", q: "", showValidated: false, sortDir: "desc" };
 
 // Carte en cours d'édition de description (passe la zone description en
 // textarea ; sinon affichage compact en lecture). Une seule à la fois.
@@ -4985,6 +4988,10 @@ window.bugFilterSetQ = function(v) {
 };
 window.bugFilterToggleValidated = function() {
   bugFilters.showValidated = !bugFilters.showValidated;
+  render();
+};
+window.bugFilterToggleSort = function() {
+  bugFilters.sortDir = bugFilters.sortDir === "desc" ? "asc" : "desc";
   render();
 };
 
@@ -13348,13 +13355,15 @@ function rBG() {
         `).join("")}
       </div>
       <input id="bugSearchInput" class="bug-search" type="text" placeholder="Rechercher…  (/)" title="Raccourci : /" value="${esc(bugFilters.q || "")}" oninput="bugFilterSetQ(this.value)">
+      <button class="bug-sort-btn" onclick="bugFilterToggleSort()" title="${bugFilters.sortDir === "desc" ? "Récent → Ancien (cliquer pour inverser)" : "Ancien → Récent (cliquer pour inverser)"}">${bugFilters.sortDir === "desc" ? "↓ récent" : "↑ ancien"}</button>
     </div>`;
   }
 
   // ===== Liste des cartes =====
+  const sortMul = bugFilters.sortDir === "asc" ? -1 : 1;
   const items = [...bugFilteredItems()].sort((a, b) => {
     if (!!a.validated !== !!b.validated) return a.validated ? 1 : -1;
-    return (b.createdAt || 0) - (a.createdAt || 0);
+    return ((b.createdAt || 0) - (a.createdAt || 0)) * sortMul;
   });
   if (!items.length) {
     if (allItems.length === 0) {
