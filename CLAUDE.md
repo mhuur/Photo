@@ -179,6 +179,7 @@ Chaque devis a `S.mission.declare` (true par défaut, false = au noir). `suiviAd
 - **Navigation par ancres** dans `index.html` : pour localiser une fonction, `grep "^// ▼ <nom>"` plutôt que les numéros de ligne du TOC. Lister toutes les ancres : `grep -n "^// ▼ " index.html`. Quand tu ajoutes une fonction-clé (renderer `rXX`, helper exposé, modal), pose une ancre au format `// ▼ <nom> — <description courte>` au-dessus.
 - **Grep avant Edit sur `index.html`** : avant tout `Edit`, vérifier l'unicité de `old_string` (`grep -c` ou `grep -n`). Sur un fichier de 9 000 lignes, beaucoup de patterns courts collisionnent (`esc(...)`, `${...}`, `S.mission.client.name`). Si non unique, élargir le contexte ou cibler via une ancre voisine.
 - **Reads serrés via ancres** : ne pas `Read` 200 lignes par sécurité. Pour bosser sur une fonction, `grep -n "^// ▼ <nom>"` puis `Read offset=<L> limit=80`. Ne charger plus large QUE si la fonction appelle des helpers que je ne connais pas.
+- **CLAUDE.md mis à jour proactivement, pas seulement au Kenavo** : dès qu'une convention nouvelle ou non-évidente est introduite (architecture, pattern de sync, naming, piège récurrent), ajouter le bullet au CLAUDE.md **dans la même PR/le même cycle**. Ne pas attendre la fin de session : si on oublie, le tour suivant peut casser la convention. Le Kenavo reste pour la consolidation finale (revue + nettoyage).
 
 ## Commandes utiles
 
