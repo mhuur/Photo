@@ -529,7 +529,9 @@
   .tarif-info{position:relative;display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;background:transparent;border:1px solid var(--border-light);color:var(--text-muted);font-size:13px;font-weight:600;font-style:italic;cursor:help;user-select:none;flex-shrink:0;padding:0;font-family:inherit;transition:color .12s,background .12s,border-color .12s}
   .tarif-info:hover,.tarif-info:focus{outline:none;color:var(--primary);border-color:var(--primary);background:var(--primary-soft)}
   .tarif-tooltip{position:absolute;top:calc(100% + 8px);left:50%;transform:translateX(-50%);background:var(--surface);border:1px solid var(--border-light);border-radius:8px;padding:14px 16px;box-shadow:var(--shadow);z-index:100;display:none;min-width:340px;text-align:left;font-style:normal;font-weight:normal;color:var(--text);cursor:default}
+  .tarif-tooltip.up{top:auto;bottom:calc(100% + 8px)}
   .tarif-tooltip::before{content:"";position:absolute;top:-6px;left:50%;transform:translateX(-50%) rotate(45deg);width:10px;height:10px;background:var(--surface);border-left:1px solid var(--border-light);border-top:1px solid var(--border-light)}
+  .tarif-tooltip.up::before{top:auto;bottom:-6px;border-left:0;border-top:0;border-right:1px solid var(--border-light);border-bottom:1px solid var(--border-light)}
   .tarif-tooltip .tt-title{font-size:13px;font-weight:600;color:var(--text);margin-bottom:8px}
   .tarif-info:hover .tarif-tooltip,.tarif-info:focus .tarif-tooltip,.tarif-info:focus-within .tarif-tooltip{display:block}
   .tarif-tooltip .presta-decomp{margin:0;max-width:none}
@@ -6074,18 +6076,52 @@ function rEditSection(key, title, bodyHtml, headerActionHtml = "") {
   </div>`;
 }
 
-window.editSectionToggle = function(key) {
-  _editSectionOpen[key] = !_editSectionOpen[key];
-  // Toggle the DOM directly (avoids full re-render → preserves form state, focus, scroll).
+// Clés des sections accordéon de l'onglet Mission. Pour ces clés on impose
+// "max 1 ouvert à la fois" + "click hors zone ferme". Les autres clés (Profil
+// : logo, photographe, signature, cgv) gardent leur comportement libre.
+const _MISSION_SECTION_KEYS = ["identification","prestations","deplacement","ajustements","modalites","conditions"];
+
+function _editSectionApplyDom(key) {
   const el = document.querySelector(`.edit-section[data-edit-section="${key}"]`);
   if (!el) return;
-  const open = _editSectionOpen[key];
+  const open = !!_editSectionOpen[key];
   el.classList.toggle("open", open);
   const body = el.querySelector(".edit-section-body");
   const header = el.querySelector(".edit-section-header");
   if (body) body.hidden = !open;
   if (header) header.setAttribute("aria-expanded", open ? "true" : "false");
+}
+
+window.editSectionToggle = function(key) {
+  const willOpen = !_editSectionOpen[key];
+  // Mission : on ferme les autres sections Mission avant d'ouvrir celle-ci.
+  if (willOpen && _MISSION_SECTION_KEYS.includes(key)) {
+    _MISSION_SECTION_KEYS.forEach(k => {
+      if (k !== key && _editSectionOpen[k]) {
+        _editSectionOpen[k] = false;
+        _editSectionApplyDom(k);
+      }
+    });
+  }
+  _editSectionOpen[key] = willOpen;
+  _editSectionApplyDom(key);
 };
+
+// Click hors d'une section Mission → ferme tous les volets Mission ouverts.
+// Listener attaché une seule fois au document. Ignore les clics dans :
+// - une .edit-section (toggle/édition normale)
+// - un overlay/modal/portail (picker client, tooltip, picker contact, etc.)
+document.addEventListener("click", (ev) => {
+  if (!S || S.tab !== "M") return;
+  const t = ev.target;
+  if (!t || t.nodeType !== 1) return;
+  if (t.closest(".edit-section")) return;
+  if (t.closest(".modal,.modal-overlay,.lg-info-portal,.tarif-tooltip,.client-picker,.contact-picker,.text-editor-modal,.print-tip-modal,.tooltip-portal")) return;
+  let changed = false;
+  _MISSION_SECTION_KEYS.forEach(k => {
+    if (_editSectionOpen[k]) { _editSectionOpen[k] = false; changed = true; _editSectionApplyDom(k); }
+  });
+});
 
 // ▼ rPaiementFields — bloc IBAN/BIC/banque dans le devis
 function rPaiementFields() {
@@ -7169,14 +7205,12 @@ function rLigneDraggable(l) {
 // ============================================================================
 // ▼ rMS — RENDERER onglet Mission/Devis
 function rMS() {
-  // Au premier rendu après un load, on ouvre les 2 sections les plus utilisées.
-  // Une fois que l'user a touché à n'importe quelle section v2, on respecte son choix.
+  // Au premier rendu après un load, on ouvre la 1re section. Ensuite, on
+  // respecte le choix de l'user (1 seul volet ouvert à la fois — voir
+  // editSectionToggle + listener click hors zone).
   const v2Keys = ["identification","prestations","deplacement","ajustements","modalites","conditions"];
   const noneTouched = v2Keys.every(k => _editSectionOpen[k] === undefined);
-  if (noneTouched) {
-    _editSectionOpen.identification = true;
-    _editSectionOpen.prestations    = true;
-  }
+  if (noneTouched) _editSectionOpen.identification = true;
 
   return `
     <span id="savedFlash" class="saved" style="position:absolute;top:18px;right:18px"></span>
@@ -7571,7 +7605,7 @@ function rDevisPaneFooterInner() {
     ? `<button class="btn" onclick="suiviUpdateSnapshot()" ${!dirty?"disabled":""} title="${dirty?'':'Aucune modification à enregistrer'}">${dirty ? '💾 Enregistrer les modifications' : '✓ À jour dans Suivi'}</button>`
     : `<button class="btn" onclick="suiviAdd()" ${!v.ok?"disabled":""} title="${v.ok?'':'Corrige les erreurs ci-dessus'}">💾 Enregistrer dans Suivi</button>`;
 
-  const infoBtn = `<button type="button" class="tarif-info" tabindex="0" aria-label="Que fait l'enregistrement dans Suivi ?">i<div class="tarif-tooltip" role="tooltip">
+  const infoBtn = `<button type="button" class="tarif-info" tabindex="0" aria-label="Que fait l'enregistrement dans Suivi ?">i<div class="tarif-tooltip up" role="tooltip">
     <div class="tt-title">Enregistrement dans Suivi</div>
     <p style="margin:0 0 8px;font-size:12px;line-height:1.5">Un seul clic enregistre l'<strong>ensemble du dossier</strong> : devis principal <strong>+</strong> feuille débours s'il y en a une. Pas besoin d'enregistrer séparément.</p>
     <p style="margin:0 0 4px;font-size:12px;line-height:1.5;font-weight:600">Première fois (devis neuf) :</p>
