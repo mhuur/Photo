@@ -8246,19 +8246,28 @@ function missionStripForCompare(m) {
 // ▼ suiviAdd — archive le devis : 2 entries Suivi + 2 snapshots
 function suiviAdd() {
   const m = S.mission;
-  // Garde-fou révision no-op : si on revise un devis et que rien n'a
-  // changé (ou seules les dates), on n'incrémente pas la version. Évite
-  // de créer une V<N+1> identique à V<N> et d'annuler V<N> pour rien.
+  // Garde-fou révision no-op : si rien n'a changé hors dates, on demande à
+  // l'utilisateur s'il veut quand même créer une nouvelle version (cas
+  // « rafraîchir la date d'émission d'un devis expiré sans modifier le
+  // contenu ») ou abandonner (cas « j'ai cliqué Réviser par erreur »).
   if (m.revisesDevisId) {
     const dvPrev = S.suivi.devis && S.suivi.devis[m.revisesDevisId];
     if (dvPrev && dvPrev.snapshotMission) {
       const sameAsPrev = missionStripForCompare(m) === missionStripForCompare(dvPrev.snapshotMission);
       if (sameAsPrev) {
-        alert("Aucune modification détectée par rapport à la version précédente.\n\nAucune nouvelle révision créée. Le devis original reste tel quel.");
-        delete m.revisesDevisId;
-        save();
-        render();
-        return;
+        const ok = confirm(
+          "Aucune modification du contenu détectée par rapport à la version précédente.\n\n" +
+          "Créer quand même une nouvelle version pour rafraîchir la date d'émission ?\n\n" +
+          "OK : nouvelle version créée avec la date du jour, l'ancienne sera annulée.\n" +
+          "Annuler : aucune révision créée, l'ancienne version reste active."
+        );
+        if (!ok) {
+          delete m.revisesDevisId;
+          save();
+          render();
+          return;
+        }
+        // Sinon on continue : V<N+1> sera créée avec la date du jour.
       }
     }
   }
