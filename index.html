@@ -3356,8 +3356,14 @@ function formatSiret(siret) {
 // depuis 2018, le popup compose n'est plus accessible via URL externe).
 // Le format mailto: ouvrirait le handler par défaut, qui peut être Outlook
 // (Edge/Windows par défaut) — pas l'effet souhaité ici.
+// Si S.identite.email est renseigné, on pinne le compte expéditeur via
+// /mail/u/<email>/ — Gmail bascule sur ce compte si l'utilisateur y est
+// connecté (sinon il prompt la connexion). Évite l'envoi depuis le mauvais
+// compte si l'utilisateur a plusieurs sessions Google actives.
 function buildGmailUrl(to, subject, body) {
-  return "https://mail.google.com/mail/?view=cm&fs=1"
+  const fromEmail = (S.identite && S.identite.email ? String(S.identite.email) : "").trim();
+  const accountPath = fromEmail ? `/u/${encodeURIComponent(fromEmail)}/` : "/";
+  return "https://mail.google.com/mail" + accountPath + "?view=cm&fs=1"
     + (to      ? "&to=" + encodeURIComponent(to) : "")
     + (subject ? "&su=" + encodeURIComponent(subject) : "")
     + (body    ? "&body=" + encodeURIComponent(body) : "");
@@ -9672,7 +9678,9 @@ function clientsBulkEmail() {
     const msg = `${emails.length} email${emails.length > 1 ? "s" : ""} récupéré${emails.length > 1 ? "s" : ""}.\n\n${noEmail.length} client${noEmail.length > 1 ? "s" : ""} sans email seront ignoré${noEmail.length > 1 ? "s" : ""} :\n• ${noEmail.slice(0, 6).join("\n• ")}${noEmail.length > 6 ? `\n• … et ${noEmail.length - 6} autre${noEmail.length - 6 > 1 ? "s" : ""}` : ""}\n\nContinuer ?`;
     if (!confirm(msg)) return;
   }
-  const url = "https://mail.google.com/mail/?view=cm&fs=1&bcc=" + encodeURIComponent(emails.join(","));
+  const fromEmail = (S.identite && S.identite.email ? String(S.identite.email) : "").trim();
+  const accountPath = fromEmail ? `/u/${encodeURIComponent(fromEmail)}/` : "/";
+  const url = "https://mail.google.com/mail" + accountPath + "?view=cm&fs=1&bcc=" + encodeURIComponent(emails.join(","));
   window.open(url, "_blank", "noopener");
   clientsExitSelectMode(); // sortir du mode après envoi réussi
 }
