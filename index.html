@@ -2069,6 +2069,13 @@ firebase.initializeApp({
 const auth = firebase.auth();
 const db = firebase.firestore();
 
+// Force la persistence locale pour que l'auth state survive aux redirects
+// (mobile Safari avec ITP peut sinon perdre l'état entre firebaseapp.com et
+// notre origin → boucle de redirect après signInWithRedirect).
+auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(err => {
+  console.warn("[auth] setPersistence LOCAL failed:", err && (err.message || err.code));
+});
+
 // Email du propriétaire du workspace partagé. Tous les membres validés écrivent
 // sur le doc users/<ownerUid>. Le mapping email→uid est résolu via workspace_ids/.
 const OWNER_EMAIL = "saintilan.romain@gmail.com";
@@ -2620,8 +2627,8 @@ async function signInWithGoogle() {
     const provider = new firebase.auth.GoogleAuthProvider();
     const isMobile = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent || "");
     if (isMobile) {
-      // Redirect : la page se recharge après auth, getRedirectResult() au boot
-      // récupère le résultat. onAuthStateChanged prend ensuite le relais.
+      // Marqueur pour détecter au boot un redirect raté (boucle ITP Safari).
+      try { sessionStorage.setItem("authRedirectInProgress", String(Date.now())); } catch (_) {}
       await auth.signInWithRedirect(provider);
     } else {
       await auth.signInWithPopup(provider);
@@ -2632,6 +2639,21 @@ async function signInWithGoogle() {
   }
 }
 window.signInWithGoogle = signInWithGoogle;
+
+// Détecte si on revient d'un redirect Google qui a échoué silencieusement
+// (typique iOS Safari avec ITP : auth state pas persisté → boucle au login).
+// Retourne true si le drapeau était posé (sera clear automatiquement).
+function authRedirectFailed() {
+  try {
+    const ts = sessionStorage.getItem("authRedirectInProgress");
+    if (!ts) return false;
+    const ageMs = Date.now() - parseInt(ts, 10);
+    sessionStorage.removeItem("authRedirectInProgress");
+    // Si on a posé le flag il y a plus de 5 secondes mais on n'est pas
+    // connecté, c'est qu'on est rentré dans la boucle.
+    return ageMs > 3000;
+  } catch (_) { return false; }
+}
 
 async function signOut() {
   try {
@@ -2650,11 +2672,16 @@ window.signOut = signOut;
 async function initWorkspace(u) {
   user = u;
   if (!u) {
+    // Détection d'une boucle redirect mobile (auth state perdu → on retombe ici).
+    // Marqueur consommé une seule fois pour ne pas s'afficher en boucle.
+    if (authRedirectFailed()) _authBoucleRedirect = true;
     workspaceState.role = "denied"; // pas authentifié → écran de login
     workspaceState.ownerUid = null;
     render();
     return;
   }
+  // Connexion réussie → reset du flag boucle si présent
+  _authBoucleRedirect = false;
   workspaceState.role = "loading";
   render();
 
@@ -5531,8 +5558,40 @@ function isInAppWebView() {
   return /\b(fban|fbav|fb_iab|fbios|instagram|twitter|line\/|micromessenger|messengerlite|snapchat|tiktok|linkedin|whatsapp|tinder|pinterest)\b/.test(ua);
 }
 
+// Mémo "on revient d'un redirect raté" — set au boot par initWorkspace, lu
+// par rLoginScreen pour afficher un écran d'aide ITP au lieu de relancer la
+// boucle. Nettoyé après usage par l'écran.
+let _authBoucleRedirect = false;
+
 // ▼ rLoginScreen — écran de connexion (user non authentifié)
 function rLoginScreen() {
+  // Boucle de redirect détectée (mobile Safari ITP, cookies cross-domain bloqués)
+  if (_authBoucleRedirect) {
+    _authBoucleRedirect = false; // affiche une seule fois
+    return `<div class="ws-screen">
+      <div class="ws-card">
+        <h1>🌊 Devis Photo</h1>
+        <div class="ws-status denied">
+          ⚠ <strong>Connexion bloquée par ton navigateur</strong>
+          <p>La connexion Google a réussi mais ton navigateur (probablement Safari sur iPhone) a bloqué la session entre Google et l'app à cause de la protection « Empêcher le suivi entre sites ».</p>
+        </div>
+        <div style="margin-top:18px;padding:14px;background:var(--surface-2);border-radius:8px;text-align:left;font-size:13px;line-height:1.6">
+          <strong>Solution iPhone (~30 secondes) :</strong>
+          <ol style="margin:8px 0 0;padding-left:18px">
+            <li>Ouvre <strong>Réglages</strong> iOS</li>
+            <li>Descends jusqu'à <strong>Safari</strong></li>
+            <li>Section « Confidentialité et sécurité »</li>
+            <li>Désactive <strong>« Empêcher le suivi entre sites »</strong></li>
+            <li>Reviens dans Safari, recharge cette page, retente la connexion</li>
+          </ol>
+          <p style="margin:10px 0 0;font-size:12px;color:var(--text-muted)">Tu peux réactiver cette option après la 1ʳᵉ connexion : ta session est gardée.</p>
+        </div>
+        <div style="margin-top:14px;display:flex;gap:8px;justify-content:center">
+          <button class="btn ws-google-btn" onclick="signInWithGoogle()">Réessayer</button>
+        </div>
+      </div>
+    </div>`;
+  }
   if (isInAppWebView()) {
     // WebView in-app → Google bloquera l'OAuth. On affiche les instructions
     // pour ouvrir dans le vrai navigateur plutôt qu'un bouton qui plantera.
