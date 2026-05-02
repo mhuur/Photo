@@ -5472,6 +5472,23 @@ function ensureLegacySnapshot(devisId) {
 }
 window.ensureLegacySnapshot = ensureLegacySnapshot;
 
+// ▼ computeRevisionNumber — numéro de révision d'un devis dans sa chaîne
+// V1 → V2 → V3… (1-indexé). Walks back via dv.replaces. V1 (root, sans
+// replaces) = 1, et la prochaine révision sera V<N+1>.
+function computeRevisionNumber(devisId) {
+  let n = 1;
+  let cur = devisId;
+  const seen = new Set();
+  while (cur && !seen.has(cur)) {
+    seen.add(cur);
+    const dv = S.suivi.devis && S.suivi.devis[cur];
+    if (!dv || !dv.replaces) break;
+    n++;
+    cur = dv.replaces;
+  }
+  return n;
+}
+
 // ▼ canReviseDevis — un devis peut-il être révisé (clone + V1 annulé) ?
 // Returns { ok: true, partial?: bool } ou { ok: false, reason: "…" }
 // Conditions :
@@ -9054,10 +9071,24 @@ function suiviExpandedPanelHtml(g) {
       })()}
       ${(() => {
         const check = canReviseDevis(g.devisId);
-        if (check.ok) {
-          return `<button class="btn ghost" onclick="${stop}reviseDevisStart('${g.devisId}')" title="Charge ce devis dans Mission pour en créer une nouvelle version. L'ancienne sera annulée si elle était envoyée.">↻ Réviser</button>`;
+        const dv = S.suivi.devis && S.suivi.devis[g.devisId];
+        const isLegacy = !dv || !dv.snapshotMission || dv.legacyReconstructed === true;
+        // Legacy : « Rééditer » (mise à jour de format, dates V1 conservées,
+        // pas de notion de version commerciale).
+        // Standard : « Réviser → V<N+1> » (nouvelle proposition, V courante annulée).
+        let lbl, tip;
+        if (isLegacy) {
+          lbl = "↻ Rééditer";
+          tip = "Met à jour ce devis legacy avec le nouveau format. Les dates et le client sont conservés. Le devis original sera annulé.";
+        } else {
+          const nextV = computeRevisionNumber(g.devisId) + 1;
+          lbl = `↻ Réviser → V${nextV}`;
+          tip = `Crée une nouvelle version (V${nextV}) en remplaçant celle-ci. La version actuelle sera annulée.`;
         }
-        return `<button class="btn ghost" disabled title="${esc(check.reason)}" style="opacity:.5;cursor:not-allowed">↻ Réviser</button>`;
+        if (check.ok) {
+          return `<button class="btn ghost" onclick="${stop}reviseDevisStart('${g.devisId}')" title="${esc(tip)}">${esc(lbl)}</button>`;
+        }
+        return `<button class="btn ghost" disabled title="${esc(check.reason)}" style="opacity:.5;cursor:not-allowed">${esc(lbl)}</button>`;
       })()}
       <span style="flex:1"></span>
       <button class="btn ghost btn-danger-ghost" title="Supprimer définitivement ce devis (devis créé par erreur)" onclick="${stop}suiviDelDevisConfirm('${g.devisId}')">🗑 Supprimer</button>
