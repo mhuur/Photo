@@ -485,9 +485,13 @@
   table.cli-table th.cli-select-head{padding-left:14px;padding-right:6px}
   table.cli-table td.cli-select-cell{padding:14px 6px 14px 14px;width:36px}
   .cli-select-cb,.cli-select-all{width:16px;height:16px;cursor:pointer;accent-color:var(--primary)}
-  .cli-bulk-bar{display:flex;align-items:center;gap:10px;padding:10px 14px;margin-bottom:14px;background:var(--primary-soft);border:1px solid var(--primary);border-radius:8px;font-size:13.5px;color:var(--text)}
+  table.cli-table.cli-select-mode tr.cli-row.clickable:hover td{background:var(--primary-soft)}
+  table.cli-table tr.cli-row.cli-selected td{background:rgba(74,158,255,.18)}
+  table.cli-table tr.cli-row.cli-selected:hover td{background:rgba(74,158,255,.28)}
+  .cli-bulk-bar{display:flex;align-items:center;gap:14px;padding:10px 14px;margin-bottom:14px;background:var(--primary-soft);border:1px solid var(--primary);border-radius:8px;font-size:13.5px;color:var(--text)}
   .cli-bulk-bar strong{color:var(--primary);font-weight:700;font-size:14px;margin-right:4px}
   .cli-bulk-bar .btn{padding:7px 14px;font-size:13px}
+  .cli-bulk-bar .btn:disabled{opacity:.45;cursor:not-allowed;box-shadow:none}
   .cli-bulk-bar .btn svg{width:13px;height:13px;vertical-align:-2px;margin-right:5px}
   .stats{display:flex;gap:8px;flex-wrap:wrap;margin:14px 0 4px}
   .stat{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:10px 14px;font-size:13px;color:var(--text-muted);min-width:120px;box-shadow:var(--shadow-sm)}
@@ -8960,55 +8964,87 @@ let clientsEditing = null;
 let clientsSearchQuery = "";
 let clientsSort = { key: "num", dir: "asc" };
 // Sélection multi-clients pour actions bulk (envoi mail groupé, etc.)
+// clientsSelectMode = false : mode normal, click ligne = ouvrir fiche.
+// clientsSelectMode = true  : mode sélection, click ligne = toggle sélection,
+//                              checkboxes affichées, barre d'action en haut.
 const clientsSelected = new Set();
+let clientsSelectMode = false;
 
+function clientsEnterSelectMode() {
+  clientsSelectMode = true;
+  clientsExpanded = null; // ferme toute fiche ouverte (cohérence visuelle)
+  clientsEditing = null;
+  render();
+}
+window.clientsEnterSelectMode = clientsEnterSelectMode;
+
+function clientsExitSelectMode() {
+  clientsSelectMode = false;
+  clientsSelected.clear();
+  render();
+}
+window.clientsExitSelectMode = clientsExitSelectMode;
+
+// Toggle sélection — appelé soit par click sur la ligne (en mode select) soit
+// par click sur la checkbox elle-même.
 function clientsToggleSelect(id, checked) {
-  if (checked) clientsSelected.add(id);
-  else clientsSelected.delete(id);
+  if (typeof checked === "boolean") {
+    if (checked) clientsSelected.add(id);
+    else clientsSelected.delete(id);
+  } else {
+    if (clientsSelected.has(id)) clientsSelected.delete(id);
+    else clientsSelected.add(id);
+  }
+  // Update DOM directement (évite re-render coûteux)
+  const row = document.getElementById("cli-row-" + id);
+  if (row) {
+    const cb = row.querySelector(".cli-select-cb");
+    if (cb) cb.checked = clientsSelected.has(id);
+    row.classList.toggle("cli-selected", clientsSelected.has(id));
+  }
   clientsUpdateBulkBar();
 }
 window.clientsToggleSelect = clientsToggleSelect;
+
+// Click sur la ligne : route selon le mode courant
+function clientsRowClick(id) {
+  if (clientsSelectMode) clientsToggleSelect(id);
+  else clientsToggle(id);
+}
+window.clientsRowClick = clientsRowClick;
 
 function clientsSelectAll(checked) {
   const list = document.getElementById("clientsList");
   if (!list) return;
   list.querySelectorAll("tr.cli-row").forEach(tr => {
-    if (tr.style.display === "none") return; // ignore les filtrés
+    if (tr.style.display === "none") return;
     const id = (tr.id || "").replace("cli-row-", "");
     if (!id) return;
     if (checked) clientsSelected.add(id);
     else clientsSelected.delete(id);
     const cb = tr.querySelector(".cli-select-cb");
     if (cb) cb.checked = checked;
+    tr.classList.toggle("cli-selected", checked);
   });
   clientsUpdateBulkBar();
 }
 window.clientsSelectAll = clientsSelectAll;
 
-function clientsClearSelection() {
-  clientsSelected.clear();
-  document.querySelectorAll(".cli-select-cb").forEach(cb => cb.checked = false);
-  document.querySelectorAll(".cli-select-all").forEach(cb => cb.checked = false);
-  clientsUpdateBulkBar();
-}
-window.clientsClearSelection = clientsClearSelection;
-
 function clientsUpdateBulkBar() {
-  const bar = document.getElementById("clientsBulkBar");
   const count = document.getElementById("clientsBulkCount");
   const lbl = document.getElementById("clientsBulkLbl");
-  if (!bar) return;
+  const sendBtn = document.getElementById("clientsBulkSendBtn");
   const n = clientsSelected.size;
-  bar.style.display = n === 0 ? "none" : "";
   if (count) count.textContent = String(n);
-  if (lbl) lbl.textContent = n > 1 ? "clients sélectionnés" : "client sélectionné";
+  if (lbl) lbl.textContent = n > 1 ? "clients sélectionnés" : (n === 1 ? "client sélectionné" : "client sélectionné");
+  if (sendBtn) sendBtn.disabled = n === 0;
 }
 
 // Ouvre Gmail compose avec en BCC les emails de tous les clients sélectionnés.
-// BCC pour préserver la confidentialité — les destinataires ne se voient pas.
+// BCC = blind carbon copy : chaque destinataire reçoit le mail sans voir les autres.
 function clientsBulkEmail() {
   const ids = [...clientsSelected];
-  if (!ids.length) return;
+  if (!ids.length) { alert("Aucun client sélectionné."); return; }
   const emails = [];
   const noEmail = [];
   for (const id of ids) {
@@ -9028,6 +9064,7 @@ function clientsBulkEmail() {
   }
   const url = "https://mail.google.com/mail/?view=cm&fs=1&bcc=" + encodeURIComponent(emails.join(","));
   window.open(url, "_blank", "noopener");
+  clientsExitSelectMode(); // sortir du mode après envoi réussi
 }
 window.clientsBulkEmail = clientsBulkEmail;
 
@@ -9360,15 +9397,18 @@ function rCL() {
     // En édition comme en lecture, la ligne du tableau est read-only :
     // la saisie de Nom/N° se fait dans l'en-tête du panneau déplié.
     const isSel = clientsSelected.has(e.id);
-    const cbCell = `<td class="cli-select-cell" onclick="event.stopPropagation()"><input type="checkbox" class="cli-select-cb" ${isSel ? "checked" : ""} onclick="clientsToggleSelect('${e.id}', this.checked)"></td>`;
+    const cbCell = clientsSelectMode
+      ? `<td class="cli-select-cell" onclick="event.stopPropagation();clientsToggleSelect('${e.id}')"><input type="checkbox" class="cli-select-cb" ${isSel ? "checked" : ""} onclick="event.stopPropagation();clientsToggleSelect('${e.id}', this.checked)"></td>`
+      : "";
+    const selClass = clientsSelectMode && isSel ? " cli-selected" : "";
     const summary = editing ? `
-      <tr class="cli-row expanded" id="cli-row-${e.id}" data-search="${esc(search)}">
+      <tr class="cli-row expanded${selClass}" id="cli-row-${e.id}" data-search="${esc(search)}">
         ${cbCell}
         <td class="cli-num">${esc(e.num) || "—"}</td>
         <td class="cli-name">${esc(e.name) || `<span style="color:var(--text-dim);font-style:italic;font-weight:400">(à remplir)</span>`}</td>
         <td class="cli-city${e.cityPostal ? "" : " dim"}">${esc(e.cityPostal) || "—"}</td>
       </tr>` : `
-      <tr class="cli-row clickable ${expanded ? "expanded" : ""}" id="cli-row-${e.id}" data-search="${esc(search)}" onclick="clientsToggle('${e.id}')">
+      <tr class="cli-row clickable ${expanded ? "expanded" : ""}${selClass}" id="cli-row-${e.id}" data-search="${esc(search)}" onclick="clientsRowClick('${e.id}')">
         ${cbCell}
         <td class="cli-num">${esc(e.num) || "—"}</td>
         <td class="cli-name">${esc(e.name) || "—"}</td>
@@ -9462,7 +9502,7 @@ function rCL() {
       `;
 
       detail = `
-        <tr class="cli-detail"><td colspan="4"><div class="cli-panel">
+        <tr class="cli-detail"><td colspan="${clientsSelectMode ? 4 : 3}"><div class="cli-panel">
           ${headerHtml}
           <div class="cli-panel-grid">
             <div class="cli-section">
@@ -9493,6 +9533,7 @@ function rCL() {
 
     <div class="cli-toolbar">
       <button class="btn" onclick="clientsAdd()">${ICONS.plus}Ajouter</button>
+      <button class="btn ghost" onclick="clientsEnterSelectMode()" title="Sélectionner plusieurs clients pour leur envoyer un mail groupé. Les destinataires sont mis en BCC (copie cachée) — ils ne voient pas les autres adresses.">${ICONS.send}Mail groupé</button>
       <span class="cli-spacer"></span>
       <button class="btn ghost" onclick="clientsExportCSV()" title="Exporter la liste en CSV">${ICONS.download}CSV</button>
     </div>
@@ -9504,12 +9545,14 @@ function rCL() {
 
     <datalist id="rencontreSuggestions">${rencontreOpts.map(v => `<option value="${esc(v)}"></option>`).join("")}</datalist>
 
-    <div id="clientsBulkBar" class="cli-bulk-bar" style="display:${clientsSelected.size > 0 ? '' : 'none'}">
+    ${clientsSelectMode ? `
+    <div class="cli-bulk-bar">
       <span><strong id="clientsBulkCount">${clientsSelected.size}</strong> <span id="clientsBulkLbl">${clientsSelected.size > 1 ? "clients sélectionnés" : "client sélectionné"}</span></span>
+      <span class="hint" style="margin:0;font-size:11.5px;color:var(--text-muted)">Cliquez sur les lignes pour sélectionner / désélectionner.</span>
       <span class="cli-spacer"></span>
-      <button class="btn" onclick="clientsBulkEmail()">${ICONS.send}Envoyer un mail (BCC)</button>
-      <button class="btn ghost" onclick="clientsClearSelection()">Désélectionner</button>
-    </div>
+      <button id="clientsBulkSendBtn" class="btn" onclick="clientsBulkEmail()" ${clientsSelected.size === 0 ? "disabled" : ""}>${ICONS.send}Envoyer (BCC)</button>
+      <button class="btn ghost" onclick="clientsExitSelectMode()">Annuler</button>
+    </div>` : ""}
 
     <div id="clientsNoResults" class="cli-empty" style="display:none">
       Aucun contact ne correspond à « <span class="term"></span> ».
@@ -9517,10 +9560,10 @@ function rCL() {
     </div>
 
     ${entries.length === 0 ? `<div class="cli-empty">Aucun client enregistré. Cliquez sur « Ajouter » pour commencer.</div>` : `
-    <table class="cli-table" id="clientsList">
+    <table class="cli-table${clientsSelectMode ? " cli-select-mode" : ""}" id="clientsList">
       <thead>
         <tr>
-          <th class="cli-select-head" style="width:36px"><input type="checkbox" class="cli-select-all" onclick="clientsSelectAll(this.checked)" title="Tout sélectionner / désélectionner (lignes visibles)"></th>
+          ${clientsSelectMode ? `<th class="cli-select-head" style="width:36px"><input type="checkbox" class="cli-select-all" onclick="clientsSelectAll(this.checked)" title="Tout sélectionner / désélectionner (lignes visibles)"></th>` : ""}
           <th class="${thCls('num')}" style="width:80px" onclick="clientsSortBy('num')">N° ${sortInd('num')}</th>
           <th class="${thCls('name')}" onclick="clientsSortBy('name')">Nom / Société ${sortInd('name')}</th>
           <th class="${thCls('city')}" style="width:200px" onclick="clientsSortBy('city')">Ville ${sortInd('city')}</th>
