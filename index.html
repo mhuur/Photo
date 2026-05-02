@@ -197,6 +197,8 @@
   .suv-mark-relance:hover{background:rgba(34,197,94,.12)!important;border-color:rgba(34,197,94,.35)!important}
   /* Indicateur révision (↻ / ↺) à côté de la ref dans la ligne tableau */
   .suv-revision-ico{display:inline-block;margin-left:6px;font-size:13px;color:var(--accent);cursor:help;font-weight:600}
+  /* Tag rev<N> à côté de la ref */
+  .suv-rev-tag{display:inline-block;margin-left:6px;font-size:10px;font-weight:600;color:var(--accent);background:rgba(99,102,241,.12);border:1px solid rgba(99,102,241,.30);border-radius:4px;padding:1px 5px;letter-spacing:.3px}
   /* Bloc détail révision dans le volet expanded (cf Q4 option C) */
   .suv-revision-info{display:flex;flex-direction:column;gap:4px;padding:8px 10px;background:var(--surface);border:1px solid var(--border-soft);border-radius:6px;margin-top:8px}
   .suv-revision-link{font-size:12px;color:var(--text-muted);display:flex;align-items:center;gap:6px}
@@ -829,6 +831,8 @@
   /* Meta + client : hiérarchie typographique sans encadré */
   .devis-preview .dp-meta-block.dp-meta-box{padding:0;background:transparent;border:0;min-width:240px}
   .devis-preview .dp-meta-ref{font-weight:700;font-size:17px;color:var(--text);font-variant-numeric:tabular-nums;letter-spacing:.01em;margin-bottom:6px}
+  .devis-preview .dp-rev-tag{display:inline-block;font-size:10px;font-weight:600;color:var(--text-dim);background:var(--surface-2);border:1px solid var(--border-soft);border-radius:4px;padding:1px 5px;letter-spacing:.3px;vertical-align:middle;margin-left:4px}
+  @media print{.devis-preview .dp-rev-tag{background:#fff;border-color:#888;color:#444}}
   .devis-preview .dp-meta-row{display:flex;justify-content:flex-end;gap:14px;font-size:12px;color:var(--text);margin:1px 0}
   .devis-preview .dp-meta-row .lbl{color:var(--text-dim);font-weight:400}
   .devis-preview .dp-meta-row strong{color:var(--text);font-weight:400;font-variant-numeric:tabular-nums}
@@ -2956,9 +2960,13 @@ function refreshRefDisplay() {
 
 function pickObject(k) {
   S.mission.object = k;
-  // Sélectionner explicitement une prestation efface l'override legacy :
-  // l'utilisateur veut désormais le tarif catalogue.
-  if (S.mission.tarifHOverride) S.mission.tarifHOverride = "";
+  // En mode Maj Trame (legacy), on conserve tarifHOverride : l'utilisateur
+  // peut sélectionner une prestation catalogue pour le LIBELLÉ uniquement,
+  // sans que le tarif catalogue prenne le relais (on veut préserver le
+  // montant total V1). Hors Maj Trame, on clear l'override comme avant.
+  if (!S.mission.majTrameDevisId && S.mission.tarifHOverride) {
+    S.mission.tarifHOverride = "";
+  }
   const item = (S.tarifs.catalog || DEFAULT_CATALOG).find(c => c.k === k);
   if (item && item.p) S.mission.prod.rate = String(item.p);
   save();
@@ -3766,7 +3774,7 @@ function rDevisPreview() {
       })()}
       <div class="dp-header-right">
         <div class="dp-meta-block dp-meta-box">
-          <div class="dp-meta-ref">${esc(formatRef(d.ref, "devis"))}</div>
+          <div class="dp-meta-ref">${esc(formatRef(d.ref, "devis"))} <span class="dp-rev-tag">rev${currentRevForPreview()}</span></div>
           <div class="dp-meta-row"><span class="lbl">Émission</span><strong>${dateFR(d.dateEmission) || "—"}</strong></div>
           ${(() => {
             // La date concrète est calculée à partir de la durée saisie. Si on n'a pas (encore)
@@ -4035,7 +4043,7 @@ function rDeboursPreview() {
       })()}
       <div class="dp-header-right">
         <div class="dp-meta-block dp-meta-box">
-          <div class="dp-meta-ref">${esc(ref)}</div>
+          <div class="dp-meta-ref">${esc(ref)} <span class="dp-rev-tag">rev${currentRevForPreview()}</span></div>
           <div class="dp-meta-row"><span class="lbl">Émission</span><strong>${dateFR(d.dateEmission) || "—"}</strong></div>
           <div class="dp-validity-mention">Document à conserver avec les justificatifs.</div>
         </div>
@@ -5113,6 +5121,18 @@ function formatRef(ref, type) {
   return `${label} n° ${stripped}`;
 }
 
+// ▼ currentRevForPreview — calcule le rev<N> à afficher dans le PDF du devis
+// pendant l'édition (rDevisPreview / rDeboursPreview).
+//   - Brouillon neuf : rev0.
+//   - Maj Trame en cours : rev = rev de l'original (in-place, pas de bump).
+//   - Réviser en cours : rev = rev(target) + 1 (la nouvelle qui sera créée).
+function currentRevForPreview() {
+  const m = S.mission;
+  if (m.majTrameDevisId) return computeRevisionNumber(m.majTrameDevisId);
+  if (m.revisesDevisId)  return computeRevisionNumber(m.revisesDevisId) + 1;
+  return 0;
+}
+
 // ▼ nextFactureSequence — calcule le prochain numéro facture pour un YYYY-MM
 // Tier 2 : prefix séparé par type — "FA" (acompte) / "FS" (solde) / "FACT" (legacy).
 // Format référence : <prefix>-YYYY-MM-NNN (séquence par mois et par préfixe).
@@ -5473,10 +5493,13 @@ function ensureLegacySnapshot(devisId) {
 window.ensureLegacySnapshot = ensureLegacySnapshot;
 
 // ▼ computeRevisionNumber — numéro de révision d'un devis dans sa chaîne
-// V1 → V2 → V3… (1-indexé). Walks back via dv.replaces. V1 (root, sans
-// replaces) = 1, et la prochaine révision sera V<N+1>.
+// (0-indexé). Walks back via dv.replaces.
+//   - Devis racine (sans replaces) = rev0.
+//   - V2 qui replaces V1 = rev1.
+//   - etc.
+// La prochaine révision aura donc rev<N+1>.
 function computeRevisionNumber(devisId) {
-  let n = 1;
+  let n = 0;
   let cur = devisId;
   const seen = new Set();
   while (cur && !seen.has(cur)) {
@@ -5585,6 +5608,48 @@ window.reviseDevisStart = function(devisId) {
       "Complète manuellement les lignes (matériel, cession, déplacement détaillé), les durées par poste si nécessaire, et autres champs avant d'enregistrer."
     ), 50);
   }
+};
+
+// ▼ majTrameStart — démarre une mise à jour de trame (legacy uniquement).
+// Charge le devis legacy dans Mission, dates V1 conservées, tarifHOverride
+// posé pour préserver le total. À la sauvegarde, suiviAdd détecte
+// majTrameDevisId :
+//   - Total inchangé → mise à jour EN PLACE du snapshot (pas de V<N+1>).
+//   - Total changé → bascule auto sur le flow Réviser standard (V<N+1>).
+window.majTrameStart = function(devisId) {
+  const dv = S.suivi.devis && S.suivi.devis[devisId];
+  if (!dv) { alert("Devis introuvable."); return; }
+  // Brouillon courant non vide ?
+  const hasDraft = !devisCurrentSuiviEntry()
+    && S.mission
+    && ((S.mission.client && (S.mission.client.id || S.mission.client.name))
+        || (S.mission.lignes && S.mission.lignes.length > 0));
+  if (hasDraft) {
+    const ok = confirm(`Tu as un brouillon en cours dans Mission qui n'a pas été enregistré dans Suivi.\n\n` +
+      `Charger ${dv.ref || devisId} pour mise à jour de trame va écraser ce brouillon.\n\nContinuer ?`);
+    if (!ok) return;
+  }
+  const r = reconstructMissionFromSuivi(devisId, { mode: "edit" });
+  S.mission = r.mission;
+  // Dates V1 conservées (objectDate aligné sur dateEmission rétroactif).
+  if (!S.mission.objectDate || S.mission.objectDate > S.mission.dateEmission) {
+    S.mission.objectDate = S.mission.dateEmission;
+  }
+  // Garde la ref originale du devis legacy (pas de régénération).
+  S.mission.ref = dv.ref || S.mission.ref;
+  // Marqueur transient distinct de revisesDevisId.
+  S.mission.majTrameDevisId = devisId;
+  delete S.mission.revisesDevisId;
+  save();
+  tab = "mission";
+  render();
+  setTimeout(() => alert(
+    "Mise à jour de trame chargée.\n\n" +
+    "Tu peux ajuster le libellé, la prestation catalogue, les heures — sans toucher au tarif horaire (préservé pour garder le total V1).\n\n" +
+    "À l'enregistrement :\n" +
+    "• Si le total HT reste identique → mise à jour en place (même ref, mêmes dates).\n" +
+    "• Si le total change → création d'une nouvelle révision avec date du jour."
+  ), 50);
 };
 
 // Standard French payment delays (B2B/B2C). Default for B2B = 30j fin de mois.
@@ -8246,6 +8311,68 @@ function missionStripForCompare(m) {
 // ▼ suiviAdd — archive le devis : 2 entries Suivi + 2 snapshots
 function suiviAdd() {
   const m = S.mission;
+  // Maj Trame (legacy in-place) : si total HT inchangé vs original, on met
+  // à jour le snapshot du devis original sans créer de V<N+1>. Sinon, on
+  // bascule sur le flow Réviser standard.
+  if (m.majTrameDevisId) {
+    const dvOrig = S.suivi.devis && S.suivi.devis[m.majTrameDevisId];
+    const tNew = totals();
+    const origTotal = dvOrig ? num(dvOrig.snapshotTotal) : 0;
+    const totalSame = Math.abs(origTotal - tNew.total) < 0.01;
+    if (totalSame && dvOrig) {
+      // Mise à jour EN PLACE du snapshot. Même devisId, ref, dates V1.
+      const previewEl = document.getElementById("devisPreview");
+      if (previewEl) {
+        const clone = previewEl.cloneNode(true);
+        clone.querySelectorAll(".dp-actions").forEach(n => n.remove());
+        dvOrig.snapshotHtml = clone.innerHTML;
+      }
+      try {
+        const dHtml = rDeboursPreview();
+        if (dHtml && !dHtml.includes("dp-empty")) {
+          const tmp = document.createElement("div");
+          tmp.innerHTML = dHtml;
+          const innerD = tmp.querySelector("#deboursPreview") || tmp.firstElementChild;
+          if (innerD) {
+            innerD.querySelectorAll(".dp-actions").forEach(n => n.remove());
+            dvOrig.snapshotDeboursHtml = innerD.innerHTML;
+          }
+        } else {
+          dvOrig.snapshotDeboursHtml = "";
+        }
+      } catch (err) { console.warn("Maj Trame débours render failed", err); }
+      dvOrig.snapshotAt = new Date().toISOString();
+      dvOrig.snapshotTotal = tNew.total;
+      dvOrig.snapshotDebours = tNew.debours || 0;
+      dvOrig.snapshotPaiementDelai = (m.paiement && m.paiement.delai) || "30j_fdm";
+      dvOrig.snapshotDatePrestation = m.datePrestation || "";
+      const snapMission = JSON.parse(JSON.stringify(m));
+      delete snapMission.revisesDevisId;
+      delete snapMission.majTrameDevisId;
+      dvOrig.snapshotMission = snapMission;
+      // Trame mise à jour proprement → on retire le flag legacy.
+      delete dvOrig.legacyReconstructed;
+      delete m.majTrameDevisId;
+      save();
+      render();
+      alert(`Trame mise à jour pour ${dvOrig.ref || m.majTrameDevisId}.\n\nLe devis garde sa référence et ses dates d'origine. Le snapshot et la facture utiliseront désormais la nouvelle présentation.`);
+      return;
+    }
+    // Total a changé → bascule en révision standard.
+    if (!confirm(
+      `Le total HT a changé (était ${fmt(origTotal)}, maintenant ${fmt(tNew.total)}).\n\n` +
+      `Cela nécessite la création d'une nouvelle révision avec date du jour. L'ancien devis sera annulé.\n\n` +
+      `Continuer ? (Sinon : annule pour ajuster manuellement.)`
+    )) {
+      return;
+    }
+    m.revisesDevisId = m.majTrameDevisId;
+    delete m.majTrameDevisId;
+    m.dateEmission = new Date().toISOString().slice(0, 10);
+    m.objectDate = m.dateEmission;
+    m.ref = "";
+    recomputeRef();
+  }
   // Garde-fou révision no-op : si rien n'a changé hors dates, on demande à
   // l'utilisateur s'il veut quand même créer une nouvelle version (cas
   // « rafraîchir la date d'émission d'un devis expiré sans modifier le
@@ -9117,22 +9244,28 @@ function suiviExpandedPanelHtml(g) {
         const check = canReviseDevis(g.devisId);
         const dv = S.suivi.devis && S.suivi.devis[g.devisId];
         const isLegacy = !dv || !dv.snapshotMission || dv.legacyReconstructed === true;
-        // Legacy : « Rééditer » (mise à jour de format, dates V1 conservées,
-        // pas de notion de version commerciale).
-        // Standard : « Réviser → V<N+1> » (nouvelle proposition, V courante annulée).
-        let lbl, tip;
+        let html = "";
+        // Bouton Maj Trame : visible uniquement pour les devis legacy.
+        // Permet d'ouvrir l'éditeur en mode legacy (tarifHOverride préservé)
+        // et de mettre à jour le snapshot en place si le total reste identique.
         if (isLegacy) {
-          lbl = "↻ Rééditer";
-          tip = "Met à jour ce devis legacy avec le nouveau format. Les dates et le client sont conservés. Le devis original sera annulé.";
-        } else {
-          const nextV = computeRevisionNumber(g.devisId) + 1;
-          lbl = `↻ Réviser → V${nextV}`;
-          tip = `Crée une nouvelle version (V${nextV}) en remplaçant celle-ci. La version actuelle sera annulée.`;
+          const tipMaj = "Charge ce devis legacy dans l'éditeur pour mettre à jour la trame (libellé, prestation catalogue, heures détaillées). Tarif horaire préservé pour garder le total V1. Si le total reste identique à l'enregistrement → mise à jour en place ; si le total change → bascule en nouvelle révision.";
+          if (check.ok) {
+            html += `<button class="btn ghost" onclick="${stop}majTrameStart('${g.devisId}')" title="${esc(tipMaj)}">🖼 Maj Trame</button>`;
+          } else {
+            html += `<button class="btn ghost" disabled title="${esc(check.reason)}" style="opacity:.5;cursor:not-allowed">🖼 Maj Trame</button>`;
+          }
         }
+        // Bouton Réviser : sur tous les devis (legacy ou pas).
+        const nextRev = computeRevisionNumber(g.devisId) + 1;
+        const lbl = `↻ Réviser → rev${nextRev}`;
+        const tip = `Crée une nouvelle version (rev${nextRev}) avec date du jour. La version actuelle sera annulée.`;
         if (check.ok) {
-          return `<button class="btn ghost" onclick="${stop}reviseDevisStart('${g.devisId}')" title="${esc(tip)}">${esc(lbl)}</button>`;
+          html += `<button class="btn ghost" onclick="${stop}reviseDevisStart('${g.devisId}')" title="${esc(tip)}">${esc(lbl)}</button>`;
+        } else {
+          html += `<button class="btn ghost" disabled title="${esc(check.reason)}" style="opacity:.5;cursor:not-allowed">${esc(lbl)}</button>`;
         }
-        return `<button class="btn ghost" disabled title="${esc(check.reason)}" style="opacity:.5;cursor:not-allowed">${esc(lbl)}</button>`;
+        return html;
       })()}
       <span style="flex:1"></span>
       <button class="btn ghost btn-danger-ghost" title="Supprimer définitivement ce devis (devis créé par erreur)" onclick="${stop}suiviDelDevisConfirm('${g.devisId}')">🗑 Supprimer</button>
@@ -9613,6 +9746,9 @@ function rSV() {
           <td class="statut">${pastille(g.statutPrin)}</td>
           <td>${dateLabel}</td>
           <td class="ref-cell suv-nowrap">${esc(g.ref) || `<span class="muted">—</span>`}${(() => {
+            const rev = computeRevisionNumber(g.devisId);
+            return rev > 0 ? ` <span class="suv-rev-tag" title="Numéro de révision dans la chaîne">rev${rev}</span>` : "";
+          })()}${(() => {
             // Indicateur ↻/↺ si lien V1↔V2 (cf Q4 option C — visuel discret)
             const dv = S.suivi.devis && S.suivi.devis[g.devisId];
             if (!dv) return "";
@@ -11204,7 +11340,10 @@ function rAC() {
       <div class="ac-row ${late ? 'ac-late' : ''}${isExpanded ? ' ac-row-active' : ''}" onclick="accueilOpenDevis('${g.devisId}')">
         <div class="ac-row-date">${esc(dateFR(g.dateMin || g.dateMax))}</div>
         <div class="ac-row-client">${esc(cleanClientLabel(g.client)) || "—"}</div>
-        <div class="ac-row-ref">${esc(g.ref) || "—"}</div>
+        <div class="ac-row-ref">${esc(g.ref) || "—"}${(() => {
+          const rev = computeRevisionNumber(g.devisId);
+          return rev > 0 ? ` <span class="suv-rev-tag">rev${rev}</span>` : "";
+        })()}</div>
         <div class="ac-row-amt">${fmt(late ? g.total : g.restant)}</div>
         <button class="ac-row-gmail" onclick="${stop}gmailRelanceForDevis('${g.devisId}','${kind}')" title="${late ? 'Relancer ce devis par Gmail' : 'Relancer le paiement par Gmail'}">${ICONS.send}</button>
       </div>
