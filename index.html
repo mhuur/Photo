@@ -3189,27 +3189,61 @@ function openGmailCompose(to, subject, body) {
 }
 window.openGmailCompose = openGmailCompose;
 
-// Retrouve le client lié à un devis archivé (par snapshotMission.client.id, sinon par nom)
+// Retrouve le client lié à un devis archivé. 4 stratégies :
+//   1. snapshotMission.client.id (le plus fiable, devis post-feature snapshot)
+//   2. snapshotClient (nom), nettoyé du préfixe #NUM legacy
+//   3. 1re entry Suivi du devis (champ e.client), même nettoyage
+//   4. null
 function findClientForDevis(devisId) {
+  if (!S.clients || !Array.isArray(S.clients.entries)) return null;
   const dv = S.suivi && S.suivi.devis && S.suivi.devis[devisId];
-  if (!dv || !S.clients || !Array.isArray(S.clients.entries)) return null;
-  if (dv.snapshotMission && dv.snapshotMission.client && dv.snapshotMission.client.id) {
+
+  // 1. Lookup direct par id (devis avec snapshotMission)
+  if (dv && dv.snapshotMission && dv.snapshotMission.client && dv.snapshotMission.client.id) {
     const found = S.clients.entries.find(c => c.id === dv.snapshotMission.client.id);
     if (found) return found;
   }
-  const name = (dv.snapshotClient || "").trim();
-  if (name) {
-    const lower = name.toLowerCase();
+
+  // Helper : strip "#NUM " prefix puis match par nom (case-insensitive)
+  const findByName = raw => {
+    const cleaned = String(raw || "").replace(/^#\d+\s*/, "").trim();
+    if (!cleaned) return null;
+    const lower = cleaned.toLowerCase();
     return S.clients.entries.find(c => (c.name || "").trim().toLowerCase() === lower) || null;
+  };
+
+  // 2. snapshotClient (nom stocké sur l'archive)
+  if (dv && dv.snapshotClient) {
+    const found = findByName(dv.snapshotClient);
+    if (found) return found;
   }
+
+  // 3. Fallback : 1re entry Suivi pour ce devis (legacy "#116 Euphorbia" ou "Nom" simple)
+  if (S.suivi && Array.isArray(S.suivi.entries)) {
+    const entry = S.suivi.entries.find(e => e.devisId === devisId);
+    if (entry && entry.client) {
+      const found = findByName(entry.client);
+      if (found) return found;
+    }
+  }
+
   return null;
 }
 
-// 1er email valide parmi les contacts d'un client
+// 1er email valide parmi les contacts d'un client. Fallback sur le champ
+// legacy client.email (peut contenir un join "\n" de plusieurs emails).
 function clientPrimaryEmail(client) {
-  if (!client || !Array.isArray(client.contacts)) return "";
-  for (const c of client.contacts) {
-    if (c.email && c.email.includes("@")) return c.email.trim();
+  if (!client) return "";
+  if (Array.isArray(client.contacts)) {
+    for (const c of client.contacts) {
+      const email = String(c.email || "").trim();
+      if (email && email.includes("@")) return email;
+    }
+  }
+  const legacy = String(client.email || "").trim();
+  if (legacy && legacy.includes("@")) {
+    const first = legacy.split(/[\n,;]+/).map(s => s.trim()).find(e => e.includes("@"));
+    if (first) return first;
   }
   return "";
 }
