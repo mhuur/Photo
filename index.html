@@ -4777,6 +4777,24 @@ const INFO_HTML = {
       <li><strong>Particulier</strong> (B2C) — bloc <em>Médiation de la consommation</em> affiché. Si "Contrat signé hors établissement" coché, mention <em>rétractation 14 j</em> ajoutée (art. L221-18 C. conso.).</li>
       <li><strong>Entreprise</strong> (B2B) — pas de bloc Médiation, pas de rétractation. Pénalités de retard 3× taux légal + indemnité forfaitaire 40 € obligatoires (C. com. L441-10).</li>
     </ul>
+  `,
+  bulkEmail: `
+    <div class="tt-title" style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:8px">Mail groupé en BCC</div>
+    <p style="margin:0 0 8px;font-size:12px;line-height:1.5">Permet d'envoyer un même mail à plusieurs clients en une fois.</p>
+    <p style="margin:0 0 4px;font-size:12px;line-height:1.5;font-weight:600">BCC = Blind Carbon Copy (copie cachée)</p>
+    <ul style="margin:0 0 8px;padding-left:18px;font-size:12px;line-height:1.55">
+      <li>Chaque destinataire reçoit le mail mais <strong>ne voit pas les autres</strong> adresses dans son en-tête.</li>
+      <li>Évite que tes clients voient les emails de tes autres clients (confidentialité, RGPD).</li>
+      <li>Plus pro qu'un envoi en TO ou CC où toute la liste est exposée.</li>
+    </ul>
+    <p style="margin:0 0 4px;font-size:12px;line-height:1.5;font-weight:600">Comment ça marche</p>
+    <ol style="margin:0 0 8px;padding-left:18px;font-size:12px;line-height:1.55">
+      <li>Click ce bouton → entre en mode sélection.</li>
+      <li>Click sur les lignes que tu veux inclure.</li>
+      <li>Click « Envoyer (BCC) » → Gmail s'ouvre avec tous les emails déjà en BCC.</li>
+      <li>Tu écris ton sujet et ton message dans Gmail, puis tu envoies.</li>
+    </ol>
+    <p style="margin:0;font-size:12px;line-height:1.5;color:var(--text-muted)">Si un client sélectionné n'a pas d'email, il sera ignoré (avec confirmation).</p>
   `
 };
 
@@ -9533,7 +9551,11 @@ function rCL() {
 
     <div class="cli-toolbar">
       <button class="btn" onclick="clientsAdd()">${ICONS.plus}Ajouter</button>
-      <button class="btn ghost" onclick="clientsEnterSelectMode()" title="Sélectionner plusieurs clients pour leur envoyer un mail groupé. Les destinataires sont mis en BCC (copie cachée) — ils ne voient pas les autres adresses.">${ICONS.send}Mail groupé</button>
+      <span style="display:inline-flex;align-items:center;gap:6px">
+        <button class="btn ghost" onclick="clientsEnterSelectMode()">${ICONS.send}Mail groupé</button>
+        <button type="button" class="lg-info-icon" tabindex="0" aria-label="Qu'est-ce que le mail groupé en BCC ?"
+          onmouseenter="showInfo(event, 'bulkEmail')" onmouseleave="hideInfo()" onfocus="showInfo(event, 'bulkEmail')" onblur="hideInfo()">i</button>
+      </span>
       <span class="cli-spacer"></span>
       <button class="btn ghost" onclick="clientsExportCSV()" title="Exporter la liste en CSV">${ICONS.download}CSV</button>
     </div>
