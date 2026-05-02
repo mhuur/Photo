@@ -828,7 +828,7 @@
   .fb-card:hover .bug-card-text-add{opacity:1}
   .bug-card-text-add:hover{color:var(--primary);background:var(--primary-soft)}
   /* Description en mode édition (textarea visible) */
-  .bug-card-text{flex:1;border:1px solid var(--border-light);background:var(--bg-2);color:var(--text);font:inherit;font-size:13px;outline:none;padding:6px 8px;border-radius:4px;min-width:0;resize:vertical;font-family:inherit;min-height:50px}
+  .bug-card-text{width:100%;border:1px solid var(--border-light);background:var(--surface);color:var(--text);font:inherit;font-size:13px;outline:none;padding:10px 12px;border-radius:6px;min-width:0;resize:vertical;font-family:inherit;min-height:200px;line-height:1.55;box-sizing:border-box}
   .bug-card-text:focus{border-color:var(--primary);box-shadow:0 0 0 2px var(--primary-soft)}
   .bug-card-actions{display:flex;flex-direction:column;gap:4px;flex-shrink:0}
   .bug-card-copy{border:1px solid var(--border-light);background:var(--surface);color:var(--text-muted);cursor:pointer;font-size:13px;width:30px;height:28px;border-radius:5px;display:flex;align-items:center;justify-content:center;transition:all .15s;padding:0}
@@ -13476,7 +13476,7 @@ function rBG() {
     // (pas de line-clamp — on veut tout voir). Vide + édition → textarea.
     let descHtml = "";
     if (editing) {
-      descHtml = `<textarea class="bug-card-text" rows="3" placeholder="Description…" oninput="bugUpdateText('${it.id}',this.value);bugAutoResize(this)" onfocus="bugAutoResize(this)">${esc(it.text || "")}</textarea>`;
+      descHtml = `<textarea class="bug-card-text" rows="8" placeholder="Description…" oninput="bugUpdateText('${it.id}',this.value);bugAutoResize(this)" onfocus="bugAutoResize(this)">${esc(it.text || "")}</textarea>`;
     } else if (it.text && it.text.trim()) {
       descHtml = `<div class="bug-card-text-full">${esc(it.text)}</div>`;
     } else {
