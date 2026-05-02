@@ -4579,25 +4579,50 @@ window.hideRemiseInfo = function() {
   if (_paiementTooltipEl) _paiementTooltipEl.style.display = "none";
 };
 
-// Tooltip explicatif du format de la référence devis. Pattern portal pour
-// éviter le clipping par overflow:hidden de la section accordéon.
-window.showRefInfo = function(evt) {
-  const el = _ensureTooltipEl();
-  el.innerHTML = `
+// Map des contenus statiques des tooltips d'aide. Référencés par clé via
+// showInfo(event, "key"). Permet de centraliser les textes et de garder les
+// handlers HTML propres (pas de HTML en attribut onmouseenter).
+const INFO_HTML = {
+  ref: `
     <div class="tt-title" style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:8px">Format de la référence</div>
-    <p style="margin:0 0 8px;font-size:12px;line-height:1.5">
-      <code style="font-family:monospace;background:var(--surface-2);padding:1px 6px;border-radius:3px">DEVIS-NUM-YYYY-MM-NNN</code>
-    </p>
+    <p style="margin:0 0 8px;font-size:12px;line-height:1.5"><code style="font-family:monospace;background:var(--surface-2);padding:1px 6px;border-radius:3px">DEVIS-NUM-YYYY-MM-NNN</code></p>
     <ul style="margin:0 0 8px;padding-left:18px;font-size:12px;line-height:1.6">
       <li><strong>DEVIS</strong> — préfixe (toujours)</li>
       <li><strong>NUM</strong> — n° du client (ex : 7 pour Clément Bretaud)</li>
       <li><strong>YYYY-MM</strong> — année et mois d'émission</li>
       <li><strong>NNN</strong> — séquence du mois, tous clients confondus (001, 002, 003…)</li>
     </ul>
-    <p style="margin:0;font-size:12px;line-height:1.5;color:var(--text-muted)">
-      Exemple : <code style="font-family:monospace">DEVIS-7-2026-05-003</code> = 3<sup>e</sup> devis de mai 2026 émis pour le client n°7. Si le client n'a pas de numéro, le segment NUM est omis.
-    </p>
-  `;
+    <p style="margin:0;font-size:12px;line-height:1.5;color:var(--text-muted)">Exemple : <code style="font-family:monospace">DEVIS-7-2026-05-003</code> = 3<sup>e</sup> devis de mai 2026 émis pour le client n°7. Si le client n'a pas de numéro, le segment NUM est omis.</p>
+  `,
+  contratHorsEtab: `
+    <div class="tt-title" style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:8px">Contrat signé hors établissement</div>
+    <p style="margin:0 0 8px;font-size:12px;line-height:1.5">Coche cette case si le devis est signé chez le client (mariage, séance à domicile, événement) ou à distance (visio, email) plutôt que dans ton local pro.</p>
+    <p style="margin:0 0 4px;font-size:12px;line-height:1.5;font-weight:600">Effet sur le devis :</p>
+    <ul style="margin:0 0 8px;padding-left:18px;font-size:12px;line-height:1.5">
+      <li><strong>Coché + clientèle Mixte ou Particulier</strong> : ajoute la mention obligatoire <em>Droit de rétractation 14 jours</em> (art. L221-18 C. conso.).</li>
+      <li><strong>Non coché</strong> : pas de mention rétractation sur le devis.</li>
+      <li><strong>Clientèle Entreprise</strong> : aucune mention quel que soit le réglage (rétractation non applicable B2B).</li>
+    </ul>
+    <p style="margin:0;font-size:12px;line-height:1.5;color:var(--text-muted)">Sanction si oubli sur un contrat à domicile : annulation possible du contrat par le client.</p>
+  `,
+  clienteleType: `
+    <div class="tt-title" style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:8px">Type de clientèle</div>
+    <p style="margin:0 0 8px;font-size:12px;line-height:1.5">Détermine les mentions légales obligatoires affichées sur le devis et la facture.</p>
+    <ul style="margin:0;padding-left:18px;font-size:12px;line-height:1.55">
+      <li><strong>Mixte</strong> — clientèle mixte particuliers + entreprises. Bloc <em>Médiation de la consommation</em> affiché (obligatoire L612-1 C. conso.). Pénalités B2B + indemnité 40 € présentes.</li>
+      <li><strong>Particulier</strong> (B2C) — bloc <em>Médiation de la consommation</em> affiché. Si "Contrat signé hors établissement" coché, mention <em>rétractation 14 j</em> ajoutée (art. L221-18 C. conso.).</li>
+      <li><strong>Entreprise</strong> (B2B) — pas de bloc Médiation, pas de rétractation. Pénalités de retard 3× taux légal + indemnité forfaitaire 40 € obligatoires (C. com. L441-10).</li>
+    </ul>
+  `
+};
+
+// ▼ showInfo — affiche un tooltip d'aide via le portail (position:fixed dans body).
+// Évite le clipping par overflow:hidden des sections accordéon.
+window.showInfo = function(evt, key) {
+  const html = INFO_HTML[key];
+  if (!html) return;
+  const el = _ensureTooltipEl();
+  el.innerHTML = html;
   el.style.display = "block";
   const target = evt.currentTarget || evt.target;
   const rect = target.getBoundingClientRect();
@@ -4614,9 +4639,12 @@ window.showRefInfo = function(evt) {
   el.style.left = left + "px";
   el.style.top = top + "px";
 };
-window.hideRefInfo = function() {
+window.hideInfo = function() {
   if (_paiementTooltipEl) _paiementTooltipEl.style.display = "none";
 };
+// Alias rétro-compat pour le tooltip Référence (avant le refacto)
+window.showRefInfo = function(evt) { window.showInfo(evt, "ref"); };
+window.hideRefInfo = function() { window.hideInfo(); };
 
 // ▼ rLigne — rendu d'une ligne (heures/matériel/cession)
 function rLigne(l) {
@@ -6822,17 +6850,8 @@ function rDevisSectionIdentification() {
           <input type="checkbox" ${d.contratHorsEtab?"checked":""} onchange="upd('mission.contratHorsEtab', this.checked)">
           Contrat signé hors établissement (mariage, séance chez le client…)
         </label>
-        <button type="button" class="tarif-info" tabindex="0" aria-label="Impact de cette case">i<div class="tarif-tooltip" role="tooltip">
-          <div class="tt-title">Contrat signé hors établissement</div>
-          <p style="margin:0 0 8px;font-size:12px;line-height:1.5">Coche cette case si le devis est signé chez le client (mariage, séance à domicile, événement) ou à distance (visio, email) plutôt que dans ton local pro.</p>
-          <p style="margin:0 0 4px;font-size:12px;line-height:1.5;font-weight:600">Effet sur le devis :</p>
-          <ul style="margin:0 0 8px;padding-left:18px;font-size:12px;line-height:1.5">
-            <li><strong>Coché + clientèle Mixte ou Particulier</strong> : ajoute la mention obligatoire <em>Droit de rétractation 14 jours</em> (art. L221-18 C. conso.).</li>
-            <li><strong>Non coché</strong> : pas de mention rétractation sur le devis.</li>
-            <li><strong>Clientèle Entreprise</strong> : aucune mention quel que soit le réglage (rétractation non applicable B2B).</li>
-          </ul>
-          <p style="margin:0;font-size:12px;line-height:1.5;color:var(--text-muted)">Sanction si oubli sur un contrat à domicile : annulation possible du contrat par le client.</p>
-        </div></button>
+        <button type="button" class="lg-info-icon" tabindex="0" aria-label="Impact de cette case"
+          onmouseenter="showInfo(event, 'contratHorsEtab')" onmouseleave="hideInfo()" onfocus="showInfo(event, 'contratHorsEtab')" onblur="hideInfo()">i</button>
       </div>
     </div>
     <h5>Client</h5>
@@ -6844,15 +6863,8 @@ function rDevisSectionIdentification() {
       <div class="field">
         <label style="font-size:11px;color:var(--text-muted);display:flex;align-items:center;gap:6px">
           Type de clientèle pour ce devis
-          <button type="button" class="tarif-info" tabindex="0" aria-label="Impact du type de clientèle">i<div class="tarif-tooltip" role="tooltip">
-            <div class="tt-title">Type de clientèle</div>
-            <p style="margin:0 0 8px;font-size:12px;line-height:1.5">Détermine les mentions légales obligatoires affichées sur le devis et la facture.</p>
-            <ul style="margin:0;padding-left:18px;font-size:12px;line-height:1.55">
-              <li><strong>Mixte</strong> — clientèle mixte particuliers + entreprises. Bloc <em>Médiation de la consommation</em> affiché (obligatoire L612-1 C. conso.). Pénalités B2B + indemnité 40 € présentes.</li>
-              <li><strong>Particulier</strong> (B2C) — bloc <em>Médiation de la consommation</em> affiché. Si "Contrat signé hors établissement" coché, mention <em>rétractation 14 j</em> ajoutée (art. L221-18 C. conso.).</li>
-              <li><strong>Entreprise</strong> (B2B) — pas de bloc Médiation, pas de rétractation. Pénalités de retard 3× taux légal + indemnité forfaitaire 40 € obligatoires (C. com. L441-10).</li>
-            </ul>
-          </div></button>
+          <button type="button" class="lg-info-icon" tabindex="0" aria-label="Impact du type de clientèle"
+            onmouseenter="showInfo(event, 'clienteleType')" onmouseleave="hideInfo()" onfocus="showInfo(event, 'clienteleType')" onblur="hideInfo()">i</button>
         </label>
         <div class="seg" style="max-width:380px">
           <button class="${eff==="mixte"?"on":""}" onclick="upd('mission.client.type', 'mixte');render()">Mixte</button>
