@@ -5499,6 +5499,7 @@ window.reviseDevisStart = function(devisId) {
     if (!ok) return;
   }
   let recovered = [];
+  const isLegacy = !dv.snapshotMission || dv.legacyReconstructed === true;
   if (dv.snapshotMission && !dv.legacyReconstructed) {
     // Cas standard : clone profond du snapshot structuré (devis archivé
     // proprement avec snapshotMission posé par suiviAdd / suiviUpdateSnapshot).
@@ -5512,8 +5513,22 @@ window.reviseDevisStart = function(devisId) {
     S.mission = r.mission;
     recovered = r.recovered;
   }
-  // Date d'émission = aujourd'hui (V2 est un nouveau document)
-  S.mission.dateEmission = new Date().toISOString().slice(0, 10);
+  // Dates :
+  //  - Standard : dateEmission = aujourd'hui (V2 = nouvelle proposition).
+  //  - Legacy : on garde les dates V1 (mise à jour de format, pas un nouveau
+  //    document commercial). Permet aux devis legacy "à relancer" de rester
+  //    dans cette catégorie après reformat (sinon dateMin = today → exclus
+  //    du filtre 7 jours de l'Accueil).
+  if (isLegacy) {
+    // dateEmission déjà = min(entries.date) via le helper.
+    // objectDate (utilisé par suiviAdd pour dater les entries V2) doit aussi
+    // refléter l'antiquité. On utilise la même date que dateEmission.
+    if (!S.mission.objectDate || S.mission.objectDate > S.mission.dateEmission) {
+      S.mission.objectDate = S.mission.dateEmission;
+    }
+  } else {
+    S.mission.dateEmission = new Date().toISOString().slice(0, 10);
+  }
   // Reset ref pour qu'elle soit recalculée à la prochaine séquence
   S.mission.ref = "";
   // Marqueur transient pour suiviAdd
