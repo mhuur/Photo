@@ -158,6 +158,10 @@ Règles que je suis à chaque session sur ce CLAUDE.md.
 - **Nettoyage** : je supprime sans hésiter ce qui est obsolète, redondant ou trivial. Court et juste > long et flou.
 - **Format** : phrases courtes, listes à puces, code en `backticks`. Pas de « il est important de noter que », « par ailleurs », « en effet ».
 - **Délégation** : si l'info est dans `SCHEMA.md`, `check.sh`, ou `gen-schema.py` → référencer le fichier, ne pas dupliquer.
+- **Code mort / obsolète — pas de big-bang** : l'utilisateur ne lit pas le code, donc ne peut pas valider ligne par ligne. Sans tests + avec `window.X` exposées via `onclick="..."` strings, le risque de régression silencieuse en supprimant du code "mort" est asymétrique vs le gain de fluidité. Donc :
+  - **Nettoyage à la marge** : à chaque fois que je touche une zone, je supprime autour le mort évident (helper sans caller, branche commentée, `setTimeout` mort) — tant que c'est local et certain.
+  - **Audit déclenché par symptôme** : si une zone précise me freine en grep/lecture (ex. renderer trop long), je le signale à l'utilisateur et on cible.
+  - **Pas de gros nettoyage spéculatif** sans douleur exprimée.
 
 ## Efficacité
 
