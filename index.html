@@ -3351,22 +3351,22 @@ function formatSiret(siret) {
 }
 
 // === Helpers compose mail ===
-// On utilise l'URL Gmail compose pour garantir l'ouverture dans Gmail web.
-// Conséquence : le compose s'ouvre en mode fullscreen (limitation Google
-// depuis 2018, le popup compose n'est plus accessible via URL externe).
-// Le format mailto: ouvrirait le handler par défaut, qui peut être Outlook
-// (Edge/Windows par défaut) — pas l'effet souhaité ici.
-// Si S.identite.email est renseigné, on pinne le compte expéditeur via
-// /mail/u/<email>/ — Gmail bascule sur ce compte si l'utilisateur y est
-// connecté (sinon il prompt la connexion). Évite l'envoi depuis le mauvais
-// compte si l'utilisateur a plusieurs sessions Google actives.
+// Flow : AccountChooser Google → sélection du compte expéditeur → redirection
+// vers Gmail compose (fullscreen, limitation Google depuis 2018) avec le
+// brouillon pré-rempli. AccountChooser garantit que l'utilisateur choisit
+// explicitement le bon compte (utile s'il est connecté à plusieurs sessions
+// Google) — il prompt la connexion si aucun compte n'est actif.
+// Si S.identite.email est renseigné, on le passe en hint pour pré-sélectionner
+// (mais c'est l'utilisateur qui valide).
 function buildGmailUrl(to, subject, body) {
-  const fromEmail = (S.identite && S.identite.email ? String(S.identite.email) : "").trim();
-  const accountPath = fromEmail ? `/u/${encodeURIComponent(fromEmail)}/` : "/";
-  return "https://mail.google.com/mail" + accountPath + "?view=cm&fs=1"
+  const composeUrl = "https://mail.google.com/mail/?view=cm&fs=1"
     + (to      ? "&to=" + encodeURIComponent(to) : "")
     + (subject ? "&su=" + encodeURIComponent(subject) : "")
     + (body    ? "&body=" + encodeURIComponent(body) : "");
+  const fromEmail = (S.identite && S.identite.email ? String(S.identite.email) : "").trim();
+  return "https://accounts.google.com/AccountChooser?continue="
+    + encodeURIComponent(composeUrl)
+    + (fromEmail ? "&Email=" + encodeURIComponent(fromEmail) : "");
 }
 
 function openGmailCompose(to, subject, body) {
@@ -9679,8 +9679,10 @@ function clientsBulkEmail() {
     if (!confirm(msg)) return;
   }
   const fromEmail = (S.identite && S.identite.email ? String(S.identite.email) : "").trim();
-  const accountPath = fromEmail ? `/u/${encodeURIComponent(fromEmail)}/` : "/";
-  const url = "https://mail.google.com/mail" + accountPath + "?view=cm&fs=1&bcc=" + encodeURIComponent(emails.join(","));
+  const composeUrl = "https://mail.google.com/mail/?view=cm&fs=1&bcc=" + encodeURIComponent(emails.join(","));
+  const url = "https://accounts.google.com/AccountChooser?continue="
+    + encodeURIComponent(composeUrl)
+    + (fromEmail ? "&Email=" + encodeURIComponent(fromEmail) : "");
   window.open(url, "_blank", "noopener");
   clientsExitSelectMode(); // sortir du mode après envoi réussi
 }
