@@ -2163,7 +2163,19 @@ const DEFAULT_S = {
   investissements: { entries: [] },
   tarifs: { catalog: JSON.parse(JSON.stringify(DEFAULT_CATALOG)), heuresAnnuelles: "900", facteurSecurite: "0" },
   bugs: { items: [] },
-  prefs: { relanceJours: 7 }
+  prefs: {
+    relanceJours: 7,
+    gmailTemplates: {
+      devis: {
+        subject: "Relance — Devis {ref}",
+        body: "Bonjour {contact},\n\nJe me permets de revenir vers vous concernant le devis {ref} envoyé le {date}.\n\nAvez-vous eu l'occasion de l'examiner ?\n\nReste à votre disposition pour toute question.\n\nCordialement,\n{name}"
+      },
+      paiement: {
+        subject: "Relance paiement — Devis {ref}",
+        body: "Bonjour {contact},\n\nJe me permets de revenir vers vous concernant le devis {ref} (émis le {date}), dont le règlement reste en attente.\n\nPourriez-vous me confirmer la date prévue de votre paiement ?\n\nReste à votre disposition pour toute question.\n\nCordialement,\n{name}"
+      }
+    }
+  }
 };
 
 // ▼ migrateClientNums — passe de cohérence sur la numérotation des clients :
@@ -2242,6 +2254,20 @@ if (!S.bugs || (!Array.isArray(S.bugs.items) && !Array.isArray(S.bugs.entries) &
 if (!Array.isArray(S.bugs.items)) S.bugs.items = [];
 if (!S.prefs || typeof S.prefs !== "object") S.prefs = { ...DEFAULT_S.prefs };
 if (typeof S.prefs.relanceJours === "undefined") S.prefs.relanceJours = DEFAULT_S.prefs.relanceJours;
+// Migration : templates Gmail. On crée la structure si absente, sans écraser
+// les éventuels overrides utilisateur (merge profond simple).
+if (!S.prefs.gmailTemplates || typeof S.prefs.gmailTemplates !== "object") {
+  S.prefs.gmailTemplates = JSON.parse(JSON.stringify(DEFAULT_S.prefs.gmailTemplates));
+} else {
+  for (const k of ["devis", "paiement"]) {
+    if (!S.prefs.gmailTemplates[k] || typeof S.prefs.gmailTemplates[k] !== "object") {
+      S.prefs.gmailTemplates[k] = { ...DEFAULT_S.prefs.gmailTemplates[k] };
+    } else {
+      if (typeof S.prefs.gmailTemplates[k].subject !== "string") S.prefs.gmailTemplates[k].subject = DEFAULT_S.prefs.gmailTemplates[k].subject;
+      if (typeof S.prefs.gmailTemplates[k].body !== "string") S.prefs.gmailTemplates[k].body = DEFAULT_S.prefs.gmailTemplates[k].body;
+    }
+  }
+}
 
 // Migrate identite: ensure structured emitter info exists (v1.40+)
 if (!S.identite || typeof S.identite !== "object") {
@@ -3257,8 +3283,19 @@ function clientPrimaryContactName(client) {
   return "";
 }
 
+// Substitue les placeholders d'un template par les valeurs réelles.
+// Placeholders supportés : {contact} {ref} {date} {client} {name}
+function substituteTemplate(tpl, vars) {
+  let out = String(tpl || "");
+  for (const k of Object.keys(vars)) {
+    out = out.replace(new RegExp("\\{" + k + "\\}", "g"), vars[k] || "");
+  }
+  return out;
+}
+
 // Ouvre Gmail avec un template de relance pré-rempli pour un devis donné.
 // kind = "devis" (pas de réponse) | "paiement" (en attente d'encaissement)
+// Templates lus depuis S.prefs.gmailTemplates (éditables dans Profil).
 function gmailRelanceForDevis(devisId, kind) {
   const dv = S.suivi && S.suivi.devis && S.suivi.devis[devisId];
   if (!dv) { alert("Devis introuvable."); return; }
@@ -3272,22 +3309,12 @@ function gmailRelanceForDevis(devisId, kind) {
   const id = S.identite || {};
   const myName = ((id.prenom || "") + " " + (id.nom || "")).trim() || (id.denomination || "");
 
-  let subject, body;
-  if (kind === "paiement") {
-    subject = `Relance paiement — Devis ${ref}`;
-    body = `Bonjour${firstName ? " " + firstName : ""},\n\n`
-         + `Je me permets de revenir vers vous concernant le devis ${ref}${dateFr ? " (émis le " + dateFr + ")" : ""}, dont le règlement reste en attente.\n\n`
-         + `Pourriez-vous me confirmer la date prévue de votre paiement ?\n\n`
-         + `Reste à votre disposition pour toute question.\n\n`
-         + `Cordialement,\n${myName}`;
-  } else {
-    subject = `Relance — Devis ${ref}`;
-    body = `Bonjour${firstName ? " " + firstName : ""},\n\n`
-         + `Je me permets de revenir vers vous concernant le devis ${ref}${dateFr ? " envoyé le " + dateFr : ""}.\n\n`
-         + `Avez-vous eu l'occasion de l'examiner ?\n\n`
-         + `Reste à votre disposition pour toute question.\n\n`
-         + `Cordialement,\n${myName}`;
-  }
+  const templates = (S.prefs && S.prefs.gmailTemplates) || DEFAULT_S.prefs.gmailTemplates;
+  const tpl = templates[kind] || templates.devis;
+  const vars = { contact: firstName, ref, date: dateFr, client: (client && client.name) || "", name: myName };
+  const subject = substituteTemplate(tpl.subject, vars);
+  const body = substituteTemplate(tpl.body, vars);
+
   if (!to) {
     if (!confirm("Aucun email de contact trouvé pour ce client. Ouvrir Gmail sans destinataire ?")) return;
   }
@@ -10536,6 +10563,8 @@ function rPF() {
       </div>
     </div>
 
+    ${rGmailTemplatesSection()}
+
     ${workspaceState.role === "owner" ? rShareSection() : ""}
 
     ${rBackupSection()}
@@ -10659,6 +10688,52 @@ async function clientsRenumberAll() {
   );
 }
 window.clientsRenumberAll = clientsRenumberAll;
+
+// ▼ rGmailTemplatesSection — édition des modèles de relance Gmail
+// Les templates sont stockés dans S.prefs.gmailTemplates et partagés avec les
+// membres du workspace. Modifiable par tous (owner + membres).
+function rGmailTemplatesSection() {
+  const t = (S.prefs && S.prefs.gmailTemplates) || DEFAULT_S.prefs.gmailTemplates;
+  const placeholders = `<code>{contact}</code> prénom du contact, <code>{ref}</code> réf devis, <code>{date}</code> date d'émission, <code>{client}</code> nom client, <code>{name}</code> ton nom`;
+  return `
+    <h3 style="margin-top:32px">Modèles de relance Gmail</h3>
+    <div class="hint" style="max-width:780px;margin-bottom:14px">
+      Ces modèles s'utilisent quand tu cliques sur « ✉ Relance devis » ou « ✉ Relance paiement » (Suivi, Accueil). Placeholders disponibles : ${placeholders}.
+    </div>
+
+    <h4 style="margin:18px 0 10px;font-size:13px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;font-weight:600">Relance devis (sans réponse)</h4>
+    <div class="row" style="max-width:780px;flex-direction:column;gap:8px">
+      <div class="field" style="max-width:none"><label>Sujet</label>
+        <input type="text" value="${esc(t.devis.subject)}" oninput="upd('prefs.gmailTemplates.devis.subject', this.value)">
+      </div>
+      <div class="field" style="max-width:none"><label>Corps du message</label>
+        <textarea rows="9" oninput="upd('prefs.gmailTemplates.devis.body', this.value)" style="font-family:inherit;font-size:13px;line-height:1.5;resize:vertical">${esc(t.devis.body)}</textarea>
+      </div>
+    </div>
+
+    <h4 style="margin:24px 0 10px;font-size:13px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;font-weight:600">Relance paiement (en attente)</h4>
+    <div class="row" style="max-width:780px;flex-direction:column;gap:8px">
+      <div class="field" style="max-width:none"><label>Sujet</label>
+        <input type="text" value="${esc(t.paiement.subject)}" oninput="upd('prefs.gmailTemplates.paiement.subject', this.value)">
+      </div>
+      <div class="field" style="max-width:none"><label>Corps du message</label>
+        <textarea rows="9" oninput="upd('prefs.gmailTemplates.paiement.body', this.value)" style="font-family:inherit;font-size:13px;line-height:1.5;resize:vertical">${esc(t.paiement.body)}</textarea>
+      </div>
+    </div>
+
+    <div style="margin-top:14px;max-width:780px">
+      <button class="btn ghost" onclick="gmailTemplatesReset()" style="font-size:13px">↺ Restaurer les modèles par défaut</button>
+    </div>
+  `;
+}
+
+function gmailTemplatesReset() {
+  if (!confirm("Restaurer les 2 modèles par défaut (Relance devis + Relance paiement) ? Les versions actuelles seront perdues.")) return;
+  S.prefs.gmailTemplates = JSON.parse(JSON.stringify(DEFAULT_S.prefs.gmailTemplates));
+  save();
+  render();
+}
+window.gmailTemplatesReset = gmailTemplatesReset;
 
 // ▼ rBackupSection — export/import JSON complet du workspace
 // Export accessible à tous (chacun peut faire sa copie). Import owner only

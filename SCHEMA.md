@@ -124,3 +124,10 @@ Source : `index.html` (bloc `const DEFAULT_S = { ... };`).
   - **items** _(array (empty))_
 - **prefs** _(object)_
   - **relanceJours**: number _(default `7`)_
+  - **gmailTemplates** _(object)_
+    - **devis** _(object)_
+      - **subject**: string _(default `"Relance — Devis {ref}"`)_
+      - **body**: string _(default `"Bonjour {contact},\n\nJe me permets de revenir vers vous…`)_
+    - **paiement** _(object)_
+      - **subject**: string _(default `"Relance paiement — Devis {ref}"`)_
+      - **body**: string _(default `"Bonjour {contact},\n\nJe me permets de revenir vers vous…`)_
