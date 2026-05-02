@@ -6760,7 +6760,20 @@ function rDevisSectionIdentification() {
   const eff = (d.client.type || (S.identite || {}).clienteleType || "mixte");
   return `
     <div class="row">
-      <div class="field"><label>Référence (auto)</label>
+      <div class="field"><label style="display:inline-flex;align-items:center;gap:6px">
+        Référence (auto)
+        <button type="button" class="tarif-info" tabindex="0" aria-label="Format de la référence du devis">i<div class="tarif-tooltip" role="tooltip">
+          <div class="tt-title">Format de la référence</div>
+          <p style="margin:0 0 8px;font-size:12px;line-height:1.5"><code style="font-family:monospace;background:var(--surface-2);padding:1px 6px;border-radius:3px">DEVIS-NUM-YYYY-MM-NNN</code></p>
+          <ul style="margin:0 0 8px;padding-left:18px;font-size:12px;line-height:1.6">
+            <li><strong>DEVIS</strong> — préfixe (toujours)</li>
+            <li><strong>NUM</strong> — n° du client (ex : 7 pour Clément Bretaud)</li>
+            <li><strong>YYYY-MM</strong> — année et mois d'émission</li>
+            <li><strong>NNN</strong> — séquence du mois, tous clients confondus (001, 002, 003…)</li>
+          </ul>
+          <p style="margin:0;font-size:12px;line-height:1.5;color:var(--text-muted)">Exemple : <code style="font-family:monospace">DEVIS-7-2026-05-003</code> = 3<sup>e</sup> devis de mai 2026 émis pour le client n°7. Si le client n'a pas de numéro, le segment NUM est omis.</p>
+        </div></button>
+      </label>
         <input type="text" value="${esc(d.ref || "")}" disabled style="opacity:.7;font-variant-numeric:tabular-nums">
       </div>
       <div class="field narrow"><label>Date d'émission</label>
