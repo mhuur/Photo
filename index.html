@@ -193,6 +193,8 @@
   .suv-last-relance:hover{background:rgba(239,68,68,.10);border-color:rgba(239,68,68,.35);color:#dc2626}
   .suv-last-relance-undo{font-size:10px;opacity:.6}
   .suv-last-relance:hover .suv-last-relance-undo{opacity:1}
+  .suv-mark-relance{padding:4px 10px!important;min-width:32px;font-weight:600;color:var(--success)}
+  .suv-mark-relance:hover{background:rgba(34,197,94,.12)!important;border-color:rgba(34,197,94,.35)!important}
   /* Indicateur révision (↻ / ↺) à côté de la ref dans la ligne tableau */
   .suv-revision-ico{display:inline-block;margin-left:6px;font-size:13px;color:var(--accent);cursor:help;font-weight:600}
   /* Bloc détail révision dans le volet expanded (cf Q4 option C) */
@@ -9015,8 +9017,8 @@ function suiviExpandedPanelHtml(g) {
         // Sinon : bouton « ✓ Marquer comme relancé » à côté du Gmail.
         const stampHtml = lastRel
           ? `<span class="suv-last-relance" title="Cliquer pour annuler la relance et faire réapparaître le devis dans « À relancer »" onclick="${stop}relanceUndo('${g.devisId}')">↻ Relancé le ${esc(dateFR(lastRel.slice(0,10)))} <span class="suv-last-relance-undo">✕</span></span>`
-          : `<button class="btn ghost" title="Confirme que tu as envoyé la relance. Reset le compteur 7j de l'Accueil." onclick="${stop}relanceMark('${g.devisId}')">✓ Marquer comme relancé</button>`;
-        return `<button class="btn ghost suv-gmail-btn" onclick="${stop}gmailRelanceForDevis('${g.devisId}','${kind}')" title="Ouvrir Gmail avec un template de relance pré-rempli. Ne marque PAS le devis comme relancé — utilise le bouton ✓ après envoi effectif.">✉ ${esc(lbl)}</button>${stampHtml}`;
+          : `<button class="btn ghost suv-mark-relance" title="Marquer comme relancé (à cliquer après envoi effectif du mail). Reset le compteur 7j de l'Accueil." onclick="${stop}relanceMark('${g.devisId}')">✓</button>`;
+        return `<button class="btn ghost suv-gmail-btn" onclick="${stop}gmailRelanceForDevis('${g.devisId}','${kind}')" title="Ouvrir Gmail avec un template de relance pré-rempli. Ne marque PAS le devis comme relancé — utilise le bouton ✓ à droite après envoi effectif.">✉ ${esc(lbl)}</button>${stampHtml}`;
       })()}
       <button class="btn ghost" onclick="${stop}viewDevisOpen('${g.devisId}')">🖨 Devis</button>
       ${(() => {
@@ -11093,9 +11095,12 @@ function rAC() {
     return { ...g, total, ref, client: lead.client || "", dateMin: dates[0] || "", dateMax: dates[dates.length - 1] || "", lastRelance: dv.lastRelance || "" };
   });
 
-  // « À relancer » : compteur basé sur max(dateMin, lastRelance). Cliquer
-  // l'icône Gmail pose lastRelance=now (cf. gmailRelanceForDevis), donc le
-  // devis disparaît temporairement et reprend après seuil jours.
+  // « À relancer » : compteur basé sur max(dateMin, lastRelance). Le bouton
+  // « ✓ Marquer comme relancé » dans le panneau pose lastRelance=now, ce qui
+  // ferait normalement disparaître le devis. Pour éviter ce flash, le devis
+  // dont le panneau est ouvert (sticky = accueilExpandedDevis) est exempté
+  // du filtre — le filtre se réapplique quand l'utilisateur referme le volet.
+  const sticky = accueilExpandedDevis;
   const aRelancer = groups
     .filter(g => g.statutPrin === "envoye")
     .map(g => {
@@ -11104,11 +11109,11 @@ function rAC() {
       const dRef = Math.max(dEmi, dRel);
       return { ...g, late: dRef > 0 && (ms - dRef) > seuilMs };
     })
-    .filter(g => g.late)
+    .filter(g => g.late || g.devisId === sticky)
     .sort((a, b) => (a.dateMin || "").localeCompare(b.dateMin || ""));
 
   const aEncaisser = groups
-    .filter(g => g.lignes.some(e => entryStatut(e) === "attente"))
+    .filter(g => g.lignes.some(e => entryStatut(e) === "attente") || g.devisId === sticky)
     .map(g => ({
       ...g,
       restant: g.lignes.filter(e => entryStatut(e) === "attente").reduce((s, e) => s + num(e.montant), 0)
