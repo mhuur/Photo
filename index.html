@@ -187,11 +187,47 @@
   table.hist tr.suv-row.clickable.on td{background:var(--primary-soft)}
   table.hist tr.suv-expanded-row td{background:var(--surface-2);padding:0;border-bottom:1px solid var(--border)}
   .suv-expanded-panel{padding:14px 18px 16px;display:flex;flex-direction:column;gap:10px}
-  .suv-expanded-actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding-bottom:8px;border-bottom:1px solid var(--border-soft)}
-  .suv-expanded-print{display:flex;gap:6px;flex-wrap:wrap;align-items:center;padding-top:8px;border-top:1px solid var(--border-soft)}
-  .suv-last-relance{display:inline-flex;align-items:center;gap:4px;font-size:11px;color:var(--text-dim);background:rgba(34,197,94,.10);border:1px solid rgba(34,197,94,.25);border-radius:6px;padding:3px 8px;cursor:pointer;transition:all .15s}
-  .suv-last-relance:hover{background:rgba(239,68,68,.10);border-color:rgba(239,68,68,.35);color:#dc2626}
-  .suv-last-relance-undo{font-size:10px;opacity:.6}
+  /* === Panneau Suivi déplié — actions uniformes (32px, style moderne) === */
+  .suv-expanded-actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding-bottom:10px;border-bottom:1px solid var(--border-soft)}
+  .suv-expanded-print{display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding-top:10px;border-top:1px solid var(--border-soft)}
+
+  /* Tous les boutons d'action partagent la même base : 32px, padding 0 14, font 12 */
+  .suv-expanded-actions > .btn,
+  .suv-expanded-actions > .btn-act,
+  .suv-expanded-print > .btn,
+  .suv-expanded-print > .suv-last-relance{
+    height:32px;padding:0 14px;font-size:12px;font-weight:600;border-radius:7px;
+    display:inline-flex;align-items:center;gap:6px;line-height:1;white-space:nowrap;
+    border:1px solid transparent;cursor:pointer;font-family:inherit;
+    transition:background .12s,color .12s,border-color .12s;
+    box-shadow:none
+  }
+  .suv-expanded-actions > .btn:hover,
+  .suv-expanded-actions > .btn-act:hover,
+  .suv-expanded-print > .btn:hover{box-shadow:none}
+
+  /* Ghost — par défaut neutre, hover primary doux */
+  .suv-expanded-print > .btn.ghost,
+  .suv-expanded-actions > .btn.ghost{background:var(--surface);color:var(--text-muted);border-color:var(--border-light)}
+  .suv-expanded-print > .btn.ghost:hover,
+  .suv-expanded-actions > .btn.ghost:hover{background:var(--primary-soft);color:var(--primary);border-color:var(--primary)}
+
+  /* Disabled — opacité réduite, pas de hover */
+  .suv-expanded-print > .btn[disabled],
+  .suv-expanded-actions > .btn[disabled]{opacity:.45;cursor:not-allowed;pointer-events:none}
+
+  /* Accepté (vert) / Refusé (rouge) — ghost coloré, hover plein */
+  .suv-expanded-actions > .btn-act{background:var(--surface);font-weight:600}
+  .suv-expanded-actions > .btn-act.act-vert{color:var(--success);border-color:var(--success)}
+  .suv-expanded-actions > .btn-act.act-vert:hover{background:var(--success);color:#fff}
+  .suv-expanded-actions > .btn-act.act-rouge{color:var(--danger);border-color:var(--danger)}
+  .suv-expanded-actions > .btn-act.act-rouge:hover{background:var(--danger);color:#fff}
+  .suv-expanded-actions > .btn-act .ico{font-size:13px;font-weight:700}
+
+  /* Tag « Relancé le DD/MM/YYYY ✕ » — même taille que les boutons */
+  .suv-last-relance{background:var(--success-soft);color:var(--success);border-color:rgba(34,197,94,.35)}
+  .suv-last-relance:hover{background:var(--danger-soft);color:var(--danger);border-color:var(--danger)}
+  .suv-last-relance-undo{font-size:11px;opacity:.7;margin-left:2px}
   .suv-last-relance:hover .suv-last-relance-undo{opacity:1}
   .suv-mark-relance{padding:4px 10px!important;min-width:32px;font-weight:600;color:var(--success)}
   .suv-mark-relance:hover{background:rgba(34,197,94,.12)!important;border-color:rgba(34,197,94,.35)!important}
