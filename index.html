@@ -5563,6 +5563,10 @@ function totals() {
   // Override de tarif horaire posé par la reconstruction legacy (Réviser sur
   // un devis sans catalogue match). Effacé dès que l'utilisateur sélectionne
   // une prestation dans le dropdown (cf. pickObject).
+  // /!\ L'override représente un tarif ABSOLU (le montant V1 réellement
+  // encaissé). Il ne doit pas être ajusté par le toggle declare/blackMode :
+  // changer le statut fiscal d'un devis legacy ne doit pas modifier le total
+  // affiché. C'est juste une étiquette comptable.
   const _override = num(d.tarifHOverride);
   const _baseTotal = _override > 0 ? _override : (cat ? num(cat.p) : 0);
   const _isDecTot = d.declare !== false;
@@ -5572,11 +5576,15 @@ function totals() {
   //   - Au black "taux fixe" : même prix que déclaré (photographe garde l'URSSAF)
   //   - Au black "taux réduit" : prix réduit (= net déclaré, le client économise l'URSSAF)
   const _blackMode = d.blackMode || "reduit";
-  const tarifH = _isDecTot
-    ? _baseTotal
-    : (_baseTotal > 0
-        ? (_blackMode === "fixe" ? _baseTotal : r2(_baseTotal * _urssafFactorTot))
-        : 0);
+  // Si tarifHOverride est posé (reconstitution legacy), il est ABSOLU :
+  // on bypasse l'ajustement declare/blackMode pour ne pas altérer le total.
+  const tarifH = _override > 0
+    ? _override
+    : (_isDecTot
+        ? _baseTotal
+        : (_baseTotal > 0
+            ? (_blackMode === "fixe" ? _baseTotal : r2(_baseTotal * _urssafFactorTot))
+            : 0));
   const HOURS_PER_DAY = 8;
   // Marge rates: au black ⇒ no compensation (everything raw).
   // URSSAF rate read from the unique source of truth (mission.urssafPct).
