@@ -2964,7 +2964,7 @@ function upd(path, val) {
     refreshRefDisplay();
   }
   save();
-  if (path.startsWith("mission.prep") || path.startsWith("mission.prod") || path.startsWith("mission.postprod") || path.startsWith("mission.deplacement") || path.startsWith("mission.autres") || path.startsWith("mission.lignes") || path === "mission.remisePct" || path === "mission.object" || path === "mission.objectText" || path === "mission.paiement.margeAvance" || path === "mission.urssafPct" || path === "mission.blackMode" || path === "mission.dureeValidite") {
+  if (path.startsWith("mission.prep") || path.startsWith("mission.prod") || path.startsWith("mission.postprod") || path.startsWith("mission.deplacement") || path.startsWith("mission.autres") || path.startsWith("mission.lignes") || path === "mission.remisePct" || path === "mission.object" || path === "mission.objectText" || path === "mission.paiement.margeAvance" || path === "mission.urssafPct" || path === "mission.blackMode" || path === "mission.dureeValidite" || path === "mission.tarifHOverride") {
     refreshTotals();
   }
 }
@@ -2994,13 +2994,9 @@ function refreshRefDisplay() {
 
 function pickObject(k) {
   S.mission.object = k;
-  // En mode Maj Trame (legacy), on conserve tarifHOverride : l'utilisateur
-  // peut sélectionner une prestation catalogue pour le LIBELLÉ uniquement,
-  // sans que le tarif catalogue prenne le relais (on veut préserver le
-  // montant total V1). Hors Maj Trame, on clear l'override comme avant.
-  if (!S.mission.majTrameDevisId && S.mission.tarifHOverride) {
-    S.mission.tarifHOverride = "";
-  }
+  // tarifHOverride n'est PAS auto-effacé : il est désormais piloté par un
+  // input dédié dans la section Prestations. Si l'utilisateur veut revenir
+  // au tarif catalogue, il vide le champ manuellement.
   const item = (S.tarifs.catalog || DEFAULT_CATALOG).find(c => c.k === k);
   if (item && item.p) S.mission.prod.rate = String(item.p);
   save();
@@ -4965,6 +4961,17 @@ window.hideRemiseInfo = function() {
 // showInfo(event, "key"). Permet de centraliser les textes et de garder les
 // handlers HTML propres (pas de HTML en attribut onmouseenter).
 const INFO_HTML = {
+  tarifHOverride: `
+    <div class="tt-title" style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:8px">Tarif horaire — override manuel</div>
+    <p style="margin:0 0 8px;font-size:12px;line-height:1.5">Champ optionnel pour forcer un tarif horaire <strong>différent du catalogue</strong> sur ce devis uniquement.</p>
+    <p style="margin:0 0 4px;font-size:12px;line-height:1.5;font-weight:600">Quand l'utiliser :</p>
+    <ul style="margin:0 0 8px;padding-left:18px;font-size:12px;line-height:1.6">
+      <li><strong>Maj Trame</strong> sur un devis legacy : pré-rempli avec le tarif synthétique (montant V1 ÷ heures) pour préserver le total exact.</li>
+      <li><strong>Réviser</strong> : permet d'appliquer un tarif client négocié hors catalogue, sans toucher à ton catalogue global.</li>
+      <li><strong>Devis ad hoc</strong> : tarif spécial une fois (formation, ami, etc.).</li>
+    </ul>
+    <p style="margin:0;font-size:12px;line-height:1.5;color:var(--text-muted)">Vide = tarif catalogue de la prestation sélectionnée. Modifie le catalogue global via l'onglet Tarifs si tu veux changer le tarif par défaut.</p>
+  `,
   ref: `
     <div class="tt-title" style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:8px">Format de la référence</div>
     <p style="margin:0 0 8px;font-size:12px;line-height:1.5"><code style="font-family:monospace;background:var(--surface-2);padding:1px 6px;border-radius:3px">DEVIS-NUM-YYYY-MM-NNN</code></p>
@@ -5601,12 +5608,8 @@ window.reviseDevisStart = function(devisId) {
   if (dv.snapshotMission && !dv.legacyReconstructed) {
     // Cas standard : clone profond du snapshot structuré (devis archivé
     // proprement avec snapshotMission posé par suiviAdd / suiviUpdateSnapshot).
+    // tarifHOverride conservé tel quel (champ utilisateur explicite).
     S.mission = JSON.parse(JSON.stringify(dv.snapshotMission));
-    // Réviser = nouvelle proposition commerciale → on part d'une base propre
-    // sans héritage d'un éventuel tarifHOverride (résidu de Maj Trame passée).
-    // Le tarif catalogue prend ainsi le relais dès que l'utilisateur touche
-    // à la prestation, sans devoir cliquer le dropdown deux fois.
-    S.mission.tarifHOverride = "";
   } else {
     // Cas legacy : reconstruction best-effort via le helper partagé en
     // mode "edit" (ligne heures, plus naturel pour la révision).
@@ -7791,6 +7794,10 @@ function rDevisSectionPrestations() {
   const materiel = (d.lignes || []).filter(l => l.type === "materiel");
   const cessions = (d.lignes || []).filter(l => l.type === "cession");
 
+  // Tarif horaire courant (pour placeholder de l'override).
+  const _catObj = (S.tarifs.catalog || DEFAULT_CATALOG).find(c => c.k === d.object);
+  const _catTarif = _catObj ? num(_catObj.p) : 0;
+  const overrideVal = d.tarifHOverride || "";
   const objectInput = `<div class="row">
     <div class="field lg"><label>Type de prestation (catalogue)</label>
       <select onchange="pickObject(this.value)">
@@ -7803,7 +7810,21 @@ function rDevisSectionPrestations() {
       <input type="text" placeholder="Ex : Shooting éditorial Collection AW26" value="${esc(d.objectText || "")}" oninput="upd('mission.objectText', this.value)">
     </div>
   </div>
-  <div class="devis-catalog-hint">Tarif horaire issu du catalogue. <a href="#" onclick="setTab('tarifs');return false">Modifier le catalogue →</a></div>`;
+  <div class="row" style="margin-top:8px">
+    <div class="field" style="max-width:240px">
+      <label style="display:flex;align-items:center;gap:6px">
+        Tarif horaire (override)
+        <button type="button" class="lg-info-icon" tabindex="0" aria-label="Quand utiliser l'override"
+          onmouseenter="showInfo(event, 'tarifHOverride')" onmouseleave="hideInfo()" onfocus="showInfo(event, 'tarifHOverride')" onblur="hideInfo()">i</button>
+      </label>
+      <input type="number" step="0.01" min="0" inputmode="decimal"
+        placeholder="${_catTarif > 0 ? _catTarif.toFixed(2).replace('.',',') + ' (catalogue)' : 'tarif catalogue'}"
+        value="${esc(overrideVal)}"
+        oninput="upd('mission.tarifHOverride', this.value)">
+      <div class="hint" style="font-size:11px;margin-top:4px">${overrideVal ? `Tarif manuel actif (${num(overrideVal).toFixed(2).replace('.',',')} €/h). Vide = tarif catalogue.` : "Vide = tarif catalogue. Renseigne pour forcer un tarif manuel."}</div>
+    </div>
+  </div>
+  <div class="devis-catalog-hint">Tarif horaire issu du catalogue par défaut. <a href="#" onclick="setTab('tarifs');return false">Modifier le catalogue →</a></div>`;
 
   // Statut Déclaré / Au black (la décomposition tarif horaire est dispo dans
   // l'encadré « Cacher taux h » du Déplacement, plus pertinent contextuellement).
@@ -8485,13 +8506,12 @@ function suiviAdd() {
   // Snapshot mission structuré : permet la re-édition (Réviser) en chargeant
   // l'éditable original. snapshotHtml seul ne suffit pas car c'est du HTML rendu.
   const snapshotMission = JSON.parse(JSON.stringify(m));
-  // On retire le marqueur transient revisesDevisId du clone (il ne fait pas
-  // partie du contenu du devis, c'est juste un drapeau de flow).
+  // On retire les marqueurs transient (drapeaux de flow, pas de contenu).
   delete snapshotMission.revisesDevisId;
   delete snapshotMission.majTrameDevisId;
-  // Pas de leak de tarifHOverride : un nouveau devis archivé doit utiliser
-  // le tarif catalogue. L'override est purement transient (Maj Trame).
-  delete snapshotMission.tarifHOverride;
+  // tarifHOverride : conservé. C'est un champ piloté par l'utilisateur via
+  // l'input dédié dans la section Prestations. S'il est posé, il reflète une
+  // décision manuelle qu'on doit préserver pour les futures révisions.
   S.suivi.devis[devisId] = {
     ref: m.ref || "",
     snapshotHtml,
