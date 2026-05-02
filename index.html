@@ -2610,12 +2610,20 @@ async function loadFromCloud(ownerUid) {
   render();
 }
 
-// ▼ signInWithGoogle — ouvre popup d'auth Google
+// ▼ signInWithGoogle — auth Google. Popup sur desktop, redirect sur mobile.
+// Google bloque le popup OAuth dans beaucoup de contextes mobiles (WebView,
+// Safari avec ITP strict, etc.). Le redirect contourne ces restrictions.
 async function signInWithGoogle() {
   try {
     const provider = new firebase.auth.GoogleAuthProvider();
-    await auth.signInWithPopup(provider);
-    // onAuthStateChanged prend le relais ensuite
+    const isMobile = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent || "");
+    if (isMobile) {
+      // Redirect : la page se recharge après auth, getRedirectResult() au boot
+      // récupère le résultat. onAuthStateChanged prend ensuite le relais.
+      await auth.signInWithRedirect(provider);
+    } else {
+      await auth.signInWithPopup(provider);
+    }
   } catch (err) {
     console.error("signInWithGoogle", err);
     alert("Connexion impossible : " + (err.message || err.code));
@@ -11167,6 +11175,16 @@ window.addEventListener('resize', () => {
 
 auth.onAuthStateChanged(async u => {
   await initWorkspace(u);
+});
+
+// Récupère le résultat d'un éventuel signInWithRedirect précédent (mobile).
+// onAuthStateChanged prendra ensuite le relais avec l'utilisateur connecté.
+// On capture les erreurs ici pour les remonter à l'utilisateur.
+auth.getRedirectResult().catch(err => {
+  console.error("getRedirectResult", err);
+  if (err && err.code && err.code !== "auth/null-user") {
+    alert("Erreur de connexion Google : " + (err.message || err.code));
+  }
 });
 
 try {
