@@ -701,21 +701,41 @@
   .fb-check.anim-toggle{animation:bugCheckPulse .4s ease}
   @keyframes bugCheckPulse{0%{transform:scale(1)}40%{transform:scale(1.25) rotate(8deg)}100%{transform:scale(1) rotate(0)}}
 
-  /* === Bug report formulaire détaillé === */
-  .bug-form{max-width:720px;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:14px 16px;margin-bottom:16px;display:flex;flex-direction:column;gap:12px;position:sticky;top:8px;z-index:5;box-shadow:0 4px 16px rgba(0,0,0,.18)}
-  .bug-form-row{display:flex;gap:12px;flex-wrap:wrap}
-  .bug-form-field{display:flex;flex-direction:column;gap:5px;flex:1;min-width:160px}
-  .bug-form-field-wide{flex:2}
-  .bug-form-field label{font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.04em}
-  .bug-form-field input,.bug-form-field select,.bug-form-field textarea{padding:8px 10px;border:1px solid var(--border-light);border-radius:6px;background:var(--bg-2);color:var(--text);font:inherit;font-size:13px}
-  .bug-form-field input:focus,.bug-form-field select:focus,.bug-form-field textarea:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 3px var(--primary-soft)}
-  .bug-form-field textarea{resize:vertical;min-height:60px;font-family:inherit}
-  .bug-form-actions{display:flex;justify-content:flex-end}
+  /* === Bug report formulaire compact (replié par défaut, étendu au focus) === */
+  .bug-form{max-width:720px;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:8px;margin-bottom:14px;position:sticky;top:8px;z-index:5;box-shadow:0 2px 10px rgba(0,0,0,.14);transition:box-shadow .2s,border-color .2s}
+  .bug-form:focus-within,.bug-form.has-content{border-color:var(--primary);box-shadow:0 4px 18px rgba(0,0,0,.22),0 0 0 3px var(--primary-soft)}
+  .bug-form.drag-over{border-color:var(--primary);background:var(--primary-soft)}
+
+  /* Ligne 1 (toujours visible) : select + input + 📎 + ＋ */
+  .bug-form-quick{display:flex;align-items:center;gap:6px}
+  .bug-form-tab-quick{height:36px;padding:0 8px;border:1px solid var(--border-light);border-radius:6px;background:var(--bg-2);color:var(--text);font:inherit;font-size:12px;font-weight:600;max-width:160px;flex-shrink:0;cursor:pointer}
+  .bug-form-tab-quick:focus{outline:none;border-color:var(--primary)}
+  .bug-form-title-quick{flex:1;height:36px;padding:0 12px;border:1px solid transparent;border-radius:6px;background:var(--bg-2);color:var(--text);font:inherit;font-size:13px;font-weight:600;min-width:0}
+  .bug-form-title-quick::placeholder{color:var(--text-dim);font-weight:500}
+  .bug-form-title-quick:focus{outline:none;border-color:var(--primary);background:var(--bg-3)}
+  .bug-form-attach{position:relative;display:inline-flex;align-items:center;justify-content:center;width:36px;height:36px;border:1px solid var(--border-light);border-radius:6px;background:var(--bg-2);color:var(--text-muted);cursor:pointer;font-size:15px;transition:all .12s;flex-shrink:0}
+  .bug-form-attach:hover{border-color:var(--primary);color:var(--primary);background:var(--primary-soft)}
+  .bug-form-attach-n{position:absolute;top:-5px;right:-5px;background:var(--primary);color:#fff;font-size:10px;font-weight:700;min-width:16px;height:16px;border-radius:8px;display:flex;align-items:center;justify-content:center;padding:0 4px;border:2px solid var(--surface)}
+  .bug-form-add-btn{width:36px;height:36px;border:0;border-radius:6px;background:var(--primary);color:#fff;cursor:pointer;font-size:18px;font-weight:700;display:flex;align-items:center;justify-content:center;transition:background .12s;flex-shrink:0}
+  .bug-form-add-btn:hover{background:var(--primary-dark)}
+
+  /* Ligne 2 (extra) : repliée par défaut, déployée au focus-within ou has-content */
+  .bug-form-extra{max-height:0;opacity:0;overflow:hidden;transition:max-height .25s ease,opacity .2s ease,margin-top .25s ease,padding-top .25s ease;display:flex;flex-direction:column;gap:8px}
+  .bug-form:focus-within .bug-form-extra,.bug-form.has-content .bug-form-extra{max-height:280px;opacity:1;margin-top:8px;padding-top:8px;border-top:1px solid var(--border-soft)}
+  .bug-form-text-quick{padding:8px 10px;border:1px solid var(--border-light);border-radius:6px;background:var(--bg-2);color:var(--text);font:inherit;font-size:13px;font-family:inherit;resize:vertical;min-height:50px}
+  .bug-form-text-quick:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 2px var(--primary-soft)}
+  .bug-form-text-quick::placeholder{color:var(--text-dim)}
+  .bug-form-thumbs{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+  .bug-form-thumbs-meta{font-size:11px;color:var(--text-dim);font-weight:600;margin-left:auto}
+  .bug-form-thumbs-empty{font-size:11px;color:var(--text-dim);font-style:italic;padding:4px 0}
+
+  /* Anciennes classes laissées au cas où — non utilisées dans le formulaire compact */
   .bug-shot-zone{border:1.5px dashed var(--border-light);border-radius:6px;padding:12px;background:var(--bg-2);transition:all .15s;display:flex;flex-direction:column;gap:10px}
   .bug-shot-zone.drag-over{border-color:var(--primary);background:var(--primary-soft)}
   .bug-shot-zone:focus-within{border-color:var(--primary)}
   .bug-shot-grid{display:flex;gap:8px;flex-wrap:wrap}
   .bug-shot-thumb,.bug-card-shot{position:relative;width:120px;height:80px;border-radius:6px;overflow:hidden;border:1px solid var(--border-light);background:var(--bg-3)}
+  .bug-form-thumbs .bug-shot-thumb{width:64px;height:48px}
   .bug-shot-thumb img,.bug-card-shot img{width:100%;height:100%;object-fit:cover;display:block}
   .bug-card-shot img{cursor:zoom-in}
   .bug-shot-del{position:absolute;top:4px;right:4px;width:20px;height:20px;border-radius:50%;background:rgba(0,0,0,.65);color:#fff;border:0;cursor:pointer;font-size:10px;display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity .12s;padding:0}
@@ -12928,39 +12948,31 @@ function rBG() {
     </div>`).join("");
   const remaining = BUG_SCREENSHOT_MAX - bugDraft.screenshots.length;
 
-  h += `<div class="bug-form">
-    <div class="bug-form-row">
-      <div class="bug-form-field">
-        <label>Onglet concerné</label>
-        <select onchange="bugDraftSet('tab', this.value)">
-          <option value="" ${!draftTab ? "selected" : ""}>— Choisir —</option>
-          ${tabOptions}
-        </select>
-      </div>
-      <div class="bug-form-field bug-form-field-wide">
-        <label>Nom (titre court)</label>
-        <input id="bugTitleInput" type="text" placeholder="Ex : « Le bouton ne réagit pas au clic »" title="Raccourci : Alt+N" value="${esc(bugDraft.title || "")}" oninput="bugDraftSet('title', this.value)">
-      </div>
+  // Le formulaire est replié par défaut (1 ligne). S'étend au :focus-within
+  // ou si le draft a déjà du contenu (pour ne pas perdre la saisie au blur).
+  const hasDraftContent = !!(bugDraft.title || bugDraft.text || bugDraft.screenshots.length);
+  const nShots = bugDraft.screenshots.length;
+  h += `<div class="bug-form ${hasDraftContent ? "has-content" : ""}" onpaste="bugDraftPaste(event)" ondragover="bugDraftDragOver(event)" ondragleave="bugDraftDragLeave(event)" ondrop="bugDraftDrop(event)">
+    <div class="bug-form-quick">
+      <select class="bug-form-tab-quick" onchange="bugDraftSet('tab', this.value)" title="Onglet concerné">
+        <option value="" ${!draftTab ? "selected" : ""}>📂 —</option>
+        ${tabOptions}
+      </select>
+      <input id="bugTitleInput" class="bug-form-title-quick" type="text" placeholder="Nouvelle remarque…  (Alt+N)" title="Raccourci : Alt+N" value="${esc(bugDraft.title || "")}" oninput="bugDraftSet('title', this.value)" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();bugAdd()}">
+      <label class="bug-form-attach" title="Joindre une capture (ou Ctrl+V)">
+        📎${nShots > 0 ? `<span class="bug-form-attach-n">${nShots}</span>` : ""}
+        <input type="file" accept="image/*" multiple style="display:none" onchange="bugDraftFileInput(this)">
+      </label>
+      <button class="bug-form-add-btn" onclick="bugAdd()" title="Ajouter (Entrée)" aria-label="Ajouter">＋</button>
     </div>
-    <div class="bug-form-field">
-      <label>Description</label>
-      <textarea rows="3" placeholder="Ce qui s'est passé, ce que tu attendais, étapes pour reproduire…" oninput="bugDraftSet('text', this.value)" onpaste="bugDraftPaste(event)">${esc(bugDraft.text || "")}</textarea>
-    </div>
-    <div class="bug-form-field">
-      <label>Captures d'écran (${bugDraft.screenshots.length} / ${BUG_SCREENSHOT_MAX})</label>
-      <div class="bug-shot-zone" onpaste="bugDraftPaste(event)" ondragover="bugDraftDragOver(event)" ondragleave="bugDraftDragLeave(event)" ondrop="bugDraftDrop(event)" tabindex="0">
-        ${bugDraft.screenshots.length > 0 ? `<div class="bug-shot-grid">${screenshotsHtml}</div>` : ""}
-        ${remaining > 0
-          ? `<div class="bug-shot-hint">
-              <strong>Ctrl+V</strong> pour coller une capture, glisse une image, ou
-              <label class="bug-shot-file-btn">choisir un fichier<input type="file" accept="image/*" multiple style="display:none" onchange="bugDraftFileInput(this)"></label>
-              <div class="bug-shot-meta">JPEG/PNG, ${remaining} restante${remaining > 1 ? "s" : ""} (max ${BUG_SCREENSHOT_MAX}, compressées en 1280×… JPEG q.0.8)</div>
-            </div>`
-          : `<div class="bug-shot-hint bug-shot-full">Limite ${BUG_SCREENSHOT_MAX} captures atteinte. Retire-en une pour en ajouter une autre.</div>`}
-      </div>
-    </div>
-    <div class="bug-form-actions">
-      <button class="btn" onclick="bugAdd()">＋ Ajouter la remarque</button>
+    <div class="bug-form-extra">
+      <textarea class="bug-form-text-quick" rows="2" placeholder="Description (optionnelle, Ctrl+V pour coller une image)…" oninput="bugDraftSet('text', this.value)">${esc(bugDraft.text || "")}</textarea>
+      ${nShots > 0
+        ? `<div class="bug-form-thumbs">
+            ${screenshotsHtml}
+            <div class="bug-form-thumbs-meta">${nShots}/${BUG_SCREENSHOT_MAX}</div>
+          </div>`
+        : `<div class="bug-form-thumbs-empty">📎 Ctrl+V, glisse une image ou utilise le bouton 📎 — ${remaining} capture${remaining > 1 ? "s" : ""} possible${remaining > 1 ? "s" : ""}</div>`}
     </div>
   </div>`;
 
