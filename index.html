@@ -760,6 +760,11 @@
 
   /* Couleurs par onglet — palette cohérente, badge léger + texte saturé */
   .bug-tab-badge{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;padding:2px 8px;border-radius:10px}
+  /* Variant <select> : badge éditable. Garde le look pill, ajoute flèche custom. */
+  select.bug-tab-select{appearance:none;-webkit-appearance:none;border:0;cursor:pointer;font:inherit;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;padding:2px 16px 2px 8px;border-radius:10px;line-height:1.6;background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 8'><path d='M0 1l4 5 4-5z' fill='%23aaa' opacity='.7'/></svg>");background-position:right 4px center;background-repeat:no-repeat;background-size:7px}
+  select.bug-tab-select:hover{filter:brightness(1.15)}
+  select.bug-tab-select:focus{outline:none;box-shadow:0 0 0 2px var(--primary-soft)}
+  select.bug-tab-select option{background:var(--bg-2);color:var(--text);font-weight:500;text-transform:none;letter-spacing:0}
   .bug-tab-badge.bug-tab-accueil{background:rgba(74,158,255,.14);color:#4a9eff}
   .bug-tab-badge.bug-tab-mission{background:rgba(34,197,94,.16);color:#22c55e}
   .bug-tab-badge.bug-tab-suivi{background:rgba(167,139,250,.18);color:#a78bfa}
@@ -13394,7 +13399,11 @@ function rBG() {
   }
   items.forEach(it => {
     const tabKey = it.tab || "autres";
-    const tabBadge = `<span class="bug-tab-badge bug-tab-${esc(tabKey)}">${esc(bugTabLabel(tabKey))}</span>`;
+    // Badge onglet éditable : <select> stylé en pill pour permettre de
+    // changer l'onglet associé après création.
+    const tabBadge = `<select class="bug-tab-badge bug-tab-${esc(tabKey)} bug-tab-select" onchange="event.stopPropagation();bugUpdateTab('${it.id}', this.value)" title="Changer l'onglet">
+      ${BUG_TAB_OPTIONS.map(([k, l]) => `<option value="${esc(k)}" ${k === tabKey ? "selected" : ""}>${esc(l)}</option>`).join("")}
+    </select>`;
     const numBadge = it.num ? `<span class="bug-num-badge" title="Pour les captures associées : note-${it.num}.png">#${it.num}</span>` : "";
     const statusPill = it.validated
       ? `<span class="bug-status-pill bug-status-done">✓ Validée</span>`
