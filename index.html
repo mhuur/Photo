@@ -12639,7 +12639,7 @@ function rAC() {
     return `<div class="ac-row-wrap${isExpanded ? ' expanded' : ''}">
       <div class="ac-row ${late ? 'ac-late' : ''}${isExpanded ? ' ac-row-active' : ''}" onclick="accueilOpenDevis('${g.devisId}')">
         <div class="ac-row-date">${esc(dateFR(g.dateMin || g.dateMax))}</div>
-        <div class="ac-row-client client-link" onclick="${stop}clientInfoModalOpen('${g.devisId}')" title="Voir les infos client">${esc(cleanClientLabel(g.client)) || "—"}</div>
+        <div class="ac-row-client">${esc(cleanClientLabel(g.client)) || "—"}</div>
         <div class="ac-row-ref">${esc(g.ref) || "—"}${(() => {
           const rev = computeRevisionNumber(g.devisId);
           return rev > 0 ? ` <span class="suv-rev-tag">rev${rev}</span>` : "";
