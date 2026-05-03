@@ -9272,9 +9272,8 @@ function rDevisSectionIdentification() {
   const duree = (typeof d.dureeValidite === "number" && d.dureeValidite > 0) ? d.dureeValidite : 30;
   const eff = (d.client.type || (S.identite || {}).clienteleType || "mixte");
   return `
-    <h5>Référence &amp; dates</h5>
     <div class="row identif-dates-row">
-      <div class="field"><label aria-hidden="true" style="visibility:hidden">·</label>
+      <div class="field"><label>Référence (auto)</label>
         <input type="text" value="${esc(d.ref || "")}" disabled
           onmouseenter="showInfo(event, 'ref')" onmouseleave="hideInfo()"
           style="opacity:.7;font-variant-numeric:tabular-nums;cursor:help">
