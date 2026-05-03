@@ -9501,7 +9501,7 @@ function rDevisSectionAjustements() {
       </div>
     </div>
     <div class="row">
-      <div class="field"><label>Taux URSSAF (%)</label>
+      <div class="field tiny"><label>Taux URSSAF (%)</label>
         <div class="lock-field">
           <input id="urssafInput" type="number" step="0.1" value="${esc(d.urssafPct ?? "22")}" ${urssafUnlocked ? `oninput="upd('mission.urssafPct', this.value)"` : "disabled"}>
           <button class="lock-menu-btn" onclick="urssafToggleMenu()" title="Options">⋮</button>
@@ -9512,8 +9512,10 @@ function rDevisSectionAjustements() {
           </div>
         </div>
       </div>
-      ${declare ? `
-      <div class="field"><label>Marge sur frais avancés (%)</label>
+    </div>
+    ${declare ? `
+    <div class="row">
+      <div class="field tiny"><label>Marge sur frais avancés (%)</label>
         <div class="lock-field">
           <input id="margeAvanceInput" type="number" step="0.1" min="0" value="${esc((d.paiement || {}).margeAvance ?? "0")}" ${margeAvanceUnlocked ? `oninput="upd('mission.paiement.margeAvance', this.value)"` : "disabled"} placeholder="0">
           <button class="lock-menu-btn" onclick="margeAvanceToggleMenu()" title="Options">⋮</button>
@@ -9524,16 +9526,16 @@ function rDevisSectionAjustements() {
           </div>
         </div>
       </div>
-      ` : (() => {
-        const bm = d.blackMode || "reduit";
-        return `<div class="field"><label>Tarif au black</label>
-          <div class="seg">
-            <button class="${bm==='reduit'?'on':''}" onclick="updBlackMode('reduit')">Taux réduit</button>
-            <button class="${bm==='fixe'?'on':''}" onclick="updBlackMode('fixe')">Taux fixe</button>
-          </div>
-        </div>`;
-      })()}
     </div>
+    ` : (() => {
+      const bm = d.blackMode || "reduit";
+      return `<div class="row"><div class="field"><label>Tarif au black</label>
+        <div class="seg seg-neon">
+          <button class="${bm==='reduit'?'on':''}" onclick="updBlackMode('reduit')">Taux réduit</button>
+          <button class="${bm==='fixe'?'on':''}" onclick="updBlackMode('fixe')">Taux fixe</button>
+        </div>
+      </div></div>`;
+    })()}
   `;
 }
 
