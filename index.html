@@ -18,6 +18,28 @@
     --warning:#f59e0b;--warning-dark:#d97706;--warning-soft:rgba(245,158,11,.12);
     --shadow:0 4px 20px rgba(0,0,0,.4);--shadow-sm:0 1px 3px rgba(0,0,0,.3);
     --input-h:34px;
+    /* === Charte graphique — espacements & tailles === */
+    /* Échelle d'espacement (multiples de 4) */
+    --space-xs: 4px;
+    --space-sm: 8px;
+    --space-md: 12px;
+    --space-lg: 16px;
+    --space-xl: 24px;
+    --space-xxl: 32px;
+    /* Hauteurs cohérentes pour tous les éléments cliquables */
+    --btn-h-sm: 28px;        /* boutons icône (✓, ×, ↑) */
+    --btn-h-md: 30px;        /* boutons compacts (+ Ajouter, chips) */
+    --btn-h-lg: 34px;        /* boutons standards (alignés sur input-h) */
+    --btn-h-xl: 38px;        /* boutons d'action principale (rare) */
+    /* Rayons */
+    --radius-sm: 4px;        /* éléments inline (pills, badges) */
+    --radius-md: 6px;        /* inputs, boutons */
+    --radius-lg: 8px;        /* cards, sections, modals */
+    --radius-xl: 12px;       /* gros conteneurs */
+    /* Espacements verticaux entre éléments (utiliser dans .row, .field, etc.) */
+    --gap-field: 12px;       /* entre champs d'une row */
+    --gap-row: 14px;         /* entre rows successives */
+    --gap-section: 24px;     /* entre sections (h3, h4, h5) */
   }
   ::-webkit-scrollbar{width:8px;height:8px}
   ::-webkit-scrollbar-track{background:var(--bg-3)}
@@ -38,12 +60,12 @@
   .sb .user a{color:inherit}
   main{flex:1;padding:24px 32px;max-width:1100px;position:relative}
   h2{margin-top:0}
-  h3{margin-top:24px;margin-bottom:8px;font-size:13px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid var(--border);padding-bottom:4px}
-  .row{display:flex;gap:14px;margin-bottom:14px;flex-wrap:wrap}
-  .row-section-break{margin-top:8px}
+  h3{margin-top:var(--space-xl);margin-bottom:var(--space-sm);font-size:13px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid var(--border);padding-bottom:var(--space-xs)}
+  .row{display:flex;gap:var(--gap-field);margin-bottom:var(--gap-row);flex-wrap:wrap}
+  .row-section-break{margin-top:var(--space-sm)}
   /* Edit accordion (Édition du devis section) — collapsible groups */
-  .edit-accordion-list{display:flex;flex-direction:column;gap:8px;margin-top:6px;margin-bottom:18px;max-width:880px}
-  .edit-section{background:var(--surface-2);border:1px solid var(--border-soft);border-radius:8px;overflow:hidden;transition:border-color .15s}
+  .edit-accordion-list{display:flex;flex-direction:column;gap:var(--space-sm);margin-top:var(--space-xs);margin-bottom:var(--space-lg);max-width:880px}
+  .edit-section{background:var(--surface-2);border:1px solid var(--border-soft);border-radius:var(--radius-lg);overflow:hidden;transition:border-color .15s}
   .edit-section.open{border-color:var(--border-light)}
   .edit-section-header{width:100%;display:flex;align-items:center;gap:10px;padding:10px 14px;background:transparent;border:0;color:var(--text);font:inherit;font-size:13px;font-weight:600;cursor:pointer;text-align:left;transition:background .12s}
   .edit-section-header:hover{background:rgba(255,255,255,.03)}
@@ -52,14 +74,17 @@
   .edit-section.open .edit-section-chevron{transform:rotate(90deg);color:var(--primary)}
   .edit-section-title{flex:1;letter-spacing:.01em}
   .edit-section-action{margin-left:auto;padding:5px 12px;font-size:11px;font-weight:500;letter-spacing:0;text-transform:none;flex-shrink:0}
-  .edit-section-body{padding:4px 14px 14px;border-top:1px solid var(--border-soft);background:var(--surface)}
+  .edit-section-body{padding:var(--space-md) var(--space-lg) var(--space-lg);border-top:1px solid var(--border-soft);background:var(--surface)}
   .edit-section-body[hidden]{display:none}
-  .edit-section-body > h4:first-child{margin-top:8px}
+  .edit-section-body > h4:first-child{margin-top:var(--space-sm)}
+  /* Sous-titres dans une section accordion (h5) */
+  .edit-section-body h5{margin:var(--space-lg) 0 var(--space-sm);font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;border:0;padding:0}
+  .edit-section-body h5:first-child{margin-top:var(--space-xs)}
   .field{display:flex;flex-direction:column;flex:1;min-width:160px}
   .field.sm{max-width:140px}
-  .field label{font-size:13px;color:var(--text-muted);margin-bottom:4px}
+  .field label{font-size:13px;color:var(--text-muted);margin-bottom:var(--space-xs)}
   .field input:not([type="checkbox"]):not([type="radio"]),.field select{height:var(--input-h)}
-  .field input,.field textarea,.field select{padding:8px 10px;border:1px solid transparent;border-radius:6px;font:inherit;background:var(--surface-2);color:var(--text);transition:border-color .12s,box-shadow .12s;font-variant-numeric:tabular-nums}
+  .field input,.field textarea,.field select{padding:var(--space-sm) var(--space-md);border:1px solid transparent;border-radius:var(--radius-md);font:inherit;background:var(--surface-2);color:var(--text);transition:border-color .12s,box-shadow .12s;font-variant-numeric:tabular-nums}
   .field input:hover,.field textarea:hover,.field select:hover{border-color:var(--border-light)}
   .field input:focus,.field textarea:focus,.field select:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 3px var(--primary-soft)}
   .field textarea{min-height:60px;resize:vertical}
@@ -2013,7 +2038,7 @@
   .locked-wrap .lock-corner-popup button:hover{background:var(--surface-hi)}
 
   /* Échéances UI */
-  .ech-list{display:flex;flex-direction:column;gap:6px;max-width:560px}
+  .ech-list{display:flex;flex-direction:column;gap:var(--space-sm);max-width:560px}
   .ech-row{display:flex;align-items:center;gap:10px;background:transparent;border:0;border-radius:0;padding:2px 0}
   .ech-row input.lbl{flex:1;height:var(--input-h);border:1px solid transparent;background:var(--surface-2);color:var(--text);font:inherit;font-size:13px;padding:0 10px;border-radius:6px;min-width:0;transition:border-color .12s,box-shadow .12s}
   .ech-row input.lbl:hover{border-color:var(--border-light)}
@@ -2060,7 +2085,7 @@
   .remise-tt-summary{margin-top:10px;padding-top:8px;border-top:1px solid var(--border-soft);font-size:12px;color:var(--text);line-height:1.5}
   .remise-tt-summary strong{color:var(--primary)}
   .ech-warn{margin-top:6px;font-size:13px;color:var(--warning);max-width:380px}
-  .ech-actions{display:flex;gap:8px;margin-top:10px;max-width:380px}
+  .ech-actions{display:flex;gap:var(--space-sm);margin-top:var(--space-md);max-width:380px}
   .ech-actions .btn:last-child{margin-left:auto}
   .ech-sum{font-size:13px;text-align:right;margin-top:4px;font-variant-numeric:tabular-nums;max-width:520px}
   .ech-sum.ok{color:var(--success)}
@@ -2207,7 +2232,7 @@
   .undo-toast-btn:hover{background:rgba(74,158,255,.12);color:#7eb8ff;box-shadow:inset 0 0 8px rgba(74,158,255,.2),0 0 12px rgba(74,158,255,.4)}
 
   /* Séparateur entre 2 sous-blocs fusionnés dans une même section accordion */
-  .section-merge-sep{border:0;border-top:1px solid var(--border-soft);margin:24px 0 18px;height:0}
+  .section-merge-sep{border:0;border-top:1px solid var(--border-soft);margin:var(--space-xl) 0 var(--space-lg);height:0}
 
   /* Bouton « + Ajouter » générique en style néon (compact, primary) */
   .btn-add-neon,.ech-add-neon{display:inline-flex;align-items:center;gap:6px;height:30px;padding:0 14px;background:transparent;color:var(--primary);border:1px solid var(--primary);border-radius:6px;cursor:pointer;font:inherit;font-size:12px;font-weight:700;letter-spacing:.04em;transition:all .15s;box-shadow:inset 0 0 0 1px rgba(74,158,255,.18),0 0 8px rgba(74,158,255,.18);text-shadow:0 0 6px currentColor;font-family:inherit}
@@ -2305,7 +2330,7 @@
   }
 
   /* Lignes section */
-  .lg-add{display:flex;gap:8px;margin-top:8px}
+  .lg-add{display:flex;gap:var(--space-sm);margin-top:var(--space-md)}
   .lg-add .btn{display:inline-flex;align-items:center;gap:6px;font-size:13px;padding:7px 14px}
   .lg-list{display:flex;flex-direction:column;gap:8px;max-width:780px;margin-bottom:0}
   .lg-list:empty{margin-bottom:0}
@@ -2414,10 +2439,8 @@
   .lg-drag:hover{color:var(--primary)}
   .lg-drag:active{cursor:grabbing}
 
-  /* Sub-headings inside an accordion body */
-  .edit-section-body h5{margin:14px 0 6px;font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;font-weight:600;border:0;padding:0}
-  .edit-section-body h5:first-child{margin-top:6px}
-  .edit-section-body .lg-add{margin-top:6px}
+  /* Sub-headings : déplacés en haut du fichier pour utiliser les variables charte */
+  .edit-section-body .lg-add{margin-top:var(--space-sm)}
 
   /* Catalogue link inside accordion body */
   .devis-catalog-hint{font-size:11px;color:var(--text-dim);margin:4px 0 10px}
