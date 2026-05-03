@@ -6004,6 +6004,13 @@ function bugUpdateTab(id, v) {
   const it = (S.bugs.items || []).find(x => x.id === id);
   if (!it) return;
   it.tab = v;
+  // Si on est en train d'éditer ce bug ET qu'un filtre par section est actif :
+  // faire suivre le filtre pour que la carte reste visible (sinon elle quitte
+  // le scope du filtre et l'utilisateur a l'impression que l'édition s'est
+  // fermée et que le changement n'a pas été pris en compte).
+  if (bugCardEditingId === id && bugFilters.tab !== "all" && bugFilters.tab !== v) {
+    bugFilters.tab = v;
+  }
   save();
   render();
 }
@@ -7579,10 +7586,10 @@ function render() {
               <div class="sb-user-menu-email">${esc(user.email)}</div>
               <div class="sb-user-menu-role">${roleLabel}</div>
             </div>
+            <button type="button" role="menuitem" onclick="userMenuClose();setTab('bugs')">${ICONS.bug}<span>Signaler un bug</span></button>
             <button type="button" role="menuitem" onclick="userMenuClose();setTab('profil')">${ICONS.user}<span>Profil</span></button>
             <button type="button" role="menuitem" onclick="userMenuClose();setTab('templates')">${ICONS.mail}<span>Templates</span></button>
             <button type="button" role="menuitem" onclick="userMenuClose();setTab('parametres')">${ICONS.settings}<span>Paramètres</span></button>
-            <button type="button" role="menuitem" onclick="userMenuClose();setTab('bugs')">${ICONS.bug}<span>Signaler un bug</span></button>
             <button type="button" role="menuitem" onclick="userMenuClose();signOut()">${ICONS.logOut}<span>Se déconnecter</span></button>
           </div>
           <button class="sb-user-trigger" id="sbUserTrigger" type="button" onclick="userMenuToggle(event)" aria-label="Mon compte" title="${esc(user.email)}">
@@ -14104,8 +14111,9 @@ function rBG() {
     </div>
     <div class="bug-form-extra">
       <textarea class="bug-form-text-quick" rows="10" placeholder="Description (optionnelle) — étapes pour reproduire, ce qui s'est passé, ce que tu attendais…" oninput="bugDraftSet('text', this.value)">${esc(bugDraft.text || "")}</textarea>
-      <div class="bug-form-hint">
-        💡 <strong>Captures :</strong> prends ta capture maintenant, nomme-la <code>note-${nextNum}.png</code> (ou <code>note-${nextNum}-1.png</code>, <code>note-${nextNum}-2.png</code>) et envoie-la par mail. Le numéro <strong>#${nextNum}</strong> sera attribué à cette remarque.
+      <div class="bug-form-hint" style="display:flex;align-items:flex-start;gap:6px">
+        <span style="flex-shrink:0;color:var(--warning);margin-top:1px">${ICO_SZ('lightbulb', 14)}</span>
+        <span><strong>Capture :</strong> renomme-la selon <code>#${nextNum}</code> et envoie-la par mail.</span>
       </div>
     </div>
   </div>`;
