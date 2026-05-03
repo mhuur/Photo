@@ -13487,11 +13487,17 @@ function rAC() {
       const dRef = Math.max(dEmi, dRel);
       return { ...g, late: dRef > 0 && (ms - dRef) > seuilMs };
     });
+  // /!\ Pas de `|| sticky` ici : aRelancer (late=true) et aSurveiller (late=false)
+  // sont mutuellement exclusives. Si on exempte sticky des deux côtés, un devis
+  // ouvert apparaît dans LES DEUX sections en même temps. Le devis suit
+  // naturellement le toggle late après une action « Marquer comme relancé »
+  // (ex: late→!late) — le volet (sticky) s'affiche alors sous la nouvelle
+  // section.
   const aRelancer = envoyes
-    .filter(g => g.late || g.devisId === sticky)
+    .filter(g => g.late)
     .sort((a, b) => (a.dateMin || "").localeCompare(b.dateMin || ""));
   const aSurveiller = envoyes
-    .filter(g => !g.late || g.devisId === sticky)
+    .filter(g => !g.late)
     .sort((a, b) => (a.dateMin || "").localeCompare(b.dateMin || ""));
 
   // Pré-filtre d'appartenance : un devis est « En attente de paiement » SEULEMENT
