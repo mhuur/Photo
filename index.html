@@ -73,7 +73,8 @@
   .sb-user-avatar img{width:100%;height:100%;object-fit:cover;display:block}
   .sb-user-initials{display:inline-flex;align-items:center;justify-content:center;width:100%;height:100%;color:#cfe3ff;text-shadow:0 0 6px rgba(74,158,255,.5)}
   /* Popup menu — pattern verre néon (cohérent avec lock-popup et cliPickPortal) */
-  .sb-user-menu{display:none;position:absolute;left:16px;bottom:calc(100% - 4px);min-width:240px;background:rgba(15,34,64,.95);border:1px solid var(--primary);border-radius:8px;box-shadow:0 0 14px rgba(74,158,255,.35),0 12px 32px rgba(0,0,0,.6);backdrop-filter:blur(8px);padding:6px;z-index:200;font-family:'Inter',sans-serif}
+  /* position:fixed pour échapper au clip overflow:auto de .sb (spec CSS : overflow-y:auto force overflow-x:auto). */
+  .sb-user-menu{display:none;position:fixed;left:16px;bottom:68px;min-width:260px;max-width:320px;background:rgba(15,34,64,.95);border:1px solid var(--primary);border-radius:8px;box-shadow:0 0 14px rgba(74,158,255,.35),0 12px 32px rgba(0,0,0,.6);backdrop-filter:blur(8px);padding:6px;z-index:200;font-family:'Inter',sans-serif}
   .sb-user-menu.open{display:block}
   .sb-user-menu-head{padding:10px 12px 8px}
   .sb-user-menu-email{font-size:13px;font-weight:600;color:#cfe3ff;text-shadow:0 0 4px rgba(74,158,255,.4);word-break:break-all;line-height:1.3}
