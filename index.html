@@ -9553,9 +9553,10 @@ function rDevisSectionAjustements() {
       </div>
     </div>
     <div class="row">
-      <div class="field tiny"><label>Taux URSSAF (%)</label>
-        <div class="lock-field">
+      <div class="field" style="max-width:200px"><label>Taux URSSAF</label>
+        <div class="lock-field with-unit">
           <input id="urssafInput" type="number" step="0.1" value="${esc(d.urssafPct ?? "22")}" ${urssafUnlocked ? `oninput="upd('mission.urssafPct', this.value)"` : "disabled"}>
+          <span class="lock-unit">%</span>
           <button class="lock-menu-btn" onclick="urssafToggleMenu()" title="Options">⋮</button>
           <div class="lock-popup" id="urssafMenu">
             ${urssafUnlocked
