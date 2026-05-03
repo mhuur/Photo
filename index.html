@@ -2038,7 +2038,10 @@
   .locked-wrap .lock-corner-popup button:hover{background:var(--surface-hi)}
 
   /* Échéances UI */
-  .ech-list{display:flex;flex-direction:column;gap:var(--space-sm);max-width:560px}
+  .ech-list{display:flex;flex-direction:column;gap:var(--space-sm);max-width:480px}
+  /* Label simple (même typo que .field label) — utilisé hors d'un .field
+     pour étiqueter une zone (ex. « Échéances » au-dessus de la liste). */
+  .field-label-only{font-size:13px;color:var(--text-muted);margin-bottom:var(--space-xs);margin-top:var(--space-md)}
   .ech-row{display:flex;align-items:center;gap:10px;background:transparent;border:0;border-radius:0;padding:2px 0}
   .ech-row input.lbl{flex:1;height:var(--input-h);border:1px solid transparent;background:var(--surface-2);color:var(--text);font:inherit;font-size:13px;padding:0 10px;border-radius:6px;min-width:0;transition:border-color .12s,box-shadow .12s}
   .ech-row input.lbl:hover{border-color:var(--border-light)}
@@ -9551,7 +9554,7 @@ function rDevisSectionModalites() {
   const suggestedRounded = Math.max(30, Math.ceil(ts.acompteSuggestedPct / 5) * 5);
 
   return `
-    <h5>Échéances</h5>
+    <div class="field-label-only">Échéances</div>
     <div class="ech-list">
       ${(d.echeances || []).map((e, idx) => {
         const isAcompte = /acompte/i.test(e.label || "");
@@ -9578,7 +9581,7 @@ function rDevisSectionModalites() {
       </div>
     </div>
     <div class="ech-warn" id="echWarn" style="${ok ? "display:none" : ""}">⚠ Les pourcentages doivent totaliser 100 %.</div>
-    <div class="ech-actions">
+    <div class="ech-actions" style="margin-bottom:var(--space-xl)">
       <button class="btn-add-neon" onclick="echeanceAdd()" type="button">＋ Ajouter</button>
     </div>
 
