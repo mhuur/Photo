@@ -2478,6 +2478,15 @@
   .identif-checkbox .lg-info-icon{margin-left:var(--space-xs)}
   /* Le h5 « Type de clientèle » accepte un bouton ⓘ inline */
   .edit-section-body h5 .lg-info-icon{display:inline-flex;font-size:10px;width:18px;height:18px;line-height:1;text-transform:none;letter-spacing:0;font-weight:700}
+
+  /* === .seg.seg-neon — variant néon réutilisable pour les toggles ===
+     Container transparent + border discrète. Bouton actif = primary
+     plein avec glow inset+outer (cohérent avec Accepté/Refusé). */
+  .seg.seg-neon{background:transparent;border:1px solid var(--border-light);padding:3px;height:var(--input-h);box-shadow:none}
+  .seg.seg-neon button{background:transparent;color:var(--text-muted);border:0;padding:0 14px;height:100%;border-radius:5px;font:inherit;font-size:13px;font-weight:600;cursor:pointer;transition:all .15s;display:inline-flex;align-items:center;gap:6px}
+  .seg.seg-neon button:hover{color:var(--text)}
+  .seg.seg-neon button.on{background:rgba(74,158,255,.10);color:var(--primary);box-shadow:inset 0 0 0 1px rgba(74,158,255,.4),0 0 10px rgba(74,158,255,.28);text-shadow:0 0 6px currentColor}
+  .seg.seg-neon button.on.warn{background:rgba(245,158,11,.10);color:var(--warning);box-shadow:inset 0 0 0 1px rgba(245,158,11,.4),0 0 10px rgba(245,158,255,.28);text-shadow:0 0 6px currentColor}
 </style>
 </head>
 <body>
@@ -9275,8 +9284,8 @@ function rDevisSectionIdentification() {
       <div class="field"><label>Durée (jours)</label>
         <input type="number" min="1" max="365" step="1" value="${esc(String(duree))}" oninput="upd('mission.dureeValidite', Math.max(1, parseInt(this.value)||30))">
       </div>
-      <div class="field"><label>Date de prestation <span class="lbl-opt">(optionnel)</span></label>
-        <input type="date" value="${esc(d.datePrestation || "")}" oninput="upd('mission.datePrestation', this.value)" title="Date de réalisation / livraison de la prestation. Affichée sur la facture (art. 289-I CGI).">
+      <div class="field"><label title="Optionnel — date de réalisation / livraison de la prestation. Affichée sur la facture (art. 289-I CGI).">Date de prestation</label>
+        <input type="date" value="${esc(d.datePrestation || "")}" oninput="upd('mission.datePrestation', this.value)">
       </div>
     </div>
 
@@ -9292,7 +9301,7 @@ function rDevisSectionIdentification() {
         onmouseenter="showInfo(event, 'clienteleType')" onmouseleave="hideInfo()" onfocus="showInfo(event, 'clienteleType')" onblur="hideInfo()">i</button>
     </h5>
     <div class="identif-clientele-row">
-      <div class="seg">
+      <div class="seg seg-neon">
         <button class="${eff==="mixte"?"on":""}" onclick="upd('mission.client.type', 'mixte');render()">Mixte</button>
         <button class="${eff==="b2c"?"on":""}" onclick="upd('mission.client.type', 'b2c');render()">Particulier</button>
         <button class="${eff==="b2b"?"on":""}" onclick="upd('mission.client.type', 'b2b');render()">Entreprise</button>
@@ -9400,11 +9409,11 @@ function rDevisSectionDeplacement() {
   const afficheMode = d.deplacement.afficheMode || "afficher";
 
   const paiementToggle = isDebours
-    ? `<div class="seg" title="Mode de refacturation des débours">
+    ? `<div class="seg seg-neon" title="Mode de refacturation des débours">
         <button class="${pmt==='acompte'?'on':''}" onclick="updDeplPaiementType('acompte')" title="Tu avances le déplacement, le client te rembourse au centime près.">Refacturé</button>
         <button class="${pmt==='fact-direct'?'on':''}" onclick="updDeplPaiementType('fact-direct')" title="Le client règle directement le transporteur. Hors devis fiscal.">Direct</button>
       </div>`
-    : `<div class="seg" title="Mode de paiement">
+    : `<div class="seg seg-neon" title="Mode de paiement">
         <button class="${pmt==='acompte'?'on':''}" onclick="updDeplPaiementType('acompte')">Acompte</button>
         <button class="${pmt==='avance'?'on':''}" onclick="updDeplPaiementType('avance')">Avance</button>
       </div>`;
@@ -9437,7 +9446,7 @@ function rDevisSectionDeplacement() {
     affichageBlock = `
       <h5>Affichage sur le devis</h5>
       <div class="depl-toggle-row">
-        <div class="seg">
+        <div class="seg seg-neon">
           <button class="${afficheMode==='afficher'?'on':''}" onclick="updDeplAfficheMode('afficher')">Ligne séparée</button>
           <button class="${afficheMode==='lisser'?'on':''}" onclick="updDeplAfficheMode('lisser')" title="Le déplacement est inclus dans le tarif horaire (pas de ligne séparée).">Inclus dans tarif</button>
         </div>
@@ -9449,7 +9458,7 @@ function rDevisSectionDeplacement() {
   return `
     <h5>Mode de transport</h5>
     <div class="depl-toggle-row">
-      <div class="seg">
+      <div class="seg seg-neon">
         <button class="${mode==='voiture'?'on':''}" onclick="updMissionMode('voiture')">Voiture</button>
         <button class="${mode==='transports'?'on':''}" onclick="updMissionMode('transports')">Transports</button>
       </div>
@@ -9460,7 +9469,7 @@ function rDevisSectionDeplacement() {
 
     <h5>Facturation</h5>
     <div class="depl-toggle-row">
-      <div class="seg">
+      <div class="seg seg-neon">
         <button class="${devis==='principal'?'on':''}" onclick="updDeplDevis('principal')">Principal</button>
         <button class="${devis==='debours'?'on warn':''}" onclick="updDeplDevis('debours')">Débours</button>
       </div>
