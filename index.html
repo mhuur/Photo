@@ -51,6 +51,8 @@
   input[type="number"]{-moz-appearance:textfield;appearance:textfield}
   input[type="number"]::-webkit-outer-spin-button,
   input[type="number"]::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+  /* Charte : <option> natifs en sombre — évite le rendu blanc/gris du navigateur qui casse le thème */
+  select option{background:var(--bg-2);color:var(--text);font-weight:500}
   body{margin:0;font-family:'Inter',system-ui,-apple-system,sans-serif;background:linear-gradient(180deg,var(--bg) 0%,var(--bg-3) 100%);background-attachment:fixed;color:var(--text);font-variant-numeric:tabular-nums}
   #app{display:flex;min-height:100vh}
   .sb{width:220px;background:var(--bg-2);color:var(--text);border-right:1px solid var(--border);display:flex;flex-direction:column;position:sticky;top:0;height:100vh;overflow-y:auto;flex-shrink:0;z-index:100}
@@ -696,14 +698,15 @@
   .cli-search-wrap input:focus{outline:none;border-color:var(--primary);background:var(--surface);box-shadow:0 0 0 3px var(--primary-soft)}
   .cli-search-wrap input:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 3px var(--primary-soft)}
   /* The dropdown is portaled to body and uses position:fixed - escapes ALL parent stacking contexts */
-  #cliPickPortal{display:none;position:fixed;background:var(--surface-2);border:1px solid var(--primary);border-radius:6px;max-height:420px;overflow-y:auto;z-index:9999;box-shadow:0 12px 32px rgba(0,0,0,.6)}
+  /* Portal du picker client — style néon (panel sombre + bordure primary + glow + backdrop blur) */
+  #cliPickPortal{display:none;position:fixed;background:rgba(15,34,64,.95);border:1px solid var(--primary);border-radius:6px;max-height:420px;overflow-y:auto;z-index:9999;box-shadow:0 0 14px rgba(74,158,255,.35),0 12px 32px rgba(0,0,0,.6);backdrop-filter:blur(8px)}
   #cliPickPortal.open{display:block}
-  #cliPickPortal .item{padding:9px 12px;cursor:pointer;border-bottom:1px solid var(--border-soft);font-size:13px;color:var(--text)}
+  #cliPickPortal .item{padding:9px 12px;cursor:pointer;border-bottom:1px solid rgba(74,158,255,.12);font-size:13px;color:var(--text);transition:background .12s,color .12s}
   #cliPickPortal .item:last-child{border-bottom:0}
-  #cliPickPortal .item:hover{background:var(--surface-hi)}
+  #cliPickPortal .item:hover{background:rgba(74,158,255,.12);color:#7eb8ff}
   #cliPickPortal .item .num{color:var(--text-muted);font-size:13px;margin-right:8px;font-variant-numeric:tabular-nums}
-  #cliPickPortal .create{padding:9px 12px;cursor:pointer;color:var(--accent);background:var(--surface);font-size:13px;font-weight:500;border-top:1px solid var(--border)}
-  #cliPickPortal .create:hover{background:var(--surface-hi)}
+  #cliPickPortal .create{padding:9px 12px;cursor:pointer;color:var(--accent);background:rgba(94,234,212,.06);font-size:13px;font-weight:500;border-top:1px solid rgba(94,234,212,.25);transition:background .12s}
+  #cliPickPortal .create:hover{background:rgba(94,234,212,.14)}
   #cliPickPortal .empty{padding:14px 12px;color:var(--text-dim);font-size:13px;font-style:italic}
   .cli-create-panel{margin-top:8px;padding:14px;background:var(--surface);border:1px solid var(--primary);border-radius:8px;max-width:520px}
   .cli-create-panel h4{margin:0 0 10px;font-size:13px;color:var(--accent);font-weight:600}
