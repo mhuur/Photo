@@ -45,6 +45,7 @@ grep -nE "^function r[A-Z]" index.html    # liste tous les renderers (rXX)
 - **`missionNew(presetClient?)`** : garde la config (taux, urssafPct, paiement, échéances, CGV, déplacement.mode), efface les données spécifiques. Tout nouveau champ `S.mission` doit être catégorisé.
 - **Lookup client depuis devis** : toujours via `findClientForDevis(devisId)` (3 stratégies en cascade), jamais ad hoc.
 - **Pop-up : `uiAlert/uiConfirm/uiPrompt` PAS `alert/confirm/prompt`** — natifs interdits (style blanc cassé, alignés top, sortent du thème). Helpers async dans le module `uiDialog` ([index.html](index.html), recherche `▼ uiAlert`). API : `await uiAlert(msg, { title?, kind:"info"|"warn"|"danger", confirmLabel? })`, `await uiConfirm(...)` → bool, `await uiPrompt(...)` → string|null. ESC=cancel, Enter=confirm, click overlay=cancel (sauf alert pure). **Toute fonction qui appelle `await uiConfirm/uiPrompt` doit être `async`** — propager aux callers (souvent juste rendre la fonction `async`, les onclick le tolèrent). Pour les `onclick="if(confirm())xxx()"` inline, créer un wrapper async `xxxConfirm(id)` (cf. `clientsDelConfirm`, `deleteAbonnementConfirm`). Choix de `kind` : `danger` = suppression définitive ou écrasement, `warn` = action destructrice réversible / validation, `info` = confirmation neutre / succès.
+- **Édition in-place dans la preview** — pour éditer un texte rich-text (CGV section, signature, conditions paiement, préambule CGV), wrapper la zone dans `.dp-rich-zone` avec un bouton `⋮` flottant : `<div class="dp-rich-zone" data-rich-field="X"><button class="dp-rich-menu-btn" onclick="event.stopPropagation();textEditorOpen('X')">⋮</button>{contenu}</div>`. Le bouton apparaît au hover (opacity 0→1), masqué `@media print` et dans `.view-devis-snapshot` (PDF nickel). Pour les sections CGV, modal d'édition dédié `cgvSectionEditModal` (titre + body + ordre + suppression).
 - **Charte graphique — variables CSS obligatoires** — toute nouvelle valeur d'espacement, hauteur ou rayon doit utiliser les variables `:root` plutôt qu'un nombre en dur. Cohérence visuelle de l'app, pas d'anarchie.
   - **Espacement** : `--space-xs:4px`, `--space-sm:8px`, `--space-md:12px`, `--space-lg:16px`, `--space-xl:24px`, `--space-xxl:32px`. Multiples de 4.
   - **Hauteur boutons** : `--btn-h-sm:28px` (icônes), `--btn-h-md:30px` (compacts néon), `--btn-h-lg:34px` (standards alignés inputs), `--btn-h-xl:38px` (action principale rare).
@@ -59,6 +60,9 @@ grep -nE "^function r[A-Z]" index.html    # liste tous les renderers (rXX)
   - **Palette** : vert `#22c55e` (`--success`), orange `#fbbf24` (`--warning`), rouge `#ef4444` (`--danger`), bleu `#4a9eff` (`--primary`). Hover plus clair : `#86efac`, `#fcd34d`, `#fca5a5`, `#7eb8ff`.
   - Réfs vivantes : `.suv-expanded-actions .btn-act.act-vert` (Accepté), `.suv-tl-card.pending` (À encaisser timeline). Forker ces blocs CSS pour cohérence.
   - **NE PAS** revenir aux fonds pleins type `background:var(--success)` + texte blanc — sauf bouton primary unique d'un formulaire (ex. `.bug-form-add-btn`).
+  - **Toggles `.seg-neon`** — pour tout toggle binaire/ternaire (Mixte/Particulier/Entreprise, Voiture/Transports, Acompte/Avance…), utiliser `<div class="seg seg-neon">`. Bouton actif = **fond plein primary** + glow lumineux fort + text-shadow blanc, variant `.warn` (orange) pour les états destructeurs (Au black, Débours). Inactif = ghost discret qui s'éclaire au hover.
+  - **Bouton `+ Ajouter…` générique** : `.btn-add-neon` (compact 30 px, bordure néon primary + glow). Toujours préférer cette classe pour les boutons d'ajout.
+- **Label de zone hors d'un `.field`** : utiliser `.field-label-only` (13 px text-muted, même typo que les labels d'inputs) plutôt qu'un `<h5>`. Cohérence typo avec les labels adjacents. Le `<h5>` reste pour les vrais sous-titres de section dans une accordion.
 
 ## Schéma & sémantique métier
 
@@ -99,6 +103,16 @@ Toggle `devis: "principal"|"debours"` par ligne matériel + déplacement.
 
 Pour devis archivés sans `snapshotHtml` : `reconstructMissionFromSuivi(devisId)` (pur) reconstitue depuis entries Suivi. `ensureLegacySnapshot(devisId)` (idempotent) capture le HTML + bandeau `.dp-reconstructed-banner` + ref rétroactive. Appelé en lazy depuis `viewDevisOpen|viewDeboursOpen|viewFactureOpen`. Si `snapshotMission` existe (boot-backfill), préféré à la reconstruction.
 
+### Logo (`S.identite.logoUrl`)
+
+Logo unique partagé sur tous les devis (data URL inline, max ~800 KB). Migration au boot copie `S.mission.logoUrl` → `S.identite.logoUrl` (one-shot), puis vide le legacy. La preview `rDevisPreview` utilise le fallback `d.logoUrl || S.identite.logoUrl` pour préserver les snapshots archivés. Édité dans l'onglet Profil (`rPF` → `rLogoField()`).
+
+### Corbeille `S.bin.items[]`
+
+Stocke les éléments supprimés réversibles (limite 30 récents). Schéma : `{ id, kind, label, payload, deletedAt }`. Helpers : `binPush(kind, payload, label)` push avant suppression ; `binRestore(itemId)` ré-insère selon `kind` ; `binPurge(itemId)` / `binClear()` purge définitive.
+
+**Toast Undo immédiat** : `showUndoToast(label, restoreFn)` apparaît 5 s en bas-droite — réutilisable pour toute suppression locale réversible. Pour ajouter un nouveau `kind` : étendre `binRestore` (switch sur `kind`) et `KIND_LBL` dans `rBinModal()`.
+
 ## Workflows fréquents
 
 ### Maj Trame vs Réviser (devis legacy)
@@ -130,6 +144,7 @@ Dissociation explicite ouverture / marquage. Cliquer ✉ Relance (`gmailRelanceF
 
 ## Pièges connus
 
+- **Limite Firestore 1 MB par doc** — `users/<ownerUid>` contient TOUT le state. **Ne JAMAIS stocker d'images en data URL inline** (logos dupliqués dans snapshots, screenshots de bugs). Symptôme : `saveToCloud` échoue silencieusement avec « exceeds maximum size » → sync gelée, divergence local/prod. `autoCleanupDoc()` au boot (`loadFromCloud`) purge auto orphelins de `S.suivi.devis` (sans entry Suivi associée) + logos data URL des snapshots si doc > 900 KB. Outils console F12 : `checkDocSize()`, `analyzeDevisArchive()`, `cleanOrphanDevis()`, `analyzeLogoInSnapshots()`, `stripLogosFromSnapshots()`.
 - **Jamais `render()` depuis un `oninput`** sur input texte → perte focus garantie. OK depuis `onchange` toggle/select et click button.
 - **Filtre sticky pendant édition** : item édité via volet déplié doit être exempté des filtres en cours (`g.devisId === sticky || <predicate>`). Voir `suiviExpandedDevis`, `accueilExpandedDevis`. Reset sticky quand l'user change explicitement de filtre. **Piège** : le sticky doit exempter UNE condition dynamique (statut, late, restant) **dans une section où le devis appartient déjà**, pas l'appartenance globale. Toujours pré-filtrer l'appartenance en amont (ex. « ce devis est-il accepté ? ») AVANT le `|| sticky`, sinon il fuit dans une section voisine (ex. devis `envoye` ouvert depuis « À relancer » apparaît vide dans « En attente de paiement »).
 - **Dropdown ancré à un `<th>`** : `position:absolute` dans `<th>` se retrouve sous `<tbody>` (stacking pénalisant). Solution : menu HORS table en `position:fixed`, coords via `getBoundingClientRect()`. Voir `positionThMenu()` + `suiviDateMenuHtml()` (call dans `requestAnimationFrame`).
@@ -150,9 +165,11 @@ Dissociation explicite ouverture / marquage. Cliquer ✉ Relance (`gmailRelanceF
 - Firestore Security Rules (en console, pas dans le repo).
 - `DEFAULT_S` schéma → toute modif impose mise à jour `loadFromCloud` + `saveToCloud` + `gen-schema.py` régénéré.
 - Suppression de champs persistés sur entries Suivi historiques.
+- **Captures inline dans Firestore : INTERDIT** — pas de data URL d'image dans `S.bugs.items[].screenshots`, ni dans `S.mission.logoUrl` (utiliser `S.identite.logoUrl`). Cause confirmée d'un blocage total de sync (cf. commit `ca540d7`). Pour des captures sur un bug : convention de nommage `note-{N}.png` et envoi externe (mail/chat).
 
 ## Méthode de travail
 
+- **Refonte UX multi-zones en N étapes** : pour toute refonte qui touche plusieurs sections (ex. in-place editing CGV), proposer un plan en 3-4 étapes avec validation entre chaque (« étape 1 schéma + helpers / étape 2 zones simples / étape 3 cas complexes / étape 4 cleanup »). Évite les commits monstres et permet à l'utilisateur de tester progressivement.
 - **Découpage en phases** pour toute tâche non triviale : audit / proposition / exécution. Stop explicite à la fin de chaque phase, attente "OK".
 - **Audit en UI pour grosses refontes** : injecter aussi le diagramme/audit dans l'app (bloc `<details>` collapsible). Retirer à la fin.
 - **Audit + proposition obligatoires (même en auto mode)** pour : navigation/menu, schéma `S`, suppression > 50 lignes, `sed` ou Edit multi-zones.
