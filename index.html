@@ -2543,7 +2543,8 @@ const DEFAULT_S = {
     rcPro: { assureur: "", numero: "", zone: "France" },
     mediateur: { nom: "", adresse: "", url: "" },
     bank: { banque: "", titulaire: "", iban: "", bic: "" },
-    clienteleType: "mixte"
+    clienteleType: "mixte",
+    logoUrl: ""
   },
   devis:    {},
   suivi:    { entries: [], devis: {} },
@@ -2826,6 +2827,12 @@ if (S.mission) {
   // Date d'émission par défaut = aujourd'hui (modifiable manuellement par l'user via l'input)
   if (!S.mission.dateEmission) {
     S.mission.dateEmission = new Date().toISOString().slice(0, 10);
+  }
+  // Migration logo : déplacé de S.mission vers S.identite (un logo unique
+  // pour tous les devis). On copie une seule fois si Profil n'en a pas.
+  if (S.identite && !S.identite.logoUrl && S.mission && S.mission.logoUrl) {
+    S.identite.logoUrl = S.mission.logoUrl;
+    S.mission.logoUrl = "";
   }
   recomputeRef();
 }
@@ -4356,7 +4363,7 @@ function rDevisPreview() {
 
   return `<div class="devis-preview" id="devisPreview">
     <div class="dp-top-row">
-      ${d.logoUrl ? `<div class="dp-logo-wrap"><img src="${esc(d.logoUrl)}" alt="Logo" class="dp-logo"></div>` : `<div class="dp-logo-spacer"></div>`}
+      ${(d.logoUrl || (S.identite && S.identite.logoUrl)) ? `<div class="dp-logo-wrap"><img src="${esc(d.logoUrl || S.identite.logoUrl)}" alt="Logo" class="dp-logo"></div>` : `<div class="dp-logo-spacer"></div>`}
     </div>
     <div class="dp-header-grid">
       ${(() => {
@@ -4627,7 +4634,7 @@ function rDeboursPreview() {
 
   return `<div class="devis-preview" id="deboursPreview">
     <div class="dp-top-row">
-      ${d.logoUrl ? `<div class="dp-logo-wrap"><img src="${esc(d.logoUrl)}" alt="Logo" class="dp-logo"></div>` : `<div class="dp-logo-spacer"></div>`}
+      ${(d.logoUrl || (S.identite && S.identite.logoUrl)) ? `<div class="dp-logo-wrap"><img src="${esc(d.logoUrl || S.identite.logoUrl)}" alt="Logo" class="dp-logo"></div>` : `<div class="dp-logo-spacer"></div>`}
     </div>
     <div class="dp-header-grid">
       ${(() => {
@@ -4785,7 +4792,7 @@ function rFacturePreview(opts) {
 
   return `<div class="devis-preview" id="facturePreview">
     <div class="dp-top-row">
-      ${d.logoUrl ? `<div class="dp-logo-wrap"><img src="${esc(d.logoUrl)}" alt="Logo" class="dp-logo"></div>` : `<div class="dp-logo-spacer"></div>`}
+      ${(d.logoUrl || (S.identite && S.identite.logoUrl)) ? `<div class="dp-logo-wrap"><img src="${esc(d.logoUrl || S.identite.logoUrl)}" alt="Logo" class="dp-logo"></div>` : `<div class="dp-logo-spacer"></div>`}
       <div class="dp-doc-ref" style="color:var(--success)">${esc(ref)}</div>
     </div>
     <div class="dp-header-grid">
@@ -7942,7 +7949,10 @@ function rCgvEditor() {
 
 // ▼ rLogoField — upload/preview du logo Profil
 function rLogoField() {
-  const url = (S.mission && S.mission.logoUrl) || "";
+  // Logo désormais stocké dans S.identite.logoUrl (info d'identité, partagée
+  // sur tous les devis). Fallback S.mission.logoUrl pour les devis legacy
+  // qui auraient encore un logo posé localement (lecture seule).
+  const url = (S.identite && S.identite.logoUrl) || (S.mission && S.mission.logoUrl) || "";
   if (url) {
     return `<div class="logo-field has-logo">
       <img src="${esc(url)}" alt="Logo" class="logo-preview">
@@ -7954,7 +7964,7 @@ function rLogoField() {
   }
   return `<div class="logo-field">
     <label class="btn ghost">📷 Choisir un logo<input type="file" accept="image/*" onchange="logoUpload(this)" hidden></label>
-    <span class="hint" style="margin:0">PNG/JPG/SVG · transparent recommandé · max ~500 KB</span>
+    <span class="hint" style="margin:0">PNG/JPG/SVG · transparent recommandé · max ~500 KB · réutilisé sur tous tes devis</span>
   </div>`;
 }
 
@@ -7967,7 +7977,10 @@ window.logoUpload = function(input) {
   }
   const reader = new FileReader();
   reader.onload = e => {
-    S.mission.logoUrl = e.target.result;
+    if (!S.identite) S.identite = { ...DEFAULT_S.identite };
+    S.identite.logoUrl = e.target.result;
+    // Vide le legacy pour éviter qu'il prenne le pas
+    if (S.mission) S.mission.logoUrl = "";
     save();
     render();
   };
@@ -7975,8 +7988,9 @@ window.logoUpload = function(input) {
 };
 
 window.logoRemove = async function() {
-  if (!await uiConfirm("Retirer le logo du devis ?", { confirmLabel: "Retirer", kind: "warn" })) return;
-  S.mission.logoUrl = "";
+  if (!await uiConfirm("Retirer le logo ? Il sera également supprimé de tous les futurs devis.", { confirmLabel: "Retirer", kind: "warn" })) return;
+  if (S.identite) S.identite.logoUrl = "";
+  if (S.mission) S.mission.logoUrl = "";
   save();
   render();
 };
@@ -8198,7 +8212,7 @@ function rFactureAcompteBody(facture, dv, devisId) {
   const factureRefLabel = formatRef(facture.ref, "facture");
   const devisRef = (dv && dv.ref) || devisId;
   const clientName = (dv && dv.snapshotClient) || (acompteEntries[0] && acompteEntries[0].client) || "";
-  const logoUrl = (S.mission && S.mission.logoUrl) || "";
+  const logoUrl = (S.mission && S.mission.logoUrl) || (S.identite && S.identite.logoUrl) || "";
 
   // Tente de retrouver le client en référentiel pour ses coords/SIRET/TVA.
   // Sinon fallback sur le nom du snapshot.
@@ -8978,13 +8992,17 @@ function rDV() { return ""; }
 // ▼ rDevisAccordion — squelette des 6 sections du formulaire devis
 function rDevisAccordion() {
   const sums = devisSectionSummaries();
+  // Section « Conditions & signature » retirée : tous ses contenus sont
+  // désormais éditables in-place dans la preview du devis (clic ⋮) :
+  // - logo → onglet Profil
+  // - photographe richtext → fallback identité Profil (legacy peu utilisé)
+  // - préambule CGV / conditions paiement / sections CGV / signature → preview
   return `<div class="edit-accordion-list">
     ${rEditSectionRaw("identification", "Identification & client",     sums.identification, rDevisSectionIdentification())}
     ${rEditSectionRaw("prestations",    "Prestations",                 sums.prestations,    rDevisSectionPrestations())}
     ${rEditSectionRaw("deplacement",    "Déplacement",                 sums.deplacement,    rDevisSectionDeplacement())}
     ${rEditSectionRaw("ajustements",    "Ajustements",                 sums.ajustements,    rDevisSectionAjustements())}
     ${rEditSectionRaw("modalites",      "Modalités de paiement",       sums.modalites,      rDevisSectionModalites())}
-    ${rEditSectionRaw("conditions",     "Conditions & signature",      sums.conditions,     rDevisSectionConditions())}
   </div>`;
 }
 
@@ -12980,7 +12998,10 @@ function rPF() {
       Identité de l'émetteur. Ces informations alimentent automatiquement l'en-tête et les mentions légales de tous tes devis et factures. Mentions obligatoires : SIRET, forme juridique, mention « EI » si applicable, médiateur conso si tu vends à des particuliers (art. L612-1 C. conso. — sanction 3 000 € si oublié).
     </div>
 
-    <h3>Coordonnées</h3>
+    <h3>Logo</h3>
+    ${rLogoField()}
+
+    <h3 style="margin-top:24px">Coordonnées</h3>
     <div class="row">
       <div class="field"><label>Prénom</label>
         <input type="text" value="${esc(id.prenom)}" oninput="upd('identite.prenom', this.value)" placeholder="Romain">
