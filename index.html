@@ -47,6 +47,10 @@
   ::-webkit-scrollbar-thumb{background:var(--surface-hi);border-radius:4px}
   ::-webkit-scrollbar-thumb:hover{background:var(--border-light)}
   *{box-sizing:border-box}
+  /* Charte : pas de spinner up/down sur les inputs number — partout dans l'app */
+  input[type="number"]{-moz-appearance:textfield;appearance:textfield}
+  input[type="number"]::-webkit-outer-spin-button,
+  input[type="number"]::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
   body{margin:0;font-family:'Inter',system-ui,-apple-system,sans-serif;background:linear-gradient(180deg,var(--bg) 0%,var(--bg-3) 100%);background-attachment:fixed;color:var(--text);font-variant-numeric:tabular-nums}
   #app{display:flex;min-height:100vh}
   .sb{width:220px;background:var(--bg-2);color:var(--text);border-right:1px solid var(--border);display:flex;flex-direction:column;position:sticky;top:0;height:100vh;overflow-y:auto;flex-shrink:0;z-index:100}
@@ -955,7 +959,7 @@
   .presta-rate.empty{color:var(--text-dim);font-size:13px;font-weight:500}
 
   /* Locked field with ⋮ menu (URSSAF) */
-  .lock-field{display:flex;align-items:stretch;gap:0;max-width:120px;position:relative;height:var(--input-h)}
+  .lock-field{display:flex;align-items:stretch;gap:0;width:100%;max-width:120px;position:relative;height:var(--input-h)}
   .lock-field input{flex:1;width:50px;height:var(--input-h);text-align:center;font-variant-numeric:tabular-nums}
   .lock-field input:disabled{opacity:0.85;cursor:not-allowed;background:var(--surface-2);color:var(--text);position:relative}
   .lock-field:has(input:disabled){position:relative}
@@ -971,6 +975,8 @@
   .lock-field.with-unit{max-width:170px}
   .lock-field.with-unit input{text-align:right;padding-right:6px}
   .lock-field .lock-unit{display:inline-flex;align-items:center;height:var(--input-h);background:var(--surface-2);color:var(--text-dim);font-size:13px;padding:0 var(--space-sm) 0 4px;flex-shrink:0;font-variant-numeric:tabular-nums;user-select:none}
+  /* Si la lock-field n'a pas de bouton ⋮ (pas de verrou), l'unité est le dernier élément → coins arrondis à droite */
+  .lock-field .lock-unit:last-child{border-radius:0 6px 6px 0}
 
   /* Devis preview (in-page, at the bottom of Mission) */
   /* Devis preview (in-page, at the bottom of Mission) */
@@ -9544,10 +9550,13 @@ function rDevisSectionAjustements() {
 
   return `
     <div class="row">
-      <div class="field tiny">
-        <label>Remise (%)</label>
+      <div class="field" style="max-width:200px">
+        <label>Remise</label>
         <div class="remise-input-wrap">
-          <input type="number" step="1" min="0" max="${ri.remiseMaxPct}" value="${esc(d.remisePct)}" oninput="updRemise(this.value, ${ri.remiseMaxPct})">
+          <div class="lock-field with-unit">
+            <input type="number" step="1" min="0" max="${ri.remiseMaxPct}" value="${esc(d.remisePct)}" oninput="updRemise(this.value, ${ri.remiseMaxPct})">
+            <span class="lock-unit">%</span>
+          </div>
           <button type="button" class="ech-info-icon" tabindex="0" onmouseenter="showRemiseInfo(event)" onmouseleave="hideRemiseInfo()" onfocus="showRemiseInfo(event)" onblur="hideRemiseInfo()" aria-label="Voir le détail du calcul de remise">i</button>
         </div>
       </div>
