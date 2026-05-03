@@ -2464,6 +2464,20 @@
   .seg.presta-status-toggle button{padding:0 16px;font-weight:600}
   .seg.presta-status-toggle button.on{background:var(--success);color:#fff;box-shadow:0 0 12px rgba(34,197,94,.4),inset 0 0 0 1px rgba(34,197,94,.5);text-shadow:0 0 6px rgba(34,197,94,.6)}
   .seg.presta-status-toggle button.on.warn{background:var(--warning);box-shadow:0 0 12px rgba(245,158,11,.4),inset 0 0 0 1px rgba(245,158,11,.5);text-shadow:0 0 6px rgba(245,158,11,.6)}
+
+  /* === Section Identification & client === */
+  .identif-dates-row{display:grid;grid-template-columns:minmax(220px,1.4fr) 150px 130px 170px;gap:var(--gap-field);max-width:880px}
+  .identif-dates-row .field{min-width:0;max-width:none}
+  /* Petit label « (optionnel) » discret */
+  .lbl-opt{font-size:10px;color:var(--text-dim);font-weight:400;font-style:italic;margin-left:var(--space-xs)}
+  .identif-clientele-row{display:flex;align-items:center;gap:var(--space-lg);flex-wrap:wrap;max-width:880px}
+  .identif-clientele-row .seg{flex-shrink:0}
+  /* Checkbox « Contrat hors établissement » alignée avec le toggle */
+  .identif-checkbox{display:inline-flex;align-items:center;gap:var(--space-sm);cursor:pointer;font-size:13px;color:var(--text);font-weight:normal}
+  .identif-checkbox input[type="checkbox"]{margin:0;cursor:pointer}
+  .identif-checkbox .lg-info-icon{margin-left:var(--space-xs)}
+  /* Le h5 « Type de clientèle » accepte un bouton ⓘ inline */
+  .edit-section-body h5 .lg-info-icon{display:inline-flex;font-size:10px;width:18px;height:18px;line-height:1;text-transform:none;letter-spacing:0;font-weight:700}
 </style>
 </head>
 <body>
@@ -9246,52 +9260,49 @@ function rDevisSectionIdentification() {
   const duree = (typeof d.dureeValidite === "number" && d.dureeValidite > 0) ? d.dureeValidite : 30;
   const eff = (d.client.type || (S.identite || {}).clienteleType || "mixte");
   return `
-    <div class="row" style="display:grid;grid-template-columns:minmax(220px,1fr) 160px 160px 180px;gap:14px;margin-bottom:14px">
-      <div class="field" style="max-width:none;min-width:0"><label style="display:inline-flex;align-items:center;gap:6px">
+    <h5>Référence &amp; dates</h5>
+    <div class="row identif-dates-row">
+      <div class="field"><label style="display:inline-flex;align-items:center;gap:var(--space-xs)">
         Référence (auto)
         <button type="button" class="lg-info-icon" tabindex="0" aria-label="Format de la référence du devis"
           onmouseenter="showRefInfo(event)" onmouseleave="hideRefInfo()" onfocus="showRefInfo(event)" onblur="hideRefInfo()">i</button>
       </label>
         <input type="text" value="${esc(d.ref || "")}" disabled style="opacity:.7;font-variant-numeric:tabular-nums">
       </div>
-      <div class="field" style="max-width:none;min-width:0"><label>Date d'émission</label>
+      <div class="field"><label>Date d'émission</label>
         <input type="date" value="${esc(d.dateEmission)}" oninput="upd('mission.dateEmission', this.value)">
       </div>
-      <div class="field" style="max-width:none;min-width:0"><label>Durée de validité (jours)</label>
+      <div class="field"><label>Durée (jours)</label>
         <input type="number" min="1" max="365" step="1" value="${esc(String(duree))}" oninput="upd('mission.dureeValidite', Math.max(1, parseInt(this.value)||30))">
       </div>
-      <div class="field" style="max-width:none;min-width:0"><label>Date de prestation <span class="hint" style="margin:0;font-size:10px">(optionnel)</span></label>
+      <div class="field"><label>Date de prestation <span class="lbl-opt">(optionnel)</span></label>
         <input type="date" value="${esc(d.datePrestation || "")}" oninput="upd('mission.datePrestation', this.value)" title="Date de réalisation / livraison de la prestation. Affichée sur la facture (art. 289-I CGI).">
       </div>
     </div>
-    <div class="row">
-      <div class="field" style="justify-content:flex-start;flex-direction:row;align-items:center;gap:8px">
-        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:normal;font-size:13px;margin:0">
-          <input type="checkbox" ${d.contratHorsEtab?"checked":""} onchange="upd('mission.contratHorsEtab', this.checked)">
-          Contrat signé hors établissement (mariage, séance chez le client…)
-        </label>
-        <button type="button" class="lg-info-icon" tabindex="0" aria-label="Impact de cette case"
-          onmouseenter="showInfo(event, 'contratHorsEtab')" onmouseleave="hideInfo()" onfocus="showInfo(event, 'contratHorsEtab')" onblur="hideInfo()">i</button>
-      </div>
-    </div>
+
     <h5>Client</h5>
     <div class="client-line">
       <div class="client-line-picker">${rClientPicker()}</div>
       <div class="client-line-contact">${rContactInline()}</div>
     </div>
-    <div class="row" style="margin-top:8px">
-      <div class="field">
-        <label style="font-size:11px;color:var(--text-muted);display:flex;align-items:center;gap:6px">
-          Type de clientèle pour ce devis
-          <button type="button" class="lg-info-icon" tabindex="0" aria-label="Impact du type de clientèle"
-            onmouseenter="showInfo(event, 'clienteleType')" onmouseleave="hideInfo()" onfocus="showInfo(event, 'clienteleType')" onblur="hideInfo()">i</button>
-        </label>
-        <div class="seg" style="max-width:380px">
-          <button class="${eff==="mixte"?"on":""}" onclick="upd('mission.client.type', 'mixte');render()">Mixte</button>
-          <button class="${eff==="b2c"?"on":""}" onclick="upd('mission.client.type', 'b2c');render()">Particulier</button>
-          <button class="${eff==="b2b"?"on":""}" onclick="upd('mission.client.type', 'b2b');render()">Entreprise</button>
-        </div>
+
+    <h5 style="display:flex;align-items:center;gap:var(--space-xs)">
+      Type de clientèle pour ce devis
+      <button type="button" class="lg-info-icon" tabindex="0" aria-label="Impact du type de clientèle"
+        onmouseenter="showInfo(event, 'clienteleType')" onmouseleave="hideInfo()" onfocus="showInfo(event, 'clienteleType')" onblur="hideInfo()">i</button>
+    </h5>
+    <div class="identif-clientele-row">
+      <div class="seg">
+        <button class="${eff==="mixte"?"on":""}" onclick="upd('mission.client.type', 'mixte');render()">Mixte</button>
+        <button class="${eff==="b2c"?"on":""}" onclick="upd('mission.client.type', 'b2c');render()">Particulier</button>
+        <button class="${eff==="b2b"?"on":""}" onclick="upd('mission.client.type', 'b2b');render()">Entreprise</button>
       </div>
+      <label class="identif-checkbox">
+        <input type="checkbox" ${d.contratHorsEtab?"checked":""} onchange="upd('mission.contratHorsEtab', this.checked)">
+        <span>Contrat signé hors établissement <span class="lbl-opt">(mariage, séance chez le client…)</span></span>
+        <button type="button" class="lg-info-icon" tabindex="0" aria-label="Impact de cette case"
+          onmouseenter="showInfo(event, 'contratHorsEtab')" onmouseleave="hideInfo()" onfocus="showInfo(event, 'contratHorsEtab')" onblur="hideInfo()">i</button>
+      </label>
     </div>
   `;
 }
