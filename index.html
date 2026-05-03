@@ -9274,12 +9274,10 @@ function rDevisSectionIdentification() {
   return `
     <h5>Référence &amp; dates</h5>
     <div class="row identif-dates-row">
-      <div class="field"><label style="display:inline-flex;align-items:center;gap:var(--space-xs)">
-        Référence (auto)
-        <button type="button" class="lg-info-icon" tabindex="0" aria-label="Format de la référence du devis"
-          onmouseenter="showRefInfo(event)" onmouseleave="hideRefInfo()" onfocus="showRefInfo(event)" onblur="hideRefInfo()">i</button>
-      </label>
-        <input type="text" value="${esc(d.ref || "")}" disabled style="opacity:.7;font-variant-numeric:tabular-nums">
+      <div class="field"><label aria-hidden="true" style="visibility:hidden">·</label>
+        <input type="text" value="${esc(d.ref || "")}" disabled
+          onmouseenter="showInfo(event, 'ref')" onmouseleave="hideInfo()"
+          style="opacity:.7;font-variant-numeric:tabular-nums;cursor:help">
       </div>
       <div class="field"><label>Date d'émission</label>
         <input type="date" value="${esc(d.dateEmission)}" oninput="upd('mission.dateEmission', this.value)">
