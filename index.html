@@ -3030,7 +3030,8 @@ const ICONS = {
   circleFilled:   _ICO('<circle cx="12" cy="12" r="9" fill="currentColor" stroke="none"/>'),
   clipboard:      _ICO('<rect width="8" height="4" x="8" y="2" rx="1" ry="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/>'),
   lightbulb:      _ICO('<path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5"/><path d="M9 18h6"/><path d="M10 22h4"/>'),
-  banknote:       _ICO('<rect width="20" height="12" x="2" y="6" rx="2"/><circle cx="12" cy="12" r="2"/><path d="M6 12h.01M18 12h.01"/>')
+  banknote:       _ICO('<rect width="20" height="12" x="2" y="6" rx="2"/><circle cx="12" cy="12" r="2"/><path d="M6 12h.01M18 12h.01"/>'),
+  fileText:       _ICO('<path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><polyline points="14 2 14 8 20 8"/><line x1="16" x2="8" y1="13" y2="13"/><line x1="16" x2="8" y1="17" y2="17"/><polyline points="10 9 9 9 8 9"/>')
 };
 // Variante taille personnalisée — pour usage inline dans du texte ou boutons compacts
 const ICO_SZ = (key, sz) => {
@@ -3051,7 +3052,9 @@ const ICO_SZ = (key, sz) => {
     alertTriangle: '<path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/>',
     alertOctagon: '<polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/>',
     lightbulb: '<path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5"/><path d="M9 18h6"/><path d="M10 22h4"/>',
-    clipboard: '<rect width="8" height="4" x="8" y="2" rx="1" ry="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/>'
+    clipboard: '<rect width="8" height="4" x="8" y="2" rx="1" ry="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/>',
+    fileText: '<path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><polyline points="14 2 14 8 20 8"/><line x1="16" x2="8" y1="13" y2="13"/><line x1="16" x2="8" y1="17" y2="17"/><polyline points="10 9 9 9 8 9"/>',
+    banknote: '<rect width="20" height="12" x="2" y="6" rx="2"/><circle cx="12" cy="12" r="2"/><path d="M6 12h.01M18 12h.01"/>'
   };
   return _ICO(map[key] || '', sz);
 };
@@ -5065,8 +5068,8 @@ function rPreviewTabs() {
 
   return `<div class="preview-tabs-wrap">
     <div class="preview-tabs-nav">
-      <button class="${activePreviewTab==='devis'?'on':''}" onclick="setPreviewTab('devis')">📄 Devis</button>
-      <button class="${activePreviewTab==='debours'?'on':''} ${hasDebours?'has':''}" onclick="setPreviewTab('debours')">💸 Débours${hasDebours ? ` <span class="badge">${fmt(t.debours)}</span>` : ""}</button>
+      <button class="${activePreviewTab==='devis'?'on':''}" onclick="setPreviewTab('devis')">${ICO_SZ('fileText', 16)} Devis</button>
+      <button class="${activePreviewTab==='debours'?'on':''} ${hasDebours?'has':''}" onclick="setPreviewTab('debours')">${ICO_SZ('banknote', 16)} Débours${hasDebours ? ` <span class="badge">${fmt(t.debours)}</span>` : ""}</button>
     </div>
     <div class="preview-tabs-body">
       ${bodyHtml}
@@ -7344,7 +7347,7 @@ function refreshTotals() {
   const deboursBtn = document.querySelector(".preview-tabs-nav button[onclick*=\"'debours'\"]");
   if (deboursBtn) {
     const hasDebours = t2.debours > 0;
-    deboursBtn.innerHTML = `💸 Débours${hasDebours ? ` <span class="badge">${fmt(t2.debours)}</span>` : ""}`;
+    deboursBtn.innerHTML = `${ICO_SZ('banknote', 16)} Débours${hasDebours ? ` <span class="badge">${fmt(t2.debours)}</span>` : ""}`;
   }
   // Update the "Total" row at the bottom of the échéances list (no € value shown anymore)
   const totalRow = document.getElementById("echTotalRow");
