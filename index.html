@@ -9567,9 +9567,10 @@ function rDevisSectionAjustements() {
     </div>
     ${declare ? `
     <div class="row">
-      <div class="field tiny"><label>Marge sur frais avancés (%)</label>
-        <div class="lock-field">
+      <div class="field" style="max-width:200px"><label>Marge sur frais avancés</label>
+        <div class="lock-field with-unit">
           <input id="margeAvanceInput" type="number" step="0.1" min="0" value="${esc((d.paiement || {}).margeAvance ?? "0")}" ${margeAvanceUnlocked ? `oninput="upd('mission.paiement.margeAvance', this.value)"` : "disabled"} placeholder="0">
+          <span class="lock-unit">%</span>
           <button class="lock-menu-btn" onclick="margeAvanceToggleMenu()" title="Options">⋮</button>
           <div class="lock-popup" id="margeAvanceMenu">
             ${margeAvanceUnlocked
