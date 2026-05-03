@@ -3944,8 +3944,8 @@ async function missionCancel() {
     return;
   }
   if (!await uiConfirm(
-    "Annuler le brouillon en cours ?\n\nTous les champs (client, ref, déplacement, matériel, cession, ajustements…) seront effacés.\n\nLes lignes Heures et les paramètres verrouillés (URSSAF, Indemnité km, Marge avancés) sont préservés.",
-    { title: "Annuler le brouillon", confirmLabel: "Annuler le brouillon", kind: "warn" }
+    "Quitter le brouillon en cours ?\n\nTous les champs (client, ref, déplacement, matériel, cession, ajustements…) seront effacés.\n\nLes lignes Heures et les paramètres verrouillés (URSSAF, Indemnité km, Marge avancés) sont préservés.",
+    { title: "Quitter le brouillon", confirmLabel: "Quitter", cancelLabel: "Reprendre", kind: "warn" }
   )) return;
   const m = S.mission;
   const dm = DEFAULT_S.mission;
