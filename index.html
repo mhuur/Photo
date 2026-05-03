@@ -2209,6 +2209,10 @@
   /* Séparateur entre 2 sous-blocs fusionnés dans une même section accordion */
   .section-merge-sep{border:0;border-top:1px solid var(--border-soft);margin:24px 0 18px;height:0}
 
+  /* Bouton « + Ajouter » échéances en style néon (compact) */
+  .ech-add-neon{display:inline-flex;align-items:center;gap:6px;height:28px;padding:0 12px;background:transparent;color:var(--primary);border:1px solid var(--primary);border-radius:6px;cursor:pointer;font:inherit;font-size:11px;font-weight:700;letter-spacing:.04em;transition:all .15s;box-shadow:inset 0 0 0 1px rgba(74,158,255,.18),0 0 8px rgba(74,158,255,.18);text-shadow:0 0 6px currentColor}
+  .ech-add-neon:hover{background:rgba(74,158,255,.10);color:#7eb8ff;box-shadow:inset 0 0 10px rgba(74,158,255,.20),0 0 14px rgba(74,158,255,.45),0 0 24px rgba(74,158,255,.18)}
+
   /* === Corbeille modale === */
   .bin-list{display:flex;flex-direction:column;gap:6px;max-height:50vh;overflow-y:auto;padding:4px 0}
   .bin-item{display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--surface);border:1px solid var(--border-light);border-radius:6px;transition:border-color .12s}
@@ -8047,15 +8051,12 @@ function rPaiementFields() {
         <button class="btn ghost" style="margin-left:8px;padding:4px 10px;font-size:11px" onclick="paiementClearLegacy()">Effacer l'ancien texte</button>
       </div>`
     : "";
-  // Récap coordonnées bancaires (lecture seule — édition dans Profil).
+  // Récap : on ne montre rien si l'IBAN est posé (info non essentielle ici).
+  // Si IBAN absent : avertissement minimal avec lien Profil.
   const bankRecap = hasBank
-    ? `<div class="hint" style="margin-top:10px;font-size:12px;color:var(--text-dim);line-height:1.5">
-        Coordonnées bancaires utilisées : ${esc(b.banque || "—")}${b.iban ? ` · IBAN ${esc(b.iban)}` : ""}.
-        <a href="#" onclick="setTab('profil');return false" style="color:var(--primary);text-decoration:none;margin-left:6px">Modifier dans Profil →</a>
-      </div>`
+    ? ""
     : `<div class="hint" style="margin-top:10px;font-size:12px;color:var(--warning);line-height:1.5">
-        ⚠ Aucune coordonnée bancaire renseignée. Le devis ne pourra pas être réglé par virement.
-        <a href="#" onclick="setTab('profil');return false" style="color:var(--primary);text-decoration:none;margin-left:6px">Renseigner dans Profil →</a>
+        ⚠ Aucune coordonnée bancaire. <a href="#" onclick="setTab('profil');return false" style="color:var(--primary);text-decoration:none">Renseigner dans Profil →</a>
       </div>`;
   return `
     ${legacyNotice}
@@ -9515,11 +9516,9 @@ function rDevisSectionModalites() {
     </div>
     <div class="ech-warn" id="echWarn" style="${ok ? "display:none" : ""}">⚠ Les pourcentages doivent totaliser 100 %.</div>
     <div class="ech-actions">
-      <button class="btn ghost" onclick="echeanceAdd()">+ Ajouter</button>
-      <button class="btn ghost" onclick="echeanceReset()">↺ Réinitialiser</button>
+      <button class="ech-add-neon" onclick="echeanceAdd()" type="button">＋ Ajouter</button>
     </div>
 
-    <h5>Délai &amp; coordonnées bancaires</h5>
     ${rPaiementFields()}
   `;
 }
