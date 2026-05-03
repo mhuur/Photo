@@ -70,16 +70,20 @@
   .row-section-break{margin-top:var(--space-sm)}
   /* Edit accordion (Édition du devis section) — collapsible groups */
   .edit-accordion-list{display:flex;flex-direction:column;gap:var(--space-sm);margin-top:var(--space-xs);margin-bottom:var(--space-lg);max-width:880px}
-  .edit-section{background:var(--surface-2);border:1px solid var(--border-soft);border-radius:var(--radius-lg);overflow:hidden;transition:border-color .15s}
-  .edit-section.open{border-color:var(--border-light)}
-  .edit-section-header{width:100%;display:flex;align-items:center;gap:10px;padding:10px 14px;background:transparent;border:0;color:var(--text);font:inherit;font-size:13px;font-weight:600;cursor:pointer;text-align:left;transition:background .12s}
-  .edit-section-header:hover{background:rgba(255,255,255,.03)}
-  .edit-section-header:focus{outline:none;background:rgba(255,255,255,.04)}
-  .edit-section-chevron{font-size:11px;color:var(--text-muted);transition:transform .18s ease;flex-shrink:0;width:14px;display:inline-flex;align-items:center;justify-content:center}
-  .edit-section.open .edit-section-chevron{transform:rotate(90deg);color:var(--primary)}
-  .edit-section-title{flex:1;letter-spacing:.01em}
+  /* Accordéon Mission — style néon : transparent au repos, bordure primary qui s'éclaire au hover, glow marqué à l'ouverture */
+  .edit-section{background:transparent;border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden;transition:border-color .2s,box-shadow .2s,background .2s}
+  .edit-section:hover:not(.open){border-color:rgba(74,158,255,.4);box-shadow:0 0 10px rgba(74,158,255,.12)}
+  .edit-section.open{border-color:var(--primary);background:rgba(74,158,255,.04);box-shadow:inset 0 0 0 1px rgba(74,158,255,.18),0 0 14px rgba(74,158,255,.35),0 0 28px rgba(74,158,255,.12)}
+  .edit-section-header{width:100%;display:flex;align-items:center;gap:10px;padding:10px 14px;background:transparent;border:0;color:var(--text);font:inherit;font-size:13px;font-weight:600;cursor:pointer;text-align:left;transition:background .12s,color .12s}
+  .edit-section-header:hover{background:rgba(74,158,255,.05)}
+  .edit-section.open .edit-section-header:hover{background:rgba(74,158,255,.08)}
+  .edit-section-header:focus{outline:none}
+  .edit-section.open .edit-section-title{color:#fff;text-shadow:0 0 8px rgba(74,158,255,.55)}
+  .edit-section-chevron{font-size:11px;color:var(--text-muted);transition:transform .2s ease,color .2s,filter .2s;flex-shrink:0;width:14px;display:inline-flex;align-items:center;justify-content:center}
+  .edit-section.open .edit-section-chevron{transform:rotate(90deg);color:var(--primary);filter:drop-shadow(0 0 4px rgba(74,158,255,.6))}
+  .edit-section-title{flex:1;letter-spacing:.01em;transition:color .2s,text-shadow .2s}
   .edit-section-action{margin-left:auto;padding:5px 12px;font-size:11px;font-weight:500;letter-spacing:0;text-transform:none;flex-shrink:0}
-  .edit-section-body{padding:var(--space-md) var(--space-lg) var(--space-lg);border-top:1px solid var(--border-soft);background:var(--surface)}
+  .edit-section-body{padding:var(--space-md) var(--space-lg) var(--space-lg);border-top:1px solid rgba(74,158,255,.2);background:rgba(74,158,255,.02)}
   .edit-section-body[hidden]{display:none}
   .edit-section-body > h4:first-child{margin-top:var(--space-sm)}
   /* Sous-titres dans une section accordion (h5) */
