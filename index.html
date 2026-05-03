@@ -969,7 +969,7 @@
   .lock-field input{border-radius:6px 0 0 6px;border-right:0}
   .lock-popup{position:absolute;top:100%;right:0;margin-top:4px;background:var(--surface-2);border:1px solid var(--border-light);border-radius:6px;box-shadow:var(--shadow);z-index:30;min-width:180px;padding:4px;display:none}
   .lock-popup.open{display:block}
-  .lock-popup button{width:100%;text-align:left;background:transparent;border:0;color:var(--text);padding:8px 12px;font:inherit;font-size:13px;cursor:pointer;border-radius:4px}
+  .lock-popup button{width:100%;text-align:left;background:transparent;border:0;color:var(--text);padding:8px 12px;font:inherit;font-size:13px;cursor:pointer;border-radius:4px;display:inline-flex;align-items:center;gap:6px}
   .lock-popup button:hover{background:var(--surface-hi)}
   /* Variante .with-unit — suffixe d'unité (ex. €/km) sandwiché entre input et bouton ⋮ */
   .lock-field.with-unit{max-width:170px}
@@ -2995,7 +2995,7 @@ let cloudT = null;
 // ▼ ICONS — bibliothèque d'icônes Lucide (SVG inline, currentColor).
 // Style outline 1.75px, 18×18. Pas de CDN : tout dans index.html.
 // Source : lucide.dev (icônes : layout-dashboard, camera, kanban, wallet, users, bar-chart-3, user, bug).
-const _ICO = (paths) => `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">${paths}</svg>`;
+const _ICO = (paths, sz = 18) => `<svg xmlns="http://www.w3.org/2000/svg" width="${sz}" height="${sz}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;flex-shrink:0">${paths}</svg>`;
 const ICONS = {
   dashboard: _ICO('<rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/>'),
   camera:    _ICO('<path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/>'),
@@ -3015,7 +3015,45 @@ const ICONS = {
   send:      _ICO('<line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>'),
   info:           _ICO('<circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/>'),
   alertTriangle:  _ICO('<path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/>'),
-  alertOctagon:   _ICO('<polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/>')
+  alertOctagon:   _ICO('<polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/>'),
+  // === Ajouts pour la charte « pas d'emoji, que du Lucide » ===
+  save:           _ICO('<path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/>'),
+  unlock:         _ICO('<rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 9.9-1"/>'),
+  rotateCcw:      _ICO('<path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/>'),
+  rotateCw:       _ICO('<path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/>'),
+  check:          _ICO('<polyline points="20 6 9 17 4 12"/>'),
+  x:              _ICO('<path d="M18 6 6 18"/><path d="m6 6 12 12"/>'),
+  moreVertical:   _ICO('<circle cx="12" cy="12" r="1"/><circle cx="12" cy="5" r="1"/><circle cx="12" cy="19" r="1"/>'),
+  chevronRight:   _ICO('<path d="m9 18 6-6-6-6"/>'),
+  chevronDown:    _ICO('<path d="m6 9 6 6 6-6"/>'),
+  circle:         _ICO('<circle cx="12" cy="12" r="10"/>'),
+  circleFilled:   _ICO('<circle cx="12" cy="12" r="9" fill="currentColor" stroke="none"/>'),
+  clipboard:      _ICO('<rect width="8" height="4" x="8" y="2" rx="1" ry="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/>'),
+  lightbulb:      _ICO('<path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5"/><path d="M9 18h6"/><path d="M10 22h4"/>'),
+  banknote:       _ICO('<rect width="20" height="12" x="2" y="6" rx="2"/><circle cx="12" cy="12" r="2"/><path d="M6 12h.01M18 12h.01"/>')
+};
+// Variante taille personnalisée — pour usage inline dans du texte ou boutons compacts
+const ICO_SZ = (key, sz) => {
+  const map = {
+    save: '<path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/>',
+    unlock: '<rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 9.9-1"/>',
+    rotateCcw: '<path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/>',
+    rotateCw: '<path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/>',
+    check: '<polyline points="20 6 9 17 4 12"/>',
+    x: '<path d="M18 6 6 18"/><path d="m6 6 12 12"/>',
+    plus: '<path d="M5 12h14"/><path d="M12 5v14"/>',
+    chevronRight: '<path d="m9 18 6-6-6-6"/>',
+    chevronDown: '<path d="m6 9 6 6 6-6"/>',
+    moreVertical: '<circle cx="12" cy="12" r="1"/><circle cx="12" cy="5" r="1"/><circle cx="12" cy="19" r="1"/>',
+    circle: '<circle cx="12" cy="12" r="10"/>',
+    circleFilled: '<circle cx="12" cy="12" r="9" fill="currentColor" stroke="none"/>',
+    info: '<circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/>',
+    alertTriangle: '<path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/>',
+    alertOctagon: '<polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/>',
+    lightbulb: '<path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5"/><path d="M9 18h6"/><path d="M10 22h4"/>',
+    clipboard: '<rect width="8" height="4" x="8" y="2" rx="1" ry="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/>'
+  };
+  return _ICO(map[key] || '', sz);
 };
 
 // ▼ uiAlert / uiConfirm / uiPrompt — dialogs stylisés (remplacent alert/confirm/prompt natifs).
@@ -6234,7 +6272,7 @@ function paiementInfoFor(devis, paiementType, margeAvancePct, margeUrssafPct, li
 function renderPaiementInfo(info) {
   if (!info) return "";
   return `<div class="paiement-info-card${info.warn ? ' warn' : ''}">
-    <div class="paiement-info-title">${info.warn ? '⚠ ' : '📋 '}${esc(info.title)}</div>
+    <div class="paiement-info-title" style="display:flex;align-items:center;gap:6px"><span style="flex-shrink:0">${info.warn ? ICO_SZ('alertTriangle', 14) : ICO_SZ('clipboard', 14)}</span><span>${esc(info.title)}</span></div>
     <div class="paiement-info-grid">
       <span class="paiement-info-lbl">Facture</span><span>${esc(info.facture)}</span>
       <span class="paiement-info-lbl">Marge</span><span>${esc(info.marge)}</span>
@@ -6425,7 +6463,7 @@ window.hideRefInfo = function() { window.hideInfo(); };
 function rLigne(l) {
   const isExpanded = expandedLignes.has(l.id);
   const hasDesc = (l.description || "").trim().length > 0;
-  const expandBtn = `<button class="lg-expand${hasDesc?' has':''}${isExpanded?' open':''}" onclick="ligneToggleExpand('${l.id}')" title="${isExpanded?'Replier la description':'Ajouter / voir la description'}">▸</button>`;
+  const expandBtn = `<button class="lg-expand${hasDesc?' has':''}${isExpanded?' open':''}" onclick="ligneToggleExpand('${l.id}')" title="${isExpanded?'Replier la description':'Ajouter / voir la description'}">${ICO_SZ('chevronRight', 16)}</button>`;
   const desc = isExpanded
     ? `<textarea class="lg-desc" placeholder="Description (apparaîtra sous l'intitulé dans le devis)" oninput="ligneUpd('${l.id}','description',this.value)">${esc(l.description||"")}</textarea>`
     : "";
@@ -6439,7 +6477,7 @@ function rLigne(l) {
           <button class="${l.unit==='j'?'on':''}" onclick="ligneSetUnit('${l.id}','j')">jours</button>
         </div>
         ${expandBtn}
-        <button class="lg-del" onclick="ligneDel('${l.id}')" title="Supprimer">×</button>
+        <button class="lg-del" onclick="ligneDel('${l.id}')" title="Supprimer">${ICO_SZ('x', 16)}</button>
       </div>
       ${desc}
     </div>`;
@@ -6451,7 +6489,7 @@ function rLigne(l) {
           <input type="number" step="0.01" placeholder="0,00" value="${esc(l.prix)}" oninput="ligneUpd('${l.id}','prix',this.value)">
           <span class="unit">€</span>
         </div>
-        <button class="lg-del" onclick="ligneDel('${l.id}')" title="Supprimer">×</button>
+        <button class="lg-del" onclick="ligneDel('${l.id}')" title="Supprimer">${ICO_SZ('x', 16)}</button>
       </div>
       <div class="lg-cession-detail">
         <div class="row">
@@ -6492,7 +6530,7 @@ function rLigne(l) {
           <button class="${pmt==='avance'?'on':''}" onclick="ligneSetPaiement('${l.id}','avance')" title="Tu avances la dépense, marge appliquée">Avance</button>
         </div>`;
     const justifBtn = isDebours
-      ? `<button class="lg-justif ${l.justificatifJoint?'on':''}" onclick="ligneUpd('${l.id}','justificatifJoint',!${!!l.justificatifJoint});render()" title="${l.justificatifJoint?'Justificatif joint ✓ (cliquer pour retirer)':'Justificatif non encore joint (cliquer pour cocher)'}">${l.justificatifJoint?'✓ Justif.':'○ Justif.'}</button>`
+      ? `<button class="lg-justif ${l.justificatifJoint?'on':''}" onclick="ligneUpd('${l.id}','justificatifJoint',!${!!l.justificatifJoint});render()" title="${l.justificatifJoint?'Justificatif joint (cliquer pour retirer)':'Justificatif non encore joint (cliquer pour cocher)'}">${l.justificatifJoint?ICO_SZ('check',14):ICO_SZ('circle',14)} Justif.</button>`
       : "";
     return `<div class="lg-row-wrap" data-id="${l.id}">
       <div class="lg-row">
@@ -6509,7 +6547,7 @@ function rLigne(l) {
         ${justifBtn}
         <button class="lg-info-icon" onmouseenter="showPaiementInfo(event, 'ligne', '${l.id}')" onmouseleave="hidePaiementInfo()" onfocus="showPaiementInfo(event, 'ligne', '${l.id}')" onblur="hidePaiementInfo()" tabindex="0" aria-label="Voir les conséquences fiscales de ce choix">i</button>
         ${expandBtn}
-        <button class="lg-del" onclick="ligneDel('${l.id}')" title="Supprimer">×</button>
+        <button class="lg-del" onclick="ligneDel('${l.id}')" title="Supprimer">${ICO_SZ('x', 16)}</button>
       </div>
       ${desc}
     </div>`;
@@ -7316,8 +7354,8 @@ function refreshTotals() {
     const pctSum = t2.echeancesTotal;
     const ok = pctSum === 100;
     totalRow.className = `ech-row ech-total ${ok ? "ok" : "warn"}`;
-    totalPct.textContent = `${pctSum.toString().replace(".",",")} %${ok ? " ✓" : ""}`;
-    if (warnEl) warnEl.style.display = ok ? "none" : "";
+    totalPct.innerHTML = `${pctSum.toString().replace(".",",")} %${ok ? ` ${ICO_SZ('check', 12)}` : ""}`;
+    if (warnEl) warnEl.style.display = ok ? "none" : "flex";
   }
   // Refresh per-line final cost indicators (in materiel form rows)
   refreshFinalCosts();
@@ -7595,7 +7633,7 @@ function rContactInline() {
   return `<div class="contact-inline">
     <span class="contact-inline-lbl">Contact</span>
     <span class="contact-inline-val">${esc(selected.name || "(sans nom)")}${selected.phone ? ` · ${esc(selected.phone)}` : ""}${selected.email ? ` · ${esc(selected.email)}` : ""}</span>
-    ${multi ? `<button class="contact-inline-change" onclick="contactPickerToggleOpen(true)" title="Changer de contact">↻</button>` : ""}
+    ${multi ? `<button class="contact-inline-change" onclick="contactPickerToggleOpen(true)" title="Changer de contact">${ICO_SZ('rotateCw', 14)}</button>` : ""}
   </div>`;
 }
 
@@ -8087,7 +8125,7 @@ function rEditSection(key, title, bodyHtml, headerActionHtml = "") {
   const open = !!_editSectionOpen[key];
   return `<div class="edit-section ${open ? 'open' : ''}" data-edit-section="${key}">
     <button type="button" class="edit-section-header" onclick="editSectionToggle('${key}')" aria-expanded="${open}">
-      <span class="edit-section-chevron" aria-hidden="true">▸</span>
+      <span class="edit-section-chevron" aria-hidden="true">${ICO_SZ('chevronRight', 14)}</span>
       <span class="edit-section-title">${esc(title)}</span>
       ${headerActionHtml}
     </button>
@@ -8157,17 +8195,19 @@ function rPaiementFields() {
   const legacy = (S.mission && S.mission.conditionsPaiement || "").trim();
   const hasBank = !!(b.banque || b.iban || b.bic || b.titulaire);
   const legacyNotice = (legacy && !hasBank)
-    ? `<div class="hint" style="margin:6px 0 14px;color:var(--warning);font-size:12px;line-height:1.5;padding:10px 12px;background:var(--warning-soft);border-radius:6px">
-        ⚠ Tu as des « conditions de paiement » dans l'ancien format texte. Renseigne tes coordonnées bancaires dans l'onglet <strong>Profil</strong>, puis clique sur « Effacer l'ancien texte ».
-        <button class="btn ghost" style="margin-left:8px;padding:4px 10px;font-size:11px" onclick="paiementClearLegacy()">Effacer l'ancien texte</button>
+    ? `<div class="hint" style="margin:6px 0 14px;color:var(--warning);font-size:12px;line-height:1.5;padding:10px 12px;background:var(--warning-soft);border-radius:6px;display:flex;align-items:flex-start;gap:8px">
+        <span style="flex-shrink:0;margin-top:1px">${ICO_SZ('alertTriangle', 14)}</span>
+        <span>Tu as des « conditions de paiement » dans l'ancien format texte. Renseigne tes coordonnées bancaires dans l'onglet <strong>Profil</strong>, puis clique sur « Effacer l'ancien texte ».
+        <button class="btn ghost" style="margin-left:8px;padding:4px 10px;font-size:11px" onclick="paiementClearLegacy()">Effacer l'ancien texte</button></span>
       </div>`
     : "";
   // Récap : on ne montre rien si l'IBAN est posé (info non essentielle ici).
   // Si IBAN absent : avertissement minimal avec lien Profil.
   const bankRecap = hasBank
     ? ""
-    : `<div class="hint" style="margin-top:10px;font-size:12px;color:var(--warning);line-height:1.5">
-        ⚠ Aucune coordonnée bancaire. <a href="#" onclick="setTab('profil');return false" style="color:var(--primary);text-decoration:none">Renseigner dans Profil →</a>
+    : `<div class="hint" style="margin-top:10px;font-size:12px;color:var(--warning);line-height:1.5;display:flex;align-items:center;gap:6px">
+        <span style="flex-shrink:0">${ICO_SZ('alertTriangle', 14)}</span>
+        <span>Aucune coordonnée bancaire. <a href="#" onclick="setTab('profil');return false" style="color:var(--primary);text-decoration:none">Renseigner dans Profil →</a></span>
       </div>`;
   return `
     ${legacyNotice}
@@ -8205,17 +8245,18 @@ function rCgvEditor() {
   `).join("");
 
   return `
-    <div class="hint" style="margin:0 0 12px;font-size:12px;color:var(--text-muted);line-height:1.5">
-      💡 Pour modifier le <strong>titre</strong>, le <strong>contenu</strong> ou l'<strong>ordre</strong> des sections, clique sur ⋮ directement dans l'aperçu du devis (ou ici à droite de chaque section).
+    <div class="hint" style="margin:0 0 12px;font-size:12px;color:var(--text-muted);line-height:1.5;display:flex;align-items:flex-start;gap:6px">
+      <span style="flex-shrink:0;color:var(--warning);margin-top:1px">${ICO_SZ('lightbulb', 14)}</span>
+      <span>Pour modifier le <strong>titre</strong>, le <strong>contenu</strong> ou l'<strong>ordre</strong> des sections, clique sur le menu ${ICO_SZ('moreVertical', 12)} directement dans l'aperçu du devis (ou ici à droite de chaque section).</span>
     </div>
 
     <div class="cgv-summary-list">
       ${sections.length === 0
-        ? `<div class="cgv-edit-empty">Aucune section. Clique sur « + Ajouter une section » ci-dessous, ou utilise « 📋 Charger modèle photographe » pour partir d'un modèle pré-rempli.</div>`
+        ? `<div class="cgv-edit-empty">Aucune section. Clique sur « + Ajouter une section » ci-dessous, ou utilise « ${ICO_SZ('clipboard', 13)} Charger modèle photographe » pour partir d'un modèle pré-rempli.</div>`
         : sectionsHtml}
     </div>
 
-    <button class="btn-add-neon" type="button" style="margin-top:10px" onclick="cgvSectionAdd()">＋ Ajouter une section</button>
+    <button class="btn-add-neon" type="button" style="margin-top:10px" onclick="cgvSectionAdd()">${ICO_SZ('plus', 14)} Ajouter une section</button>
   `;
 }
 
@@ -9301,7 +9342,7 @@ function rEditSectionRaw(key, title, summaryHtml, bodyHtml, headerActionHtml = "
   const open = !!_editSectionOpen[key];
   return `<div class="edit-section ${open ? 'open' : ''}" data-edit-section="${key}">
     <button type="button" class="edit-section-header" onclick="editSectionToggle('${key}')" aria-expanded="${open}">
-      <span class="edit-section-chevron" aria-hidden="true">▸</span>
+      <span class="edit-section-chevron" aria-hidden="true">${ICO_SZ('chevronRight', 14)}</span>
       <span class="edit-section-title">${esc(title)}</span>
       <span class="edit-section-summary" data-summary="${key}">${summaryHtml}</span>
       ${headerActionHtml}
@@ -9417,29 +9458,29 @@ function rDevisSectionPrestations() {
     <h5>Statut fiscal</h5>
     <div class="presta-status-row">
       <div class="seg seg-neon">
-        <button class="${declare?"on ok":""}" onclick="updMissionDeclare(true)">✓ Déclaré</button>
-        <button class="${!declare?"on warn":""}" onclick="updMissionDeclare(false)">● Au black</button>
+        <button class="${declare?"on ok":""}" onclick="updMissionDeclare(true)">${ICO_SZ('check', 14)} Déclaré</button>
+        <button class="${!declare?"on warn":""}" onclick="updMissionDeclare(false)">${ICO_SZ('circleFilled', 12)} Au black</button>
       </div>
     </div>
-    ${!declare ? `<div class="black-warning" role="alert"><strong>⚠ Mode au black</strong> — pas de débours, pas d'URSSAF, pas de marge sur avance applicable. Tous les matériels et déplacements sont au prix brut, payés via l'acompte.</div>` : ""}
+    ${!declare ? `<div class="black-warning" role="alert"><strong>${ICO_SZ('alertTriangle', 14)} Mode au black</strong> — pas de débours, pas d'URSSAF, pas de marge sur avance applicable. Tous les matériels et déplacements sont au prix brut, payés via l'acompte.</div>` : ""}
 
     <h5>Heures</h5>
     <div class="lg-list" id="lgListHeures">
       ${heures.length ? heures.map(l => rLigneDraggable(l)).join("") : `<div class="lg-empty">Aucune ligne — ajoute des heures pour démarrer le devis</div>`}
     </div>
-    <div class="lg-add"><button class="btn-add-neon" type="button" onclick="ligneAdd('heures')">＋ Heures</button></div>
+    <div class="lg-add"><button class="btn-add-neon" type="button" onclick="ligneAdd('heures')">${ICO_SZ('plus', 14)} Heures</button></div>
 
     <h5>Matériel</h5>
     <div class="lg-list" id="lgListMateriel">
       ${materiel.length ? materiel.map(l => rLigneDraggable(l)).join("") : `<div class="lg-empty">Aucun matériel</div>`}
     </div>
-    <div class="lg-add"><button class="btn-add-neon" type="button" onclick="ligneAdd('materiel')">＋ Matériel</button></div>
+    <div class="lg-add"><button class="btn-add-neon" type="button" onclick="ligneAdd('materiel')">${ICO_SZ('plus', 14)} Matériel</button></div>
 
     <h5>Cession de droits <button type="button" class="lg-info-icon" tabindex="0" aria-label="Étendue, durée, territoire, supports (CPI L131-3)" title="Étendue, durée, territoire, supports — Conformément au CPI L131-3">i</button></h5>
     <div class="lg-list" id="lgListCessions">
       ${cessions.length ? cessions.map(l => rLigneDraggable(l)).join("") : `<div class="lg-empty">Aucune cession de droits — recommandé pour formaliser l'usage des photos par le client</div>`}
     </div>
-    <div class="lg-add"><button class="btn-add-neon" type="button" onclick="ligneAdd('cession')">＋ Cession de droits</button></div>
+    <div class="lg-add"><button class="btn-add-neon" type="button" onclick="ligneAdd('cession')">${ICO_SZ('plus', 14)} Cession de droits</button></div>
   `;
 }
 
@@ -9477,8 +9518,8 @@ function rDevisSectionDeplacement() {
             <button class="lock-menu-btn" onclick="tauxKmToggleMenu()" title="Options">⋮</button>
             <div class="lock-popup" id="tauxKmMenu">
               ${tauxKmUnlocked
-                ? `<button onclick="tauxKmResetDefault()">↺ Rétablir 0,40 €/km</button>`
-                : `<button onclick="tauxKmUnlock()">🔓 Modifier</button>`}
+                ? `<button onclick="tauxKmResetDefault()">${ICO_SZ('rotateCcw', 14)} Rétablir 0,40 €/km</button>`
+                : `<button onclick="tauxKmUnlock()">${ICO_SZ('unlock', 14)} Modifier</button>`}
             </div>
           </div>
         </div>
@@ -9499,7 +9540,7 @@ function rDevisSectionDeplacement() {
       ? `<button type="button" class="tarif-info" data-kind="depl-lisser" tabindex="0" aria-label="Voir l'impact sur le taux horaire">i<div class="tarif-tooltip" role="tooltip">${rDeplLisserTooltipBody(b, t)}</div></button>`
       : "";
     const noHoursWarn = (afficheMode === "lisser" && t.totalHeures === 0)
-      ? `<div class="hint" style="margin-top:var(--space-sm);color:var(--warning)">⚠ Pas d'heures dans le devis : le déplacement est facturé séparément en attendant (mode « Inclus dans tarif » nécessite des heures).</div>`
+      ? `<div class="hint" style="margin-top:var(--space-sm);color:var(--warning);display:flex;align-items:center;gap:6px"><span style="flex-shrink:0">${ICO_SZ('alertTriangle', 14)}</span><span>Pas d'heures dans le devis : le déplacement est facturé séparément en attendant (mode « Inclus dans tarif » nécessite des heures).</span></div>`
       : "";
     affichageBlock = `
       <h5>Affichage sur le devis</h5>
@@ -9569,8 +9610,8 @@ function rDevisSectionAjustements() {
           <button class="lock-menu-btn" onclick="urssafToggleMenu()" title="Options">⋮</button>
           <div class="lock-popup" id="urssafMenu">
             ${urssafUnlocked
-              ? `<button onclick="urssafResetDefault()">↺ Rétablir 22 %</button>`
-              : `<button onclick="urssafUnlock()">🔓 Modifier</button>`}
+              ? `<button onclick="urssafResetDefault()">${ICO_SZ('rotateCcw', 14)} Rétablir 22 %</button>`
+              : `<button onclick="urssafUnlock()">${ICO_SZ('unlock', 14)} Modifier</button>`}
           </div>
         </div>
       </div>
@@ -9584,8 +9625,8 @@ function rDevisSectionAjustements() {
           <button class="lock-menu-btn" onclick="margeAvanceToggleMenu()" title="Options">⋮</button>
           <div class="lock-popup" id="margeAvanceMenu">
             ${margeAvanceUnlocked
-              ? `<button onclick="margeAvanceResetDefault()">↺ Rétablir 0 %</button>`
-              : `<button onclick="margeAvanceUnlock()">🔓 Modifier</button>`}
+              ? `<button onclick="margeAvanceResetDefault()">${ICO_SZ('rotateCcw', 14)} Rétablir 0 %</button>`
+              : `<button onclick="margeAvanceUnlock()">${ICO_SZ('unlock', 14)} Modifier</button>`}
           </div>
         </div>
       </div>
@@ -9630,19 +9671,19 @@ function rDevisSectionModalites() {
           <input class="lbl" value="${esc(e.label)}" placeholder="Libellé (ex: Acompte, Livraison…)" oninput="echeanceUpd('${e.id}','label',this.value)">
           <div class="pct-wrap"><input type="number" step="1" min="0" max="100" value="${esc(e.pct)}" oninput="echeanceUpd('${e.id}','pct',this.value)"><span class="unit">%</span></div>
           ${suggestion}
-          <button class="del" onclick="echeanceDel('${e.id}')" title="Supprimer">×</button>
+          <button class="del" onclick="echeanceDel('${e.id}')" title="Supprimer">${ICO_SZ('x', 14)}</button>
         </div>`;
       }).join("")}
       <div class="ech-row ech-total ${ok ? "ok" : "warn"}" id="echTotalRow">
         <span class="lbl-total">Total</span>
-        <span class="pct-total" id="echTotalPct">${pctSum.toString().replace(".",",")} %${ok ? " ✓" : ""}</span>
+        <span class="pct-total" id="echTotalPct">${pctSum.toString().replace(".",",")} %${ok ? ` ${ICO_SZ('check', 12)}` : ""}</span>
         <div class="ech-info-spacer" aria-hidden="true"></div>
         <span class="del-spacer"></span>
       </div>
     </div>
-    <div class="ech-warn" id="echWarn" style="${ok ? "display:none" : ""}">⚠ Les pourcentages doivent totaliser 100 %.</div>
+    <div class="ech-warn" id="echWarn" style="display:${ok ? "none" : "flex"};align-items:center;gap:6px"><span style="flex-shrink:0">${ICO_SZ('alertTriangle', 14)}</span><span>Les pourcentages doivent totaliser 100 %.</span></div>
     <div class="ech-actions" style="margin-bottom:var(--space-xl)">
-      <button class="btn-add-neon" onclick="echeanceAdd()" type="button">＋ Ajouter</button>
+      <button class="btn-add-neon" onclick="echeanceAdd()" type="button">${ICO_SZ('plus', 14)} Ajouter</button>
     </div>
 
     ${rPaiementFields()}
@@ -9660,7 +9701,7 @@ function rDevisSectionConditions() {
     ${rLogoField()}
     <h5>Photographe (en-tête du devis, fallback)</h5>
     ${renderLockedTextarea("photographe", d.photographe || "", "", "Vos coordonnées en haut à gauche du devis (utilisé si l'identité Profil est vide)…")}
-    <div class="hint" style="margin:14px 0 8px;font-size:12px;color:var(--text-muted)">💡 Tout le reste (<strong>préambule CGV</strong>, <strong>conditions de paiement</strong>, <strong>sections CGV</strong>, <strong>bloc signature</strong>) est désormais éditable directement depuis l'aperçu du devis (clic sur ⋮).</div>
+    <div class="hint" style="margin:14px 0 8px;font-size:12px;color:var(--text-muted);display:flex;align-items:flex-start;gap:6px"><span style="flex-shrink:0;color:var(--warning);margin-top:1px">${ICO_SZ('lightbulb', 14)}</span><span>Tout le reste (<strong>préambule CGV</strong>, <strong>conditions de paiement</strong>, <strong>sections CGV</strong>, <strong>bloc signature</strong>) est désormais éditable directement depuis l'aperçu du devis (clic sur ${ICO_SZ('moreVertical', 12)}).</span></div>
     <h5>Sections CGV (vue compacte)</h5>
     ${rCgvEditor()}
   `;
@@ -9677,18 +9718,18 @@ function rDevisPaneFooterInner() {
   const inSuivi = !!devisCurrentSuiviEntry();
 
   const bannerErr = v.errors.length
-    ? `<div class="devis-banner err"><span class="devis-banner-ico">⛔</span><div>Émission bloquée :<ul>${v.errors.map(e => `<li>${esc(e)}</li>`).join("")}</ul></div></div>`
+    ? `<div class="devis-banner err"><span class="devis-banner-ico">${ICO_SZ('alertOctagon', 16)}</span><div>Émission bloquée :<ul>${v.errors.map(e => `<li>${esc(e)}</li>`).join("")}</ul></div></div>`
     : "";
   const bannerWarn = v.warnings.length
-    ? `<div class="devis-banner warn"><span class="devis-banner-ico">⚠</span><div>${v.warnings.map(esc).join(" · ")}</div></div>`
+    ? `<div class="devis-banner warn"><span class="devis-banner-ico">${ICO_SZ('alertTriangle', 16)}</span><div>${v.warnings.map(esc).join(" · ")}</div></div>`
     : "";
   const bannerDirty = (inSuivi && dirty)
-    ? `<div class="devis-banner info"><span class="devis-banner-ico">●</span><div>Modifications non enregistrées dans Suivi.</div></div>`
+    ? `<div class="devis-banner info"><span class="devis-banner-ico">${ICO_SZ('circleFilled', 12)}</span><div>Modifications non enregistrées dans Suivi.</div></div>`
     : "";
 
   const mainBtn = inSuivi
-    ? `<button class="btn-neon" onclick="suiviUpdateSnapshot()" ${!dirty?"disabled":""} title="${dirty?'':'Aucune modification à enregistrer'}">${dirty ? '💾 Enregistrer les modifications' : '✓ À jour dans Suivi'}</button>`
-    : `<button class="btn-neon" onclick="suiviAdd()" ${!v.ok?"disabled":""} title="${v.ok?'':'Corrige les erreurs ci-dessus'}">💾 Enregistrer dans Suivi</button>`;
+    ? `<button class="btn-neon" onclick="suiviUpdateSnapshot()" ${!dirty?"disabled":""} title="${dirty?'':'Aucune modification à enregistrer'}">${dirty ? `${ICONS.save} Enregistrer les modifications` : `${ICONS.check} À jour dans Suivi`}</button>`
+    : `<button class="btn-neon" onclick="suiviAdd()" ${!v.ok?"disabled":""} title="${v.ok?'':'Corrige les erreurs ci-dessus'}">${ICONS.save} Enregistrer dans Suivi</button>`;
 
   const infoBtn = `<button type="button" class="tarif-info" tabindex="0" aria-label="Que fait l'enregistrement dans Suivi ?">i<div class="tarif-tooltip up" role="tooltip">
     <div class="tt-title">Enregistrement dans Suivi</div>
@@ -9697,7 +9738,7 @@ function rDevisPaneFooterInner() {
     <p style="margin:0 0 8px;font-size:12px;line-height:1.5">Bouton « Enregistrer dans Suivi ». Crée une nouvelle entrée dans l'onglet Suivi avec snapshots figés.</p>
     <p style="margin:0 0 4px;font-size:12px;line-height:1.5;font-weight:600">Après modifications :</p>
     <p style="margin:0 0 8px;font-size:12px;line-height:1.5">Bouton « Enregistrer les modifications ». Met à jour les snapshots existants dans Suivi avec la version actuelle.</p>
-    <p style="margin:0;font-size:12px;line-height:1.5;color:var(--text-muted)">Une fois archivé : ouvre l'onglet Suivi → bouton 🖨 pour imprimer le devis, le débours ou la facture.</p>
+    <p style="margin:0;font-size:12px;line-height:1.5;color:var(--text-muted)">Une fois archivé : ouvre l'onglet Suivi → bouton « Imprimer » pour le devis, le débours ou la facture.</p>
   </div></button>`;
 
   return `
