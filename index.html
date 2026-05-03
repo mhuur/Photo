@@ -56,7 +56,8 @@
   body{margin:0;font-family:'Inter',system-ui,-apple-system,sans-serif;background:linear-gradient(180deg,var(--bg) 0%,var(--bg-3) 100%);background-attachment:fixed;color:var(--text);font-variant-numeric:tabular-nums}
   #app{display:flex;min-height:100vh}
   .sb{width:220px;background:var(--bg-2);color:var(--text);border-right:1px solid var(--border);display:flex;flex-direction:column;position:sticky;top:0;height:100vh;overflow-y:auto;flex-shrink:0;z-index:100}
-  .sb h1{font-size:13px;padding:18px 16px 10px;margin:0;color:var(--accent);letter-spacing:.05em;text-transform:uppercase;font-weight:700}
+  /* En-tête sidebar — typo néon Tilt Neon. Visuellement distinct des tabs (pas de hover, cursor:default, border-bottom). */
+  .sb h1{font-family:'Tilt Neon',sans-serif;font-size:24px;font-weight:400;padding:18px 16px 14px;margin:0 12px 8px;color:#cfe3ff;letter-spacing:.06em;text-transform:uppercase;line-height:1;text-align:center;cursor:default;border-bottom:1px solid rgba(74,158,255,.25);text-shadow:0 0 4px rgba(74,158,255,.9),0 0 12px rgba(74,158,255,.5),0 0 24px rgba(74,158,255,.25)}
   .sb button.tab{display:flex;align-items:center;gap:11px;width:100%;background:none;border:0;color:var(--text-muted);padding:10px 16px;text-align:left;cursor:pointer;font:inherit;font-size:13px;border-left:3px solid transparent}
   .sb button.tab:hover{background:var(--surface);color:var(--text)}
   .sb button.tab.active{background:var(--surface);color:#fff;border-left-color:var(--primary)}
@@ -3223,8 +3224,8 @@ const TABS = [
   ["tarifs",  "Frais & Tarifs",    "wallet"],
   ["clients", "Clients",           "users"],
   ["compta",  "Comptabilité",      "barChart"],
-  ["profil",  "Profil",            "user"],
   ["bugs",    "Signaler un bug",   "bug"]
+  // Profil, Templates, Paramètres → accessibles via le menu user (sidebar bottom).
 ];
 
 const app = document.getElementById("app");
@@ -7543,7 +7544,7 @@ function render() {
     return;
   }
   // owner / member → app normale
-  const renderers = { accueil: rAC, mission: rMS, profil: rPF, suivi: rSV, clients: rCL, tarifs: rTR, compta: rCP, bugs: rBG, parametres: rParametres };
+  const renderers = { accueil: rAC, mission: rMS, profil: rPF, suivi: rSV, clients: rCL, tarifs: rTR, compta: rCP, bugs: rBG, parametres: rParametres, templates: rTemplates };
   const view = (renderers[tab] || (() => ""))();
   // Badge "owner" ou "membre" en bas de la sidebar
   const pendingCount = Object.keys(workspaceState.pendingRequests || {}).length;
@@ -7552,7 +7553,7 @@ function render() {
     : "Membre";
   app.innerHTML = `
     <aside class="sb">
-      <h1>🌊 Devis Photo</h1>
+      <h1>Menu</h1>
       ${(() => {
         const hasDraft = typeof missionHasDraft === "function" && missionHasDraft();
         const visible = TABS.filter(([k]) => k !== "mission" || hasDraft || tab === "mission");
@@ -7576,6 +7577,8 @@ function render() {
               <div class="sb-user-menu-email">${esc(user.email)}</div>
               <div class="sb-user-menu-role">${roleLabel}</div>
             </div>
+            <button type="button" role="menuitem" onclick="userMenuClose();setTab('profil')">${ICONS.user}<span>Profil</span></button>
+            <button type="button" role="menuitem" onclick="userMenuClose();setTab('templates')">${ICONS.mail}<span>Templates</span></button>
             <button type="button" role="menuitem" onclick="userMenuClose();setTab('parametres')">${ICONS.settings}<span>Paramètres</span></button>
             <button type="button" role="menuitem" onclick="userMenuClose();signOut()">${ICONS.logOut}<span>Se déconnecter</span></button>
           </div>
@@ -13761,9 +13764,8 @@ function rPF() {
   `;
 }
 
-// ▼ rParametres — vue Paramètres (accessible uniquement via le menu user de la sidebar).
-// Contient toute la configuration de l'app : préférences, templates Gmail, partage
-// du workspace, sauvegarde JSON. Distinct de Profil qui n'a que les infos d'identité.
+// ▼ rParametres — vue Paramètres (accessible via le menu user). Configuration générale :
+// préférences, partage workspace, sauvegarde. Templates Gmail dans rTemplates (vue séparée).
 function rParametres() {
   return `
     <h1 class="page-title">Paramètres <span id="savedFlash" class="saved"></span></h1>
@@ -13776,11 +13778,18 @@ function rParametres() {
       </div>
     </div>
 
-    ${rGmailTemplatesSection()}
-
     ${workspaceState.role === "owner" ? rShareSection() : ""}
 
     ${rBackupSection()}
+  `;
+}
+
+// ▼ rTemplates — vue Templates Gmail (relance devis + relance paiement). Accessible
+// via le menu user. Wrap le helper rGmailTemplatesSection existant.
+function rTemplates() {
+  return `
+    <h1 class="page-title">Templates <span id="savedFlash" class="saved"></span></h1>
+    ${rGmailTemplatesSection()}
   `;
 }
 
