@@ -2169,6 +2169,28 @@
   .view-devis-snapshot .dp-rich-menu-btn{display:none}
   .view-devis-snapshot .dp-rich-zone:hover{background:transparent;box-shadow:none}
 
+  /* === Section CGV — modal d'édition + liste sommaire formulaire === */
+  .cgv-edit-pos-meta{font-size:11px;color:var(--text-dim);font-weight:500;margin-left:8px;letter-spacing:0;text-transform:none}
+  .cgv-edit-modal-body{display:flex;flex-direction:column;gap:4px;padding:6px 0}
+  .cgv-edit-modal-label{font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.04em}
+  .cgv-edit-modal-input{padding:9px 12px;border:1px solid var(--border-light);border-radius:6px;background:var(--bg-2);color:var(--text);font:inherit;font-size:13px;font-weight:600}
+  .cgv-edit-modal-input:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 2px var(--primary-soft)}
+  .cgv-edit-modal-textarea{padding:10px 12px;border:1px solid var(--border-light);border-radius:6px;background:var(--bg-2);color:var(--text);font:inherit;font-size:13px;font-family:inherit;resize:vertical;line-height:1.55;min-height:160px;width:100%;box-sizing:border-box}
+  .cgv-edit-modal-textarea:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 2px var(--primary-soft)}
+  /* Boutons modal — style néon doux */
+  .modal-actions .cgv-edit-move{font-size:12px;font-weight:600}
+  .modal-actions .cgv-edit-remove{color:var(--danger);border:1px solid var(--danger);background:transparent;font-size:12px;font-weight:600;box-shadow:inset 0 0 0 1px rgba(239,68,68,.25),0 0 6px rgba(239,68,68,.15)}
+  .modal-actions .cgv-edit-remove:hover{background:rgba(239,68,68,.08);color:#fca5a5;box-shadow:inset 0 0 8px rgba(239,68,68,.2),0 0 12px rgba(239,68,68,.4)}
+
+  /* Liste sommaire CGV (formulaire de gauche) — minimal */
+  .cgv-summary-list{display:flex;flex-direction:column;gap:4px;max-width:780px}
+  .cgv-summary-row{display:flex;align-items:center;gap:10px;padding:8px 12px;background:var(--surface);border:1px solid var(--border-light);border-radius:6px;transition:border-color .12s,background .12s}
+  .cgv-summary-row:hover{border-color:var(--primary);background:rgba(74,158,255,.04)}
+  .cgv-summary-num{font-size:12px;font-weight:700;color:var(--primary);min-width:22px;font-variant-numeric:tabular-nums}
+  .cgv-summary-title{flex:1;font-size:13px;font-weight:500;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .cgv-summary-edit{flex-shrink:0;background:transparent;border:1px solid transparent;color:var(--text-dim);cursor:pointer;font-size:14px;line-height:1;width:26px;height:26px;border-radius:5px;display:inline-flex;align-items:center;justify-content:center;font-weight:700;padding:0;transition:all .12s}
+  .cgv-summary-edit:hover{color:var(--primary);background:var(--primary-soft);border-color:var(--primary)}
+
   /* Editor modal toolbar */
   .rte-toolbar{display:flex;gap:3px;flex-wrap:wrap;align-items:center;padding:6px 8px;background:var(--surface);border:1px solid var(--border);border-radius:6px;margin-bottom:8px}
   .rte-btn{background:transparent;border:1px solid transparent;color:var(--text);padding:5px 9px;border-radius:4px;cursor:pointer;font:inherit;font-size:13px;font-weight:500;min-width:30px;line-height:1.3}
@@ -7192,6 +7214,7 @@ function render() {
     ${rViewFactureModal()}
     ${rClientInfoModal()}
     ${rBugLightbox()}
+    ${rCgvSectionEditModal()}
     ${rPrintTipModal()}
 `;
 }
@@ -7466,7 +7489,8 @@ function renderCgvSections(preambule, sections) {
     const titlePart = title
       ? `<strong class="cgv-section-title">${i + 1}. ${esc(titleDisplay)}</strong> `
       : `<strong class="cgv-section-title">${i + 1}.</strong> `;
-    html += `<p class="cgv-section">${titlePart}${esc(body)}</p>`;
+    // Wrap pour édition in-place : bouton ⋮ ouvre cgvSectionEditOpen.
+    html += `<div class="dp-rich-zone" data-rich-field="cgvSection-${esc(s.id || i)}"><button class="dp-rich-menu-btn" type="button" onclick="event.stopPropagation();cgvSectionEditOpen('${esc(s.id)}')" title="Modifier cette section CGV">⋮</button><p class="cgv-section">${titlePart}${esc(body)}</p></div>`;
   });
   return html;
 }
@@ -7560,6 +7584,61 @@ window.cgvSectionMoveDown = function(id) {
   save();
   render();
 };
+
+// ▼ cgvSectionEditModal — édition in-place d'une section CGV depuis la
+// preview du devis (clic sur ⋮ flottant dans la zone). Regroupe titre +
+// body + actions ordre/suppression dans un modal compact.
+let cgvSectionEditModal = null; // { id }
+
+window.cgvSectionEditOpen = function(id) {
+  cgvSectionEditModal = { id };
+  render();
+  requestAnimationFrame(() => {
+    const ti = document.getElementById("cgvSectionEditTitle");
+    if (ti) { ti.focus(); ti.select(); }
+  });
+};
+window.cgvSectionEditClose = function() {
+  cgvSectionEditModal = null;
+  render();
+};
+// Wrapper qui supprime + ferme le modal (cgvSectionRemove a déjà uiConfirm).
+window.cgvSectionRemoveAndClose = async function(id) {
+  await cgvSectionRemove(id);
+  // Si la section a été effectivement supprimée, on ferme.
+  const stillExists = (S.mission.cgvSections || []).some(s => s.id === id);
+  if (!stillExists) {
+    cgvSectionEditModal = null;
+    render();
+  }
+};
+
+function rCgvSectionEditModal() {
+  if (!cgvSectionEditModal) return "";
+  const sections = S.mission.cgvSections || [];
+  const sec = sections.find(s => s.id === cgvSectionEditModal.id);
+  if (!sec) { cgvSectionEditModal = null; return ""; }
+  const idx = sections.indexOf(sec);
+  const total = sections.length;
+  return `<div class="modal-overlay" onclick="if(event.target===this)cgvSectionEditClose()">
+    <div class="modal-card" style="max-width:680px">
+      <div class="modal-title">Section CGV ${idx + 1}<span class="cgv-edit-pos-meta"> — section ${idx + 1} sur ${total}</span></div>
+      <div class="modal-sub">Modifie le titre et le contenu. Boutons d'ordre et de suppression en bas.</div>
+      <div class="cgv-edit-modal-body">
+        <label class="cgv-edit-modal-label">Titre</label>
+        <input type="text" id="cgvSectionEditTitle" class="cgv-edit-modal-input" placeholder="Ex : Objet, Réservation et acompte, …" value="${esc(sec.title || "")}" oninput="cgvSectionUpdate('${esc(sec.id)}', 'title', this.value)">
+        <label class="cgv-edit-modal-label" style="margin-top:14px">Contenu</label>
+        <textarea class="cgv-edit-modal-textarea" rows="8" placeholder="Contenu de la section…" oninput="cgvSectionUpdate('${esc(sec.id)}', 'body', this.value)">${esc(sec.body || "")}</textarea>
+      </div>
+      <div class="modal-actions">
+        <button class="btn ghost cgv-edit-move" onclick="cgvSectionMoveUp('${esc(sec.id)}')" ${idx === 0 ? 'disabled' : ''} title="Monter cette section">↑ Monter</button>
+        <button class="btn ghost cgv-edit-move" onclick="cgvSectionMoveDown('${esc(sec.id)}')" ${idx === total - 1 ? 'disabled' : ''} title="Descendre cette section">↓ Descendre</button>
+        <button class="btn ghost cgv-edit-remove" style="margin-left:auto" onclick="cgvSectionRemoveAndClose('${esc(sec.id)}')" title="Supprimer cette section">× Supprimer</button>
+        <button class="btn" onclick="cgvSectionEditClose()">Fermer</button>
+      </div>
+    </div>
+  </div>`;
+}
 
 // Photographer template — populates preambule + sections array
 const CGV_TEMPLATE_PREAMBLE = "Le présent document précise les conditions générales de vente applicables aux prestations photographiques et audiovisuelles. Il complète et fait partie intégrante du devis qu'il accompagne.";
@@ -7825,34 +7904,30 @@ window.paiementClearLegacy = async function() {
 // ▼ rCgvEditor — éditeur des sections CGV
 function rCgvEditor() {
   const sections = (S.mission.cgvSections || []);
-  const preambule = S.mission.cgvPreambule || "";
+  // Liste compacte (lecture) : chaque section apparaît juste avec son numéro
+  // + son titre. Pour modifier titre/contenu/ordre : clic sur ⋮ dans la
+  // preview du devis. Le formulaire ne contient plus que la liste sommaire
+  // + bouton « + Ajouter ». Évite la duplication preview ↔ formulaire.
   const sectionsHtml = sections.map((s, i) => `
-    <div class="cgv-edit-row" data-id="${s.id}">
-      <div class="cgv-edit-head">
-        <span class="cgv-edit-num">${i + 1}.</span>
-        <input type="text" class="cgv-edit-title" placeholder="Titre de la section (ex : Objet, Réservation, …)" value="${esc(s.title || "")}" oninput="cgvSectionUpdate('${s.id}', 'title', this.value)">
-        <div class="cgv-edit-actions">
-          <button class="btn-icon" onclick="cgvSectionMoveUp('${s.id}')" title="Monter" ${i === 0 ? "disabled" : ""}>↑</button>
-          <button class="btn-icon" onclick="cgvSectionMoveDown('${s.id}')" title="Descendre" ${i === sections.length - 1 ? "disabled" : ""}>↓</button>
-          <button class="btn-icon danger" onclick="cgvSectionRemove('${s.id}')" title="Supprimer">×</button>
-        </div>
-      </div>
-      <textarea class="cgv-edit-body" placeholder="Contenu de la section…" rows="3" oninput="cgvSectionUpdate('${s.id}', 'body', this.value)">${esc(s.body || "")}</textarea>
+    <div class="cgv-summary-row" data-id="${s.id}">
+      <span class="cgv-summary-num">${i + 1}.</span>
+      <span class="cgv-summary-title">${esc(s.title || "(sans titre)")}</span>
+      <button class="btn-icon cgv-summary-edit" onclick="cgvSectionEditOpen('${s.id}')" title="Modifier">⋮</button>
     </div>
   `).join("");
 
   return `
-    <div class="hint" style="margin:0 0 14px;font-size:12px;color:var(--text-muted);line-height:1.5">
-      Sections numérotées (titre + contenu). Chaque section apparaît avec son numéro auto-généré, son titre en uppercase et son corps justifié à l'impression.
+    <div class="hint" style="margin:0 0 12px;font-size:12px;color:var(--text-muted);line-height:1.5">
+      💡 Pour modifier le <strong>titre</strong>, le <strong>contenu</strong> ou l'<strong>ordre</strong> des sections, clique sur ⋮ directement dans l'aperçu du devis (ou ici à droite de chaque section).
     </div>
 
-    <div class="cgv-edit-list">
+    <div class="cgv-summary-list">
       ${sections.length === 0
         ? `<div class="cgv-edit-empty">Aucune section. Clique sur « + Ajouter une section » ci-dessous, ou utilise « 📋 Charger modèle photographe » pour partir d'un modèle pré-rempli.</div>`
         : sectionsHtml}
     </div>
 
-    <button class="btn ghost" style="margin-top:8px" onclick="cgvSectionAdd()">+ Ajouter une section</button>
+    <button class="btn ghost" style="margin-top:10px" onclick="cgvSectionAdd()">+ Ajouter une section</button>
   `;
 }
 
