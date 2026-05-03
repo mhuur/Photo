@@ -78,7 +78,7 @@
   .edit-section-header:hover{background:rgba(74,158,255,.05)}
   .edit-section.open .edit-section-header:hover{background:rgba(74,158,255,.08)}
   .edit-section-header:focus{outline:none}
-  .edit-section.open .edit-section-title{color:#fff;text-shadow:0 0 8px rgba(74,158,255,.55)}
+  .edit-section.open .edit-section-title{color:#cfe3ff;text-shadow:0 0 8px rgba(74,158,255,.55)}
   .edit-section-chevron{font-size:11px;color:var(--text-muted);transition:transform .2s ease,color .2s,filter .2s;flex-shrink:0;width:14px;display:inline-flex;align-items:center;justify-content:center}
   .edit-section.open .edit-section-chevron{transform:rotate(90deg);color:var(--primary);filter:drop-shadow(0 0 4px rgba(74,158,255,.6))}
   .edit-section-title{flex:1;letter-spacing:.01em;transition:color .2s,text-shadow .2s}
@@ -93,9 +93,9 @@
   .field.sm{max-width:140px}
   .field label{font-size:13px;color:var(--text-muted);margin-bottom:var(--space-xs)}
   .field input:not([type="checkbox"]):not([type="radio"]),.field select{height:var(--input-h)}
-  .field input,.field textarea,.field select{padding:var(--space-sm) var(--space-md);border:1px solid transparent;border-radius:var(--radius-md);font:inherit;background:var(--surface-2);color:var(--text);transition:border-color .12s,box-shadow .12s;font-variant-numeric:tabular-nums}
-  .field input:hover,.field textarea:hover,.field select:hover{border-color:var(--border-light)}
-  .field input:focus,.field textarea:focus,.field select:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 3px var(--primary-soft)}
+  .field input,.field textarea,.field select{padding:var(--space-sm) var(--space-md);border:1px solid var(--border-soft);border-radius:var(--radius-md);font:inherit;background:var(--surface-2);color:var(--text);transition:border-color .15s,box-shadow .15s,background .15s;font-variant-numeric:tabular-nums}
+  .field input:hover:not(:disabled),.field textarea:hover:not(:disabled),.field select:hover:not(:disabled){border-color:rgba(74,158,255,.4);box-shadow:0 0 8px rgba(74,158,255,.1)}
+  .field input:focus,.field textarea:focus,.field select:focus{outline:none;border-color:var(--primary);background:rgba(74,158,255,.04);box-shadow:inset 0 0 0 1px rgba(74,158,255,.22),0 0 12px rgba(74,158,255,.35),0 0 24px rgba(74,158,255,.12)}
   .field textarea{min-height:60px;resize:vertical}
   .btn{background:var(--primary);color:#fff;border:0;padding:10px 16px;border-radius:6px;cursor:pointer;font:inherit;font-weight:500;transition:all .15s}
   .btn:hover{background:var(--primary-dark);box-shadow:0 2px 8px rgba(74,158,255,.3)}
