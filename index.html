@@ -63,6 +63,9 @@
   .sb .tab-icon{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;flex-shrink:0;color:inherit}
   .sb .tab-icon svg{width:18px;height:18px}
   .sb button.tab.active .tab-icon{color:var(--primary)}
+  /* Pastille « brouillon » à côté du label Mission quand un brouillon est en cours */
+  .sb .brouillon-tag{font-size:9px;color:var(--warning);background:rgba(245,158,11,.10);padding:2px 7px;border-radius:999px;margin-left:6px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;border:1px solid rgba(245,158,11,.4);text-shadow:0 0 4px rgba(245,158,11,.5);box-shadow:0 0 8px rgba(245,158,11,.25);animation:brouillon-pulse 2s ease-in-out infinite}
+  @keyframes brouillon-pulse{0%,100%{opacity:.7;box-shadow:0 0 6px rgba(245,158,11,.2)}50%{opacity:1;box-shadow:0 0 12px rgba(245,158,11,.45)}}
   .sb .user{margin-top:auto;padding:12px 16px;font-size:13px;color:var(--text-muted);border-top:1px solid var(--border)}
   .sb .user a{color:inherit}
   main{flex:1;padding:24px 32px;max-width:1100px;position:relative}
@@ -7488,7 +7491,16 @@ function render() {
   app.innerHTML = `
     <aside class="sb">
       <h1>🌊 Devis Photo</h1>
-      ${TABS.map(([k,l,ico]) => `<button class="tab ${tab===k?"active":""}" onclick="setTab('${k}')"><span class="tab-icon">${ICONS[ico]||""}</span>${esc(l)}</button>`).join("")}
+      ${(() => {
+        const hasDraft = typeof missionHasDraft === "function" && missionHasDraft();
+        const visible = TABS.filter(([k]) => k !== "mission" || hasDraft || tab === "mission");
+        return visible.map(([k,l,ico]) => {
+          const labelHtml = (k === "mission" && hasDraft)
+            ? `${esc(l)} <span class="brouillon-tag">brouillon</span>`
+            : esc(l);
+          return `<button class="tab ${tab===k?"active":""}" onclick="setTab('${k}')"><span class="tab-icon">${ICONS[ico]||""}</span>${labelHtml}</button>`;
+        }).join("");
+      })()}
       <div class="user">
         ${esc(user.email)}
         <div style="font-size:11px;color:var(--text-dim);margin-top:2px">${roleLabel}</div>
