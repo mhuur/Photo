@@ -10928,6 +10928,11 @@ function suiviDevisRefuser(devisId) {
     e.statutAvantRefus = entryStatut(e);
     e.statut = "refuse";
   }
+  // Timestamp du changement de statut → utilisé par la section « Annulés/refusés »
+  // de l'Accueil (filtre 7 jours sur la BASCULE de statut, pas sur la date d'émission).
+  if (S.suivi.devis && S.suivi.devis[devisId]) {
+    S.suivi.devis[devisId].statutTs = Date.now();
+  }
   save();
   render();
 }
@@ -10988,6 +10993,10 @@ function suiviRevert(id) {
       x.statut = x.statutAvantRefus || "envoye";
       delete x.statutAvantRefus;
     }
+    // Plus refusé → on retire le timestamp pour la section Accueil.
+    if (S.suivi.devis && S.suivi.devis[e.devisId]) {
+      delete S.suivi.devis[e.devisId].statutTs;
+    }
   }
   save();
   render();
@@ -10998,6 +11007,11 @@ function suiviDevisRevertRefus(devisId) {
   for (const x of suiviGroupLigne(devisId)) {
     x.statut = x.statutAvantRefus || "envoye";
     delete x.statutAvantRefus;
+  }
+  // Le devis n'est plus refusé → on retire le timestamp pour qu'il sorte
+  // de la section « Annulés/refusés » de l'Accueil.
+  if (S.suivi.devis && S.suivi.devis[devisId]) {
+    delete S.suivi.devis[devisId].statutTs;
   }
   save();
   render();
@@ -11010,6 +11024,11 @@ function suiviDevisAnnuler(devisId) {
     e.statutAvantAnnul = entryStatut(e);
     e.statut = "annule";
   }
+  // Timestamp du changement de statut → utilisé par la section « Annulés/refusés »
+  // de l'Accueil (filtre 7 jours sur la BASCULE de statut, pas sur la date d'émission).
+  if (S.suivi.devis && S.suivi.devis[devisId]) {
+    S.suivi.devis[devisId].statutTs = Date.now();
+  }
   save();
   render();
 }
@@ -11019,6 +11038,11 @@ function suiviDevisRevertAnnul(devisId) {
   for (const x of suiviGroupLigne(devisId)) {
     x.statut = x.statutAvantAnnul || "attente";
     delete x.statutAvantAnnul;
+  }
+  // Le devis n'est plus annulé → on retire le timestamp pour qu'il sorte
+  // de la section « Annulés/refusés » de l'Accueil.
+  if (S.suivi.devis && S.suivi.devis[devisId]) {
+    delete S.suivi.devis[devisId].statutTs;
   }
   save();
   render();
@@ -13410,20 +13434,26 @@ function rAC() {
     }))
     .sort((a, b) => (a.dateMax || "").localeCompare(b.dateMax || ""));
 
-  // « Annulés / refusés » récents : statutPrin in (refuse, annule) ET émis dans les
-  // 7 derniers jours (filtre par date d'émission g.dateMin — pratique sans champ
-  // dédié pour la date de changement de statut). Section éphémère qui aide à
-  // garder un œil sur les retours négatifs récents avant qu'ils ne disparaissent.
+  // « Annulés / refusés » récents : statutPrin in (refuse, annule) ET dont la
+  // BASCULE de statut date de moins de 7 jours. Le timestamp dv.statutTs est
+  // posé par suiviDevisRefuser/Annuler et retiré par les helpers de revert.
+  // Fallback (devis annulés AVANT cette feature, sans statutTs) : on les exclut
+  // pour éviter qu'ils polluent la liste.
   const sevenDaysMs = 7 * 86400000;
   const aTermines = groups
     .filter(g => g.statutPrin === "refuse" || g.statutPrin === "annule")
     .filter(g => {
       if (g.devisId === sticky) return true;
-      if (!g.dateMin) return false;
-      const dEmi = new Date(g.dateMin + "T00:00:00").getTime();
-      return (ms - dEmi) <= sevenDaysMs;
+      const dv = S.suivi.devis && S.suivi.devis[g.devisId];
+      const ts = dv && dv.statutTs;
+      if (!ts) return false;
+      return (ms - ts) <= sevenDaysMs;
     })
-    .sort((a, b) => (b.dateMin || "").localeCompare(a.dateMin || ""));
+    .sort((a, b) => {
+      const tsA = (S.suivi.devis[a.devisId] || {}).statutTs || 0;
+      const tsB = (S.suivi.devis[b.devisId] || {}).statutTs || 0;
+      return tsB - tsA;
+    });
 
   const stop = "event.stopPropagation();";
   const renderRow = (g, late) => {
