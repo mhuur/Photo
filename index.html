@@ -2387,9 +2387,13 @@
      width as materiel rows. Without this, depl row spans wider than materiel and the
      toggles get pushed further right. */
   .depl-wrap{max-width:780px}
-  .depl-subtoggle-row{display:flex;align-items:center;gap:10px;margin-top:8px}
-  .depl-subtoggle-row .lg-toggle{min-width:300px}
-  .depl-subtoggle-row .lg-toggle button{font-size:13px;font-weight:500;padding:0 14px}
+  /* Ligne de toggles dans la section Déplacement — gap cohérent, alignement
+     baseline. Largeur des segments : auto (suit le texte des boutons). */
+  .depl-toggle-row{display:flex;align-items:center;gap:var(--space-md);flex-wrap:wrap;max-width:780px;margin-bottom:var(--space-sm)}
+  .depl-toggle-row .seg{flex-shrink:0}
+  .depl-toggle-row .lg-info-icon,.depl-toggle-row .tarif-info{flex-shrink:0}
+  /* Legacy classes conservées (autres usages potentiels) */
+  .depl-subtoggle-row{display:flex;align-items:center;gap:var(--space-md);margin-top:var(--space-sm)}
   /* Déplacement: structure miroir EXACTE des lignes matériel pour aligner les toggles
      verticalement. depl-title-slot mimétise .lg-title (flex:1, min-width:160px) et
      contient le toggle Voiture/Transports. lg-prix-spacer mimétise .lg-prix (90px).
@@ -9371,75 +9375,76 @@ function rDevisSectionDeplacement() {
   const pmt = d.deplacement.paiementType || "acompte";
   const afficheMode = d.deplacement.afficheMode || "afficher";
 
-  const paiementModeHtml = isDebours
-    ? `<div class="seg lg-toggle lg-toggle-pmt" title="Mode de refacturation des débours">
-        <button class="${pmt==='acompte'?'on':''}" onclick="updDeplPaiementType('acompte')" title="Tu avances le déplacement, le client te rembourse au centime près. Apparaît sur la feuille débours.">Refacturé</button>
-        <button class="${pmt==='fact-direct'?'on':''}" onclick="updDeplPaiementType('fact-direct')" title="Le client règle directement le transporteur. Hors devis fiscal, listé pour info.">Direct</button>
+  const paiementToggle = isDebours
+    ? `<div class="seg" title="Mode de refacturation des débours">
+        <button class="${pmt==='acompte'?'on':''}" onclick="updDeplPaiementType('acompte')" title="Tu avances le déplacement, le client te rembourse au centime près.">Refacturé</button>
+        <button class="${pmt==='fact-direct'?'on':''}" onclick="updDeplPaiementType('fact-direct')" title="Le client règle directement le transporteur. Hors devis fiscal.">Direct</button>
       </div>`
-    : `<div class="seg lg-toggle lg-toggle-pmt" title="Mode de paiement (obligatoire)">
+    : `<div class="seg" title="Mode de paiement">
         <button class="${pmt==='acompte'?'on':''}" onclick="updDeplPaiementType('acompte')">Acompte</button>
         <button class="${pmt==='avance'?'on':''}" onclick="updDeplPaiementType('avance')">Avance</button>
       </div>`;
 
-  return `
-    <h5>Déplacement</h5>
-    <div class="lg-row-wrap depl-wrap" data-id="deplacement">
-      <div class="lg-row">
-        <div class="depl-title-slot">
-          <div class="seg lg-toggle">
-            <button class="${mode==='voiture'?'on':''}" onclick="updMissionMode('voiture')">Voiture</button>
-            <button class="${mode==='transports'?'on':''}" onclick="updMissionMode('transports')">Transports</button>
-          </div>
+  // Champs trajet selon le mode (voiture / transports en commun)
+  const trajetFields = mode === "voiture"
+    ? `<div class="row">
+        <div class="field narrow"><label>Distance (km)</label><input type="number" step="0.1" value="${esc(d.deplacement.km)}" oninput="upd('mission.deplacement.km', this.value)"></div>
+        <div class="field narrow"><label>Péages (€)</label><input type="number" step="0.01" value="${esc(d.deplacement.peages)}" oninput="upd('mission.deplacement.peages', this.value)"></div>
+        <div class="field narrow"><label>€/km</label><input type="number" step="0.01" value="${esc(d.deplacement.tauxKm ?? "0.40")}" oninput="upd('mission.deplacement.tauxKm', this.value)"></div>
+        <div class="field narrow"><label>Temps de trajet (h)</label><input type="number" step="0.25" value="${esc(d.deplacement.trajetH)}" oninput="upd('mission.deplacement.trajetH', this.value)"></div>
+      </div>`
+    : `<div class="row">
+        <div class="field narrow"><label>Prix des billets (€)</label><input type="number" step="0.01" value="${esc(d.deplacement.ticket)}" oninput="upd('mission.deplacement.ticket', this.value)"></div>
+        <div class="field narrow"><label>Temps de trajet (h)</label><input type="number" step="0.25" value="${esc(d.deplacement.trajetH)}" oninput="upd('mission.deplacement.trajetH', this.value)"></div>
+      </div>`;
+
+  // Bloc affichage : visible uniquement si « Principal » (pas applicable
+  // aux débours qui apparaissent toujours sur la feuille débours).
+  let affichageBlock = "";
+  if (devis === "principal") {
+    const t = totals();
+    const b = afficheMode === "lisser" ? tarifBreakdown(true) : null;
+    const infoBtn = (afficheMode === "lisser" && b)
+      ? `<button type="button" class="tarif-info" data-kind="depl-lisser" tabindex="0" aria-label="Voir l'impact sur le taux horaire">i<div class="tarif-tooltip" role="tooltip">${rDeplLisserTooltipBody(b, t)}</div></button>`
+      : "";
+    const noHoursWarn = (afficheMode === "lisser" && t.totalHeures === 0)
+      ? `<div class="hint" style="margin-top:var(--space-sm);color:var(--warning)">⚠ Pas d'heures dans le devis : le déplacement est facturé séparément en attendant (mode « Inclus dans tarif » nécessite des heures).</div>`
+      : "";
+    affichageBlock = `
+      <h5>Affichage sur le devis</h5>
+      <div class="depl-toggle-row">
+        <div class="seg">
+          <button class="${afficheMode==='afficher'?'on':''}" onclick="updDeplAfficheMode('afficher')">Ligne séparée</button>
+          <button class="${afficheMode==='lisser'?'on':''}" onclick="updDeplAfficheMode('lisser')" title="Le déplacement est inclus dans le tarif horaire (pas de ligne séparée).">Inclus dans tarif</button>
         </div>
-        <div class="lg-prix-spacer" aria-hidden="true"></div>
-        <div class="seg lg-toggle">
-          <button class="${devis==='principal'?'on':''}" onclick="updDeplDevis('principal')">Principal</button>
-          <button class="${devis==='debours'?'on warn':''}" onclick="updDeplDevis('debours')">Débours</button>
-        </div>
-        ${paiementModeHtml}
-        <button class="lg-info-icon" onmouseenter="showPaiementInfo(event, 'depl')" onmouseleave="hidePaiementInfo()" tabindex="0" aria-label="Voir les conséquences fiscales">i</button>
-        <span class="lg-btn-spacer" aria-hidden="true"></span>
-        <span class="lg-btn-spacer" aria-hidden="true"></span>
+        ${infoBtn}
       </div>
-      ${devis === 'principal' ? (() => {
-        // Quand "Dans taux h" est actif, le déplacement est lissé dans le tarif
-        // horaire (pas affiché en ligne séparée). Un (i) à côté donne 2 chiffres :
-        //   - matériel amorti à l'heure (b.matos)
-        //   - majoration appliquée au taux horaire par le lissage (t.deplPerHour)
-        // Le tooltip est mis à jour live par refreshTotals().
-        const t = totals();
-        const b = afficheMode === 'lisser' ? tarifBreakdown(true) : null;
-        const infoBtn = (afficheMode === 'lisser' && b)
-          ? `<button type="button" class="tarif-info" data-kind="depl-lisser" tabindex="0" aria-label="Voir l'impact sur le taux horaire">i<div class="tarif-tooltip" role="tooltip">${rDeplLisserTooltipBody(b, t)}</div></button>`
-          : '';
-        const noHoursWarn = (afficheMode === 'lisser' && t.totalHeures === 0)
-          ? `<div class="hint" style="margin-top:6px;color:var(--warning)">⚠ Pas d'heures dans le devis : le déplacement est facturé séparément en attendant (mode « Dans taux h » nécessite des heures).</div>`
-          : '';
-        return `<div class="depl-subtoggle-row">
-          <div class="seg-with-info">
-            <div class="seg lg-toggle">
-              <button class="${afficheMode==='afficher'?'on':''}" onclick="updDeplAfficheMode('afficher')">Afficher dans devis</button>
-              <button class="${afficheMode==='lisser'?'on':''}" onclick="updDeplAfficheMode('lisser')" title="Le déplacement est inclus dans le tarif horaire (pas de ligne séparée dans le devis)">Dans taux h</button>
-            </div>
-            ${infoBtn}
-          </div>
-          ${noHoursWarn}
-        </div>`;
-      })() : ''}
+      ${noHoursWarn}`;
+  }
+
+  return `
+    <h5>Mode de transport</h5>
+    <div class="depl-toggle-row">
+      <div class="seg">
+        <button class="${mode==='voiture'?'on':''}" onclick="updMissionMode('voiture')">Voiture</button>
+        <button class="${mode==='transports'?'on':''}" onclick="updMissionMode('transports')">Transports</button>
+      </div>
     </div>
-    ${mode === "voiture" ? `
-    <div class="row">
-      <div class="field narrow"><label>Distance (km)</label><input type="number" step="0.1" value="${esc(d.deplacement.km)}" oninput="upd('mission.deplacement.km', this.value)"></div>
-      <div class="field narrow"><label>Péages (€)</label><input type="number" step="0.01" value="${esc(d.deplacement.peages)}" oninput="upd('mission.deplacement.peages', this.value)"></div>
-      <div class="field narrow"><label>€/km</label><input type="number" step="0.01" value="${esc(d.deplacement.tauxKm ?? "0.40")}" oninput="upd('mission.deplacement.tauxKm', this.value)"></div>
-      <div class="field narrow"><label>Temps de trajet (h)</label><input type="number" step="0.25" value="${esc(d.deplacement.trajetH)}" oninput="upd('mission.deplacement.trajetH', this.value)"></div>
+
+    <h5>Trajet</h5>
+    ${trajetFields}
+
+    <h5>Facturation</h5>
+    <div class="depl-toggle-row">
+      <div class="seg">
+        <button class="${devis==='principal'?'on':''}" onclick="updDeplDevis('principal')">Principal</button>
+        <button class="${devis==='debours'?'on warn':''}" onclick="updDeplDevis('debours')">Débours</button>
+      </div>
+      ${paiementToggle}
+      <button class="lg-info-icon" onmouseenter="showPaiementInfo(event, 'depl')" onmouseleave="hidePaiementInfo()" tabindex="0" aria-label="Voir les conséquences fiscales">i</button>
     </div>
-    ` : `
-    <div class="row">
-      <div class="field narrow"><label>Prix des billets (€)</label><input type="number" step="0.01" value="${esc(d.deplacement.ticket)}" oninput="upd('mission.deplacement.ticket', this.value)"></div>
-      <div class="field narrow"><label>Temps de trajet (h)</label><input type="number" step="0.25" value="${esc(d.deplacement.trajetH)}" oninput="upd('mission.deplacement.trajetH', this.value)"></div>
-    </div>
-    `}
+
+    ${affichageBlock}
   `;
 }
 
