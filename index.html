@@ -3944,7 +3944,7 @@ async function missionCancel() {
     return;
   }
   if (!await uiConfirm(
-    "Quitter le brouillon en cours ?\n\nTous les champs (client, ref, déplacement, matériel, cession, ajustements…) seront effacés.\n\nLes lignes Heures et les paramètres verrouillés (URSSAF, Indemnité km, Marge avancés) sont préservés.",
+    "Quitter le brouillon en cours ?\n\nTous les champs (client, ref, heures, matériel, cession, déplacement, ajustements…) seront effacés.\n\nLes paramètres verrouillés (URSSAF, Indemnité km, Marge avancés) restent en place pour le prochain devis.",
     { title: "Quitter le brouillon", confirmLabel: "Quitter", cancelLabel: "Reprendre", kind: "warn" }
   )) return;
   const m = S.mission;
@@ -3969,8 +3969,11 @@ async function missionCancel() {
   }
   // Autres
   m.autres = { desc: "", montant: "0" };
-  // Lignes : garde uniquement les heures, drop matériel + cession
-  m.lignes = (m.lignes || []).filter(l => l.type === "heures");
+  // Toutes les lignes effacées (heures + matériel + cession). Important :
+  // « Quitter » doit refermer la vue Mission complètement → missionHasDraft()
+  // doit retourner false sinon le tab Mission reste affiché en sidebar avec
+  // la pastille « BROUILLON ».
+  m.lignes = [];
   // Ajustements
   m.remisePct = "0";
   m.contratHorsEtab = false;
@@ -9873,7 +9876,7 @@ function rMissionToolbarInner() {
     : (v.ok ? "Archive ce devis dans Suivi puis revient à l'onglet Suivi." : "Corrige les erreurs ci-dessous avant de terminer.");
   return `
     <button class="btn-neon" onclick="missionTerminer()" ${!canTerminer ? "disabled" : ""} title="${esc(terminerTitle)}">${ICONS.check}${terminerLabel}</button>
-    <button class="btn-neon btn-neon-warn" onclick="missionCancel()" title="Annule le brouillon : vide tous les champs SAUF les lignes Heures et les paramètres verrouillés. Ferme la vue Mission.">${ICONS.x}Annuler</button>
+    <button class="btn-neon btn-neon-warn" onclick="missionCancel()" title="Quitte la vue Mission et efface le brouillon en cours. Les paramètres verrouillés (URSSAF, Indemnité km, Marge avancés) restent en place pour le prochain devis.">${ICONS.x}Annuler</button>
   `;
 }
 
