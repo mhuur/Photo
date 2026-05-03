@@ -7543,7 +7543,7 @@ function render() {
     return;
   }
   // owner / member → app normale
-  const renderers = { accueil: rAC, mission: rMS, profil: rPF, suivi: rSV, clients: rCL, tarifs: rTR, compta: rCP, bugs: rBG };
+  const renderers = { accueil: rAC, mission: rMS, profil: rPF, suivi: rSV, clients: rCL, tarifs: rTR, compta: rCP, bugs: rBG, parametres: rParametres };
   const view = (renderers[tab] || (() => ""))();
   // Badge "owner" ou "membre" en bas de la sidebar
   const pendingCount = Object.keys(workspaceState.pendingRequests || {}).length;
@@ -7576,12 +7576,12 @@ function render() {
               <div class="sb-user-menu-email">${esc(user.email)}</div>
               <div class="sb-user-menu-role">${roleLabel}</div>
             </div>
-            <button type="button" role="menuitem" onclick="userMenuClose();setTab('profil')">${ICONS.settings}<span>Paramètres</span></button>
+            <button type="button" role="menuitem" onclick="userMenuClose();setTab('parametres')">${ICONS.settings}<span>Paramètres</span></button>
             <button type="button" role="menuitem" onclick="userMenuClose();signOut()">${ICONS.logOut}<span>Se déconnecter</span></button>
           </div>
-          <button class="sb-user-trigger" id="sbUserTrigger" type="button" onclick="userMenuToggle(event)" aria-label="Mon compte" title="Mon compte">
+          <button class="sb-user-trigger" id="sbUserTrigger" type="button" onclick="userMenuToggle(event)" aria-label="Mon compte" title="${esc(user.email)}">
             <span class="sb-user-avatar">${avatarInner}</span>
-            <span class="sb-user-trigger-label">${esc(user.email)}</span>
+            <span class="sb-user-trigger-label">Mon compte</span>
           </button>
         </div>`;
       })()}
@@ -13758,7 +13758,17 @@ function rPF() {
       </div>
     </div>
 
-    <h3 style="margin-top:24px">Préférences</h3>
+  `;
+}
+
+// ▼ rParametres — vue Paramètres (accessible uniquement via le menu user de la sidebar).
+// Contient toute la configuration de l'app : préférences, templates Gmail, partage
+// du workspace, sauvegarde JSON. Distinct de Profil qui n'a que les infos d'identité.
+function rParametres() {
+  return `
+    <h1 class="page-title">Paramètres <span id="savedFlash" class="saved"></span></h1>
+
+    <h3>Préférences</h3>
     <div class="row">
       <div class="field narrow"><label>Seuil de relance (jours)</label>
         <input type="number" min="1" step="1" value="${esc(((S.prefs||{}).relanceJours)||7)}" oninput="upd('prefs.relanceJours', Math.max(1, parseInt(this.value)||7))">
@@ -13771,126 +13781,8 @@ function rPF() {
     ${workspaceState.role === "owner" ? rShareSection() : ""}
 
     ${rBackupSection()}
-
-    ${workspaceState.role === "owner" ? rAdminToolsSection() : ""}
   `;
 }
-
-// ▼ rAdminToolsSection — outils admin (owner only) : renumérotation, etc.
-function rAdminToolsSection() {
-  const total = (S.clients && S.clients.entries) ? S.clients.entries.length : 0;
-  return `
-    <h3 style="margin-top:32px">Outils administrateur</h3>
-    <div class="hint" style="margin-bottom:14px;max-width:780px">
-      Actions de maintenance sur le workspace. Réservées au propriétaire.
-    </div>
-    <div style="display:flex;flex-direction:column;gap:10px;align-items:flex-start;max-width:780px">
-      <div>
-        <button class="btn ghost" onclick="clientsRenumberAll()">Renuméroter tous les clients (1 → ${total})</button>
-        <div class="hint" style="font-size:11.5px;margin-top:4px">
-          Compacte la numérotation client : 1, 2, 3… en suivant l'ordre actuel des n°. Les références de devis archivés au format DEVIS-NUM-… et les libellés du Suivi sont mis à jour pour rester cohérents. Ne touche pas aux factures (FA/FS — pas de num client dans leur format).
-        </div>
-      </div>
-    </div>
-  `;
-}
-
-// ▼ clientsRenumberAll — compacte la numérotation 1..N + propage partout
-async function clientsRenumberAll() {
-  if (workspaceState.role !== "owner") {
-    uiAlert("Action réservée au propriétaire.", { kind: "warn" });
-    return;
-  }
-  const total = (S.clients && S.clients.entries) ? S.clients.entries.length : 0;
-  if (total === 0) { uiAlert("Aucun client à renuméroter.", { kind: "warn" }); return; }
-  const ok = await uiConfirm(
-    `• L'ordre actuel des n° est préservé (le plus petit devient 1, le suivant 2, etc.).\n` +
-    `• Les fiches sans n° passent à la fin par ordre alphabétique.\n` +
-    `• Les références de devis archivés (DEVIS-NUM-YYYY-MM-NNN) sont mises à jour.\n` +
-    `• Les libellés clients du Suivi (au format "#NUM Nom") sont mis à jour.\n\n` +
-    `Cette action est IRRÉVERSIBLE (sauf import d'un backup antérieur).`,
-    { title: `Renuméroter les ${total} clients ?`, confirmLabel: "Renuméroter", kind: "danger" }
-  );
-  if (!ok) return;
-
-  // 1. Trie : nums existants triés numériquement, fiches sans num à la fin par alpha
-  const sorted = [...S.clients.entries].sort((a, b) => {
-    const an = parseInt(a.num, 10);
-    const bn = parseInt(b.num, 10);
-    const aValid = !isNaN(an) && an >= 1;
-    const bValid = !isNaN(bn) && bn >= 1;
-    if (aValid && bValid) return an - bn;
-    if (aValid) return -1;
-    if (bValid) return 1;
-    return (a.name || "").localeCompare(b.name || "", "fr");
-  });
-
-  // 2. Mapping ancien_num → nouveau_num (pour propagation)
-  const mapping = {};
-  sorted.forEach((c, i) => {
-    const old = String(c.num || "").trim();
-    const fresh = String(i + 1);
-    if (old && old !== fresh) mapping[old] = fresh;
-    c.num = fresh;
-  });
-
-  // 3. Mission courante
-  if (S.mission && S.mission.client && S.mission.client.id) {
-    const c = S.clients.entries.find(x => x.id === S.mission.client.id);
-    if (c) S.mission.client.num = c.num;
-  }
-
-  // 4. Refs des devis archivés : DEVIS-{oldNum}-YYYY-MM-NNN → DEVIS-{newNum}-YYYY-MM-NNN
-  // + snapshotMission embarqué dans chaque archive
-  let devisRefsUpdated = 0, snapMissionUpdated = 0;
-  if (S.suivi && S.suivi.devis) {
-    for (const devisId of Object.keys(S.suivi.devis)) {
-      const dv = S.suivi.devis[devisId];
-      if (!dv) continue;
-      if (typeof dv.ref === "string") {
-        const m = dv.ref.match(/^DEVIS-(\d+)-(\d{4})-(\d{2})-(\d+)$/);
-        if (m && mapping[m[1]]) {
-          dv.ref = `DEVIS-${mapping[m[1]]}-${m[2]}-${m[3]}-${m[4]}`;
-          devisRefsUpdated++;
-        }
-      }
-      if (dv.snapshotMission && dv.snapshotMission.client && dv.snapshotMission.client.num) {
-        const oldNum = String(dv.snapshotMission.client.num).trim();
-        if (mapping[oldNum]) {
-          dv.snapshotMission.client.num = mapping[oldNum];
-          snapMissionUpdated++;
-        }
-      }
-    }
-  }
-
-  // 5. Libellés Suivi : "#NUM Nom" → "#NEWNUM Nom"
-  let suiviLabelsUpdated = 0;
-  if (S.suivi && Array.isArray(S.suivi.entries)) {
-    for (const e of S.suivi.entries) {
-      if (typeof e.client !== "string") continue;
-      const m = e.client.match(/^#(\d+)(\s.*)?$/);
-      if (m && mapping[m[1]]) {
-        e.client = `#${mapping[m[1]]}${m[2] || ""}`;
-        suiviLabelsUpdated++;
-      }
-    }
-  }
-
-  // 6. Recompute current devis ref (au cas où elle utilisait l'ancien num)
-  if (typeof recomputeRef === "function") recomputeRef();
-
-  save();
-  render();
-  uiAlert(
-    `${total} clients désormais numérotés 1 à ${total}\n` +
-    `• ${devisRefsUpdated} référence${devisRefsUpdated > 1 ? "s" : ""} de devis mises à jour\n` +
-    `• ${snapMissionUpdated} snapshot${snapMissionUpdated > 1 ? "s" : ""} de mission mis à jour\n` +
-    `• ${suiviLabelsUpdated} libellé${suiviLabelsUpdated > 1 ? "s" : ""} Suivi mis à jour`,
-    { title: "Renumérotation terminée", kind: "info" }
-  );
-}
-window.clientsRenumberAll = clientsRenumberAll;
 
 // ▼ rGmailTemplatesSection — édition des modèles de relance Gmail
 // Les templates sont stockés dans S.prefs.gmailTemplates et partagés avec les
