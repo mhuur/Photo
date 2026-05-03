@@ -106,6 +106,7 @@ Source : `index.html` (bloc `const DEFAULT_S = { ... };`).
     - **iban**: string _(default `""`)_
     - **bic**: string _(default `""`)_
   - **clienteleType**: string _(default `"mixte"`)_
+  - **logoUrl**: string _(default `""`)_
 - **devis** _(object)_
 - **suivi** _(object)_
   - **entries** _(array (empty))_
