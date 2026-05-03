@@ -2452,7 +2452,18 @@
   .devis-catalog-hint a:hover{text-decoration:underline}
 
   /* Empty state in lignes list */
-  .lg-empty{padding:14px;text-align:center;color:var(--text-dim);font-size:13px;border:1px dashed var(--border-soft);border-radius:6px;margin:4px 0}
+  .lg-empty{padding:var(--space-lg);text-align:center;color:var(--text-dim);font-size:13px;font-style:italic;border:1px dashed var(--border-soft);border-radius:var(--radius-md);margin:var(--space-xs) 0;background:rgba(255,255,255,.01)}
+
+  /* === Section Prestations — éléments dédiés === */
+  .presta-tarif-hint{flex:1;min-width:200px;font-size:12px;color:var(--text-dim);line-height:1.5;padding:0 0 var(--space-sm) var(--space-sm)}
+  .presta-tarif-hint a{color:var(--primary);text-decoration:none;font-weight:500}
+  .presta-tarif-hint a:hover{text-decoration:underline}
+  .presta-status-row{display:flex;align-items:center;gap:var(--space-md);flex-wrap:wrap;max-width:780px}
+  /* Toggle Déclaré / Au black en style néon */
+  .seg.presta-status-toggle{flex-shrink:0}
+  .seg.presta-status-toggle button{padding:0 16px;font-weight:600}
+  .seg.presta-status-toggle button.on{background:var(--success);color:#fff;box-shadow:0 0 12px rgba(34,197,94,.4),inset 0 0 0 1px rgba(34,197,94,.5);text-shadow:0 0 6px rgba(34,197,94,.6)}
+  .seg.presta-status-toggle button.on.warn{background:var(--warning);box-shadow:0 0 12px rgba(245,158,11,.4),inset 0 0 0 1px rgba(245,158,11,.5);text-shadow:0 0 6px rgba(245,158,11,.6)}
 </style>
 </head>
 <body>
@@ -9296,53 +9307,55 @@ function rDevisSectionPrestations() {
   const materiel = (d.lignes || []).filter(l => l.type === "materiel");
   const cessions = (d.lignes || []).filter(l => l.type === "cession");
 
-  // Tarif horaire courant (pour placeholder de l'override).
   const _catObj = (S.tarifs.catalog || DEFAULT_CATALOG).find(c => c.k === d.object);
   const _catTarif = _catObj ? num(_catObj.p) : 0;
   const overrideVal = d.tarifHOverride || "";
-  const objectInput = `<div class="row">
-    <div class="field lg"><label>Type de prestation (catalogue)</label>
-      <select onchange="pickObject(this.value)">
-        <option value="">— choisir —</option>
-        ${(S.tarifs.catalog || DEFAULT_CATALOG).map(c =>
-          `<option value="${c.k}" ${d.object===c.k?"selected":""}>${esc(c.l)}</option>`).join("")}
-      </select>
-    </div>
-    <div class="field"><label>Objet (libre)</label>
-      <input type="text" placeholder="Ex : Shooting éditorial Collection AW26" value="${esc(d.objectText || "")}" oninput="upd('mission.objectText', this.value)">
-    </div>
-  </div>
-  <div class="row" style="margin-top:8px">
-    <div class="field" style="max-width:240px">
-      <label style="display:flex;align-items:center;gap:6px">
-        Tarif horaire (override)
-        <button type="button" class="lg-info-icon" tabindex="0" aria-label="Quand utiliser l'override"
-          onmouseenter="showInfo(event, 'tarifHOverride')" onmouseleave="hideInfo()" onfocus="showInfo(event, 'tarifHOverride')" onblur="hideInfo()">i</button>
-      </label>
-      <input type="number" step="0.01" min="0" inputmode="decimal"
-        placeholder="${_catTarif > 0 ? _catTarif.toFixed(2).replace('.',',') + ' (catalogue)' : 'tarif catalogue'}"
-        value="${esc(overrideVal)}"
-        oninput="upd('mission.tarifHOverride', this.value)">
-      <div class="hint" style="font-size:11px;margin-top:4px">${overrideVal ? `Tarif manuel actif (${num(overrideVal).toFixed(2).replace('.',',')} €/h). Vide = tarif catalogue.` : "Vide = tarif catalogue. Renseigne pour forcer un tarif manuel."}</div>
-    </div>
-  </div>
-  <div class="devis-catalog-hint">Tarif horaire issu du catalogue par défaut. <a href="#" onclick="setTab('tarifs');return false">Modifier le catalogue →</a></div>`;
+  const overrideHint = overrideVal
+    ? `Tarif manuel actif : ${num(overrideVal).toFixed(2).replace('.',',')} €/h.`
+    : (_catTarif > 0
+        ? `Vide → tarif catalogue (${_catTarif.toFixed(2).replace('.',',')} €/h). <a href="#" onclick="setTab('tarifs');return false">Modifier le catalogue →</a>`
+        : `Renseigne pour forcer un tarif horaire manuel.`);
 
-  // Statut Déclaré / Au black (la décomposition tarif horaire est dispo dans
-  // l'encadré « Cacher taux h » du Déplacement, plus pertinent contextuellement).
-  const statusBlock = `<div class="row">
-    <div class="field"><label>Statut</label>
-      <div class="seg">
+  return `
+    <h5>Type de prestation</h5>
+    <div class="row">
+      <div class="field lg"><label>Catalogue</label>
+        <select onchange="pickObject(this.value)">
+          <option value="">— choisir —</option>
+          ${(S.tarifs.catalog || DEFAULT_CATALOG).map(c =>
+            `<option value="${c.k}" ${d.object===c.k?"selected":""}>${esc(c.l)}</option>`).join("")}
+        </select>
+      </div>
+      <div class="field"><label>Objet (libre)</label>
+        <input type="text" placeholder="Ex : Shooting éditorial Collection AW26" value="${esc(d.objectText || "")}" oninput="upd('mission.objectText', this.value)">
+      </div>
+    </div>
+
+    <h5>Tarif horaire</h5>
+    <div class="row" style="align-items:flex-end">
+      <div class="field" style="max-width:200px">
+        <label style="display:flex;align-items:center;gap:var(--space-xs)">
+          Override (€/h)
+          <button type="button" class="lg-info-icon" tabindex="0" aria-label="Quand utiliser l'override"
+            onmouseenter="showInfo(event, 'tarifHOverride')" onmouseleave="hideInfo()" onfocus="showInfo(event, 'tarifHOverride')" onblur="hideInfo()">i</button>
+        </label>
+        <input type="number" step="0.01" min="0" inputmode="decimal"
+          placeholder="${_catTarif > 0 ? _catTarif.toFixed(2).replace('.',',') : 'tarif catalogue'}"
+          value="${esc(overrideVal)}"
+          oninput="upd('mission.tarifHOverride', this.value)">
+      </div>
+      <div class="presta-tarif-hint">${overrideHint}</div>
+    </div>
+
+    <h5>Statut fiscal</h5>
+    <div class="presta-status-row">
+      <div class="seg presta-status-toggle">
         <button class="${declare?"on":""}" onclick="updMissionDeclare(true)">✓ Déclaré</button>
         <button class="${!declare?"on warn":""}" onclick="updMissionDeclare(false)">● Au black</button>
       </div>
     </div>
-  </div>
-  ${!declare ? `<div class="black-warning" role="alert"><strong>⚠ Mode au black</strong> — pas de débours, pas d'URSSAF, pas de marge sur avance applicable. Tous les matériels et déplacements sont au prix brut, payés via l'acompte.</div>` : ""}`;
+    ${!declare ? `<div class="black-warning" role="alert"><strong>⚠ Mode au black</strong> — pas de débours, pas d'URSSAF, pas de marge sur avance applicable. Tous les matériels et déplacements sont au prix brut, payés via l'acompte.</div>` : ""}
 
-  return `
-    ${objectInput}
-    ${statusBlock}
     <h5>Heures</h5>
     <div class="lg-list" id="lgListHeures">
       ${heures.length ? heures.map(l => rLigneDraggable(l)).join("") : `<div class="lg-empty">Aucune ligne — ajoute des heures pour démarrer le devis</div>`}
@@ -9355,9 +9368,9 @@ function rDevisSectionPrestations() {
     </div>
     <div class="lg-add"><button class="btn-add-neon" type="button" onclick="ligneAdd('materiel')">＋ Matériel</button></div>
 
-    <h5>Cession de droits <span style="font-weight:normal;color:var(--text-muted);font-size:12px">— étendue, durée, territoire, supports (CPI L131-3)</span></h5>
+    <h5>Cession de droits <button type="button" class="lg-info-icon" tabindex="0" aria-label="Étendue, durée, territoire, supports (CPI L131-3)" title="Étendue, durée, territoire, supports — Conformément au CPI L131-3">i</button></h5>
     <div class="lg-list" id="lgListCessions">
-      ${cessions.length ? cessions.map(l => rLigneDraggable(l)).join("") : `<div class="lg-empty">Aucune cession de droits — recommandé pour formaliser l'usage des photos par le client.</div>`}
+      ${cessions.length ? cessions.map(l => rLigneDraggable(l)).join("") : `<div class="lg-empty">Aucune cession de droits — recommandé pour formaliser l'usage des photos par le client</div>`}
     </div>
     <div class="lg-add"><button class="btn-add-neon" type="button" onclick="ligneAdd('cession')">＋ Cession de droits</button></div>
   `;
