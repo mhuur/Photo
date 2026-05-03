@@ -2263,6 +2263,9 @@
   .btn-neon{display:inline-flex;align-items:center;gap:8px;background:transparent;color:var(--primary);border:1px solid var(--primary);padding:9px 16px;border-radius:6px;cursor:pointer;font:inherit;font-size:13px;font-weight:600;transition:all .15s;box-shadow:inset 0 0 0 1px rgba(74,158,255,.22),0 0 12px rgba(74,158,255,.35),0 0 24px rgba(74,158,255,.14);text-shadow:0 0 8px currentColor}
   .btn-neon:hover:not(:disabled){background:rgba(74,158,255,.10);color:#7eb8ff;box-shadow:inset 0 0 12px rgba(74,158,255,.22),0 0 18px rgba(74,158,255,.55),0 0 32px rgba(74,158,255,.22)}
   .btn-neon:disabled{opacity:.45;cursor:not-allowed;box-shadow:inset 0 0 0 1px rgba(74,158,255,.12);text-shadow:none}
+  /* Variante warn — orange — pour actions destructives réversibles (Annuler brouillon, etc.) */
+  .btn-neon.btn-neon-warn{color:var(--warning);border-color:var(--warning);box-shadow:inset 0 0 0 1px rgba(245,158,11,.22),0 0 12px rgba(245,158,11,.35),0 0 24px rgba(245,158,11,.14)}
+  .btn-neon.btn-neon-warn:hover:not(:disabled){background:rgba(245,158,11,.10);color:#fcd34d;box-shadow:inset 0 0 12px rgba(245,158,11,.22),0 0 18px rgba(245,158,11,.55),0 0 32px rgba(245,158,11,.22)}
 
   /* === Corbeille modale === */
   .bin-list{display:flex;flex-direction:column;gap:6px;max-height:50vh;overflow-y:auto;padding:4px 0}
@@ -3909,6 +3912,62 @@ async function missionNewClick() {
   if (await missionNew()) render();
 }
 window.missionNewClick = missionNewClick;
+
+// ▼ missionCancel — annule le brouillon en cours : vide tous les champs sauf
+// les heures (lignes type "heures" préservées) et sauf les paramètres
+// verrouillés (URSSAF, Marge avancés, Indemnité km — gérés via lock-field
+// donc déjà hors du clear). Ne touche pas non plus aux échéances ni à la
+// config de paiement.
+async function missionCancel() {
+  if (typeof devisCurrentSuiviEntry === "function" && devisCurrentSuiviEntry()) {
+    await uiAlert("Ce devis est déjà archivé dans Suivi — il n'y a pas de brouillon à annuler. Utilise « Nouveau devis » pour repartir de zéro.", { title: "Pas de brouillon" });
+    return;
+  }
+  if (!missionHasDraft()) {
+    await uiAlert("Aucun brouillon en cours.", { title: "Rien à annuler" });
+    return;
+  }
+  if (!await uiConfirm(
+    "Annuler le brouillon en cours ?\n\nTous les champs (client, ref, déplacement, matériel, cession, ajustements…) seront effacés.\n\nLes lignes Heures et les paramètres verrouillés (URSSAF, Indemnité km, Marge avancés) sont préservés.",
+    { title: "Annuler le brouillon", confirmLabel: "Annuler le brouillon", kind: "warn" }
+  )) return;
+  const m = S.mission;
+  const dm = DEFAULT_S.mission;
+  // Identification / objet
+  m.ref = "";
+  m.dateEmission = new Date().toISOString().slice(0, 10);
+  m.datePrestation = "";
+  m.object = "";
+  m.objectText = "";
+  m.objectDate = "";
+  m.objectLieu = "";
+  // Client : vide (pas de preset ici, contrairement à missionNew)
+  const defaultType = (S.identite && S.identite.clienteleType) || "mixte";
+  m.client = { ...dm.client, type: defaultType };
+  // Déplacement chiffres seulement (mode/tauxKm/devis/affichage gardés)
+  if (m.deplacement) {
+    m.deplacement.km = "0";
+    m.deplacement.peages = "0";
+    m.deplacement.trajetH = "0";
+    m.deplacement.ticket = "0";
+  }
+  // Autres
+  m.autres = { desc: "", montant: "0" };
+  // Lignes : garde uniquement les heures, drop matériel + cession
+  m.lignes = (m.lignes || []).filter(l => l.type === "heures");
+  // Ajustements
+  m.remisePct = "0";
+  m.contratHorsEtab = false;
+  m.tarifHOverride = "";
+  // Markers transients
+  delete m.revisesDevisId;
+  delete m.majTrameDevisId;
+  // Régénère la ref auto
+  if (typeof recomputeRef === "function") recomputeRef();
+  save();
+  render();
+}
+window.missionCancel = missionCancel;
 
 // Bouton « + Nouveau devis » sur l'Accueil (clear + switch tab)
 async function missionNewFromAccueil() {
@@ -9311,6 +9370,7 @@ function rMS() {
     <span id="savedFlash" class="saved" style="position:absolute;top:18px;right:18px"></span>
     <div class="mission-toolbar">
       <button class="btn-neon" onclick="missionNewClick()" title="Démarre un nouveau devis vierge. Garde la configuration (taux horaires, URSSAF, paiement, CGV) et efface tout le reste (client, heures, lignes, déplacement, autres prestations).">${ICONS.plus}Nouveau devis</button>
+      <button class="btn-neon btn-neon-warn" onclick="missionCancel()" title="Annule le brouillon : vide tous les champs SAUF les lignes Heures et les paramètres verrouillés (URSSAF, Indemnité km, Marge avancés).">${ICONS.x}Annuler</button>
     </div>
     ${rDevisAccordion()}
     ${rPreviewTabs()}
