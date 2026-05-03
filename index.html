@@ -2206,6 +2206,9 @@
   .undo-toast-btn{background:transparent;color:var(--primary);border:1px solid var(--primary);border-radius:6px;padding:5px 12px;cursor:pointer;font:inherit;font-size:12px;font-weight:700;transition:all .12s;text-shadow:0 0 6px currentColor}
   .undo-toast-btn:hover{background:rgba(74,158,255,.12);color:#7eb8ff;box-shadow:inset 0 0 8px rgba(74,158,255,.2),0 0 12px rgba(74,158,255,.4)}
 
+  /* Séparateur entre 2 sous-blocs fusionnés dans une même section accordion */
+  .section-merge-sep{border:0;border-top:1px solid var(--border-soft);margin:24px 0 18px;height:0}
+
   /* === Corbeille modale === */
   .bin-list{display:flex;flex-direction:column;gap:6px;max-height:50vh;overflow-y:auto;padding:4px 0}
   .bin-item{display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--surface);border:1px solid var(--border-light);border-radius:6px;transition:border-color .12s}
@@ -7980,7 +7983,7 @@ function rEditSection(key, title, bodyHtml, headerActionHtml = "") {
 // Clés des sections accordéon de l'onglet Mission. Pour ces clés on impose
 // "max 1 ouvert à la fois" + "click hors zone ferme". Les autres clés (Profil
 // : logo, photographe, signature, cgv) gardent leur comportement libre.
-const _MISSION_SECTION_KEYS = ["identification","prestations","deplacement","ajustements","modalites","conditions"];
+const _MISSION_SECTION_KEYS = ["identification","prestations","deplacement","majorations","conditions"];
 
 function _editSectionApplyDom(key) {
   const el = document.querySelector(`.edit-section[data-edit-section="${key}"]`);
@@ -8882,12 +8885,21 @@ function devisSectionSummaries() {
     ? `<span class="amt">${cgvCount} section${cgvCount > 1 ? "s" : ""} CGV</span>`
     : `<span class="warn">CGV vides</span>`;
 
+  // Section fusionnée « Majorations & paiements » : combine les éléments
+  // marquants de remise/URSSAF + état des échéances + IBAN.
+  const majSummaryBits = [];
+  if (remisePct > 0) majSummaryBits.push(`<span class="${remiseClass}">${remisePct.toString().replace(".",",")}% remise</span>`);
+  majSummaryBits.push(echBit);
+  majSummaryBits.push(ibanBit);
+  const majorationsSummary = majSummaryBits.join('<span class="dot"></span>');
+
   return {
     identification: idSummary,
     prestations:    prestaSummary,
     deplacement:    deplSummary,
     ajustements:    adjSummary,
     modalites:      modSummary,
+    majorations:    majorationsSummary,
     conditions:     condSummary
   };
 }
@@ -9158,9 +9170,19 @@ function rDevisAccordion() {
     ${rEditSectionRaw("identification", "Identification & client",     sums.identification, rDevisSectionIdentification())}
     ${rEditSectionRaw("prestations",    "Prestations",                 sums.prestations,    rDevisSectionPrestations())}
     ${rEditSectionRaw("deplacement",    "Déplacement",                 sums.deplacement,    rDevisSectionDeplacement())}
-    ${rEditSectionRaw("ajustements",    "Ajustements",                 sums.ajustements,    rDevisSectionAjustements())}
-    ${rEditSectionRaw("modalites",      "Modalités de paiement",       sums.modalites,      rDevisSectionModalites())}
+    ${rEditSectionRaw("majorations",    "Majorations &amp; paiements", sums.majorations,    rDevisSectionMajorations())}
   </div>`;
+}
+
+// Section fusionnée « Majorations & paiements » : remise/URSSAF (ex
+// Ajustements) + échéances/délai/IBAN (ex Modalités de paiement). Un
+// séparateur visuel et des h5 distincts pour garder la hiérarchie.
+function rDevisSectionMajorations() {
+  return `
+    ${rDevisSectionAjustements()}
+    <hr class="section-merge-sep">
+    ${rDevisSectionModalites()}
+  `;
 }
 
 function rEditSectionRaw(key, title, summaryHtml, bodyHtml, headerActionHtml = "") {
