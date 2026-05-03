@@ -45,6 +45,13 @@ grep -nE "^function r[A-Z]" index.html    # liste tous les renderers (rXX)
 - **`missionNew(presetClient?)`** : garde la config (taux, urssafPct, paiement, échéances, CGV, déplacement.mode), efface les données spécifiques. Tout nouveau champ `S.mission` doit être catégorisé.
 - **Lookup client depuis devis** : toujours via `findClientForDevis(devisId)` (3 stratégies en cascade), jamais ad hoc.
 - **Pop-up : `uiAlert/uiConfirm/uiPrompt` PAS `alert/confirm/prompt`** — natifs interdits (style blanc cassé, alignés top, sortent du thème). Helpers async dans le module `uiDialog` ([index.html](index.html), recherche `▼ uiAlert`). API : `await uiAlert(msg, { title?, kind:"info"|"warn"|"danger", confirmLabel? })`, `await uiConfirm(...)` → bool, `await uiPrompt(...)` → string|null. ESC=cancel, Enter=confirm, click overlay=cancel (sauf alert pure). **Toute fonction qui appelle `await uiConfirm/uiPrompt` doit être `async`** — propager aux callers (souvent juste rendre la fonction `async`, les onclick le tolèrent). Pour les `onclick="if(confirm())xxx()"` inline, créer un wrapper async `xxxConfirm(id)` (cf. `clientsDelConfirm`, `deleteAbonnementConfirm`). Choix de `kind` : `danger` = suppression définitive ou écrasement, `warn` = action destructrice réversible / validation, `info` = confirmation neutre / succès.
+- **Style visuel : néon** — pour toute nouvelle UI ou retouche esthétique (boutons d'action, états colorés, badges interactifs), privilégier le langage néon plutôt que les fonds pleins ou les pills mates.
+  - **Recette type** : `background:transparent` + `border:1px solid <couleur>` + `box-shadow: inset 0 0 0 1px rgba(<couleur>,.32), 0 0 12px rgba(<couleur>,.22)` au repos.
+  - **Hover (pulse)** : 3 layers cumulés `inset 0 0 12px rgba(.22), 0 0 18px rgba(.5), 0 0 32px rgba(.22)` + `background:rgba(<couleur>,.06-.10)` + couleur texte plus claire.
+  - **Texte d'état** : `text-shadow:0 0 8px currentColor` sur les éléments porteurs de l'état (icône, state-label, montant).
+  - **Palette** : vert `#22c55e` (`--success`), orange `#fbbf24` (`--warning`), rouge `#ef4444` (`--danger`), bleu `#4a9eff` (`--primary`). Hover plus clair : `#86efac`, `#fcd34d`, `#fca5a5`, `#7eb8ff`.
+  - Réfs vivantes : `.suv-expanded-actions .btn-act.act-vert` (Accepté), `.suv-tl-card.pending` (À encaisser timeline). Forker ces blocs CSS pour cohérence.
+  - **NE PAS** revenir aux fonds pleins type `background:var(--success)` + texte blanc — sauf bouton primary unique d'un formulaire (ex. `.bug-form-add-btn`).
 
 ## Schéma & sémantique métier
 
