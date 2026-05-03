@@ -967,6 +967,10 @@
   .lock-popup.open{display:block}
   .lock-popup button{width:100%;text-align:left;background:transparent;border:0;color:var(--text);padding:8px 12px;font:inherit;font-size:13px;cursor:pointer;border-radius:4px}
   .lock-popup button:hover{background:var(--surface-hi)}
+  /* Variante .with-unit — suffixe d'unité (ex. €/km) sandwiché entre input et bouton ⋮ */
+  .lock-field.with-unit{max-width:170px}
+  .lock-field.with-unit input{text-align:right;padding-right:6px}
+  .lock-field .lock-unit{display:inline-flex;align-items:center;height:var(--input-h);background:var(--surface-2);color:var(--text-dim);font-size:13px;padding:0 var(--space-sm) 0 4px;flex-shrink:0;font-variant-numeric:tabular-nums;user-select:none}
 
   /* Devis preview (in-page, at the bottom of Mission) */
   /* Devis preview (in-page, at the bottom of Mission) */
@@ -3911,6 +3915,36 @@ function margeAvanceResetDefault() {
   render();
 }
 window.margeAvanceResetDefault = margeAvanceResetDefault;
+
+// ============ Indemnité kilométrique lock (mêmes mécanismes qu'URSSAF) ============
+let tauxKmUnlocked = false;
+function tauxKmToggleMenu() {
+  const p = document.getElementById("tauxKmMenu");
+  if (p) p.classList.toggle("open");
+}
+window.tauxKmToggleMenu = tauxKmToggleMenu;
+
+function tauxKmUnlock() {
+  tauxKmUnlocked = true;
+  const p = document.getElementById("tauxKmMenu");
+  if (p) p.classList.remove("open");
+  render();
+  requestAnimationFrame(() => {
+    const inp = document.getElementById("tauxKmInput");
+    if (inp) { inp.focus(); inp.select(); }
+  });
+}
+window.tauxKmUnlock = tauxKmUnlock;
+
+function tauxKmResetDefault() {
+  if (S.mission && S.mission.deplacement) S.mission.deplacement.tauxKm = "0.40";
+  tauxKmUnlocked = false;
+  const p = document.getElementById("tauxKmMenu");
+  if (p) p.classList.remove("open");
+  save();
+  render();
+}
+window.tauxKmResetDefault = tauxKmResetDefault;
 
 // ============ Locked textareas (photographe / conditions / cgv / signature) ============
 let textLockState = { photographe: true, conditionsPaiement: true, cgv: true, signatureBlock: true };
@@ -9241,7 +9275,7 @@ function rDevisAccordion() {
   return `<div class="edit-accordion-list">
     ${rEditSectionRaw("identification", "Identification & client",     sums.identification, rDevisSectionIdentification())}
     ${rEditSectionRaw("prestations",    "Prestations",                 sums.prestations,    rDevisSectionPrestations())}
-    ${rEditSectionRaw("deplacement",    "Déplacement",                 sums.deplacement,    rDevisSectionDeplacement())}
+    ${rEditSectionRaw("deplacement",    "Déplacements",                sums.deplacement,    rDevisSectionDeplacement())}
     ${rEditSectionRaw("majorations",    "Majorations & paiements",     sums.majorations,    rDevisSectionMajorations())}
   </div>`;
 }
@@ -9430,7 +9464,18 @@ function rDevisSectionDeplacement() {
     ? `<div class="row">
         <div class="field narrow"><label>Distance (km)</label><input type="number" step="0.1" value="${esc(d.deplacement.km)}" oninput="upd('mission.deplacement.km', this.value)"></div>
         <div class="field narrow"><label>Péages (€)</label><input type="number" step="0.01" value="${esc(d.deplacement.peages)}" oninput="upd('mission.deplacement.peages', this.value)"></div>
-        <div class="field narrow"><label>€/km</label><input type="number" step="0.01" value="${esc(d.deplacement.tauxKm ?? "0.40")}" oninput="upd('mission.deplacement.tauxKm', this.value)"></div>
+        <div class="field narrow" style="max-width:180px"><label>Indemnité kilométrique</label>
+          <div class="lock-field with-unit">
+            <input id="tauxKmInput" type="number" step="0.01" min="0" value="${esc(d.deplacement.tauxKm ?? "0.40")}" ${tauxKmUnlocked ? `oninput="upd('mission.deplacement.tauxKm', this.value)"` : "disabled"}>
+            <span class="lock-unit">€/km</span>
+            <button class="lock-menu-btn" onclick="tauxKmToggleMenu()" title="Options">⋮</button>
+            <div class="lock-popup" id="tauxKmMenu">
+              ${tauxKmUnlocked
+                ? `<button onclick="tauxKmResetDefault()">↺ Rétablir 0,40 €/km</button>`
+                : `<button onclick="tauxKmUnlock()">🔓 Modifier</button>`}
+            </div>
+          </div>
+        </div>
         <div class="field narrow"><label>Temps de trajet (h)</label><input type="number" step="0.25" value="${esc(d.deplacement.trajetH)}" oninput="upd('mission.deplacement.trajetH', this.value)"></div>
       </div>`
     : `<div class="row">
