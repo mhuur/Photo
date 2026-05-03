@@ -610,6 +610,7 @@
   .cli-contact{padding:8px 0;border-bottom:1px dashed var(--border-soft)}
   .cli-contact:last-child{border-bottom:0}
   .cli-contact .nm{font-weight:600;color:var(--text);font-size:14px;display:block;margin-bottom:3px}
+  .cli-contact .cli-contact-poste{font-weight:400;color:var(--text-muted);font-size:13px;font-style:italic}
   .cli-contact .ln{display:flex;align-items:center;gap:7px;font-size:13px;color:var(--text-muted);padding:2px 0;text-decoration:none}
   .cli-contact a.ln:hover{color:var(--primary)}
   .cli-contact .ln svg{width:13px;height:13px;flex-shrink:0;opacity:.7}
@@ -5388,7 +5389,7 @@ function cliPickSaveCreate() {
   const cd = cliPickDraft;
   const contacts = (cd.contact || cd.phone || cd.email)
     ? [{ id: uid(), name: cd.contact || "", phone: cd.phone || "", email: cd.email || "" }]
-    : [{ id: uid(), name: "", phone: "", email: "" }];
+    : [{ id: uid(), name: "", poste: "", phone: "", email: "" }];
   const entry = { id, ...cd, contacts };
   S.clients.entries.unshift(entry);
   S.mission.client = {
@@ -12060,7 +12061,7 @@ function clientsAdd() {
     id,
     num:        clientsNextNum(),
     name:       "",
-    contacts:   [{ id: uid(), name: "", phone: "", email: "" }],
+    contacts:   [{ id: uid(), name: "", poste: "", phone: "", email: "" }],
     contact:    "",
     address:    "",
     cityPostal: "",
@@ -12198,7 +12199,7 @@ function clientsCreateFromSearch() {
   const id = uid();
   S.clients.entries.unshift({
     id, num: clientsNextNum(), name,
-    contacts: [{ id: uid(), name: "", phone: "", email: "" }],
+    contacts: [{ id: uid(), name: "", poste: "", phone: "", email: "" }],
     contact: "", address: "", cityPostal: "", phone: "", email: "", rencontre: "",
     siret: "", tvaIntra: ""
   });
@@ -12319,7 +12320,7 @@ function clientContactAdd(clientId) {
   const e = S.clients.entries.find(x => x.id === clientId);
   if (!e) return;
   if (!Array.isArray(e.contacts)) e.contacts = [];
-  e.contacts.push({ id: uid(), name: "", phone: "", email: "" });
+  e.contacts.push({ id: uid(), name: "", poste: "", phone: "", email: "" });
   syncClientLegacy(e);
   save();
   render();
@@ -12403,6 +12404,7 @@ function rCL() {
             <div class="cli-contact-edit-num">${i + 1}</div>
             <div class="cli-contact-edit-fields">
               <input placeholder="Nom du contact" value="${esc(c.name || "")}" oninput="clientContactUpd('${e.id}','${c.id}','name',this.value)">
+              <input placeholder="Poste (ex : Directeur, Responsable com…)" value="${esc(c.poste || "")}" oninput="clientContactUpd('${e.id}','${c.id}','poste',this.value)">
               <input type="tel" inputmode="tel" autocomplete="off" placeholder="Téléphone" value="${esc(c.phone || "")}" oninput="clientContactUpd('${e.id}','${c.id}','phone',this.value)">
               <input type="email" placeholder="Email" value="${esc(c.email || "")}" oninput="clientContactUpd('${e.id}','${c.id}','email',this.value)">
             </div>
@@ -12413,7 +12415,7 @@ function rCL() {
       ` : (validContacts.length === 0 ? `<div class="cli-dl"><dd class="dim">Aucun contact renseigné</dd></div>` :
         validContacts.map(c => `
           <div class="cli-contact">
-            <span class="nm">${esc(c.name || "(sans nom)")}</span>
+            <span class="nm">${esc(c.name || "(sans nom)")}${c.poste ? ` <span class="cli-contact-poste">— ${esc(c.poste)}</span>` : ""}</span>
             ${c.phone ? `<a class="ln" href="tel:${esc((c.phone || "").replace(/\s/g, ""))}">${ICONS.phone}${esc(c.phone)}</a>` : ""}
             ${c.email ? `<a class="ln" href="${esc(buildGmailUrl(c.email, '', ''))}" title="Composer un mail à ${esc(c.email)}">${ICONS.send}${esc(c.email)}</a>` : ""}
           </div>
