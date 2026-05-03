@@ -3128,7 +3128,7 @@ const TABS = [
 const app = document.getElementById("app");
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const num = v => { const n = parseFloat(String(v).replace(",", ".")); return isFinite(n) ? n : 0; };
-const fmt = v => num(v).toFixed(2).replace(".", ",") + " €";
+const fmt = v => r2(num(v)).toFixed(2).replace(".", ",") + " €";
 
 // ▼ save() — flush localStorage + déclenche saveToCloud (debounce 200ms).
 // Bloqué tant que le workspace n'est pas résolu (sinon on écraserait avec des défauts).
