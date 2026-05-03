@@ -122,6 +122,8 @@ Source : `index.html` (bloc `const DEFAULT_S = { ... };`).
   - **catalog**: string _(default `"<DEFAULT_CATALOG>"`)_
   - **heuresAnnuelles**: string _(default `"900"`)_
   - **facteurSecurite**: string _(default `"0"`)_
+- **bin** _(object)_
+  - **items** _(array (empty))_
 - **bugs** _(object)_
   - **items** _(array (empty))_
 - **prefs** _(object)_

@@ -2197,6 +2197,34 @@
   @media print{.dp-cgv-add-btn{display:none !important}}
   .view-devis-snapshot .dp-cgv-add-btn{display:none}
 
+  /* === Toast undo (feedback immédiat après suppression) === */
+  .undo-toast{position:fixed;bottom:24px;right:24px;z-index:10000;display:flex;align-items:center;gap:14px;padding:12px 18px;background:var(--bg-2);border:1px solid var(--primary);border-radius:8px;box-shadow:inset 0 0 0 1px rgba(74,158,255,.2),0 0 16px rgba(74,158,255,.32),0 6px 20px rgba(0,0,0,.4);color:var(--text);font:inherit;font-size:13px;animation:undoToastIn .25s ease}
+  @keyframes undoToastIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+  .undo-toast.undo-toast-out{animation:undoToastOut .25s ease forwards}
+  @keyframes undoToastOut{to{opacity:0;transform:translateY(8px)}}
+  .undo-toast-msg{flex:1}
+  .undo-toast-btn{background:transparent;color:var(--primary);border:1px solid var(--primary);border-radius:6px;padding:5px 12px;cursor:pointer;font:inherit;font-size:12px;font-weight:700;transition:all .12s;text-shadow:0 0 6px currentColor}
+  .undo-toast-btn:hover{background:rgba(74,158,255,.12);color:#7eb8ff;box-shadow:inset 0 0 8px rgba(74,158,255,.2),0 0 12px rgba(74,158,255,.4)}
+
+  /* === Corbeille modale === */
+  .bin-list{display:flex;flex-direction:column;gap:6px;max-height:50vh;overflow-y:auto;padding:4px 0}
+  .bin-item{display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--surface);border:1px solid var(--border-light);border-radius:6px;transition:border-color .12s}
+  .bin-item:hover{border-color:var(--primary)}
+  .bin-item-kind{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--text-dim);padding:2px 8px;background:var(--surface-2);border-radius:10px;flex-shrink:0}
+  .bin-item-label{flex:1;font-size:13px;font-weight:500;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+  .bin-item-date{font-size:11px;color:var(--text-dim);font-style:italic;flex-shrink:0}
+  .bin-item-restore{flex-shrink:0;background:transparent;border:1px solid var(--success);color:var(--success);cursor:pointer;font:inherit;font-size:11px;font-weight:600;padding:4px 10px;border-radius:5px;transition:all .12s;box-shadow:inset 0 0 0 1px rgba(34,197,94,.2),0 0 6px rgba(34,197,94,.15)}
+  .bin-item-restore:hover{background:rgba(34,197,94,.1);color:#86efac;box-shadow:inset 0 0 8px rgba(34,197,94,.2),0 0 12px rgba(34,197,94,.4)}
+  .bin-item-purge{flex-shrink:0;background:transparent;border:1px solid transparent;color:var(--text-dim);cursor:pointer;font:inherit;font-size:14px;line-height:1;width:24px;height:24px;border-radius:5px;display:inline-flex;align-items:center;justify-content:center;padding:0;transition:all .12s}
+  .bin-item-purge:hover{color:var(--danger);background:var(--danger-soft);border-color:var(--danger)}
+  .bin-empty{padding:30px;text-align:center;color:var(--text-dim);font-style:italic;font-size:13px}
+
+  /* Lien d'accès corbeille — petit, sous le bloc CGV de la preview */
+  .dp-bin-link{display:inline-flex;align-items:center;gap:5px;margin-top:10px;padding:5px 10px;background:transparent;color:var(--text-dim);border:1px solid transparent;border-radius:5px;cursor:pointer;font:inherit;font-size:11px;font-weight:500;transition:all .12s}
+  .dp-bin-link:hover{color:var(--primary);background:var(--primary-soft);border-color:var(--primary)}
+  @media print{.dp-bin-link{display:none !important}}
+  .view-devis-snapshot .dp-bin-link{display:none}
+
   /* Editor modal toolbar */
   .rte-toolbar{display:flex;gap:3px;flex-wrap:wrap;align-items:center;padding:6px 8px;background:var(--surface);border:1px solid var(--border);border-radius:6px;margin-bottom:8px}
   .rte-btn{background:transparent;border:1px solid transparent;color:var(--text);padding:5px 9px;border-radius:4px;cursor:pointer;font:inherit;font-size:13px;font-weight:500;min-width:30px;line-height:1.3}
@@ -2553,6 +2581,7 @@ const DEFAULT_S = {
   abonnements: { entries: [] },
   investissements: { entries: [] },
   tarifs: { catalog: JSON.parse(JSON.stringify(DEFAULT_CATALOG)), heuresAnnuelles: "900", facteurSecurite: "0" },
+  bin:    { items: [] },
   bugs: { items: [] },
   prefs: {
     relanceJours: 7,
@@ -2642,6 +2671,7 @@ if (!S.tarifs || !Array.isArray(S.tarifs.catalog) || !S.tarifs.catalog.length) S
 if (!S.tarifs.heuresAnnuelles) S.tarifs.heuresAnnuelles = "900";
 if (typeof S.tarifs.facteurSecurite === "undefined") S.tarifs.facteurSecurite = "0";
 if (!S.bugs || (!Array.isArray(S.bugs.items) && !Array.isArray(S.bugs.entries) && typeof S.bugs.html !== "string")) S.bugs = { items: [] };
+if (!S.bin || !Array.isArray(S.bin.items)) S.bin = { items: [] };
 if (!Array.isArray(S.bugs.items)) S.bugs.items = [];
 if (!S.prefs || typeof S.prefs !== "object") S.prefs = { ...DEFAULT_S.prefs };
 if (typeof S.prefs.relanceJours === "undefined") S.prefs.relanceJours = DEFAULT_S.prefs.relanceJours;
@@ -3071,6 +3101,7 @@ async function saveToCloud() {
       abonnements: S.abonnements,
       investissements: S.investissements,
       tarifs:  S.tarifs,
+      bin:     S.bin,
       bugs:    S.bugs,
       prefs:   S.prefs,
       _lastWriteBy: user ? user.uid : null,
@@ -3181,6 +3212,7 @@ async function loadFromCloud(ownerUid) {
       if (d.investissements) S.investissements = { ...DEFAULT_S.investissements, ...d.investissements, entries: Array.isArray(d.investissements.entries) ? d.investissements.entries : [] };
       if (d.tarifs && Array.isArray(d.tarifs.catalog) && d.tarifs.catalog.length) S.tarifs = { catalog: d.tarifs.catalog, heuresAnnuelles: d.tarifs.heuresAnnuelles || S.tarifs.heuresAnnuelles || "900", facteurSecurite: d.tarifs.facteurSecurite || S.tarifs.facteurSecurite || "0" };
       if (d.bugs)    S.bugs    = { items: Array.isArray(d.bugs.items) ? d.bugs.items : (Array.isArray(d.bugs.entries) ? d.bugs.entries.map(e => ({ id: e.id, text: e.title || "", steps: e.desc ? [e.desc] : [], validated: e.status === "fixed", createdAt: e.date ? new Date(e.date).getTime() || Date.now() : Date.now() })) : []) };
+      if (d.bin)     S.bin     = { items: Array.isArray(d.bin.items) ? d.bin.items : [] };
       if (d.prefs)   S.prefs   = { ...DEFAULT_S.prefs, ...d.prefs };
       if (S.mission && !S.mission.dateEmission) {
         S.mission.dateEmission = new Date().toISOString().slice(0, 10);
@@ -3431,6 +3463,7 @@ function subscribeWorkspaceData(ownerUid) {
     if (d.investissements) S.investissements = { ...DEFAULT_S.investissements, ...d.investissements, entries: Array.isArray(d.investissements.entries) ? d.investissements.entries : [] };
     if (d.tarifs && Array.isArray(d.tarifs.catalog) && d.tarifs.catalog.length) S.tarifs = { catalog: d.tarifs.catalog, heuresAnnuelles: d.tarifs.heuresAnnuelles || S.tarifs.heuresAnnuelles || "900", facteurSecurite: d.tarifs.facteurSecurite || S.tarifs.facteurSecurite || "0" };
     if (d.bugs)    S.bugs    = { items: Array.isArray(d.bugs.items) ? d.bugs.items : [] };
+    if (d.bin)     S.bin     = { items: Array.isArray(d.bin.items) ? d.bin.items : [] };
     if (d.prefs)   S.prefs   = { ...DEFAULT_S.prefs, ...d.prefs };
     // migrateLegacyReconstructedFlag() DÉSACTIVÉ ici aussi (cf. loadFromCloud).
     // Migration phones (idempotente, ne corrige que ce qui a 9 chiffres FR
@@ -4532,6 +4565,10 @@ function rDevisPreview() {
         </div>
         <div class="dp-cgv-body">${renderCgvSections(d.cgvPreambule, d.cgvSections)}${penaltyArticle}</div>
         <button class="dp-cgv-add-btn" type="button" onclick="cgvSectionAdd()" title="Ajouter une nouvelle section CGV">＋ Ajouter une section CGV</button>
+        ${(() => {
+          const binCount = (S.bin && Array.isArray(S.bin.items) && S.bin.items.length) || 0;
+          return binCount > 0 ? `<button class="dp-bin-link" type="button" onclick="binModalToggle()" title="Voir les sections supprimées et les restaurer">🗑 Corbeille (${binCount})</button>` : "";
+        })()}
       </div>`;
     })()}
 
@@ -7231,6 +7268,7 @@ function render() {
     ${rClientInfoModal()}
     ${rBugLightbox()}
     ${rCgvSectionEditModal()}
+    ${rBinModal()}
     ${rPrintTipModal()}
 `;
 }
@@ -7576,13 +7614,96 @@ window.cgvSectionUpdate = function(id, field, val) {
   // No render — would lose focus in input/textarea
 };
 window.cgvSectionRemove = async function(id) {
-  const s = (S.mission.cgvSections || []).find(x => x.id === id);
-  if (!s) return;
+  const sections = S.mission.cgvSections || [];
+  const idx = sections.findIndex(x => x.id === id);
+  if (idx < 0) return;
+  const s = sections[idx];
   const label = s.title ? `« ${s.title} »` : "cette section";
   if (!await uiConfirm(`Supprimer ${label} ?`, { confirmLabel: "Supprimer", kind: "danger" })) return;
-  S.mission.cgvSections = (S.mission.cgvSections || []).filter(x => x.id !== id);
+  // Push corbeille pour récupération + toast undo immédiat
+  binPush("cgvSection", { section: s, originalIndex: idx }, s.title || "Section sans titre");
+  S.mission.cgvSections = sections.filter(x => x.id !== id);
   save();
   render();
+  showUndoToast(`Section « ${s.title || "(sans titre)"} » supprimée`, () => {
+    if (!Array.isArray(S.mission.cgvSections)) S.mission.cgvSections = [];
+    S.mission.cgvSections.splice(Math.min(idx, S.mission.cgvSections.length), 0, s);
+    // Retire de la corbeille (la dernière entrée correspond)
+    if (S.bin && Array.isArray(S.bin.items) && S.bin.items.length > 0) {
+      S.bin.items.shift();
+    }
+    save();
+    render();
+  });
+};
+
+// ▼ Corbeille — stocke les éléments supprimés pour récupération.
+// Limite 30 items récents. Persistée dans S.bin (sync cloud).
+function binPush(kind, payload, label) {
+  if (!S.bin) S.bin = { items: [] };
+  if (!Array.isArray(S.bin.items)) S.bin.items = [];
+  S.bin.items.unshift({
+    id: uid(),
+    kind,
+    label: String(label || "(sans nom)"),
+    payload: JSON.parse(JSON.stringify(payload)),
+    deletedAt: Date.now()
+  });
+  if (S.bin.items.length > 30) S.bin.items.length = 30;
+}
+window.binRestore = function(itemId) {
+  if (!S.bin || !Array.isArray(S.bin.items)) return;
+  const idx = S.bin.items.findIndex(x => x.id === itemId);
+  if (idx < 0) return;
+  const item = S.bin.items[idx];
+  if (item.kind === "cgvSection") {
+    if (!Array.isArray(S.mission.cgvSections)) S.mission.cgvSections = [];
+    const insertAt = Math.min(item.payload.originalIndex || S.mission.cgvSections.length, S.mission.cgvSections.length);
+    S.mission.cgvSections.splice(insertAt, 0, item.payload.section);
+  }
+  S.bin.items.splice(idx, 1);
+  save();
+  render();
+};
+window.binPurge = function(itemId) {
+  if (!S.bin || !Array.isArray(S.bin.items)) return;
+  S.bin.items = S.bin.items.filter(x => x.id !== itemId);
+  save();
+  render();
+};
+window.binClear = async function() {
+  if (!S.bin || !S.bin.items.length) return;
+  if (!await uiConfirm(`Vider la corbeille (${S.bin.items.length} élément${S.bin.items.length > 1 ? "s" : ""}) ? Cette action est irréversible.`, { confirmLabel: "Vider", kind: "danger" })) return;
+  S.bin.items = [];
+  save();
+  render();
+};
+
+// ▼ Toast Undo — feedback immédiat après une suppression réversible.
+// Apparaît en bas-droite, disparaît après 5s. Bouton « Annuler » exécute
+// restoreFn passé par l'appelant. Une seule à la fois.
+let _undoToastTimer = null;
+window.showUndoToast = function(label, restoreFn) {
+  if (_undoToastTimer) { clearTimeout(_undoToastTimer); _undoToastTimer = null; }
+  const existing = document.getElementById("undoToast");
+  if (existing) existing.remove();
+  const toast = document.createElement("div");
+  toast.id = "undoToast";
+  toast.className = "undo-toast";
+  toast.innerHTML = `
+    <span class="undo-toast-msg">${esc(label)}</span>
+    <button class="undo-toast-btn" type="button">↶ Annuler</button>
+  `;
+  document.body.appendChild(toast);
+  toast.querySelector(".undo-toast-btn").onclick = () => {
+    if (restoreFn) restoreFn();
+    toast.remove();
+    if (_undoToastTimer) { clearTimeout(_undoToastTimer); _undoToastTimer = null; }
+  };
+  _undoToastTimer = setTimeout(() => {
+    toast.classList.add("undo-toast-out");
+    setTimeout(() => { toast.remove(); _undoToastTimer = null; }, 250);
+  }, 5000);
 };
 window.cgvSectionMoveUp = function(id) {
   const sections = S.mission.cgvSections || [];
@@ -7628,6 +7749,38 @@ window.cgvSectionRemoveAndClose = async function(id) {
     render();
   }
 };
+
+// ▼ binModal — modale d'accès à la corbeille (sections CGV supprimées etc.)
+let binModalOpen = false;
+window.binModalToggle = function() {
+  binModalOpen = !binModalOpen;
+  render();
+};
+function rBinModal() {
+  if (!binModalOpen) return "";
+  const items = (S.bin && S.bin.items) || [];
+  const KIND_LBL = { cgvSection: "Section CGV" };
+  return `<div class="modal-overlay" onclick="if(event.target===this)binModalToggle()">
+    <div class="modal-card" style="max-width:640px">
+      <div class="modal-title">🗑 Corbeille <span style="font-size:11px;color:var(--text-dim);font-weight:500;margin-left:6px">(${items.length} élément${items.length > 1 ? "s" : ""})</span></div>
+      <div class="modal-sub">Restaure ou supprime définitivement les éléments. Limite 30 récents.</div>
+      ${items.length === 0
+        ? `<div class="bin-empty">Corbeille vide.</div>`
+        : `<div class="bin-list">${items.map(it => `
+            <div class="bin-item">
+              <span class="bin-item-kind">${esc(KIND_LBL[it.kind] || it.kind)}</span>
+              <span class="bin-item-label">${esc(it.label || "(sans nom)")}</span>
+              <span class="bin-item-date">${esc(bugRelativeTime(it.deletedAt))}</span>
+              <button class="bin-item-restore" onclick="binRestore('${esc(it.id)}')" title="Restaurer">↶ Restaurer</button>
+              <button class="bin-item-purge" onclick="binPurge('${esc(it.id)}')" title="Supprimer définitivement">×</button>
+            </div>`).join("")}</div>`}
+      <div class="modal-actions">
+        ${items.length > 0 ? `<button class="btn ghost" onclick="binClear()" style="color:var(--danger);border-color:var(--danger)">Vider la corbeille</button>` : ""}
+        <button class="btn" onclick="binModalToggle()">Fermer</button>
+      </div>
+    </div>
+  </div>`;
+}
 
 function rCgvSectionEditModal() {
   if (!cgvSectionEditModal) return "";
