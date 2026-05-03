@@ -2209,9 +2209,9 @@
   /* Séparateur entre 2 sous-blocs fusionnés dans une même section accordion */
   .section-merge-sep{border:0;border-top:1px solid var(--border-soft);margin:24px 0 18px;height:0}
 
-  /* Bouton « + Ajouter » échéances en style néon (compact) */
-  .ech-add-neon{display:inline-flex;align-items:center;gap:6px;height:28px;padding:0 12px;background:transparent;color:var(--primary);border:1px solid var(--primary);border-radius:6px;cursor:pointer;font:inherit;font-size:11px;font-weight:700;letter-spacing:.04em;transition:all .15s;box-shadow:inset 0 0 0 1px rgba(74,158,255,.18),0 0 8px rgba(74,158,255,.18);text-shadow:0 0 6px currentColor}
-  .ech-add-neon:hover{background:rgba(74,158,255,.10);color:#7eb8ff;box-shadow:inset 0 0 10px rgba(74,158,255,.20),0 0 14px rgba(74,158,255,.45),0 0 24px rgba(74,158,255,.18)}
+  /* Bouton « + Ajouter » générique en style néon (compact, primary) */
+  .btn-add-neon,.ech-add-neon{display:inline-flex;align-items:center;gap:6px;height:30px;padding:0 14px;background:transparent;color:var(--primary);border:1px solid var(--primary);border-radius:6px;cursor:pointer;font:inherit;font-size:12px;font-weight:700;letter-spacing:.04em;transition:all .15s;box-shadow:inset 0 0 0 1px rgba(74,158,255,.18),0 0 8px rgba(74,158,255,.18);text-shadow:0 0 6px currentColor;font-family:inherit}
+  .btn-add-neon:hover,.ech-add-neon:hover{background:rgba(74,158,255,.10);color:#7eb8ff;box-shadow:inset 0 0 10px rgba(74,158,255,.20),0 0 14px rgba(74,158,255,.45),0 0 24px rgba(74,158,255,.18)}
 
   /* === Corbeille modale === */
   .bin-list{display:flex;flex-direction:column;gap:6px;max-height:50vh;overflow-y:auto;padding:4px 0}
@@ -8104,7 +8104,7 @@ function rCgvEditor() {
         : sectionsHtml}
     </div>
 
-    <button class="btn ghost" style="margin-top:10px" onclick="cgvSectionAdd()">+ Ajouter une section</button>
+    <button class="btn-add-neon" type="button" style="margin-top:10px" onclick="cgvSectionAdd()">＋ Ajouter une section</button>
   `;
 }
 
@@ -9320,19 +9320,19 @@ function rDevisSectionPrestations() {
     <div class="lg-list" id="lgListHeures">
       ${heures.length ? heures.map(l => rLigneDraggable(l)).join("") : `<div class="lg-empty">Aucune ligne — ajoute des heures pour démarrer le devis</div>`}
     </div>
-    <div class="lg-add"><button class="btn ghost" onclick="ligneAdd('heures')">+ Heures</button></div>
+    <div class="lg-add"><button class="btn-add-neon" type="button" onclick="ligneAdd('heures')">＋ Heures</button></div>
 
     <h5>Matériel</h5>
     <div class="lg-list" id="lgListMateriel">
       ${materiel.length ? materiel.map(l => rLigneDraggable(l)).join("") : `<div class="lg-empty">Aucun matériel</div>`}
     </div>
-    <div class="lg-add"><button class="btn ghost" onclick="ligneAdd('materiel')">+ Matériel</button></div>
+    <div class="lg-add"><button class="btn-add-neon" type="button" onclick="ligneAdd('materiel')">＋ Matériel</button></div>
 
     <h5>Cession de droits <span style="font-weight:normal;color:var(--text-muted);font-size:12px">— étendue, durée, territoire, supports (CPI L131-3)</span></h5>
     <div class="lg-list" id="lgListCessions">
       ${cessions.length ? cessions.map(l => rLigneDraggable(l)).join("") : `<div class="lg-empty">Aucune cession de droits — recommandé pour formaliser l'usage des photos par le client.</div>`}
     </div>
-    <div class="lg-add"><button class="btn ghost" onclick="ligneAdd('cession')">+ Cession de droits</button></div>
+    <div class="lg-add"><button class="btn-add-neon" type="button" onclick="ligneAdd('cession')">＋ Cession de droits</button></div>
   `;
 }
 
@@ -9516,7 +9516,7 @@ function rDevisSectionModalites() {
     </div>
     <div class="ech-warn" id="echWarn" style="${ok ? "display:none" : ""}">⚠ Les pourcentages doivent totaliser 100 %.</div>
     <div class="ech-actions">
-      <button class="ech-add-neon" onclick="echeanceAdd()" type="button">＋ Ajouter</button>
+      <button class="btn-add-neon" onclick="echeanceAdd()" type="button">＋ Ajouter</button>
     </div>
 
     ${rPaiementFields()}
