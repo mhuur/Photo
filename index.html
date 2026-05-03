@@ -16,6 +16,7 @@
     --success:#22c55e;--success-dark:#16a34a;--success-soft:rgba(34,197,94,.14);
     --danger:#ef4444;--danger-dark:#dc2626;--danger-soft:rgba(239,68,68,.14);
     --warning:#f59e0b;--warning-dark:#d97706;--warning-soft:rgba(245,158,11,.12);
+    --neon-violet:#c026d3;--neon-violet-dark:#86198f;--neon-violet-soft:rgba(192,38,211,.14);
     --shadow:0 4px 20px rgba(0,0,0,.4);--shadow-sm:0 1px 3px rgba(0,0,0,.3);
     --input-h:34px;
     /* === Charte graphique — espacements & tailles === */
@@ -2462,11 +2463,6 @@
   .presta-tarif-hint a{color:var(--primary);text-decoration:none;font-weight:500}
   .presta-tarif-hint a:hover{text-decoration:underline}
   .presta-status-row{display:flex;align-items:center;gap:var(--space-md);flex-wrap:wrap;max-width:780px}
-  /* Toggle Déclaré / Au black en style néon */
-  .seg.presta-status-toggle{flex-shrink:0}
-  .seg.presta-status-toggle button{padding:0 16px;font-weight:600}
-  .seg.presta-status-toggle button.on{background:var(--success);color:#fff;box-shadow:0 0 12px rgba(34,197,94,.4),inset 0 0 0 1px rgba(34,197,94,.5);text-shadow:0 0 6px rgba(34,197,94,.6)}
-  .seg.presta-status-toggle button.on.warn{background:var(--warning);box-shadow:0 0 12px rgba(245,158,11,.4),inset 0 0 0 1px rgba(245,158,11,.5);text-shadow:0 0 6px rgba(245,158,11,.6)}
 
   /* === Section Identification & client === */
   .identif-dates-row{display:grid;grid-template-columns:minmax(220px,1.4fr) 150px 130px 170px;gap:var(--gap-field);max-width:880px}
@@ -2493,6 +2489,14 @@
   .seg.seg-neon button.on:hover{background:var(--primary-dark);color:#fff}
   .seg.seg-neon button.on.warn{background:var(--warning);color:#fff;box-shadow:inset 0 0 0 1px rgba(255,255,255,.18),0 0 14px rgba(245,158,11,.55),0 0 28px rgba(245,158,11,.25);text-shadow:0 0 8px rgba(255,255,255,.5)}
   .seg.seg-neon button.on.warn:hover{background:var(--warning-dark);color:#fff}
+  /* Variante succès (vert) — pour toggles porteurs d'un statut positif (ex. Déclaré) */
+  .seg.seg-neon button.on.ok{background:var(--success);color:#fff;box-shadow:inset 0 0 0 1px rgba(255,255,255,.18),0 0 14px rgba(34,197,94,.55),0 0 28px rgba(34,197,94,.25);text-shadow:0 0 8px rgba(255,255,255,.5)}
+  .seg.seg-neon button.on.ok:hover{background:var(--success-dark);color:#fff}
+  /* Variante container .violet — fuchsia/néon translucide pour toggles neutres (alternative au bleu primary).
+     Fond semi-transparent (pas de plein), bordure néon + double glow, texte fuchsia clair lumineux.
+     Les modificateurs .warn et .ok sur le bouton restent prioritaires (sémantique préservée). */
+  .seg.seg-neon.violet button.on:not(.warn):not(.ok){background:rgba(192,38,211,.18);color:#fdf4ff;box-shadow:inset 0 0 0 1px rgba(232,121,249,.5),0 0 14px rgba(192,38,211,.5);text-shadow:0 0 8px rgba(232,121,249,.7)}
+  .seg.seg-neon.violet button.on:not(.warn):not(.ok):hover{background:rgba(192,38,211,.28);color:#fff}
 </style>
 </head>
 <body>
@@ -9304,7 +9308,7 @@ function rDevisSectionIdentification() {
         onmouseenter="showInfo(event, 'clienteleType')" onmouseleave="hideInfo()" onfocus="showInfo(event, 'clienteleType')" onblur="hideInfo()">i</button>
     </h5>
     <div class="identif-clientele-row">
-      <div class="seg seg-neon">
+      <div class="seg seg-neon violet">
         <button class="${eff==="mixte"?"on":""}" onclick="upd('mission.client.type', 'mixte');render()">Mixte</button>
         <button class="${eff==="b2c"?"on":""}" onclick="upd('mission.client.type', 'b2c');render()">Particulier</button>
         <button class="${eff==="b2b"?"on":""}" onclick="upd('mission.client.type', 'b2b');render()">Entreprise</button>
@@ -9372,8 +9376,8 @@ function rDevisSectionPrestations() {
 
     <h5>Statut fiscal</h5>
     <div class="presta-status-row">
-      <div class="seg presta-status-toggle">
-        <button class="${declare?"on":""}" onclick="updMissionDeclare(true)">✓ Déclaré</button>
+      <div class="seg seg-neon">
+        <button class="${declare?"on ok":""}" onclick="updMissionDeclare(true)">✓ Déclaré</button>
         <button class="${!declare?"on warn":""}" onclick="updMissionDeclare(false)">● Au black</button>
       </div>
     </div>
@@ -9412,11 +9416,11 @@ function rDevisSectionDeplacement() {
   const afficheMode = d.deplacement.afficheMode || "afficher";
 
   const paiementToggle = isDebours
-    ? `<div class="seg seg-neon" title="Mode de refacturation des débours">
+    ? `<div class="seg seg-neon violet" title="Mode de refacturation des débours">
         <button class="${pmt==='acompte'?'on':''}" onclick="updDeplPaiementType('acompte')" title="Tu avances le déplacement, le client te rembourse au centime près.">Refacturé</button>
         <button class="${pmt==='fact-direct'?'on':''}" onclick="updDeplPaiementType('fact-direct')" title="Le client règle directement le transporteur. Hors devis fiscal.">Direct</button>
       </div>`
-    : `<div class="seg seg-neon" title="Mode de paiement">
+    : `<div class="seg seg-neon violet" title="Mode de paiement">
         <button class="${pmt==='acompte'?'on':''}" onclick="updDeplPaiementType('acompte')">Acompte</button>
         <button class="${pmt==='avance'?'on':''}" onclick="updDeplPaiementType('avance')">Avance</button>
       </div>`;
@@ -9449,7 +9453,7 @@ function rDevisSectionDeplacement() {
     affichageBlock = `
       <h5>Affichage sur le devis</h5>
       <div class="depl-toggle-row">
-        <div class="seg seg-neon">
+        <div class="seg seg-neon violet">
           <button class="${afficheMode==='afficher'?'on':''}" onclick="updDeplAfficheMode('afficher')">Ligne séparée</button>
           <button class="${afficheMode==='lisser'?'on':''}" onclick="updDeplAfficheMode('lisser')" title="Le déplacement est inclus dans le tarif horaire (pas de ligne séparée).">Inclus dans tarif</button>
         </div>
@@ -9461,7 +9465,7 @@ function rDevisSectionDeplacement() {
   return `
     <h5>Mode de transport</h5>
     <div class="depl-toggle-row">
-      <div class="seg seg-neon">
+      <div class="seg seg-neon violet">
         <button class="${mode==='voiture'?'on':''}" onclick="updMissionMode('voiture')">Voiture</button>
         <button class="${mode==='transports'?'on':''}" onclick="updMissionMode('transports')">Transports</button>
       </div>
@@ -9472,7 +9476,7 @@ function rDevisSectionDeplacement() {
 
     <h5>Facturation</h5>
     <div class="depl-toggle-row">
-      <div class="seg seg-neon">
+      <div class="seg seg-neon violet">
         <button class="${devis==='principal'?'on':''}" onclick="updDeplDevis('principal')">Principal</button>
         <button class="${devis==='debours'?'on warn':''}" onclick="updDeplDevis('debours')">Débours</button>
       </div>
@@ -9533,7 +9537,7 @@ function rDevisSectionAjustements() {
     ` : (() => {
       const bm = d.blackMode || "reduit";
       return `<div class="row"><div class="field"><label>Tarif au black</label>
-        <div class="seg seg-neon">
+        <div class="seg seg-neon violet">
           <button class="${bm==='reduit'?'on':''}" onclick="updBlackMode('reduit')">Taux réduit</button>
           <button class="${bm==='fixe'?'on':''}" onclick="updBlackMode('fixe')">Taux fixe</button>
         </div>
