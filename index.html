@@ -433,13 +433,14 @@
   .ac-cta{display:inline-flex;align-items:center;gap:8px;margin:0 0 18px}
 
   /* Compta : KPI cards en haut de l'onglet */
-  .cp-kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;margin:12px 0 18px}
-  .cp-kpi{display:flex;flex-direction:column;gap:4px;padding:12px 14px;background:var(--surface);border:1px solid var(--border-light);border-radius:8px}
-  .cp-kpi-label{font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.04em}
-  .cp-kpi-value{font-size:20px;font-weight:700;font-variant-numeric:tabular-nums;color:var(--text)}
-  .cp-kpi-value.cp-kpi-warn{color:var(--warning)}
-  .cp-kpi-value.cp-kpi-ok{color:var(--success)}
-  .cp-kpi-value.cp-kpi-danger{color:var(--danger)}
+  .cp-kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:8px;margin:8px 0 16px}
+  .cp-kpi{display:flex;flex-direction:column;gap:3px;padding:8px 12px;background:rgba(0,0,0,.22);border:1px solid rgba(74,158,255,.28);border-radius:6px;box-shadow:inset 0 0 0 1px rgba(74,158,255,.06),0 0 6px rgba(74,158,255,.08);transition:border-color .15s,box-shadow .15s}
+  .cp-kpi:hover{border-color:rgba(74,158,255,.5);box-shadow:inset 0 0 0 1px rgba(74,158,255,.14),0 0 12px rgba(74,158,255,.18)}
+  .cp-kpi-label{font-size:10px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em}
+  .cp-kpi-value{font-size:16px;font-weight:700;font-variant-numeric:tabular-nums;color:#cfe3ff;text-shadow:0 0 6px rgba(74,158,255,.4)}
+  .cp-kpi-value.cp-kpi-warn{color:#fcd34d;text-shadow:0 0 6px rgba(245,158,11,.45)}
+  .cp-kpi-value.cp-kpi-ok{color:#86efac;text-shadow:0 0 6px rgba(34,197,94,.45)}
+  .cp-kpi-value.cp-kpi-danger{color:#fca5a5;text-shadow:0 0 6px rgba(239,68,68,.45)}
 
   /* Compta : graphique CA mensuel inline (12 derniers mois) */
   .cp-chart-wrap{margin:0 0 22px;padding:14px 18px;background:var(--surface);border:1px solid var(--border-light);border-radius:8px}
@@ -13409,6 +13410,21 @@ function rAC() {
     }))
     .sort((a, b) => (a.dateMax || "").localeCompare(b.dateMax || ""));
 
+  // « Annulés / refusés » récents : statutPrin in (refuse, annule) ET émis dans les
+  // 7 derniers jours (filtre par date d'émission g.dateMin — pratique sans champ
+  // dédié pour la date de changement de statut). Section éphémère qui aide à
+  // garder un œil sur les retours négatifs récents avant qu'ils ne disparaissent.
+  const sevenDaysMs = 7 * 86400000;
+  const aTermines = groups
+    .filter(g => g.statutPrin === "refuse" || g.statutPrin === "annule")
+    .filter(g => {
+      if (g.devisId === sticky) return true;
+      if (!g.dateMin) return false;
+      const dEmi = new Date(g.dateMin + "T00:00:00").getTime();
+      return (ms - dEmi) <= sevenDaysMs;
+    })
+    .sort((a, b) => (b.dateMin || "").localeCompare(a.dateMin || ""));
+
   const stop = "event.stopPropagation();";
   const renderRow = (g, late) => {
     const kind = late ? "devis" : "paiement";
@@ -13443,14 +13459,6 @@ function rAC() {
     </div>
 
     <div class="ac-section">
-      <h3>Devis envoyés <span class="ac-count">${aSurveiller.length}</span></h3>
-      <div class="hint" style="margin:0 0 8px;font-size:11px">Devis émis en attente d'acceptation, dans le délai de relance (≤ ${esc(seuil)} jours).</div>
-      ${aSurveiller.length === 0
-        ? `<div class="ac-empty">Aucun devis envoyé en cours.</div>`
-        : `<div class="ac-list">${aSurveiller.map(g => renderRow(g, false)).join("")}</div>`}
-    </div>
-
-    <div class="ac-section">
       <h3>À relancer <span class="ac-count">${aRelancer.length}</span></h3>
       <div class="hint" style="margin:0 0 8px;font-size:11px">Devis envoyés sans réponse depuis plus de ${esc(seuil)} jours. Seuil modifiable dans Profil.</div>
       ${aRelancer.length === 0
@@ -13464,6 +13472,22 @@ function rAC() {
       ${aEncaisser.length === 0
         ? `<div class="ac-empty">Aucun paiement en attente.</div>`
         : `<div class="ac-list">${aEncaisser.map(g => renderRow(g, false)).join("")}</div>`}
+    </div>
+
+    <div class="ac-section">
+      <h3>Devis envoyés <span class="ac-count">${aSurveiller.length}</span></h3>
+      <div class="hint" style="margin:0 0 8px;font-size:11px">Devis émis en attente d'acceptation, dans le délai de relance (≤ ${esc(seuil)} jours).</div>
+      ${aSurveiller.length === 0
+        ? `<div class="ac-empty">Aucun devis envoyé en cours.</div>`
+        : `<div class="ac-list">${aSurveiller.map(g => renderRow(g, false)).join("")}</div>`}
+    </div>
+
+    <div class="ac-section">
+      <h3>Annulés / refusés <span class="ac-count">${aTermines.length}</span></h3>
+      <div class="hint" style="margin:0 0 8px;font-size:11px">Devis annulés ou refusés émis dans les 7 derniers jours.</div>
+      ${aTermines.length === 0
+        ? `<div class="ac-empty">Aucun devis annulé ou refusé récent.</div>`
+        : `<div class="ac-list">${aTermines.map(g => renderRow(g, false)).join("")}</div>`}
     </div>
   `;
 }
