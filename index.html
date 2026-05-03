@@ -2191,6 +2191,12 @@
   .cgv-summary-edit{flex-shrink:0;background:transparent;border:1px solid transparent;color:var(--text-dim);cursor:pointer;font-size:14px;line-height:1;width:26px;height:26px;border-radius:5px;display:inline-flex;align-items:center;justify-content:center;font-weight:700;padding:0;transition:all .12s}
   .cgv-summary-edit:hover{color:var(--primary);background:var(--primary-soft);border-color:var(--primary)}
 
+  /* Bouton « + Ajouter section CGV » en bas du bloc CGV de la preview (style néon) */
+  .dp-cgv-add-btn{display:inline-flex;align-items:center;gap:6px;margin-top:14px;padding:8px 16px;background:transparent;color:var(--primary);border:1px dashed var(--primary);border-radius:7px;cursor:pointer;font:inherit;font-size:12px;font-weight:600;letter-spacing:.04em;transition:all .15s;box-shadow:inset 0 0 0 1px rgba(74,158,255,.18),0 0 8px rgba(74,158,255,.12)}
+  .dp-cgv-add-btn:hover{background:rgba(74,158,255,.08);border-style:solid;color:#7eb8ff;box-shadow:inset 0 0 12px rgba(74,158,255,.20),0 0 18px rgba(74,158,255,.45),0 0 32px rgba(74,158,255,.15)}
+  @media print{.dp-cgv-add-btn{display:none !important}}
+  .view-devis-snapshot .dp-cgv-add-btn{display:none}
+
   /* Editor modal toolbar */
   .rte-toolbar{display:flex;gap:3px;flex-wrap:wrap;align-items:center;padding:6px 8px;background:var(--surface);border:1px solid var(--border);border-radius:6px;margin-bottom:8px}
   .rte-btn{background:transparent;border:1px solid transparent;color:var(--text);padding:5px 9px;border-radius:4px;cursor:pointer;font:inherit;font-size:13px;font-weight:500;min-width:30px;line-height:1.3}
@@ -4481,7 +4487,8 @@ function rDevisPreview() {
 
     <div class="dp-spacer"></div>
 
-    <div class="dp-signature-row">
+    <div class="dp-signature-row dp-rich-zone" data-rich-field="signatureBlock">
+      <button class="dp-rich-menu-btn" type="button" onclick="event.stopPropagation();textEditorOpen('signatureBlock')" title="Modifier le bloc signature">⋮</button>
       ${(d.signatureBlock || "").trim()
         ? richDisplayHtml(d.signatureBlock)
         : `<div class="dp-sig-default">
@@ -4517,6 +4524,7 @@ function rDevisPreview() {
           <span class="dp-cgv-title">Conditions générales de vente</span><span class="dp-cgv-sep"> — </span><span class="dp-cgv-ref">Annexe au ${esc(formatRef(d.ref, "devis"))}</span>
         </div>
         <div class="dp-cgv-body">${renderCgvSections(d.cgvPreambule, d.cgvSections)}${penaltyArticle}</div>
+        <button class="dp-cgv-add-btn" type="button" onclick="cgvSectionAdd()" title="Ajouter une nouvelle section CGV">＋ Ajouter une section CGV</button>
       </div>`;
     })()}
 
@@ -4691,7 +4699,8 @@ function rDeboursPreview() {
 
     <div class="dp-spacer"></div>
 
-    <div class="dp-signature-row">
+    <div class="dp-signature-row dp-rich-zone" data-rich-field="signatureBlock">
+      <button class="dp-rich-menu-btn" type="button" onclick="event.stopPropagation();textEditorOpen('signatureBlock')" title="Modifier le bloc signature">⋮</button>
       ${(d.signatureBlock || "").trim()
         ? richDisplayHtml(d.signatureBlock)
         : `<div class="dp-sig-default">
@@ -9327,13 +9336,11 @@ function rDevisSectionConditions() {
   return `
     <h5>Logo (optionnel)</h5>
     ${rLogoField()}
-    <h5>Photographe (en-tête du devis)</h5>
-    ${renderLockedTextarea("photographe", d.photographe || "", "", "Vos coordonnées en haut à gauche du devis…")}
-    <h5>CGV — sections</h5>
-    <div class="hint" style="margin:0 0 10px;font-size:12px;color:var(--text-muted)">💡 Le <strong>préambule</strong> et les <strong>conditions de paiement texte libre</strong> sont désormais éditables directement depuis l'aperçu du devis (clic sur ⋮).</div>
+    <h5>Photographe (en-tête du devis, fallback)</h5>
+    ${renderLockedTextarea("photographe", d.photographe || "", "", "Vos coordonnées en haut à gauche du devis (utilisé si l'identité Profil est vide)…")}
+    <div class="hint" style="margin:14px 0 8px;font-size:12px;color:var(--text-muted)">💡 Tout le reste (<strong>préambule CGV</strong>, <strong>conditions de paiement</strong>, <strong>sections CGV</strong>, <strong>bloc signature</strong>) est désormais éditable directement depuis l'aperçu du devis (clic sur ⋮).</div>
+    <h5>Sections CGV (vue compacte)</h5>
     ${rCgvEditor()}
-    <h5>Bloc signature</h5>
-    ${renderLockedTextarea("signatureBlock", d.signatureBlock || "", "", "Bloc de signature client…")}
   `;
 }
 
