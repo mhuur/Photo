@@ -2482,7 +2482,9 @@
   .presta-tarif-hint{flex:1;min-width:200px;font-size:12px;color:var(--text-dim);line-height:1.5;padding:0 0 var(--space-sm) var(--space-sm)}
   .presta-tarif-hint a{color:var(--primary);text-decoration:none;font-weight:500}
   .presta-tarif-hint a:hover{text-decoration:underline}
-  .presta-status-row{display:flex;align-items:center;gap:var(--space-md);flex-wrap:wrap;max-width:780px}
+  .presta-status-row{display:flex;flex-direction:column;align-items:flex-start;gap:var(--space-sm);max-width:780px}
+  .presta-status-row .seg{width:320px;max-width:100%}
+  .presta-status-row .seg button{flex:1;justify-content:center}
 
   /* === Section Identification & client === */
   .identif-dates-row{display:grid;grid-template-columns:minmax(220px,1.4fr) 150px 130px 170px;gap:var(--gap-field);max-width:880px}
@@ -9476,7 +9478,7 @@ function rDevisSectionPrestations() {
       </div>
       ${!declare ? (() => {
         const bm = d.blackMode || "reduit";
-        return `<div class="seg seg-neon violet" style="margin-left:auto" title="Stratégie de prix au black">
+        return `<div class="seg seg-neon violet" title="Stratégie de prix au black">
           <button class="${bm==='fixe'?'on':''}" onclick="updBlackMode('fixe')" title="On garde le tarif catalogue : tu encaisses la part qui aurait été versée à l'URSSAF en bonus.">Net maximisé</button>
           <button class="${bm==='reduit'?'on':''}" onclick="updBlackMode('reduit')" title="On retire la part URSSAF du tarif catalogue : le client paie moins cher, tu touches l'équivalent du net déclaré.">Prix compétitif</button>
         </div>`;
