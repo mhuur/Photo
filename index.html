@@ -13342,16 +13342,38 @@ function rAC() {
     return { ...g, total, ref, client: lead.client || "", dateMin: dates[0] || "", dateMax: dates[dates.length - 1] || "", lastRelance: dv.lastRelance || "" };
   });
 
-  // « À relancer » : compteur basé sur max(dateMin, lastRelance). Le bouton
-  // « ✓ Marquer comme relancé » dans le panneau pose lastRelance=now, ce qui
-  // ferait normalement disparaître le devis. Pour éviter ce flash, le devis
-  // dont le panneau est ouvert (sticky = accueilExpandedDevis) est exempté
-  // du filtre — le filtre se réapplique quand l'utilisateur referme le volet.
+  // « À relancer » : compteur basé sur max(dateRacineEmission, lastRelance).
+  // /!\ On utilise la date d'émission de la RACINE de la chaîne de révisions
+  // (V1) et non celle de la version courante. Sinon, réviser un devis (ce qui
+  // crée une V<N+1> avec une nouvelle dateMin = aujourd'hui) ferait
+  // visuellement « reset » le compteur de relance, alors que le client a déjà
+  // été contacté il y a longtemps.
+  // Le bouton « ✓ Marquer comme relancé » dans le panneau pose lastRelance=now,
+  // ce qui ferait normalement disparaître le devis. Pour éviter ce flash, le
+  // devis dont le panneau est ouvert (sticky = accueilExpandedDevis) est
+  // exempté du filtre — le filtre se réapplique quand l'utilisateur referme.
+  const chainRootEmissionDate = (devisId) => {
+    let cur = devisId;
+    const seen = new Set();
+    while (cur && !seen.has(cur)) {
+      seen.add(cur);
+      const dv = S.suivi.devis && S.suivi.devis[cur];
+      if (!dv) return "";
+      if (!dv.replaces) {
+        const ents = (S.suivi.entries || []).filter(e => e.devisId === cur);
+        const dates = ents.map(e => e.date).filter(Boolean).sort();
+        return dates[0] || "";
+      }
+      cur = dv.replaces;
+    }
+    return "";
+  };
   const sticky = accueilExpandedDevis;
   const aRelancer = groups
     .filter(g => g.statutPrin === "envoye")
     .map(g => {
-      const dEmi = g.dateMin ? new Date(g.dateMin + "T00:00:00").getTime() : 0;
+      const rootDate = chainRootEmissionDate(g.devisId) || g.dateMin;
+      const dEmi = rootDate ? new Date(rootDate + "T00:00:00").getTime() : 0;
       const dRel = g.lastRelance ? new Date(g.lastRelance).getTime() : 0;
       const dRef = Math.max(dEmi, dRel);
       return { ...g, late: dRef > 0 && (ms - dRef) > seuilMs };
