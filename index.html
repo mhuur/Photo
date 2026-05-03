@@ -70,6 +70,11 @@
   .sb .user a{color:inherit}
   main{flex:1;padding:24px 32px;max-width:1100px;position:relative}
   h2{margin-top:0}
+  /* === Titre de page néon — appliqué à tous les onglets via .page-title === */
+  .page-title{font-size:36px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#cfe3ff;text-shadow:0 0 14px rgba(74,158,255,.5),0 0 28px rgba(74,158,255,.2);margin:0 0 28px;padding:14px 0 16px;border-top:4px double rgba(74,158,255,.45);border-bottom:4px double rgba(74,158,255,.45);display:flex;align-items:center;gap:16px;line-height:1.1;font-family:inherit;animation:title-pulse 5s ease-in-out infinite}
+  .page-title .saved{font-size:14px;font-weight:500;letter-spacing:0;text-transform:none}
+  .page-title small,.page-title .meta{font-size:14px;font-weight:400;letter-spacing:.02em;text-transform:none;color:var(--text-muted);text-shadow:none;margin-left:auto}
+  @keyframes title-pulse{0%,100%{filter:drop-shadow(0 0 0 rgba(74,158,255,.0))}50%{filter:drop-shadow(0 0 6px rgba(74,158,255,.35))}}
   h3{margin-top:var(--space-xl);margin-bottom:var(--space-sm);font-size:13px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid var(--border);padding-bottom:var(--space-xs)}
   .row{display:flex;gap:var(--gap-field);margin-bottom:var(--gap-row);flex-wrap:wrap}
   .row-section-break{margin-top:var(--space-sm)}
@@ -9411,7 +9416,7 @@ function rMS() {
   if (noneTouched) _editSectionOpen.identification = true;
 
   return `
-    <span id="savedFlash" class="saved" style="position:absolute;top:18px;right:18px"></span>
+    <h1 class="page-title">Mission <span id="savedFlash" class="saved"></span></h1>
     <div class="mission-toolbar" id="missionToolbar">${rMissionToolbarInner()}</div>
     <div class="devis-banners" id="devisBanners">${rDevisBanners()}</div>
     ${rDevisAccordion()}
@@ -11795,7 +11800,7 @@ function rSV() {
   }
 
   return `
-    <h2>Suivi <span id="savedFlash" class="saved"></span></h2>
+    <h1 class="page-title">Suivi <span id="savedFlash" class="saved"></span></h1>
 
     ${suiviLegendHtml()}
 
@@ -12420,7 +12425,7 @@ function rCL() {
   setTimeout(() => clientsApplyFilters(), 0);
 
   return `
-    <h2>Clients <span style="color:var(--text-dim);font-weight:400;font-size:0.7em">— ${total}</span> <span id="savedFlash" class="saved"></span></h2>
+    <h1 class="page-title">Clients <span class="meta">— ${total}</span> <span id="savedFlash" class="saved"></span></h1>
 
     <div class="cli-toolbar">
       <button class="btn" onclick="clientsAdd()">${ICONS.plus}Ajouter</button>
@@ -13040,7 +13045,7 @@ function rCP() {
   const stop = "event.stopPropagation();";
 
   return `
-    <h2>Comptabilité <span id="savedFlash" class="saved"></span></h2>
+    <h1 class="page-title">Comptabilité <span id="savedFlash" class="saved"></span></h1>
 
     <div class="cp-kpi-grid">
       <div class="cp-kpi"><span class="cp-kpi-label">CA mois (${esc(MOIS_FR[today.getMonth()])} ${esc(currentYear)})</span><strong class="cp-kpi-value">${fmt(caMois)}</strong></div>
@@ -13193,7 +13198,7 @@ function rTR() {
   }).join("");
 
   return `
-    <h2>Frais &amp; Tarifs <span id="savedFlash" class="saved"></span></h2>
+    <h1 class="page-title">Frais &amp; Tarifs <span id="savedFlash" class="saved"></span></h1>
 
     <h3>Synthèse coûts horaires</h3>
     <div class="hint" style="max-width:780px">Coût horaire à intégrer dans tes tarifs (Net = Tarif − URSSAF − ce coût). Heures : estimation prudente ≈ 900 h/an. Facteur sécurité : marge pour les imprévus (ex. 15 %).</div>
@@ -13324,11 +13329,11 @@ function rAC() {
 
   const allData = bilanCompute();
   const monthRow = allData.find(r => r.ym === todayYM);
-  const ytdRows = allData.filter(r => r.ym.slice(0, 4) === currentYear);
   const caMois = monthRow ? monthRow.ca : 0;
-  const caYTD = ytdRows.reduce((s, r) => s + r.ca, 0);
   const payeMois = monthRow ? monthRow.paye : 0;
-  const nbAttente = S.suivi.entries.filter(e => entryStatut(e) === "attente").length;
+  // Salaire net mois en cours = part nette encaissée après URSSAF + trésorerie mise de côté.
+  // Source : monthRow.salaire (issu de la décomposition par entry dans bilanCompute).
+  const salaireNetMois = monthRow ? monthRow.salaire : 0;
 
   const ms = today.getTime();
   const seuilMs = seuil * 86400000;
@@ -13369,7 +13374,9 @@ function rAC() {
     return "";
   };
   const sticky = accueilExpandedDevis;
-  const aRelancer = groups
+  // On annote tous les devis "envoye" avec late=true/false, puis on les répartit
+  // dans 2 sections : late → "À relancer", pas late → "Devis envoyés".
+  const envoyes = groups
     .filter(g => g.statutPrin === "envoye")
     .map(g => {
       const rootDate = chainRootEmissionDate(g.devisId) || g.dateMin;
@@ -13377,8 +13384,12 @@ function rAC() {
       const dRel = g.lastRelance ? new Date(g.lastRelance).getTime() : 0;
       const dRef = Math.max(dEmi, dRel);
       return { ...g, late: dRef > 0 && (ms - dRef) > seuilMs };
-    })
+    });
+  const aRelancer = envoyes
     .filter(g => g.late || g.devisId === sticky)
+    .sort((a, b) => (a.dateMin || "").localeCompare(b.dateMin || ""));
+  const aSurveiller = envoyes
+    .filter(g => !g.late || g.devisId === sticky)
     .sort((a, b) => (a.dateMin || "").localeCompare(b.dateMin || ""));
 
   // Pré-filtre d'appartenance : un devis est « En attente de paiement » SEULEMENT
@@ -13415,18 +13426,24 @@ function rAC() {
   };
 
   return `
-    <h2>Accueil <span id="savedFlash" class="saved"></span></h2>
-    <div class="hint" style="max-width:780px;margin-bottom:16px">Vue d'ensemble de ton activité. Clique sur un devis pour l'ouvrir dans Suivi &amp; paiements.</div>
+    <h1 class="page-title">Accueil <span id="savedFlash" class="saved"></span></h1>
 
     <div class="cp-kpi-grid">
       <div class="cp-kpi"><span class="cp-kpi-label">CA mois (${esc(MOIS_FR[today.getMonth()])} ${esc(currentYear)})</span><strong class="cp-kpi-value">${fmt(caMois)}</strong></div>
-      <div class="cp-kpi"><span class="cp-kpi-label">CA cumulé ${esc(currentYear)}</span><strong class="cp-kpi-value">${fmt(caYTD)}</strong></div>
       <div class="cp-kpi"><span class="cp-kpi-label">Encaissé ${esc(MOIS_FR[today.getMonth()])}</span><strong class="cp-kpi-value">${fmt(payeMois)}</strong></div>
-      <div class="cp-kpi"><span class="cp-kpi-label">Devis en attente de paiement</span><strong class="cp-kpi-value">${nbAttente}</strong></div>
+      <div class="cp-kpi"><span class="cp-kpi-label">Salaire net ${esc(MOIS_FR[today.getMonth()])}</span><strong class="cp-kpi-value">${fmt(salaireNetMois)}</strong></div>
     </div>
 
     <div class="ac-cta">
       <button class="btn-neon" onclick="missionNewFromAccueil()" title="Crée un nouveau devis dans Mission. Garde la configuration (taux, URSSAF, paiement, CGV) et démarre vierge sur le client/heures/lignes/déplacement.">${ICONS.plus}Nouveau devis</button>
+    </div>
+
+    <div class="ac-section">
+      <h3>Devis envoyés <span class="ac-count">${aSurveiller.length}</span></h3>
+      <div class="hint" style="margin:0 0 8px;font-size:11px">Devis émis en attente d'acceptation, dans le délai de relance (≤ ${esc(seuil)} jours).</div>
+      ${aSurveiller.length === 0
+        ? `<div class="ac-empty">Aucun devis envoyé en cours.</div>`
+        : `<div class="ac-list">${aSurveiller.map(g => renderRow(g, false)).join("")}</div>`}
     </div>
 
     <div class="ac-section">
@@ -13480,7 +13497,7 @@ function rPF() {
   const isFranchise = id.regimeTVA === "franchise";
 
   return `
-    <h2>Profil <span id="savedFlash" class="saved"></span></h2>
+    <h1 class="page-title">Profil <span id="savedFlash" class="saved"></span></h1>
     <div class="hint" style="max-width:780px;margin-bottom:20px">
       Identité de l'émetteur. Ces informations alimentent automatiquement l'en-tête et les mentions légales de tous tes devis et factures. Mentions obligatoires : SIRET, forme juridique, mention « EI » si applicable, médiateur conso si tu vends à des particuliers (art. L612-1 C. conso. — sanction 3 000 € si oublié).
     </div>
@@ -14032,7 +14049,7 @@ function rBG() {
   const nOpen = allItems.filter(it => !it.validated).length;
   const nDone = allItems.filter(it => it.validated).length;
 
-  let h = `<h2>Notes <span id="savedFlash" class="saved"></span></h2>`;
+  let h = `<h1 class="page-title">Notes <span id="savedFlash" class="saved"></span></h1>`;
   h += `<div class="fb-bar">
     <div class="fb-title">Notes &amp; Remarques</div>
     <button class="fb-copy-btn" onclick="bugCopy()" id="bug-copy-btn">📋 Copier toutes les actions en cours</button>
