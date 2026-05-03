@@ -57,7 +57,7 @@
   #app{display:flex;min-height:100vh}
   .sb{width:220px;background:var(--bg-2);color:var(--text);border-right:1px solid var(--border);display:flex;flex-direction:column;position:sticky;top:0;height:100vh;overflow-y:auto;flex-shrink:0;z-index:100}
   /* En-tête sidebar — typo néon Tilt Neon. Visuellement distinct des tabs (pas de hover, cursor:default, border-bottom). */
-  .sb h1{font-family:'Tilt Neon',sans-serif;font-size:24px;font-weight:400;padding:18px 16px 14px;margin:0 12px 8px;color:#cfe3ff;letter-spacing:.06em;text-transform:uppercase;line-height:1;text-align:center;cursor:default;border-bottom:1px solid rgba(74,158,255,.25);text-shadow:0 0 4px rgba(74,158,255,.9),0 0 12px rgba(74,158,255,.5),0 0 24px rgba(74,158,255,.25)}
+  .sb h1{font-family:'Tilt Neon',sans-serif;font-size:24px;font-weight:400;padding:18px 16px 14px;margin:0 12px 8px;color:#cfe3ff;letter-spacing:.06em;text-transform:uppercase;line-height:1;text-align:left;cursor:default;border-bottom:1px solid rgba(74,158,255,.25);text-shadow:0 0 4px rgba(74,158,255,.9),0 0 12px rgba(74,158,255,.5),0 0 24px rgba(74,158,255,.25)}
   .sb button.tab{display:flex;align-items:center;gap:11px;width:100%;background:none;border:0;color:var(--text-muted);padding:10px 16px;text-align:left;cursor:pointer;font:inherit;font-size:13px;border-left:3px solid transparent}
   .sb button.tab:hover{background:var(--surface);color:var(--text)}
   .sb button.tab.active{background:var(--surface);color:#fff;border-left-color:var(--primary)}
@@ -3218,14 +3218,16 @@ window.uiPrompt = function(message, opts = {}) {
 };
 
 const TABS = [
-  ["accueil", "Accueil",           "dashboard"],
-  ["mission", "Mission",           "camera"],
-  ["suivi",   "Suivi & paiements", "kanban"],
-  ["tarifs",  "Frais & Tarifs",    "wallet"],
-  ["clients", "Clients",           "users"],
-  ["compta",  "Comptabilité",      "barChart"],
-  ["bugs",    "Signaler un bug",   "bug"]
-  // Profil, Templates, Paramètres → accessibles via le menu user (sidebar bottom).
+  ["accueil", "Accueil",                "dashboard"],
+  ["mission", "Mission",                "camera"],
+  ["tarifs",  "Catalogue",              "fileText"],
+  ["compta",  "Comptabilité",           "barChart"],
+  ["suivi",   "Historique",             "kanban"],
+  ["achats",  "Achats / Abonnements",   "wallet"],
+  ["clients", "Clients",                "users"]
+  // Profil, Templates, Paramètres, Signaler un bug → menu user (sidebar bottom).
+  // /!\ Les clés (accueil/tarifs/suivi/...) restent inchangées pour compat
+  // setTab('tarifs') / setTab('suivi') existants. Seuls les LABELS changent.
 ];
 
 const app = document.getElementById("app");
@@ -7544,7 +7546,7 @@ function render() {
     return;
   }
   // owner / member → app normale
-  const renderers = { accueil: rAC, mission: rMS, profil: rPF, suivi: rSV, clients: rCL, tarifs: rTR, compta: rCP, bugs: rBG, parametres: rParametres, templates: rTemplates };
+  const renderers = { accueil: rAC, mission: rMS, profil: rPF, suivi: rSV, clients: rCL, tarifs: rCatalogue, achats: rAchats, compta: rCP, bugs: rBG, parametres: rParametres, templates: rTemplates };
   const view = (renderers[tab] || (() => ""))();
   // Badge "owner" ou "membre" en bas de la sidebar
   const pendingCount = Object.keys(workspaceState.pendingRequests || {}).length;
@@ -7580,6 +7582,7 @@ function render() {
             <button type="button" role="menuitem" onclick="userMenuClose();setTab('profil')">${ICONS.user}<span>Profil</span></button>
             <button type="button" role="menuitem" onclick="userMenuClose();setTab('templates')">${ICONS.mail}<span>Templates</span></button>
             <button type="button" role="menuitem" onclick="userMenuClose();setTab('parametres')">${ICONS.settings}<span>Paramètres</span></button>
+            <button type="button" role="menuitem" onclick="userMenuClose();setTab('bugs')">${ICONS.bug}<span>Signaler un bug</span></button>
             <button type="button" role="menuitem" onclick="userMenuClose();signOut()">${ICONS.logOut}<span>Se déconnecter</span></button>
           </div>
           <button class="sb-user-trigger" id="sbUserTrigger" type="button" onclick="userMenuToggle(event)" aria-label="Mon compte" title="${esc(user.email)}">
@@ -13193,10 +13196,56 @@ function rCP() {
 }
 
 // ▼ rTR — RENDERER onglet Tarifs
-function rTR() {
-  // Prestations editing
+// ▼ rCatalogue — vue Catalogue (anciennement rTR « Frais & Tarifs »).
+// Liste éditable des prestations + tarifs €/h. Le calcul Net/Coût matériel/Tarif
+// utilise le coût horaire matériel (tm) issu de l'onglet « Achats / Abonnements ».
+function rCatalogue() {
   const cat = S.tarifs.catalog || DEFAULT_CATALOG;
+  const tm = tauxMatos();
+  const urssafPct = num(S.mission && S.mission.urssafPct) || 22;
+  const urssafFactor = 1 - urssafPct / 100;
+  const tarifRows3col = cat.map((c, idx) => {
+    const final = num(c.p);
+    const sansUrssaf = final > 0 ? r2(final * urssafFactor) : 0;
+    const net = final > 0 ? r2(sansUrssaf - tm.tauxRetenu) : 0;
+    return `
+    <tr ${final === 0 ? 'class="row-empty"' : ''}>
+      <td><input type="text" value="${esc(c.l)}" oninput="tarifEdit(${idx},'l',this.value)" placeholder="Libellé prestation" class="tr-cell-input"></td>
+      <td class="amount net-cell ${final > 0 ? (net >= 0 ? 'ok' : 'bad') : 'dim'}">${final > 0 ? fmt(net) : "—"}</td>
+      <td class="amount muted-cell ${final > 0 ? '' : 'dim'}">${final > 0 ? fmt(tm.tauxRetenu) : "—"}</td>
+      <td class="amount tarif-cell">
+        <div class="tarif-input-wrap">
+          <input type="number" step="0.5" value="${esc(c.p || "")}" oninput="tarifEdit(${idx},'p',this.value)" placeholder="—" class="tr-tarif-input">
+          <span class="unit">€/h</span>
+        </div>
+      </td>
+    </tr>`;
+  }).join("");
+  return `
+    <h1 class="page-title">Catalogue <span id="savedFlash" class="saved"></span></h1>
+    <h3>Prestations &amp; tarifs (€/h)</h3>
+    <div class="hint" style="max-width:880px">Saisis le <strong>tarif final</strong> facturé au client (TTC, URSSAF incluse, à droite). Le tableau remonte le calcul : <strong>− URSSAF − coût matériel = Net</strong> qui te reste pour ton temps. Le coût matériel se règle dans l'onglet « Achats / Abonnements ».</div>
+    <table class="hist" style="max-width:880px">
+      <thead>
+        <tr>
+          <th>Libellé</th>
+          <th style="width:110px;text-align:right">Net<div style="font-size:13px;font-weight:400;color:var(--text-muted);margin-top:1px">pour ton temps</div></th>
+          <th style="width:110px;text-align:right">Coût matériel<div style="font-size:13px;font-weight:400;color:var(--text-muted);margin-top:1px">amortissement</div></th>
+          <th style="width:110px;text-align:right">Tarif final<div style="font-size:13px;font-weight:400;color:var(--text-muted);margin-top:1px">prix client TTC</div></th>
+        </tr>
+      </thead>
+      <tbody>${tarifRows3col}</tbody>
+    </table>
+    <div style="margin-top:10px;display:flex;justify-content:flex-end;max-width:880px">
+      <button class="btn ghost" onclick="tarifReset()" style="font-size:13px">↺ Réinitialiser aux tarifs par défaut</button>
+    </div>
+  `;
+}
 
+// ▼ rAchats — vue Achats / Abonnements. Synthèse coût horaire matériel +
+// abonnements pro + investissements (amortissement). Alimente le coût matériel
+// affiché dans le Catalogue.
+function rAchats() {
   // Abonnements
   const abEntries = S.abonnements.entries;
   const abActif = abEntries.filter(e => !e.dateFin);
@@ -13244,33 +13293,10 @@ function rTR() {
     </tr>`;
   }).join("");
 
-  // Compute taux matos
   const tm = tauxMatos();
-  const urssafPct = num(S.mission && S.mission.urssafPct) || 22;
-  const urssafFactor = 1 - urssafPct / 100; // e.g., 0.78 for 22%
-  // Le catalogue est un référentiel global : on affiche toujours le scénario
-  // nominal (déclaré, URSSAF appliquée). Le décompte selon le devis en cours
-  // (au noir, mode fixe, etc.) appartient au devis lui-même via rTauxBreakdown.
-  const tarifRows3col = cat.map((c, idx) => {
-    const final = num(c.p);
-    const sansUrssaf = final > 0 ? r2(final * urssafFactor) : 0;
-    const net = final > 0 ? r2(sansUrssaf - tm.tauxRetenu) : 0;
-    return `
-    <tr ${final === 0 ? 'class="row-empty"' : ''}>
-      <td><input type="text" value="${esc(c.l)}" oninput="tarifEdit(${idx},'l',this.value)" placeholder="Libellé prestation" class="tr-cell-input"></td>
-      <td class="amount net-cell ${final > 0 ? (net >= 0 ? 'ok' : 'bad') : 'dim'}">${final > 0 ? fmt(net) : "—"}</td>
-      <td class="amount muted-cell ${final > 0 ? '' : 'dim'}">${final > 0 ? fmt(tm.tauxRetenu) : "—"}</td>
-      <td class="amount tarif-cell">
-        <div class="tarif-input-wrap">
-          <input type="number" step="0.5" value="${esc(c.p || "")}" oninput="tarifEdit(${idx},'p',this.value)" placeholder="—" class="tr-tarif-input">
-          <span class="unit">€/h</span>
-        </div>
-      </td>
-    </tr>`;
-  }).join("");
 
   return `
-    <h1 class="page-title">Frais &amp; Tarifs <span id="savedFlash" class="saved"></span></h1>
+    <h1 class="page-title">Achats / Abonnements <span id="savedFlash" class="saved"></span></h1>
 
     <h3>Synthèse coûts horaires</h3>
     <div class="hint" style="max-width:780px">Coût horaire à intégrer dans tes tarifs (Net = Tarif − URSSAF − ce coût). Heures : estimation prudente ≈ 900 h/an. Facteur sécurité : marge pour les imprévus (ex. 15 %).</div>
@@ -13311,23 +13337,6 @@ function rTR() {
         </div>` : ""}
       </div>
     </section>
-
-    <h3>Prestations &amp; tarifs (€/h)</h3>
-    <div class="hint" style="max-width:880px">Saisis le <strong>tarif final</strong> facturé au client (TTC, URSSAF incluse, à droite). Le tableau remonte le calcul : <strong>− URSSAF − coût matériel = Net</strong> qui te reste pour ton temps.</div>
-    <table class="hist" style="max-width:880px">
-      <thead>
-        <tr>
-          <th>Libellé</th>
-          <th style="width:110px;text-align:right">Net<div style="font-size:13px;font-weight:400;color:var(--text-muted);margin-top:1px">pour ton temps</div></th>
-          <th style="width:110px;text-align:right">Coût matériel<div style="font-size:13px;font-weight:400;color:var(--text-muted);margin-top:1px">amortissement</div></th>
-          <th style="width:110px;text-align:right">Tarif final<div style="font-size:13px;font-weight:400;color:var(--text-muted);margin-top:1px">prix client TTC</div></th>
-        </tr>
-      </thead>
-      <tbody>${tarifRows3col}</tbody>
-    </table>
-    <div style="margin-top:10px;display:flex;justify-content:flex-end;max-width:880px">
-      <button class="btn ghost" onclick="tarifReset()" style="font-size:13px">↺ Réinitialiser aux tarifs par défaut</button>
-    </div>
 
     <h3>Abonnements professionnels</h3>
     <div class="hint">Coût mensuel calculé automatiquement à partir du coût annuel. Le total ne compte que les abonnements <span style="color:var(--success);font-weight:600">En cours</span> (case cochée). Décocher pour saisir une date de fin.</div>
