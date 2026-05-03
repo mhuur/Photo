@@ -2155,6 +2155,20 @@
   .rich-display-edit{position:absolute;top:6px;right:6px;background:transparent;border:0;color:var(--text-muted);cursor:pointer;border-radius:4px;width:26px;height:26px;font-size:13px;line-height:1;display:flex;align-items:center;justify-content:center;font-weight:700;z-index:2;transition:color .12s,background .12s}
   .rich-display-edit:hover{color:var(--primary);background:var(--surface)}
 
+  /* === Zones éditables in-place dans la preview du devis (style néon) === */
+  /* Wrap autour des sections rich-text rendues dans rDevisPreview, avec
+     bouton ⋮ flottant qui ouvre le textEditor. Masqué à l'impression et
+     dans les snapshots archivés (.view-devis-snapshot). */
+  .dp-rich-zone{position:relative;border-radius:6px;transition:box-shadow .15s,background .15s;padding:2px 4px;margin:0 -4px}
+  .dp-rich-zone:hover{background:rgba(74,158,255,.04);box-shadow:inset 0 0 0 1px rgba(74,158,255,.35),0 0 12px rgba(74,158,255,.18)}
+  .dp-rich-menu-btn{position:absolute;top:4px;right:4px;background:var(--bg-2);border:1px solid var(--primary);color:var(--primary);cursor:pointer;border-radius:6px;width:26px;height:26px;font-size:14px;line-height:1;display:flex;align-items:center;justify-content:center;font-weight:700;z-index:5;opacity:0;transition:all .15s;box-shadow:0 0 8px rgba(74,158,255,.4),inset 0 0 0 1px rgba(74,158,255,.25);text-shadow:0 0 6px currentColor}
+  .dp-rich-zone:hover .dp-rich-menu-btn{opacity:1}
+  .dp-rich-menu-btn:hover{background:rgba(74,158,255,.15);box-shadow:0 0 14px rgba(74,158,255,.6),inset 0 0 8px rgba(74,158,255,.25);transform:scale(1.05)}
+  /* Masque les boutons d'édition à l'impression et dans les snapshots archivés */
+  @media print{.dp-rich-menu-btn,.dp-rich-zone:hover{background:transparent !important;box-shadow:none !important}.dp-rich-menu-btn{display:none !important}}
+  .view-devis-snapshot .dp-rich-menu-btn{display:none}
+  .view-devis-snapshot .dp-rich-zone:hover{background:transparent;box-shadow:none}
+
   /* Editor modal toolbar */
   .rte-toolbar{display:flex;gap:3px;flex-wrap:wrap;align-items:center;padding:6px 8px;background:var(--surface);border:1px solid var(--border);border-radius:6px;margin-bottom:8px}
   .rte-btn{background:transparent;border:1px solid transparent;color:var(--text);padding:5px 9px;border-radius:4px;cursor:pointer;font:inherit;font-size:13px;font-weight:500;min-width:30px;line-height:1.3}
@@ -4439,7 +4453,7 @@ function rDevisPreview() {
           ${b.iban ? `<div class="dp-bank-line iban"><span class="lbl">IBAN</span><span class="val">${esc(b.iban)}</span></div>` : ""}
           ${b.bic ? `<div class="dp-bank-line"><span class="lbl">BIC</span><span class="val">${esc(b.bic)}</span></div>` : ""}
         </div>` : ""}
-        ${legacy && !hasBank ? `<div class="dp-payment-text">${richDisplayHtml(legacy)}</div>` : ""}
+        ${legacy && !hasBank ? `<div class="dp-payment-text dp-rich-zone" data-rich-field="conditionsPaiement"><button class="dp-rich-menu-btn" type="button" onclick="event.stopPropagation();textEditorOpen('conditionsPaiement')" title="Modifier ce texte">⋮</button>${richDisplayHtml(legacy)}</div>` : ""}
       </div>`;
     })()}
 
@@ -7439,7 +7453,10 @@ function renderCgvSections(preambule, sections) {
   if (!safePreamb && validSections.length === 0) return "";
   let html = "";
   if (safePreamb) {
-    html += `<p class="cgv-paragraph">${esc(safePreamb)}</p>`;
+    // Préambule éditable in-place (wrapper .dp-rich-zone + bouton ⋮).
+    // richDisplayHtml gère le contenu rich-text (issu du textEditor) ou
+    // le texte plain (legacy / saisie simple) sans double-escape.
+    html += `<div class="dp-rich-zone" data-rich-field="cgvPreambule"><button class="dp-rich-menu-btn" type="button" onclick="event.stopPropagation();textEditorOpen('cgvPreambule')" title="Modifier le préambule CGV">⋮</button><p class="cgv-paragraph">${richDisplayHtml(safePreamb)}</p></div>`;
   }
   validSections.forEach((s, i) => {
     const title = (s.title || "").trim();
@@ -7826,12 +7843,7 @@ function rCgvEditor() {
 
   return `
     <div class="hint" style="margin:0 0 14px;font-size:12px;color:var(--text-muted);line-height:1.5">
-      Saisie structurée : préambule optionnel (italique) + sections numérotées (titre + contenu). Chaque section apparaît avec son numéro auto-généré, son titre en uppercase et son corps justifié à l'impression.
-    </div>
-
-    <div class="field" style="margin-bottom:18px">
-      <label>Préambule (optionnel)</label>
-      <textarea rows="2" placeholder="Texte d'introduction qui apparaîtra en italique au-dessus des sections numérotées (ex : « Le présent document précise les conditions générales… »)" oninput="upd('mission.cgvPreambule', this.value)">${esc(preambule)}</textarea>
+      Sections numérotées (titre + contenu). Chaque section apparaît avec son numéro auto-généré, son titre en uppercase et son corps justifié à l'impression.
     </div>
 
     <div class="cgv-edit-list">
@@ -9242,9 +9254,8 @@ function rDevisSectionConditions() {
     ${rLogoField()}
     <h5>Photographe (en-tête du devis)</h5>
     ${renderLockedTextarea("photographe", d.photographe || "", "", "Vos coordonnées en haut à gauche du devis…")}
-    <h5>Conditions de paiement (texte libre)</h5>
-    ${renderLockedTextarea("conditionsPaiement", d.conditionsPaiement || "", "", "Conditions de paiement libres…")}
-    <h5>CGV — préambule + sections</h5>
+    <h5>CGV — sections</h5>
+    <div class="hint" style="margin:0 0 10px;font-size:12px;color:var(--text-muted)">💡 Le <strong>préambule</strong> et les <strong>conditions de paiement texte libre</strong> sont désormais éditables directement depuis l'aperçu du devis (clic sur ⋮).</div>
     ${rCgvEditor()}
     <h5>Bloc signature</h5>
     ${renderLockedTextarea("signatureBlock", d.signatureBlock || "", "", "Bloc de signature client…")}
