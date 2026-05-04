@@ -13544,8 +13544,13 @@ function rAC() {
     });
 
   const stop = "event.stopPropagation();";
-  const renderRow = (g, late) => {
-    const kind = late ? "devis" : "paiement";
+  // opts: { late?: bool (orange date pour À relancer), showRestant?: bool (afficher
+  // g.restant au lieu de g.total — utilisé uniquement par En attente de paiement) }
+  const renderRow = (g, opts = {}) => {
+    const { late = false, showRestant = false } = opts;
+    const amount = showRestant ? g.restant : g.total;
+    const gmailKind = showRestant ? "paiement" : "devis";
+    const gmailTitle = showRestant ? "Relancer le paiement par Gmail" : "Relancer ce devis par Gmail";
     const isExpanded = accueilExpandedDevis === g.devisId;
     const panel = isExpanded ? `<div class="ac-row-panel" onclick="${stop}">${suiviExpandedPanelHtml(g)}</div>` : "";
     return `<div class="ac-row-wrap${isExpanded ? ' expanded' : ''}">
@@ -13556,8 +13561,8 @@ function rAC() {
           const rev = computeRevisionNumber(g.devisId);
           return rev > 0 ? ` <span class="suv-rev-tag">rev${rev}</span>` : "";
         })()}</div>
-        <div class="ac-row-amt">${fmt(late ? g.total : g.restant)}</div>
-        <button class="ac-row-gmail" onclick="${stop}gmailRelanceForDevis('${g.devisId}','${kind}')" title="${late ? 'Relancer ce devis par Gmail' : 'Relancer le paiement par Gmail'}">${ICONS.send}</button>
+        <div class="ac-row-amt">${fmt(amount)}</div>
+        <button class="ac-row-gmail" onclick="${stop}gmailRelanceForDevis('${g.devisId}','${gmailKind}')" title="${gmailTitle}">${ICONS.send}</button>
       </div>
       ${panel}
     </div>`;
@@ -13581,7 +13586,7 @@ function rAC() {
       <div class="hint" style="margin:0 0 8px;font-size:11px">Devis envoyés sans réponse depuis plus de ${esc(seuil)} jours. Seuil modifiable dans Profil.</div>
       ${aRelancer.length === 0
         ? `<div class="ac-empty">Aucun devis à relancer.</div>`
-        : `<div class="ac-list">${aRelancer.map(g => renderRow(g, true)).join("")}</div>`}
+        : `<div class="ac-list">${aRelancer.map(g => renderRow(g, { late: true })).join("")}</div>`}
     </div>
 
     <div class="ac-section">
@@ -13589,7 +13594,7 @@ function rAC() {
       <div class="hint" style="margin:0 0 8px;font-size:11px">Devis acceptés dont au moins une échéance n'est pas soldée.</div>
       ${aEncaisser.length === 0
         ? `<div class="ac-empty">Aucun paiement en attente.</div>`
-        : `<div class="ac-list">${aEncaisser.map(g => renderRow(g, false)).join("")}</div>`}
+        : `<div class="ac-list">${aEncaisser.map(g => renderRow(g, { showRestant: true })).join("")}</div>`}
     </div>
 
     <div class="ac-section">
@@ -13597,7 +13602,7 @@ function rAC() {
       <div class="hint" style="margin:0 0 8px;font-size:11px">Devis émis en attente d'acceptation, dans le délai de relance (≤ ${esc(seuil)} jours).</div>
       ${aSurveiller.length === 0
         ? `<div class="ac-empty">Aucun devis envoyé en cours.</div>`
-        : `<div class="ac-list">${aSurveiller.map(g => renderRow(g, false)).join("")}</div>`}
+        : `<div class="ac-list">${aSurveiller.map(g => renderRow(g)).join("")}</div>`}
     </div>
 
     <div class="ac-section">
@@ -13605,7 +13610,7 @@ function rAC() {
       <div class="hint" style="margin:0 0 8px;font-size:11px">Devis annulés ou refusés émis dans les 7 derniers jours.</div>
       ${aTermines.length === 0
         ? `<div class="ac-empty">Aucun devis annulé ou refusé récent.</div>`
-        : `<div class="ac-list">${aTermines.map(g => renderRow(g, false)).join("")}</div>`}
+        : `<div class="ac-list">${aTermines.map(g => renderRow(g)).join("")}</div>`}
     </div>
   `;
 }
