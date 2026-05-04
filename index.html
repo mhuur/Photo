@@ -258,12 +258,16 @@
   .suv-expanded-panel{padding:14px 18px 16px;display:flex;flex-direction:column;gap:10px}
   /* === Panneau Suivi déplié — actions uniformes (32px, style moderne) === */
   .suv-expanded-actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding-bottom:10px;border-bottom:1px solid var(--border-soft)}
-  .suv-expanded-print{display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding-top:10px;border-top:1px solid var(--border-soft)}
+  .suv-expanded-print{display:flex;gap:8px;flex-wrap:wrap;align-items:flex-start;padding-top:10px;border-top:1px solid var(--border-soft)}
+  /* Wrapper flex column pour stacker un bouton + un petit tag (date d'envoi) */
+  .suv-action-col{display:flex;flex-direction:column;gap:3px;align-items:stretch}
+  .suv-envoi-tag{font-size:10px;color:var(--text-dim);font-style:italic;text-align:center;letter-spacing:.02em;line-height:1;padding:0 4px}
 
   /* Tous les boutons d'action partagent la même base : 32px, padding 0 14, font 12 */
   .suv-expanded-actions > .btn,
   .suv-expanded-actions > .btn-act,
   .suv-expanded-print > .btn,
+  .suv-expanded-print > .suv-action-col > .btn,
   .suv-expanded-print > .suv-last-relance{
     height:32px;padding:0 14px;font-size:12px;font-weight:600;border-radius:7px;
     display:inline-flex;align-items:center;gap:6px;line-height:1;white-space:nowrap;
@@ -273,16 +277,20 @@
   }
   .suv-expanded-actions > .btn:hover,
   .suv-expanded-actions > .btn-act:hover,
-  .suv-expanded-print > .btn:hover{box-shadow:none}
+  .suv-expanded-print > .btn:hover,
+  .suv-expanded-print > .suv-action-col > .btn:hover{box-shadow:none}
 
   /* Ghost — par défaut neutre, hover primary doux */
   .suv-expanded-print > .btn.ghost,
+  .suv-expanded-print > .suv-action-col > .btn.ghost,
   .suv-expanded-actions > .btn.ghost{background:var(--surface);color:var(--text-muted);border-color:var(--border-light)}
   .suv-expanded-print > .btn.ghost:hover,
+  .suv-expanded-print > .suv-action-col > .btn.ghost:hover,
   .suv-expanded-actions > .btn.ghost:hover{background:var(--primary-soft);color:var(--primary);border-color:var(--primary)}
 
   /* Disabled — opacité réduite, pas de hover */
   .suv-expanded-print > .btn[disabled],
+  .suv-expanded-print > .suv-action-col > .btn[disabled],
   .suv-expanded-actions > .btn[disabled]{opacity:.45;cursor:not-allowed;pointer-events:none}
 
   /* Accepté (vert) / Refusé (rouge) — style néon, glow lumineux */
@@ -3220,6 +3228,49 @@ window.uiPrompt = function(message, opts = {}) {
   });
 };
 
+// ▼ uiChoice — dialog multi-boutons. Renvoie la `value` du bouton choisi, ou
+// null si annulé (ESC / overlay click / bouton cancel).
+// API : await uiChoice(message, { title?, kind?, cancelLabel?, choices: [{ label, value, kind?: "primary"|"danger"|"ghost" }] })
+let _uiChoiceMap = [];
+window._uiChoicePick = function(idx) {
+  const value = _uiChoiceMap[idx];
+  _uiDialogClose(value);
+};
+window.uiChoice = function(message, opts = {}) {
+  if (_uiDialogResolve) _uiDialogClose(_uiDialogCancelValue);
+  return new Promise((resolve) => {
+    _uiDialogResolve = resolve;
+    _uiDialogCancelValue = null;
+    const title = opts.title || "";
+    const cancelLabel = opts.cancelLabel || "Annuler";
+    const kind = opts.kind || "info";
+    const icon = kind === "danger" ? ICONS.alertOctagon : kind === "warn" ? ICONS.alertTriangle : ICONS.info;
+    const choices = opts.choices || [];
+    _uiChoiceMap = choices.map(c => c.value);
+    const choicesHtml = choices.map((c, i) => {
+      const cls = c.kind === "danger" ? "btn ui-dialog-btn-danger" : c.kind === "ghost" ? "btn ghost" : "btn";
+      return `<button class="${cls}" onclick="_uiChoicePick(${i})">${esc(c.label)}</button>`;
+    }).join("");
+    const html = `<div class="modal-overlay ui-dialog-overlay" id="ui-dialog-overlay" onclick="if(event.target===this)_uiDialogClose(null)">
+      <div class="modal-card modal-dialog modal-dialog-${kind}" role="dialog" aria-modal="true">
+        <div class="ui-dialog-head">
+          <span class="ui-dialog-icon ui-dialog-icon-${kind}">${icon}</span>
+          <div class="ui-dialog-text">
+            ${title ? `<div class="ui-dialog-title">${esc(title)}</div>` : ""}
+            ${message ? `<div class="ui-dialog-msg">${esc(message).replace(/\n/g, "<br>")}</div>` : ""}
+          </div>
+        </div>
+        <div class="modal-actions" style="flex-wrap:wrap;gap:8px">
+          <button class="btn ghost" onclick="_uiDialogClose(null)">${esc(cancelLabel)}</button>
+          ${choicesHtml}
+        </div>
+      </div>
+    </div>`;
+    document.body.insertAdjacentHTML("beforeend", html);
+    document.addEventListener("keydown", _uiDialogKey);
+  });
+};
+
 const TABS = [
   ["accueil", "Accueil",                "dashboard"],
   ["mission", "Mission",                "camera"],
@@ -4417,16 +4468,170 @@ async function gmailRelanceForDevis(devisId, kind) {
     if (!await uiConfirm("Aucun email de contact trouvé pour ce client. Ouvrir Gmail sans destinataire ?", { title: "Pas de destinataire", kind: "info" })) return;
   }
   openGmailCompose(to, subject, body);
-  // Stamp lastRelance immédiatement à l'ouverture de Gmail. Si l'utilisateur
-  // annule finalement le brouillon, il peut cliquer ✕ sur le tag de date
-  // dans le panneau Suivi (relanceUndo) pour retirer le stamp.
-  if (!S.suivi.devis) S.suivi.devis = {};
-  if (!S.suivi.devis[devisId]) S.suivi.devis[devisId] = { ref: dv.ref || "" };
-  S.suivi.devis[devisId].lastRelance = new Date().toISOString();
-  save();
-  render();
+  // Popup post-ouverture Gmail : l'utilisateur confirme s'il a vraiment
+  // envoyé le mail (sinon le brouillon Gmail peut être abandonné).
+  // Si "Client relancé" → stamp lastRelance ; si "Non envoyé" → no-op
+  // (le devis reste visible dans « À relancer »).
+  const sent = await uiConfirm(
+    "Le mail de relance vient d'être ouvert dans Gmail. Une fois envoyé au client, confirme ici pour mettre à jour la date de relance.",
+    { title: "Relance envoyée ?", confirmLabel: "Client relancé", cancelLabel: "Non envoyé", kind: "info" }
+  );
+  if (sent) {
+    if (!S.suivi.devis) S.suivi.devis = {};
+    if (!S.suivi.devis[devisId]) S.suivi.devis[devisId] = { ref: dv.ref || "" };
+    S.suivi.devis[devisId].lastRelance = new Date().toISOString();
+    save();
+    render();
+  }
 }
 window.gmailRelanceForDevis = gmailRelanceForDevis;
+
+// ============================================================================
+// Actions Devis / Facture — popups + persistance envoi
+// ----------------------------------------------------------------------------
+// _pendingEnvoiPopup : posé par devisActionMenu / factureActionMenu avant
+// d'ouvrir le modal de prévisualisation. Au moment où l'utilisateur ferme
+// le modal, on demande s'il a bien envoyé le devis/facture au client. Si
+// oui → stamp envoiTs + affichage de la date sous le bouton.
+// ============================================================================
+let _pendingEnvoiPopup = null;
+
+// Wrap viewDevisClose pour intercepter la fermeture et déclencher le popup.
+const _origViewDevisCloseForEnvoi = window.viewDevisClose;
+window.viewDevisClose = async function() {
+  const pending = _pendingEnvoiPopup;
+  _pendingEnvoiPopup = null;
+  // Fermeture standard d'abord (UI réactive)
+  viewDevisModal = null;
+  render();
+  // Puis popup si on était dans un flow Imprimer/Imprimer+envoyer
+  if (pending && pending.kind === "devis") {
+    const sent = await uiConfirm(
+      "Le devis a été envoyé au client ?",
+      { title: "Confirmation envoi", confirmLabel: "Envoyé", cancelLabel: "Pas encore", kind: "info" }
+    );
+    if (sent) {
+      if (!S.suivi.devis) S.suivi.devis = {};
+      if (!S.suivi.devis[pending.devisId]) S.suivi.devis[pending.devisId] = {};
+      S.suivi.devis[pending.devisId].envoiTs = Date.now();
+      save();
+      render();
+    }
+  }
+};
+
+// Wrap viewFactureClose pareillement.
+window.viewFactureClose = async function() {
+  const pending = _pendingEnvoiPopup;
+  _pendingEnvoiPopup = null;
+  viewFactureModal = null;
+  render();
+  if (pending && pending.kind === "facture") {
+    const sent = await uiConfirm(
+      `La facture ${pending.factureType === "acompte" ? "d'acompte" : "de solde"} a été envoyée au client ?`,
+      { title: "Confirmation envoi", confirmLabel: "Envoyée", cancelLabel: "Pas encore", kind: "info" }
+    );
+    if (sent) {
+      const dv = S.suivi.devis && S.suivi.devis[pending.devisId];
+      if (dv && Array.isArray(dv.factures)) {
+        const fac = dv.factures.find(f => f.type === pending.factureType);
+        if (fac) {
+          fac.envoiTs = Date.now();
+          save();
+          render();
+        }
+      }
+    }
+  }
+};
+
+// Helper : ouvre Gmail compose pré-rempli pour un devis archivé (subject + body
+// + destinataire). Le PDF doit être attaché manuellement par l'utilisateur après
+// avoir sauvegardé via le print dialog (Gmail compose URL ne supporte pas les
+// pièces jointes).
+function openGmailComposeForDevis(devisId) {
+  const dv = S.suivi.devis && S.suivi.devis[devisId];
+  if (!dv) return;
+  const ref = dv.ref || "";
+  const client = findClientForDevis(devisId);
+  const to = client ? clientPrimaryEmail(client) : "";
+  const contactName = client ? clientPrimaryContactName(client) : "";
+  const firstName = contactName ? contactName.split(/\s+/)[0] : "";
+  const id = S.identite || {};
+  const myName = ((id.prenom || "") + " " + (id.nom || "")).trim() || (id.denomination || "");
+  const refDisplay = formatRef(ref, "devis");
+  const subject = refDisplay;
+  const body = `Bonjour${firstName ? ` ${firstName}` : ""},\n\nVeuillez trouver ci-joint le ${refDisplay.toLowerCase()}.\n\nN'hésitez pas à revenir vers moi pour toute question.\n\nCordialement,\n${myName}`;
+  openGmailCompose(to, subject, body);
+}
+
+// Idem pour une facture (acompte ou solde).
+function openGmailComposeForFacture(devisId, type) {
+  const dv = S.suivi.devis && S.suivi.devis[devisId];
+  if (!dv) return;
+  const fac = (dv.factures || []).find(f => f.type === type);
+  if (!fac) return;
+  const ref = fac.ref || "";
+  const client = findClientForDevis(devisId);
+  const to = client ? clientPrimaryEmail(client) : "";
+  const contactName = client ? clientPrimaryContactName(client) : "";
+  const firstName = contactName ? contactName.split(/\s+/)[0] : "";
+  const id = S.identite || {};
+  const myName = ((id.prenom || "") + " " + (id.nom || "")).trim() || (id.denomination || "");
+  const refDisplay = formatRef(ref, "facture");
+  const subject = refDisplay;
+  const body = `Bonjour${firstName ? ` ${firstName}` : ""},\n\nVeuillez trouver ci-joint la ${refDisplay.toLowerCase()}.\n\nCordialement,\n${myName}`;
+  openGmailCompose(to, subject, body);
+}
+
+// ▼ devisActionMenu — popup 3 options pour le bouton Devis du Suivi.
+window.devisActionMenu = async function(devisId) {
+  const check = canReviseDevis(devisId);
+  const nextRev = computeRevisionNumber(devisId) + 1;
+  const choices = [];
+  if (check.ok) {
+    choices.push({ label: `Réviser → rev${nextRev}`, value: "revise", kind: "ghost" });
+  }
+  choices.push({ label: "Imprimer", value: "print", kind: "ghost" });
+  choices.push({ label: "Imprimer et envoyer", value: "printSend" });
+  const choice = await uiChoice("Que veux-tu faire avec ce devis ?", {
+    title: "Devis", choices, cancelLabel: "Annuler"
+  });
+  if (!choice) return;
+  if (choice === "revise") {
+    reviseDevisStart(devisId);
+  } else if (choice === "print") {
+    _pendingEnvoiPopup = { kind: "devis", devisId };
+    viewDevisOpen(devisId);
+  } else if (choice === "printSend") {
+    _pendingEnvoiPopup = { kind: "devis", devisId };
+    viewDevisOpen(devisId);
+    // Petit délai pour laisser le modal s'ouvrir avant Gmail (évite que le focus
+    // saute trop vite hors de la fenêtre courante).
+    setTimeout(() => openGmailComposeForDevis(devisId), 300);
+  }
+};
+
+// ▼ factureActionMenu — popup 2 options pour le bouton Facture (par type).
+window.factureActionMenu = async function(devisId, type) {
+  const choice = await uiChoice("Que veux-tu faire avec cette facture ?", {
+    title: type === "acompte" ? "Facture d'acompte" : "Facture de solde",
+    cancelLabel: "Annuler",
+    choices: [
+      { label: "Imprimer", value: "print", kind: "ghost" },
+      { label: "Imprimer et envoyer", value: "printSend" }
+    ]
+  });
+  if (!choice) return;
+  if (choice === "print") {
+    _pendingEnvoiPopup = { kind: "facture", devisId, factureType: type };
+    viewFactureOpen(devisId, type);
+  } else if (choice === "printSend") {
+    _pendingEnvoiPopup = { kind: "facture", devisId, factureType: type };
+    viewFactureOpen(devisId, type);
+    setTimeout(() => openGmailComposeForFacture(devisId, type), 300);
+  }
+};
 
 // ▼ relanceMark — stampe lastRelance manuellement après un envoi confirmé.
 // Reset le compteur 7j de « À relancer » (Accueil).
@@ -11224,82 +11429,73 @@ function suiviExpandedPanelHtml(g) {
     <div class="suv-tl">${lignes.map(suiviTimelineStepHtml).join("")}</div>
     <div class="suv-expanded-print">
       ${(() => {
-        // Bouton Relance Gmail selon le statut du devis
+        // Bouton Relance — ouvre Gmail puis popup confirm "Client relancé / Non envoyé".
         let kind = null;
         if (statutPrin === "envoye") kind = "devis";
         else if (statutPrin === "en_cours" || statutPrin === "attente") kind = "paiement";
         if (!kind) return "";
-        const lbl = kind === "paiement" ? "Relance paiement" : "Relance devis";
         const dv = S.suivi.devis && S.suivi.devis[g.devisId];
         const lastRel = dv && dv.lastRelance;
-        // Bouton unique : ✉ Relancer ouvre Gmail ET stamp la date.
-        // Si déjà relancé : tag vert avec ✕ pour annuler la dernière relance.
         if (lastRel) {
           return `<span class="suv-last-relance" title="Cliquer pour annuler la relance et faire réapparaître le devis dans « À relancer »" onclick="${stop}relanceUndo('${g.devisId}')">↻ Relancé le ${esc(dateFR(lastRel.slice(0,10)))} <span class="suv-last-relance-undo">✕</span></span>`;
         }
-        return `<button class="btn ghost suv-gmail-btn" onclick="${stop}gmailRelanceForDevis('${g.devisId}','${kind}')" title="Ouvrir Gmail avec un template de relance pré-rempli + marquer le devis comme relancé. Si tu annules le brouillon, clique ✕ sur la date pour retirer le stamp.">✉ ${esc(lbl)}</button>`;
+        return `<button class="btn ghost suv-gmail-btn" onclick="${stop}gmailRelanceForDevis('${g.devisId}','${kind}')" title="Ouvrir Gmail avec un template de relance pré-rempli. Au retour, popup pour confirmer si le mail a été envoyé.">✉ Relancer</button>`;
       })()}
-      <button class="btn ghost" onclick="${stop}viewDevisOpen('${g.devisId}')">🖨 Devis</button>
+      ${(() => {
+        // Bouton Devis ▾ — popup 3 options (Réviser / Imprimer / Imprimer + envoyer)
+        const dv = S.suivi.devis && S.suivi.devis[g.devisId];
+        const envoiTs = dv && dv.envoiTs;
+        const envoiBadge = envoiTs ? `<div class="suv-envoi-tag">Envoyé le ${esc(dateFR(new Date(envoiTs).toISOString().slice(0,10)))}</div>` : "";
+        return `<div class="suv-action-col"><button class="btn ghost" onclick="${stop}devisActionMenu('${g.devisId}')">${ICONS.fileText} Devis</button>${envoiBadge}</div>`;
+      })()}
       ${(() => {
         // Bouton Débours masqué si aucun frais débours sur les entries.
-        // Pour les devis archivés (snapshot existant), on s'aligne sur la
-        // somme des entries Suivi (pour les legacy comme pour les standards).
         const totalDebours = lignes.reduce((s, e) => s + num(e.frais), 0);
         if (totalDebours <= 0) return "";
-        return `<button class="btn ghost" onclick="${stop}viewDeboursOpen('${g.devisId}')">🖨 Débours</button>`;
+        return `<button class="btn ghost" onclick="${stop}viewDeboursOpen('${g.devisId}')">${ICONS.fileText} Débours</button>`;
       })()}
       ${(() => {
-        // Bloque l'UI facture pour les devis au noir (CA = 0).
+        // Boutons Facture ▾ par type (acompte / solde) avec popup 2 options.
         if (isDevisAuNoir(g.devisId)) {
-          return `<button class="btn ghost" disabled title="Devis au noir (CA déclaré = 0). La facturation est désactivée." style="opacity:.5;cursor:not-allowed">🖨 Facture</button>`;
+          return `<button class="btn ghost" disabled title="Devis au noir (CA déclaré = 0). La facturation est désactivée." style="opacity:.5;cursor:not-allowed">${ICONS.fileText} Facture</button>`;
         }
         const facA = findFactureFor(g.devisId, "acompte");
         const facS = findFactureFor(g.devisId, "solde");
         const appA = isFactureApplicable(g.devisId, "acompte");
         const appS = isFactureApplicable(g.devisId, "solde");
-        let html = "";
-        if (facA || appA) {
-          const lbl = facA ? "🖨 Acompte " + esc(formatRef(facA.ref, "facture")) : "📄 Émettre acompte";
-          html += `<button class="btn ghost" onclick="${stop}viewFactureOpen('${g.devisId}','acompte')">${lbl}</button>`;
-        }
-        if (facS || appS) {
-          const lbl = facS ? "🖨 Solde " + esc(formatRef(facS.ref, "facture")) : "📄 Émettre solde";
-          html += `<button class="btn ghost" onclick="${stop}viewFactureOpen('${g.devisId}','solde')">${lbl}</button>`;
-        }
+        const factureCol = (type, fac, applicable) => {
+          if (!fac && !applicable) return "";
+          if (!fac) {
+            // Facture pas encore émise → bouton classique pour la créer
+            const lbl = type === "acompte" ? "Émettre acompte" : "Émettre solde";
+            return `<button class="btn ghost" onclick="${stop}viewFactureOpen('${g.devisId}','${type}')">${ICONS.fileText} ${lbl}</button>`;
+          }
+          const envoiTs = fac.envoiTs;
+          const envoiBadge = envoiTs ? `<div class="suv-envoi-tag">Envoyée le ${esc(dateFR(new Date(envoiTs).toISOString().slice(0,10)))}</div>` : "";
+          const lbl = type === "acompte" ? `Acompte ${formatRef(fac.ref, "facture")}` : `Solde ${formatRef(fac.ref, "facture")}`;
+          return `<div class="suv-action-col"><button class="btn ghost" onclick="${stop}factureActionMenu('${g.devisId}','${type}')">${ICONS.fileText} ${esc(lbl)}</button>${envoiBadge}</div>`;
+        };
+        let html = factureCol("acompte", facA, appA) + factureCol("solde", facS, appS);
         if (!html) {
-          html = `<button class="btn ghost" disabled title="Au moins un paiement reçu nécessaire pour émettre une facture" style="opacity:.5;cursor:not-allowed">🖨 Facture</button>`;
+          html = `<button class="btn ghost" disabled title="Au moins un paiement reçu nécessaire pour émettre une facture" style="opacity:.5;cursor:not-allowed">${ICONS.fileText} Facture</button>`;
         }
         return html;
       })()}
       ${(() => {
+        // Bouton Maj Trame conservé (uniquement legacy) — flow distinct de Réviser.
         const check = canReviseDevis(g.devisId);
         const dv = S.suivi.devis && S.suivi.devis[g.devisId];
         const isLegacy = !dv || !dv.snapshotMission || dv.legacyReconstructed === true;
-        let html = "";
-        // Bouton Maj Trame : visible uniquement pour les devis legacy.
-        // Permet d'ouvrir l'éditeur en mode legacy (tarifHOverride préservé)
-        // et de mettre à jour le snapshot en place si le total reste identique.
-        if (isLegacy) {
-          const tipMaj = "Charge ce devis legacy dans l'éditeur pour mettre à jour la trame (libellé, prestation catalogue, heures détaillées). Tarif horaire préservé pour garder le total V1. Si le total reste identique à l'enregistrement → mise à jour en place ; si le total change → bascule en nouvelle révision.";
-          if (check.ok) {
-            html += `<button class="btn ghost" onclick="${stop}majTrameStart('${g.devisId}')" title="${esc(tipMaj)}">🖼 Maj Trame</button>`;
-          } else {
-            html += `<button class="btn ghost" disabled title="${esc(check.reason)}" style="opacity:.5;cursor:not-allowed">🖼 Maj Trame</button>`;
-          }
-        }
-        // Bouton Réviser : sur tous les devis (legacy ou pas).
-        const nextRev = computeRevisionNumber(g.devisId) + 1;
-        const lbl = `↻ Réviser → rev${nextRev}`;
-        const tip = `Crée une nouvelle version (rev${nextRev}) avec date du jour. La version actuelle sera annulée.`;
+        if (!isLegacy) return "";
+        const tipMaj = "Charge ce devis legacy dans l'éditeur pour mettre à jour la trame (libellé, prestation catalogue, heures détaillées). Tarif horaire préservé pour garder le total V1. Si le total reste identique à l'enregistrement → mise à jour en place ; si le total change → bascule en nouvelle révision.";
         if (check.ok) {
-          html += `<button class="btn ghost" onclick="${stop}reviseDevisStart('${g.devisId}')" title="${esc(tip)}">${esc(lbl)}</button>`;
+          return `<button class="btn ghost" onclick="${stop}majTrameStart('${g.devisId}')" title="${esc(tipMaj)}">${ICO_SZ('rotateCcw',14)} Maj Trame</button>`;
         } else {
-          html += `<button class="btn ghost" disabled title="${esc(check.reason)}" style="opacity:.5;cursor:not-allowed">${esc(lbl)}</button>`;
+          return `<button class="btn ghost" disabled title="${esc(check.reason)}" style="opacity:.5;cursor:not-allowed">${ICO_SZ('rotateCcw',14)} Maj Trame</button>`;
         }
-        return html;
       })()}
       <span style="flex:1"></span>
-      <button class="btn ghost btn-danger-ghost" title="Supprimer définitivement ce devis (devis créé par erreur)" onclick="${stop}suiviDelDevisConfirm('${g.devisId}')">🗑 Supprimer</button>
+      <button class="btn ghost btn-danger-ghost" title="Supprimer définitivement ce devis (devis créé par erreur)" onclick="${stop}suiviDelDevisConfirm('${g.devisId}')">${ICONS.trash} Supprimer</button>
     </div>
     ${(() => {
       const dv = S.suivi.devis && S.suivi.devis[g.devisId];
