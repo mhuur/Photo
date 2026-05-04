@@ -5548,16 +5548,23 @@ function bugFilteredItems() {
   });
 }
 
+// /!\ Les CLÉS (accueil/tarifs/suivi/...) restent inchangées pour compat avec les
+// bugs existants (it.tab persisté). Seuls les LABELS sont mis à jour pour refléter
+// les nouveaux noms du menu sidebar (Catalogue, Historique, Achats / Abonnements,
+// Templates, Paramètres). Achats est une nouvelle catégorie sans clé legacy.
 const BUG_TAB_OPTIONS = [
-  ["accueil", "Accueil"],
-  ["mission", "Mission"],
-  ["suivi",   "Suivi & paiements"],
-  ["tarifs",  "Frais & Tarifs"],
-  ["clients", "Clients"],
-  ["compta",  "Comptabilité"],
-  ["profil",  "Profil"],
-  ["bugs",    "Notes / Bugs"],
-  ["autres",  "Autres"]
+  ["accueil",    "Accueil"],
+  ["mission",    "Mission"],
+  ["tarifs",     "Catalogue"],
+  ["compta",     "Comptabilité"],
+  ["suivi",      "Historique"],
+  ["achats",     "Achats / Abonnements"],
+  ["clients",    "Clients"],
+  ["profil",     "Profil"],
+  ["templates",  "Templates"],
+  ["parametres", "Paramètres"],
+  ["bugs",       "Signaler un bug"],
+  ["autres",     "Autres"]
 ];
 
 function bugTabLabel(k) {
@@ -14192,7 +14199,7 @@ function rBG() {
     const tabKey = it.tab || "autres";
     // Badge onglet éditable : <select> stylé en pill pour permettre de
     // changer l'onglet associé après création.
-    const tabBadge = `<select class="bug-tab-badge bug-tab-${esc(tabKey)} bug-tab-select" onchange="event.stopPropagation();bugUpdateTab('${it.id}', this.value)" title="Changer l'onglet">
+    const tabBadge = `<select class="bug-tab-badge bug-tab-${esc(tabKey)} bug-tab-select" onclick="event.stopPropagation()" onmousedown="event.stopPropagation()" onchange="event.stopPropagation();bugUpdateTab('${it.id}', this.value)" title="Changer l'onglet">
       ${BUG_TAB_OPTIONS.map(([k, l]) => `<option value="${esc(k)}" ${k === tabKey ? "selected" : ""}>${esc(l)}</option>`).join("")}
     </select>`;
     const numBadge = it.num ? `<span class="bug-num-badge" title="Pour les captures associées : note-${it.num}.png">#${it.num}</span>` : "";
