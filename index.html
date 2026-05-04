@@ -262,6 +262,10 @@
   /* Wrapper flex column pour stacker un bouton + un petit tag (date d'envoi) */
   .suv-action-col{display:flex;flex-direction:column;gap:3px;align-items:stretch}
   .suv-envoi-tag{font-size:10px;color:var(--text-dim);font-style:italic;text-align:center;letter-spacing:.02em;line-height:1;padding:0 4px}
+  .suv-envoi-tag.suv-envoi-undo{cursor:pointer;transition:color .12s}
+  .suv-envoi-tag.suv-envoi-undo:hover{color:var(--danger)}
+  .suv-envoi-undo-x{opacity:.6;margin-left:2px;display:inline-flex;vertical-align:-1px}
+  .suv-envoi-tag.suv-envoi-undo:hover .suv-envoi-undo-x{opacity:1}
 
   /* Tous les boutons d'action partagent la même base : 32px, padding 0 14, font 12 */
   .suv-expanded-actions > .btn,
@@ -2302,6 +2306,12 @@
   /* Bouton « + Ajouter » générique en style néon (compact, primary) */
   .btn-add-neon,.ech-add-neon{display:inline-flex;align-items:center;gap:6px;height:30px;padding:0 14px;background:transparent;color:var(--primary);border:1px solid var(--primary);border-radius:6px;cursor:pointer;font:inherit;font-size:12px;font-weight:700;letter-spacing:.04em;transition:all .15s;box-shadow:inset 0 0 0 1px rgba(74,158,255,.18),0 0 8px rgba(74,158,255,.18);text-shadow:0 0 6px currentColor;font-family:inherit}
   .btn-add-neon:hover,.ech-add-neon:hover{background:rgba(74,158,255,.10);color:#7eb8ff;box-shadow:inset 0 0 10px rgba(74,158,255,.20),0 0 14px rgba(74,158,255,.45),0 0 24px rgba(74,158,255,.18)}
+  /* Variante ghost — discret au repos, allume au hover comme la version primary */
+  .btn-add-neon.ghost{color:var(--text-muted);border-color:var(--border-light);box-shadow:none;text-shadow:none;font-weight:600}
+  .btn-add-neon.ghost:hover{color:var(--primary);border-color:var(--primary);background:rgba(74,158,255,.06);box-shadow:inset 0 0 0 1px rgba(74,158,255,.18),0 0 8px rgba(74,158,255,.18);text-shadow:0 0 6px currentColor}
+  /* Variante danger — rouge néon */
+  .btn-add-neon.danger{color:#ef4444;border-color:#ef4444;box-shadow:inset 0 0 0 1px rgba(239,68,68,.18),0 0 8px rgba(239,68,68,.18);text-shadow:0 0 6px currentColor}
+  .btn-add-neon.danger:hover{color:#fca5a5;border-color:#f87171;background:rgba(239,68,68,.10);box-shadow:inset 0 0 10px rgba(239,68,68,.20),0 0 14px rgba(239,68,68,.45),0 0 24px rgba(239,68,68,.18)}
   /* .btn-neon — action primary en style néon (Nouveau devis, Enregistrer dans Suivi…) — version "lourde" du btn-add-neon */
   .btn-neon{display:inline-flex;align-items:center;gap:8px;background:transparent;color:var(--primary);border:1px solid var(--primary);padding:9px 16px;border-radius:6px;cursor:pointer;font:inherit;font-size:13px;font-weight:600;transition:all .15s;box-shadow:inset 0 0 0 1px rgba(74,158,255,.22),0 0 12px rgba(74,158,255,.35),0 0 24px rgba(74,158,255,.14);text-shadow:0 0 8px currentColor}
   .btn-neon:hover:not(:disabled){background:rgba(74,158,255,.10);color:#7eb8ff;box-shadow:inset 0 0 12px rgba(74,158,255,.22),0 0 18px rgba(74,158,255,.55),0 0 32px rgba(74,158,255,.22)}
@@ -3156,12 +3166,12 @@ function _uiDialogOpen({ kind = "info", title = "", message = "", confirmLabel =
     _uiDialogResolve = resolve;
     _uiDialogCancelValue = isPrompt ? null : (cancelLabel ? false : undefined);
     const icon = kind === "danger" ? ICONS.alertOctagon : kind === "warn" ? ICONS.alertTriangle : ICONS.info;
-    const confirmCls = kind === "danger" ? "btn ui-dialog-btn-danger" : "btn";
+    const confirmCls = kind === "danger" ? "btn-add-neon danger" : "btn-add-neon";
     const inputHtml = isPrompt
       ? `<input type="text" id="ui-dialog-input" class="ui-dialog-input" value="${esc(defaultValue)}" placeholder="${esc(placeholder)}" />`
       : "";
     const cancelHtml = cancelLabel
-      ? `<button class="btn ghost" onclick="_uiDialogClose(${isPrompt ? "null" : "false"})">${esc(cancelLabel)}</button>`
+      ? `<button class="btn-add-neon ghost" onclick="_uiDialogClose(${isPrompt ? "null" : "false"})">${esc(cancelLabel)}</button>`
       : "";
     const confirmHandler = isPrompt
       ? `_uiDialogClose(document.getElementById('ui-dialog-input').value)`
@@ -3248,7 +3258,7 @@ window.uiChoice = function(message, opts = {}) {
     const choices = opts.choices || [];
     _uiChoiceMap = choices.map(c => c.value);
     const choicesHtml = choices.map((c, i) => {
-      const cls = c.kind === "danger" ? "btn ui-dialog-btn-danger" : c.kind === "ghost" ? "btn ghost" : "btn";
+      const cls = c.kind === "danger" ? "btn-add-neon danger" : c.kind === "ghost" ? "btn-add-neon ghost" : "btn-add-neon";
       return `<button class="${cls}" onclick="_uiChoicePick(${i})">${esc(c.label)}</button>`;
     }).join("");
     const html = `<div class="modal-overlay ui-dialog-overlay" id="ui-dialog-overlay" onclick="if(event.target===this)_uiDialogClose(null)">
@@ -3261,7 +3271,7 @@ window.uiChoice = function(message, opts = {}) {
           </div>
         </div>
         <div class="modal-actions" style="flex-wrap:wrap;gap:8px">
-          <button class="btn ghost" onclick="_uiDialogClose(null)">${esc(cancelLabel)}</button>
+          <button class="btn-add-neon ghost" onclick="_uiDialogClose(null)">${esc(cancelLabel)}</button>
           ${choicesHtml}
         </div>
       </div>
@@ -4496,55 +4506,6 @@ window.gmailRelanceForDevis = gmailRelanceForDevis;
 // ============================================================================
 let _pendingEnvoiPopup = null;
 
-// Wrap viewDevisClose pour intercepter la fermeture et déclencher le popup.
-const _origViewDevisCloseForEnvoi = window.viewDevisClose;
-window.viewDevisClose = async function() {
-  const pending = _pendingEnvoiPopup;
-  _pendingEnvoiPopup = null;
-  // Fermeture standard d'abord (UI réactive)
-  viewDevisModal = null;
-  render();
-  // Puis popup si on était dans un flow Imprimer/Imprimer+envoyer
-  if (pending && pending.kind === "devis") {
-    const sent = await uiConfirm(
-      "Le devis a été envoyé au client ?",
-      { title: "Confirmation envoi", confirmLabel: "Envoyé", cancelLabel: "Pas encore", kind: "info" }
-    );
-    if (sent) {
-      if (!S.suivi.devis) S.suivi.devis = {};
-      if (!S.suivi.devis[pending.devisId]) S.suivi.devis[pending.devisId] = {};
-      S.suivi.devis[pending.devisId].envoiTs = Date.now();
-      save();
-      render();
-    }
-  }
-};
-
-// Wrap viewFactureClose pareillement.
-window.viewFactureClose = async function() {
-  const pending = _pendingEnvoiPopup;
-  _pendingEnvoiPopup = null;
-  viewFactureModal = null;
-  render();
-  if (pending && pending.kind === "facture") {
-    const sent = await uiConfirm(
-      `La facture ${pending.factureType === "acompte" ? "d'acompte" : "de solde"} a été envoyée au client ?`,
-      { title: "Confirmation envoi", confirmLabel: "Envoyée", cancelLabel: "Pas encore", kind: "info" }
-    );
-    if (sent) {
-      const dv = S.suivi.devis && S.suivi.devis[pending.devisId];
-      if (dv && Array.isArray(dv.factures)) {
-        const fac = dv.factures.find(f => f.type === pending.factureType);
-        if (fac) {
-          fac.envoiTs = Date.now();
-          save();
-          render();
-        }
-      }
-    }
-  }
-};
-
 // Helper : ouvre Gmail compose pré-rempli pour un devis archivé (subject + body
 // + destinataire). Le PDF doit être attaché manuellement par l'utilisateur après
 // avoir sauvegardé via le print dialog (Gmail compose URL ne supporte pas les
@@ -4606,11 +4567,28 @@ window.devisActionMenu = async function(devisId) {
   } else if (choice === "printSend") {
     _pendingEnvoiPopup = { kind: "devis", devisId };
     viewDevisOpen(devisId);
-    // Petit délai pour laisser le modal s'ouvrir avant Gmail (évite que le focus
-    // saute trop vite hors de la fenêtre courante).
-    setTimeout(() => openGmailComposeForDevis(devisId), 300);
+    _printThenGmail(() => openGmailComposeForDevis(devisId));
   }
 };
+
+// ▼ _printThenGmail — ouvre Gmail puis déclenche l'impression auto.
+// Limite navigateur : l'URL Gmail compose ne supporte pas l'attache de
+// fichier (sécurité). On ouvre Gmail d'abord (dans la fenêtre de transient
+// activation utilisateur, sinon window.open est bloqué comme popup), puis on
+// déclenche l'impression. L'utilisateur sauvegarde le PDF, switch sur l'onglet
+// Gmail, drag-drop manuel.
+function _printThenGmail(openGmailFn) {
+  // Délai pour laisser le modal preview se rendre avant d'ouvrir Gmail.
+  setTimeout(() => {
+    openGmailFn();
+    // Petit délai supplémentaire pour que la nouvelle fenêtre/onglet Gmail
+    // soit traitée avant qu'on lui colle le dialogue d'impression par dessus.
+    setTimeout(() => {
+      _doPrint();
+      showInfoToast("Sauvegarde le PDF puis glisse-le dans le mail Gmail (impossible d'attacher automatiquement).");
+    }, 250);
+  }, 300);
+}
 
 // ▼ factureActionMenu — popup 2 options pour le bouton Facture (par type).
 window.factureActionMenu = async function(devisId, type) {
@@ -4629,7 +4607,7 @@ window.factureActionMenu = async function(devisId, type) {
   } else if (choice === "printSend") {
     _pendingEnvoiPopup = { kind: "facture", devisId, factureType: type };
     viewFactureOpen(devisId, type);
-    setTimeout(() => openGmailComposeForFacture(devisId, type), 300);
+    _printThenGmail(() => openGmailComposeForFacture(devisId, type));
   }
 };
 
@@ -4655,6 +4633,30 @@ function relanceUndo(devisId) {
   render();
 }
 window.relanceUndo = relanceUndo;
+
+// ▼ devisEnvoiUndo / factureEnvoiUndo — efface envoiTs (badge « Envoyé le … »)
+// après confirm. Cas où l'utilisateur a marqué par erreur ou veut renvoyer.
+window.devisEnvoiUndo = async function(devisId) {
+  const dv = S.suivi && S.suivi.devis && S.suivi.devis[devisId];
+  if (!dv || !dv.envoiTs) return;
+  const ok = await uiConfirm("Annuler la marque d'envoi de ce devis ?", { title: "Marque d'envoi", kind: "warn", confirmLabel: "Annuler l'envoi", cancelLabel: "Garder" });
+  if (!ok) return;
+  delete dv.envoiTs;
+  save();
+  render();
+};
+window.factureEnvoiUndo = async function(devisId, type) {
+  const dv = S.suivi && S.suivi.devis && S.suivi.devis[devisId];
+  if (!dv || !Array.isArray(dv.factures)) return;
+  const fac = dv.factures.find(f => f.type === type);
+  if (!fac || !fac.envoiTs) return;
+  const lbl = type === "acompte" ? "d'acompte" : "de solde";
+  const ok = await uiConfirm(`Annuler la marque d'envoi de la facture ${lbl} ?`, { title: "Marque d'envoi", kind: "warn", confirmLabel: "Annuler l'envoi", cancelLabel: "Garder" });
+  if (!ok) return;
+  delete fac.envoiTs;
+  save();
+  render();
+};
 
 // Update SIRET in S.identite + refresh status indicator without losing focus.
 window.updSiretWithCheck = function(raw) {
@@ -8237,6 +8239,21 @@ window.binClear = async function() {
   render();
 };
 
+// ▼ showInfoToast — variante sans bouton, infos transitoires (5s).
+window.showInfoToast = function(label) {
+  const existing = document.getElementById("undoToast");
+  if (existing) existing.remove();
+  const toast = document.createElement("div");
+  toast.id = "undoToast";
+  toast.className = "undo-toast";
+  toast.innerHTML = `<span class="undo-toast-msg">${esc(label)}</span>`;
+  document.body.appendChild(toast);
+  setTimeout(() => {
+    toast.classList.add("undo-toast-out");
+    setTimeout(() => { toast.remove(); }, 250);
+  }, 5000);
+};
+
 // ▼ Toast Undo — feedback immédiat après une suppression réversible.
 // Apparaît en bas-droite, disparaît après 5s. Bouton « Annuler » exécute
 // restoreFn passé par l'appelant. Une seule à la fois.
@@ -8731,9 +8748,26 @@ window.viewDevisOpen = function(devisId) {
   viewDevisModal = { devisId, view: "devis" };
   render();
 };
-window.viewDevisClose = function() {
+window.viewDevisClose = async function() {
+  // Capture le pending AVANT de fermer le modal (sinon perdu).
+  const pending = _pendingEnvoiPopup;
+  _pendingEnvoiPopup = null;
   viewDevisModal = null;
   render();
+  // Si on était dans un flow Imprimer / Imprimer+envoyer → popup confirm.
+  if (pending && pending.kind === "devis") {
+    const sent = await uiConfirm(
+      "Le devis a été envoyé au client ?",
+      { title: "Confirmation envoi", confirmLabel: "Envoyé", cancelLabel: "Pas encore", kind: "info" }
+    );
+    if (sent) {
+      if (!S.suivi.devis) S.suivi.devis = {};
+      if (!S.suivi.devis[pending.devisId]) S.suivi.devis[pending.devisId] = {};
+      S.suivi.devis[pending.devisId].envoiTs = Date.now();
+      save();
+      render();
+    }
+  }
 };
 window.viewDevisSetView = function(view) {
   if (!viewDevisModal) return;
@@ -8771,7 +8805,17 @@ function computePrintFilename() {
   const devisId = (viewDevisModal && viewDevisModal.devisId) || (viewFactureModal && viewFactureModal.devisId);
   const firstEntry = (S.suivi.entries || []).find(e => e.devisId === devisId);
   const prestation = (firstEntry && firstEntry.prestation) || "";
-  const client = dv.snapshotClient || "Client";
+  // Cascade pour récupérer le nom client : snapshotMission > snapshotClient
+  // (nettoyé du #NUM legacy) > findClientForDevis > 1re entry Suivi > "Client".
+  const stripNum = s => String(s || "").replace(/^#\d+\s*/, "").trim();
+  let client = (dv.snapshotMission && dv.snapshotMission.client && dv.snapshotMission.client.name) || "";
+  if (!client && dv.snapshotClient) client = stripNum(dv.snapshotClient);
+  if (!client && devisId) {
+    const c = findClientForDevis(devisId);
+    if (c && c.name) client = c.name;
+  }
+  if (!client && firstEntry && firstEntry.client) client = stripNum(firstEntry.client);
+  if (!client) client = "Client";
   const ref = dv.ref || "DEVIS";
   // Strip "DEVIS-" prefix from ref to be more readable: "14-2026-04-26"
   const refClean = ref.replace(/^(DEVIS|DEBOURS|FACTURE)-?/i, "");
@@ -11445,7 +11489,7 @@ function suiviExpandedPanelHtml(g) {
         // Bouton Devis ▾ — popup 3 options (Réviser / Imprimer / Imprimer + envoyer)
         const dv = S.suivi.devis && S.suivi.devis[g.devisId];
         const envoiTs = dv && dv.envoiTs;
-        const envoiBadge = envoiTs ? `<div class="suv-envoi-tag">Envoyé le ${esc(dateFR(new Date(envoiTs).toISOString().slice(0,10)))}</div>` : "";
+        const envoiBadge = envoiTs ? `<div class="suv-envoi-tag suv-envoi-undo" title="Cliquer pour annuler la marque d'envoi" onclick="${stop}devisEnvoiUndo('${g.devisId}')">Envoyé le ${esc(dateFR(new Date(envoiTs).toISOString().slice(0,10)))} <span class="suv-envoi-undo-x">${ICO_SZ('x', 10)}</span></div>` : "";
         return `<div class="suv-action-col"><button class="btn ghost" onclick="${stop}devisActionMenu('${g.devisId}')">${ICONS.fileText} Devis</button>${envoiBadge}</div>`;
       })()}
       ${(() => {
@@ -11471,7 +11515,7 @@ function suiviExpandedPanelHtml(g) {
             return `<button class="btn ghost" onclick="${stop}viewFactureOpen('${g.devisId}','${type}')">${ICONS.fileText} ${lbl}</button>`;
           }
           const envoiTs = fac.envoiTs;
-          const envoiBadge = envoiTs ? `<div class="suv-envoi-tag">Envoyée le ${esc(dateFR(new Date(envoiTs).toISOString().slice(0,10)))}</div>` : "";
+          const envoiBadge = envoiTs ? `<div class="suv-envoi-tag suv-envoi-undo" title="Cliquer pour annuler la marque d'envoi" onclick="${stop}factureEnvoiUndo('${g.devisId}','${type}')">Envoyée le ${esc(dateFR(new Date(envoiTs).toISOString().slice(0,10)))} <span class="suv-envoi-undo-x">${ICO_SZ('x', 10)}</span></div>` : "";
           const lbl = type === "acompte" ? `Acompte ${formatRef(fac.ref, "facture")}` : `Solde ${formatRef(fac.ref, "facture")}`;
           return `<div class="suv-action-col"><button class="btn ghost" onclick="${stop}factureActionMenu('${g.devisId}','${type}')">${ICONS.fileText} ${esc(lbl)}</button>${envoiBadge}</div>`;
         };
@@ -11672,9 +11716,28 @@ window.viewFactureOpen = async function(devisId, type) {
   viewFactureModal = { devisId, type };
   render();
 };
-window.viewFactureClose = function() {
+window.viewFactureClose = async function() {
+  const pending = _pendingEnvoiPopup;
+  _pendingEnvoiPopup = null;
   viewFactureModal = null;
   render();
+  if (pending && pending.kind === "facture") {
+    const sent = await uiConfirm(
+      `La facture ${pending.factureType === "acompte" ? "d'acompte" : "de solde"} a été envoyée au client ?`,
+      { title: "Confirmation envoi", confirmLabel: "Envoyée", cancelLabel: "Pas encore", kind: "info" }
+    );
+    if (sent) {
+      const dv = S.suivi.devis && S.suivi.devis[pending.devisId];
+      if (dv && Array.isArray(dv.factures)) {
+        const fac = dv.factures.find(f => f.type === pending.factureType);
+        if (fac) {
+          fac.envoiTs = Date.now();
+          save();
+          render();
+        }
+      }
+    }
+  }
 };
 window.viewFacturePrint = function() {
   window.print();
