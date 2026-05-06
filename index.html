@@ -330,16 +330,28 @@
   .suv-last-relance:hover .suv-last-relance-undo{opacity:1}
   .suv-mark-relance{padding:4px 10px!important;min-width:32px;font-weight:600;color:var(--success)}
   .suv-mark-relance:hover{background:rgba(34,197,94,.12)!important;border-color:rgba(34,197,94,.35)!important}
-  /* Indicateur révision (↻ / ↺) à côté de la ref dans la ligne tableau */
-  .suv-revision-ico{display:inline-block;margin-left:6px;font-size:13px;color:var(--accent);cursor:help;font-weight:600}
-  /* Tag rev<N> à côté de la ref */
+  /* Tag rev<N> à côté de la ref (rev active de la chaîne) */
   .suv-rev-tag{display:inline-block;margin-left:6px;font-size:10px;font-weight:600;color:var(--accent);background:rgba(99,102,241,.12);border:1px solid rgba(99,102,241,.30);border-radius:4px;padding:1px 5px;letter-spacing:.3px}
-  /* Bloc détail révision dans le volet expanded (cf Q4 option C) */
-  .suv-revision-info{display:flex;flex-direction:column;gap:4px;padding:8px 10px;background:var(--surface);border:1px solid var(--border-soft);border-radius:6px;margin-top:8px}
-  .suv-revision-link{font-size:12px;color:var(--text-muted);display:flex;align-items:center;gap:6px}
-  .suv-revision-link strong{color:var(--text);font-variant-numeric:tabular-nums}
-  .suv-revision-jump{background:transparent;border:0;color:var(--primary);cursor:pointer;font:inherit;font-size:12px;padding:2px 6px;border-radius:3px}
-  .suv-revision-jump:hover{background:var(--primary-soft)}
+  /* Section Historique des versions (panneau étendu Suivi) */
+  .suv-history{margin-top:var(--space-md);background:var(--surface);border:1px solid var(--border-soft);border-radius:var(--radius-lg);padding:0;overflow:hidden}
+  .suv-history > summary{cursor:pointer;padding:10px 14px;font-size:13px;font-weight:600;color:var(--text);display:flex;align-items:center;gap:8px;list-style:none;user-select:none}
+  .suv-history > summary::-webkit-details-marker{display:none}
+  .suv-history > summary::before{content:"▸";display:inline-block;font-size:10px;color:var(--text-muted);transition:transform .15s ease}
+  .suv-history[open] > summary::before{transform:rotate(90deg)}
+  .suv-history > summary:hover{background:rgba(255,255,255,.03)}
+  .suv-hist-count{display:inline-block;font-size:10px;font-weight:600;color:var(--text-muted);background:var(--bg);border:1px solid var(--border-soft);border-radius:var(--radius-sm);padding:1px 6px;margin-left:auto}
+  .suv-hist-list{display:flex;flex-direction:column;border-top:1px solid var(--border-soft)}
+  .suv-hist-row{display:grid;grid-template-columns:48px 1fr 100px 100px auto;gap:12px;align-items:center;padding:8px 14px;border-bottom:1px solid var(--border-soft);font-size:12px;color:var(--text-muted)}
+  .suv-hist-row:last-child{border-bottom:0}
+  .suv-hist-row.active{background:rgba(99,102,241,.06)}
+  .suv-hist-row.active .suv-hist-rev,.suv-hist-row.active .suv-hist-ref{color:var(--text)}
+  .suv-hist-rev{font-size:10px;font-weight:600;color:var(--accent);background:rgba(99,102,241,.12);border:1px solid rgba(99,102,241,.30);border-radius:var(--radius-sm);padding:1px 5px;letter-spacing:.3px;text-align:center;justify-self:start}
+  .suv-hist-ref{font-variant-numeric:tabular-nums;display:flex;align-items:center;gap:8px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .suv-hist-active{display:inline-block;font-size:9px;font-weight:600;color:var(--success);background:rgba(34,197,94,.10);border:1px solid rgba(34,197,94,.32);border-radius:var(--radius-sm);padding:1px 5px;letter-spacing:.3px;text-transform:uppercase}
+  .suv-hist-date{font-variant-numeric:tabular-nums;text-align:left}
+  .suv-hist-amt{font-variant-numeric:tabular-nums;text-align:right;color:var(--text)}
+  .suv-hist-actions{display:flex;gap:6px;justify-self:end}
+  .suv-hist-action{padding:4px 8px;font-size:11px;height:auto;display:inline-flex;align-items:center;gap:4px}
   /* Bouton danger en mode ghost — discret par défaut, accent rouge au hover */
   .btn.btn-danger-ghost{color:var(--text-dim);border-color:transparent}
   .btn.btn-danger-ghost:hover{background:var(--danger-soft);color:var(--danger);border-color:var(--danger)}
@@ -11440,6 +11452,52 @@ function suiviLignePaye(id) {
 }
 window.suiviLignePaye = suiviLignePaye;
 
+// ▼ suiviRestoreRevision — bascule la rev active de la chaîne vers devisId.
+// Non destructif : les versions plus récentes restent dans l'historique. Une
+// future révision (depuis cette rev restaurée) sautera au-dessus de leurs
+// numéros (cf chainNextRevNum). Bloqué si une rev plus récente porte un
+// engagement comptable (facture émise ou paiement encaissé).
+window.suiviRestoreRevision = async function(devisId) {
+  const dv = S.suivi.devis && S.suivi.devis[devisId];
+  if (!dv) return;
+  if (dv.isActive === true) {
+    uiAlert("Cette version est déjà la version active.", { kind: "info" });
+    return;
+  }
+  const ids = chainOf(devisId);
+  if (!ids.length) return;
+  const rev = computeRevisionNumber(devisId);
+  // Garde-fou : aucune rev de la chaîne ne doit avoir un paiement encaissé
+  // ou une facture émise — sinon restaurer une version antérieure créerait
+  // une incohérence comptable. Note : en pratique canReviseDevis bloque déjà
+  // la création d'une révision si une facture/paiement existe, donc on
+  // tombe rarement dans ce cas. Garde-fou défensif.
+  for (const id of ids) {
+    const x = S.suivi.devis[id];
+    if (!x) continue;
+    const ents = (S.suivi.entries || []).filter(e => e.devisId === id);
+    if (ents.some(e => entryStatut(e) === "termine")) {
+      uiAlert(`Impossible : la version ${esc(x.ref || id)} a au moins un paiement encaissé. Restaurer une version antérieure créerait une incohérence comptable.`, { kind: "warn" });
+      return;
+    }
+    if (Array.isArray(x.factures) && x.factures.length > 0) {
+      uiAlert(`Impossible : la version ${esc(x.ref || id)} a une facture émise. Restaurer une version antérieure invaliderait cette écriture.`, { kind: "warn" });
+      return;
+    }
+  }
+  const ok = await uiConfirm(
+    `Restaurer rev${rev} (${esc(dv.ref || devisId)}) comme version active ?\n\n` +
+    `Les versions plus récentes restent accessibles dans l'historique. Une nouvelle révision créée à partir de cette version repartira au-dessus de l'historique existant.`,
+    { title: "Restaurer cette version", confirmLabel: "Restaurer", kind: "info" }
+  );
+  if (!ok) return;
+  for (const id of ids) {
+    if (S.suivi.devis[id]) S.suivi.devis[id].isActive = (id === devisId);
+  }
+  save();
+  render();
+};
+
 // Toggle d'une ligne entre "attente" et "termine" (utilisé par le popover paiement
 // du tableau Suivi). Sans effet pour les lignes "envoye" / "refuse".
 // pmtTs = timestamp du dernier paiement, utilisé par l'undo pour revenir
@@ -11709,23 +11767,48 @@ function suiviExpandedPanelHtml(g) {
       <span style="flex:1"></span>
       <button class="btn ghost btn-danger-ghost" title="Supprimer définitivement ce devis (devis créé par erreur)" onclick="${stop}suiviDelDevisConfirm('${g.devisId}')">${ICONS.trash} Supprimer</button>
     </div>
-    ${(() => {
-      const dv = S.suivi.devis && S.suivi.devis[g.devisId];
-      if (!dv) return "";
-      const parts = [];
-      if (dv.replaces) {
-        const v1 = S.suivi.devis[dv.replaces];
-        const v1Ref = v1 ? (v1.ref || dv.replaces) : dv.replaces;
-        parts.push(`<div class="suv-revision-link">↺ Remplace <strong>${esc(v1Ref)}</strong> <button class="suv-revision-jump" onclick="${stop}suiviExpandedToggle('${dv.replaces}')" title="Voir l'ancienne version">→</button></div>`);
-      }
-      if (dv.replacedBy) {
-        const v2 = S.suivi.devis[dv.replacedBy];
-        const v2Ref = v2 ? (v2.ref || dv.replacedBy) : dv.replacedBy;
-        parts.push(`<div class="suv-revision-link">↻ Remplacé par <strong>${esc(v2Ref)}</strong> <button class="suv-revision-jump" onclick="${stop}suiviExpandedToggle('${dv.replacedBy}')" title="Voir la nouvelle version">→</button></div>`);
-      }
-      return parts.length ? `<div class="suv-revision-info">${parts.join("")}</div>` : "";
-    })()}
+    ${suiviHistoryHtml(g.devisId)}
   </div>`;
+}
+
+// ▼ suiviHistoryHtml — section « Historique des versions » du panneau étendu.
+// Affichée uniquement si la chaîne contient ≥ 2 revs. Liste les versions de
+// la plus récente à la plus ancienne, avec ref + date + bouton 👁 Voir
+// (ouvre le PDF de la version) et — sur les revs non actives — ↺ Restaurer
+// (commit 3, à câbler).
+function suiviHistoryHtml(devisId) {
+  const ids = chainOf(devisId);
+  if (!ids || ids.length < 2) return "";
+  const stop = "event.stopPropagation();";
+  const map = (S.suivi && S.suivi.devis) || {};
+  const items = [...ids].reverse().map(id => {
+    const dv = map[id] || {};
+    const rev = computeRevisionNumber(id);
+    const ref = dv.ref || id;
+    const ents = (S.suivi.entries || []).filter(e => e.devisId === id);
+    const dates = ents.map(e => e.date).filter(Boolean).sort();
+    const dateLbl = dates[0] ? dateFR(dates[0]) : "—";
+    const isActive = dv.isActive === true;
+    const total = num(dv.snapshotTotal) || ents.reduce((s, e) => s + num(e.montant), 0);
+    const activeBadge = isActive ? `<span class="suv-hist-active">active</span>` : "";
+    const restoreBtn = !isActive
+      ? `<button class="btn ghost suv-hist-action" onclick="${stop}suiviRestoreRevision('${id}')" title="Restaurer cette version comme rev active. Les versions plus récentes restent dans l'historique. Une nouvelle révision repartira de cette version avec un numéro qui saute au-dessus de l'historique existant.">${ICO_SZ('rotateCcw',13)} Restaurer</button>`
+      : "";
+    return `<div class="suv-hist-row${isActive ? ' active' : ''}">
+      <span class="suv-hist-rev">rev${rev}</span>
+      <span class="suv-hist-ref">${esc(ref)}${activeBadge}</span>
+      <span class="suv-hist-date">${esc(dateLbl)}</span>
+      <span class="suv-hist-amt">${fmt(total)}</span>
+      <span class="suv-hist-actions">
+        <button class="btn ghost suv-hist-action" onclick="${stop}viewDevisOpen('${id}')" title="Voir le PDF de cette version">${ICO_SZ('search',13)} Voir</button>
+        ${restoreBtn}
+      </span>
+    </div>`;
+  }).join("");
+  return `<details class="suv-history">
+    <summary>${ICO_SZ('clipboard',14)} Historique des versions <span class="suv-hist-count">${ids.length}</span></summary>
+    <div class="suv-hist-list">${items}</div>
+  </details>`;
 }
 
 function suiviExpandedRowHtml(g) {
@@ -12320,14 +12403,7 @@ function rSV() {
           <td>${dateLabel}</td>
           <td class="ref-cell suv-nowrap">${esc(g.ref) || `<span class="muted">—</span>`}${(() => {
             const rev = computeRevisionNumber(g.devisId);
-            return rev > 0 ? ` <span class="suv-rev-tag" title="Numéro de révision dans la chaîne">rev${rev}</span>` : "";
-          })()}${(() => {
-            // Indicateur ↻/↺ si lien V1↔V2 (cf Q4 option C — visuel discret)
-            const dv = S.suivi.devis && S.suivi.devis[g.devisId];
-            if (!dv) return "";
-            if (dv.replacedBy) return ` <span class="suv-revision-ico" title="Ce devis a été remplacé par une nouvelle version (clique pour déplier)">↻</span>`;
-            if (dv.replaces)   return ` <span class="suv-revision-ico" title="Ce devis remplace une version précédente (clique pour déplier)">↺</span>`;
-            return "";
+            return rev > 0 ? ` <span class="suv-rev-tag" title="Numéro de révision active dans la chaîne. Versions précédentes accessibles via l'historique du panneau étendu.">rev${rev}</span>` : "";
           })()}</td>
           <td class="suv-nowrap">
             <strong class="client-link" onclick="${stop}clientInfoModalOpen('${g.devisId}')" title="Voir les infos client">${esc(cleanClientLabel(g.client)) || "—"}</strong>
