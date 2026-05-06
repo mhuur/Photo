@@ -4548,7 +4548,8 @@ function openGmailComposeForFacture(devisId, type) {
 // ▼ devisActionMenu — popup 3 options pour le bouton Devis du Suivi.
 window.devisActionMenu = async function(devisId) {
   const check = canReviseDevis(devisId);
-  const nextRev = computeRevisionNumber(devisId) + 1;
+  // Affichage user 0-indexé. chainNextRevNum (1-indexé) → -1 pour l'affichage.
+  const nextRev = Math.max(0, chainNextRevNum(devisId) - 1);
   const choices = [];
   if (check.ok) {
     choices.push({ label: `Réviser → rev${nextRev}`, value: "revise", kind: "ghost" });
@@ -6942,7 +6943,10 @@ function formatRef(ref, type) {
 function currentRevForPreview() {
   const m = S.mission;
   if (m.majTrameDevisId) return computeRevisionNumber(m.majTrameDevisId);
-  if (m.revisesDevisId)  return computeRevisionNumber(m.revisesDevisId) + 1;
+  // Réviser : la prochaine rev créée portera chainNextRevNum (= max+1 dans
+  // la chaîne, saute au-dessus si versions intermédiaires restaurées). Affichage
+  // user 0-indexé → on retourne next-1.
+  if (m.revisesDevisId)  return Math.max(0, chainNextRevNum(m.revisesDevisId) - 1);
   return 0;
 }
 
@@ -7306,23 +7310,167 @@ function ensureLegacySnapshot(devisId) {
 window.ensureLegacySnapshot = ensureLegacySnapshot;
 
 // ▼ computeRevisionNumber — numéro de révision d'un devis dans sa chaîne
-// (0-indexé). Walks back via dv.replaces.
-//   - Devis racine (sans replaces) = rev0.
-//   - V2 qui replaces V1 = rev1.
-//   - etc.
-// La prochaine révision aura donc rev<N+1>.
+// (0-indexé). Lit dv.revNum (figé, posé par migrateRevisionChains/suiviAdd) ;
+// fallback walk-back via dv.replaces pour les devis pré-migration.
+//   - Devis racine sans replaces ni revNum = rev0.
+//   - revNum=1 → rev0, revNum=2 → rev1, etc. (revNum est 1-indexé en stockage,
+//     0-indexé pour affichage user → on retourne revNum-1).
 function computeRevisionNumber(devisId) {
+  const dv = S.suivi.devis && S.suivi.devis[devisId];
+  if (dv && typeof dv.revNum === "number" && dv.revNum > 0) return dv.revNum - 1;
   let n = 0;
   let cur = devisId;
   const seen = new Set();
   while (cur && !seen.has(cur)) {
     seen.add(cur);
-    const dv = S.suivi.devis && S.suivi.devis[cur];
-    if (!dv || !dv.replaces) break;
+    const x = S.suivi.devis && S.suivi.devis[cur];
+    if (!x || !x.replaces) break;
     n++;
-    cur = dv.replaces;
+    cur = x.replaces;
   }
   return n;
+}
+
+// ▼ chainOf — retourne tous les devisIds de la chaîne du devis donné, triés
+// par revNum croissant (rev0 d'abord, head en dernier). Inclut le devis lui-même.
+// O(n) sur S.suivi.devis. Si la chaîne n'est pas migrée (pas de chainId),
+// fallback : walk-back par `replaces` puis walk-forward via lookups inverses.
+function chainOf(devisId) {
+  const map = (S.suivi && S.suivi.devis) || {};
+  const dv = map[devisId];
+  if (!dv) return [];
+  const chainId = dv.chainId;
+  if (chainId) {
+    const ids = Object.keys(map).filter(id => map[id].chainId === chainId);
+    ids.sort((a, b) => (map[a].revNum || 0) - (map[b].revNum || 0));
+    return ids;
+  }
+  // Fallback pré-migration : walk-back via replaces puis walk-forward via
+  // recherche inverse (autre devis dont replaces === current).
+  const seen = new Set();
+  let root = devisId;
+  while (root && !seen.has(root)) {
+    seen.add(root);
+    const x = map[root];
+    if (!x || !x.replaces) break;
+    root = x.replaces;
+  }
+  const ordered = [root];
+  const guard = new Set([root]);
+  let cur = root;
+  while (true) {
+    const next = Object.keys(map).find(id => !guard.has(id) && map[id].replaces === cur);
+    if (!next) break;
+    ordered.push(next);
+    guard.add(next);
+    cur = next;
+  }
+  return ordered;
+}
+
+// ▼ chainActiveId — retourne le devisId de la rev active dans la chaîne du
+// devis donné. Lit dv.isActive (1 par chaîne après migration). Fallback :
+// le head de chaîne (dernier rev créé via walk-forward).
+function chainActiveId(devisId) {
+  const ids = chainOf(devisId);
+  if (!ids.length) return devisId;
+  const map = (S.suivi && S.suivi.devis) || {};
+  const active = ids.find(id => map[id] && map[id].isActive === true);
+  return active || ids[ids.length - 1];
+}
+
+// ▼ chainNextRevNum — numéro de la prochaine rev à créer dans cette chaîne.
+// = max(revNum dans la chaîne) + 1. Ex : chaîne rev1..rev4, on restaure rev3
+// puis on révise → nouvelle rev = 5 (skip 4 qui existe déjà en historique).
+function chainNextRevNum(devisId) {
+  const ids = chainOf(devisId);
+  const map = (S.suivi && S.suivi.devis) || {};
+  let max = 0;
+  for (const id of ids) {
+    const r = (map[id] && map[id].revNum) || 0;
+    if (r > max) max = r;
+  }
+  return max + 1;
+}
+
+// ▼ migrateRevisionChains — one-shot : pose chainId/revNum/isActive sur les
+// devis qui n'ont que l'ancien modèle replaces/replacedBy. Restaure aussi
+// statutAvantAnnul sur les entries des révisions non-head (annulation auto
+// désormais retirée). Idempotent : skip les devis déjà migrés.
+function migrateRevisionChains() {
+  const map = (S.suivi && S.suivi.devis) || {};
+  const ids = Object.keys(map);
+  if (!ids.length) return false;
+  const visited = new Set();
+  let changed = false;
+  for (const id of ids) {
+    if (visited.has(id)) continue;
+    if (map[id] && map[id].chainId) { visited.add(id); continue; }
+    // Détermine la chaîne via replaces/replacedBy. Walk-back pour trouver le root.
+    const seen = new Set();
+    let root = id;
+    while (root && !seen.has(root)) {
+      seen.add(root);
+      const x = map[root];
+      if (!x || !x.replaces || !map[x.replaces]) break;
+      root = x.replaces;
+    }
+    // Walk-forward depuis root via replacedBy (legacy) ou recherche inverse via replaces.
+    const chain = [root];
+    const guard = new Set([root]);
+    let cur = root;
+    while (true) {
+      let next = null;
+      if (map[cur] && map[cur].replacedBy && map[map[cur].replacedBy] && !guard.has(map[cur].replacedBy)) {
+        next = map[cur].replacedBy;
+      } else {
+        next = ids.find(x => !guard.has(x) && map[x].replaces === cur);
+      }
+      if (!next) break;
+      chain.push(next);
+      guard.add(next);
+      cur = next;
+    }
+    // Pose chainId, revNum, isActive sur tous les membres de la chaîne.
+    const chainId = root;
+    chain.forEach((cid, idx) => {
+      const dv = map[cid];
+      if (!dv) return;
+      dv.chainId = chainId;
+      dv.revNum = idx + 1; // 1-indexé en stockage
+      dv.isActive = (idx === chain.length - 1); // head = active
+      if ("replacedBy" in dv) delete dv.replacedBy; // ambigu post-restauration
+      visited.add(cid);
+      changed = true;
+    });
+    // Restaurer statutAvantAnnul sur les entries des révisions non-head
+    // (l'auto-annulation `suiviAdd` n'est plus posée — ce nettoyage évite
+    // que les anciennes V1 restent en `annule`).
+    for (let i = 0; i < chain.length - 1; i++) {
+      const cid = chain[i];
+      const ents = (S.suivi.entries || []).filter(e => e.devisId === cid);
+      for (const e of ents) {
+        if (e.statut === "annule" && e.statutAvantAnnul) {
+          e.statut = e.statutAvantAnnul;
+          delete e.statutAvantAnnul;
+          changed = true;
+        }
+      }
+    }
+  }
+  // Devis isolés (sans replaces et sans chainId) : pose le minimum (chainId=self, revNum=1, isActive=true).
+  for (const id of ids) {
+    const dv = map[id];
+    if (!dv) continue;
+    if (!dv.chainId) {
+      dv.chainId = id;
+      dv.revNum = 1;
+      dv.isActive = true;
+      if ("replacedBy" in dv) delete dv.replacedBy;
+      changed = true;
+    }
+  }
+  return changed;
 }
 
 // ▼ canReviseDevis — un devis peut-il être révisé (clone + V1 annulé) ?
@@ -10419,6 +10567,11 @@ function suiviMigrate() {
     if ("paidAt" in e) delete e.paidAt;
   }
 
+  // Migration chaînes de révision (one-shot, idempotent) : pose
+  // chainId/revNum/isActive et restaure les statuts auto-annulés sur les
+  // anciennes révisions. Voir migrateRevisionChains pour les détails.
+  migrateRevisionChains();
+
   const ungrouped = S.suivi.entries.filter(e => !e.devisId);
   if (ungrouped.length === 0) {
     // Even when nothing to group, refs may still need recomputing
@@ -10681,8 +10834,21 @@ async function suiviAdd() {
   const existingFactures = (S.suivi.devis[devisId] && Array.isArray(S.suivi.devis[devisId].factures))
     ? S.suivi.devis[devisId].factures
     : [];
-  // Lien V1↔V2 si on est en train de réviser un devis existant
+  // Lien vers la rev d'origine (info historique). En présence de restauration,
+  // ne définit pas la position dans la chaîne — chainId/revNum/isActive le font.
   const replaces = m.revisesDevisId || null;
+  // Détermination chainId/revNum/isActive :
+  //   - Nouvelle chaîne (pas de revisesDevisId) → chainId = devisId, revNum = 1.
+  //   - Révision (revisesDevisId pointe vers une rev existante) → chainId hérité,
+  //     revNum = max(chain.revNum) + 1 (saut au-dessus si versions intermédiaires
+  //     restaurées : restaurer rev3 puis réviser une chaîne rev1..rev4 → rev5).
+  let chainId = devisId;
+  let revNum = 1;
+  if (replaces && S.suivi.devis[replaces]) {
+    const prev = S.suivi.devis[replaces];
+    chainId = prev.chainId || replaces;
+    revNum = chainNextRevNum(replaces);
+  }
   // Snapshot mission structuré : permet la re-édition (Réviser) en chargeant
   // l'éditable original. snapshotHtml seul ne suffit pas car c'est du HTML rendu.
   const snapshotMission = JSON.parse(JSON.stringify(m));
@@ -10707,8 +10873,13 @@ async function suiviAdd() {
     factures: existingFactures,
     // Snapshot mission éditable (pour fonction Réviser)
     snapshotMission,
-    // Lien V1↔V2 (si V2 vient d'une révision)
-    replaces
+    // Lien historique vers la rev d'origine (peut pointer vers une version
+    // ancienne en cas de restauration intermédiaire — ne sert qu'à l'historique).
+    replaces,
+    // Chaîne de révisions
+    chainId,
+    revNum,
+    isActive: true
   };
 
   // Décomposition montant → salaire / URSSAF / trésorerie (calque la logique Excel) :
@@ -10760,26 +10931,23 @@ async function suiviAdd() {
     });
   }
 
-  // Flow Réviser : si V2 vient d'une révision de V1, on lie les deux et on
-  // bascule V1 en "annule" (mais SEULEMENT si V1 était en "envoye" — un V1
-  // déjà refusé par le client reste refusé, info commerciale conservée).
+  // Flow Réviser : V2 devient la rev active de la chaîne. Toutes les autres
+  // revs de la chaîne sont désactivées (isActive=false). Aucune mutation de
+  // statut sur leurs entries — la chaîne n'expose que sa rev active dans
+  // les groupes Suivi, donc les V précédentes deviennent invisibles
+  // naturellement (leur statut reste tel quel, info commerciale préservée).
   const v1Id = m.revisesDevisId;
   if (v1Id && S.suivi.devis[v1Id]) {
     const v1 = S.suivi.devis[v1Id];
-    v1.replacedBy = devisId;
     // Hérite le lastRelance de V1 sur V2 : le client a déjà été relancé sur
     // cette mission, peu importe la version. Réviser ne reset pas le
     // compteur 7j « À relancer » de l'Accueil.
     if (v1.lastRelance && S.suivi.devis[devisId]) {
       S.suivi.devis[devisId].lastRelance = v1.lastRelance;
     }
-    const v1Entries = S.suivi.entries.filter(e => e.devisId === v1Id);
-    const allEnvoye = v1Entries.length > 0 && v1Entries.every(e => entryStatut(e) === "envoye");
-    if (allEnvoye) {
-      for (const e of v1Entries) {
-        e.statutAvantAnnul = e.statut;
-        e.statut = "annule";
-      }
+    // Désactive toutes les autres revs de la chaîne (1 isActive=true par chaîne).
+    for (const id of chainOf(devisId)) {
+      if (id !== devisId && S.suivi.devis[id]) S.suivi.devis[id].isActive = false;
     }
     // Reset le marqueur transient sur S.mission (côté éditable courant) — V2
     // est désormais le devis "actif" dans S.mission, plus de lien transient.
@@ -11964,10 +12132,25 @@ function suiviYears() {
 
 const STATUT_ORDER = { envoye: 0, en_cours: 1, attente: 2, termine: 3, refuse: 4, annule: 5 };
 
+// Filtre : ne retient que les entries appartenant à la rev ACTIVE de leur chaîne.
+// Les versions historiques (rev1, rev2 d'une chaîne dont rev3 est active) ne
+// sont pas exposées dans Suivi/Accueil — accessibles uniquement via la section
+// Historique du panneau étendu. Orphelins (sans devisId) toujours inclus.
+function _isActiveEntry(e) {
+  if (!e.devisId) return true;
+  const dv = S.suivi.devis && S.suivi.devis[e.devisId];
+  if (!dv) return true; // devis sans entrée dans la map → on garde par sécurité
+  // Pré-migration : pas de chainId encore posé → tout est actif (la migration
+  // sera lancée à la prochaine boot via suiviMigrate).
+  if (typeof dv.isActive !== "boolean") return true;
+  return dv.isActive;
+}
+
 // Liste TOUS les groupes (sans filtre) — utile pour les compteurs des chips
 function suiviGroupsAll() {
   const m = new Map();
   for (const e of S.suivi.entries) {
+    if (!_isActiveEntry(e)) continue;
     const did = e.devisId || ("__orphan_" + e.id);
     if (!m.has(did)) m.set(did, []);
     m.get(did).push(e);
@@ -11981,6 +12164,7 @@ function suiviGroupsAll() {
 function suiviGroups() {
   const groups = new Map();
   for (const e of S.suivi.entries) {
+    if (!_isActiveEntry(e)) continue;
     const did = e.devisId || ("__orphan_" + e.id);
     if (!groups.has(did)) groups.set(did, []);
     groups.get(did).push(e);
