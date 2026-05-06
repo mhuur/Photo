@@ -14745,7 +14745,7 @@ function rCatalogue() {
     return r2(final * (1 - rate / 100));
   };
   const tarifRows = cat.length === 0
-    ? `<tr><td colspan="7" class="catalog-empty">Aucune prestation. Clique sur « Nouvelle prestation » pour démarrer.</td></tr>`
+    ? `<tr><td colspan="8" class="catalog-empty">Aucune prestation. Clique sur « Nouvelle prestation » pour démarrer.</td></tr>`
     : cat.map((c, idx) => {
         // Lignes de type "group" : séparateur visuel éditable, occupe toute la
         // largeur des colonnes du milieu. Pas de tarif/calcul.
@@ -14757,7 +14757,7 @@ function rCatalogue() {
             ondragover="tarifDragOver(event)"
             ondrop="tarifDrop(event,'${esc(c.k)}')">
           <td class="catalog-drag-handle" title="Glisser pour réordonner">${ICO_SZ('gripVertical', 14)}</td>
-          <td colspan="5" class="catalog-group-cell">
+          <td colspan="6" class="catalog-group-cell">
             <input type="text" value="${esc(c.l)}" oninput="tarifEdit(${idx},'l',this.value)" placeholder="Nom du groupe (ex : Photo, Vidéo, Événementiel)" class="tr-cell-input catalog-group-libelle">
           </td>
           <td class="actions catalog-action-cell">
@@ -14769,11 +14769,16 @@ function rCatalogue() {
         const empty = final === 0;
         const tarifBlack = computeTarifBlack(final);
         // Net : dépend du mode actif.
-        //   Déclaré  : Net = tarif × (1 − URSSAF%) − coût mat
+        //   Déclaré  : Net = tarif − URSSAF − coût mat
         //   Au black : Net = tarif au black − coût mat (utilise le tarif réel facturé)
         const urssafAmt = isDecl && final > 0 ? r2(final * urssafPct / 100) : 0;
         const baseTarif = isDecl ? final - urssafAmt : tarifBlack;
         const net = final > 0 ? r2(baseTarif - tm.tauxRetenu) : 0;
+        // Cellule URSSAF : montant en mode Déclaré, "—" en Au black (pas d'URSSAF facturé)
+        const urssafCellContent = !isDecl
+          ? "—"
+          : (empty ? "—" : `−${fmt(urssafAmt)}`);
+        const urssafCellClass = (!isDecl || empty) ? "dim" : "";
         return `
         <tr ${empty ? 'class="row-empty"' : ''} draggable="true" data-tarif-key="${esc(c.k)}"
             ondragstart="tarifDragStart(event,'${esc(c.k)}')"
@@ -14791,19 +14796,23 @@ function rCatalogue() {
               <span class="unit">€/h</span>
             </div>
           </td>
-          <td class="amount net-cell ${empty ? 'dim' : (net >= 0 ? 'ok' : 'bad')}">${empty ? "—" : fmt(net)}</td>
+          <td class="amount muted-cell ${urssafCellClass}">${urssafCellContent}</td>
           <td class="amount muted-cell ${empty ? 'dim' : ''}">${empty ? "—" : `−${fmt(tm.tauxRetenu)}`}</td>
+          <td class="amount net-cell ${empty ? 'dim' : (net >= 0 ? 'ok' : 'bad')}">${empty ? "—" : fmt(net)}</td>
           <td class="amount tarif-black-cell ${empty ? 'dim' : ''}">${empty ? "—" : fmt(tarifBlack)}</td>
           <td class="actions catalog-action-cell">
             <button type="button" class="catalog-row-del" title="Supprimer cette prestation" onclick="tarifDel(${idx})" aria-label="Supprimer">${ICO_SZ('trash', 14)}</button>
           </td>
         </tr>`;
       }).join("");
+  const urssafHeadSubtitle = isDecl
+    ? `${urssafPct.toString().replace(".", ",")} %`
+    : `au black`;
   const tarifBlackHeadSubtitle = isNetMax
     ? (remiseNoirePct > 0 ? `−${remiseNoirePct.toString().replace(".", ",")} %` : `Net maximisé`)
     : `−${urssafPct.toString().replace(".", ",")} %`;
   const hint = isDecl
-    ? `Saisis le <strong>tarif final</strong> facturé au client (TTC, URSSAF incluse). Décomposition : <strong>Tarif − URSSAF (${urssafPct.toString().replace(".", ",")} %) − Coût matériel = Net</strong>. La colonne <strong>Tarif au black</strong> à droite calcule ce que ce tarif deviendrait en stratégie au noir.`
+    ? `Saisis le <strong>tarif final</strong> facturé au client (TTC, URSSAF incluse). Décomposition : <strong>Tarif − URSSAF − Coût matériel = Net</strong>. La colonne <strong>Tarif au black</strong> à droite calcule ce que ce tarif deviendrait en stratégie au noir.`
     : `En mode au black, le tarif final TTC reste affiché à titre de référence. Le client paie le <strong>Tarif au black</strong> (à droite). Décomposition : <strong>Tarif au black − Coût matériel = Net</strong>.`;
   // Sous-toolbar : visible seulement en mode Au black (toggle Net max/Prix
   // compétitif + input remise non déclarée).
@@ -14846,8 +14855,9 @@ function rCatalogue() {
           <th style="width:24px"></th>
           <th>Libellé</th>
           <th style="width:120px;text-align:right">Tarif final<div style="font-size:13px;font-weight:400;color:var(--text-muted);margin-top:1px">prix client TTC</div></th>
-          <th style="width:110px;text-align:right">Net<div style="font-size:13px;font-weight:400;color:var(--text-muted);margin-top:1px">pour ton temps</div></th>
+          <th style="width:110px;text-align:right">URSSAF<div style="font-size:13px;font-weight:400;color:var(--text-muted);margin-top:1px">${urssafHeadSubtitle}</div></th>
           <th style="width:110px;text-align:right">Coût matériel<div style="font-size:13px;font-weight:400;color:var(--text-muted);margin-top:1px">amortissement</div></th>
+          <th style="width:110px;text-align:right">Net<div style="font-size:13px;font-weight:400;color:var(--text-muted);margin-top:1px">pour ton temps</div></th>
           <th style="width:120px;text-align:right" data-th-tarif-black>Tarif au black<div class="catalog-th-sub" style="font-size:13px;font-weight:400;color:var(--text-muted);margin-top:1px">${tarifBlackHeadSubtitle}</div></th>
           <th style="width:36px"></th>
         </tr>
