@@ -221,6 +221,12 @@
   .suv-chip .pst{flex-shrink:0}
   .suv-chip-count{display:inline-block;margin-left:4px;padding:1px 7px;border-radius:9px;background:var(--surface-hi);color:var(--text);font-size:11px;font-weight:700;font-variant-numeric:tabular-nums;letter-spacing:0;line-height:1.4}
   .suv-chip.on .suv-chip-count{background:var(--surface);color:var(--text)}
+  .suv-chip-sep{display:inline-block;width:1px;height:20px;background:var(--border-soft);margin:0 4px;align-self:center}
+  .suv-chip-bin svg{flex-shrink:0}
+  .suv-chip-bin.on{background:rgba(239,68,68,.10);border-color:var(--danger);box-shadow:0 0 0 1px var(--danger) inset;color:var(--text)}
+  .suv-bin-row td{padding:8px 10px;border-bottom:1px solid var(--border-soft);font-size:13px;color:var(--text-muted)}
+  .suv-bin-row td:nth-child(2){color:var(--text);font-variant-numeric:tabular-nums}
+  .suv-bin-row td.amt{color:var(--text);font-weight:600;font-variant-numeric:tabular-nums;text-align:right}
   /* Suivi: nowrap on ref + client cells */
   td.suv-nowrap{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:280px}
   table.hist th.sortable{cursor:pointer;user-select:none;white-space:nowrap}
@@ -2764,7 +2770,7 @@ const DEFAULT_S = {
     logoUrl: ""
   },
   devis:    {},
-  suivi:    { entries: [], devis: {} },
+  suivi:    { entries: [], devis: {}, bin: { items: [] } },
   clients:  { entries: [] },
   compta:   {},
   abonnements: { entries: [] },
@@ -2827,8 +2833,9 @@ function migrateClientNums() {
 }
 
 let S = JSON.parse(localStorage.getItem(SK) || "null") || JSON.parse(JSON.stringify(DEFAULT_S));
-if (!S.suivi || !Array.isArray(S.suivi.entries)) S.suivi = { entries: [], devis: {} };
+if (!S.suivi || !Array.isArray(S.suivi.entries)) S.suivi = { entries: [], devis: {}, bin: { items: [] } };
 if (!S.suivi.devis || typeof S.suivi.devis !== "object") S.suivi.devis = {};
+if (!S.suivi.bin || !Array.isArray(S.suivi.bin.items)) S.suivi.bin = { items: [] };
 if (!S.clients || !Array.isArray(S.clients.entries)) S.clients = { ...DEFAULT_S.clients };
 // Migrate clients to structured contacts[] (zipping legacy contact/phone/email lines)
 S.clients.entries.forEach(c => {
@@ -3329,6 +3336,26 @@ const TABS = [
   // setTab('tarifs') / setTab('suivi') existants. Seuls les LABELS changent.
 ];
 
+// Labels des onglets accessibles via le menu utilisateur (pas dans la sidebar
+// principale). Centralisés ici pour que pageTitle() couvre TOUTE l'app.
+const TABS_AUX_LABELS = {
+  profil:     "Profil",
+  parametres: "Paramètres",
+  templates:  "Templates",
+  bugs:       "Notes",
+  majlog:     "Mises à jour"
+};
+
+// ▼ pageTitle — retourne le label d'affichage du tab donné (ou tab courant
+// si omis). Source unique de vérité partagée entre la sidebar et le h1 des
+// renderers : changer le label dans TABS / TABS_AUX_LABELS le propage partout.
+function pageTitle(tabKey) {
+  const k = tabKey || (typeof tab !== "undefined" ? tab : "");
+  const fromTabs = TABS.find(t => t[0] === k);
+  if (fromTabs) return fromTabs[1];
+  return TABS_AUX_LABELS[k] || "";
+}
+
 const app = document.getElementById("app");
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const num = v => { const n = parseFloat(String(v).replace(",", ".")); return isFinite(n) ? n : 0; };
@@ -3487,7 +3514,7 @@ async function loadFromCloud(ownerUid) {
         };
       }
       if (d.devis)   S.devis   = Object.assign({}, DEFAULT_S.devis,   d.devis);
-      if (d.suivi)   S.suivi   = { ...DEFAULT_S.suivi, ...d.suivi, entries: Array.isArray(d.suivi.entries) ? d.suivi.entries : [], devis: (d.suivi.devis && typeof d.suivi.devis === "object") ? d.suivi.devis : {} };
+      if (d.suivi)   S.suivi   = { ...DEFAULT_S.suivi, ...d.suivi, entries: Array.isArray(d.suivi.entries) ? d.suivi.entries : [], devis: (d.suivi.devis && typeof d.suivi.devis === "object") ? d.suivi.devis : {}, bin: { items: Array.isArray(d.suivi.bin && d.suivi.bin.items) ? d.suivi.bin.items : [] } };
       if (d.clients) S.clients = { ...DEFAULT_S.clients, ...d.clients, entries: Array.isArray(d.clients.entries) ? d.clients.entries : [] };
       if (d.compta)  S.compta  = Object.assign({}, DEFAULT_S.compta,  d.compta);
       if (d.abonnements) S.abonnements = { ...DEFAULT_S.abonnements, ...d.abonnements, entries: Array.isArray(d.abonnements.entries) ? d.abonnements.entries : [] };
@@ -3742,7 +3769,7 @@ function subscribeWorkspaceData(ownerUid) {
       };
     }
     if (d.devis)   S.devis   = Object.assign({}, DEFAULT_S.devis,   d.devis);
-    if (d.suivi)   S.suivi   = { ...DEFAULT_S.suivi, ...d.suivi, entries: Array.isArray(d.suivi.entries) ? d.suivi.entries : [], devis: (d.suivi.devis && typeof d.suivi.devis === "object") ? d.suivi.devis : {} };
+    if (d.suivi)   S.suivi   = { ...DEFAULT_S.suivi, ...d.suivi, entries: Array.isArray(d.suivi.entries) ? d.suivi.entries : [], devis: (d.suivi.devis && typeof d.suivi.devis === "object") ? d.suivi.devis : {}, bin: { items: Array.isArray(d.suivi.bin && d.suivi.bin.items) ? d.suivi.bin.items : [] } };
     if (d.clients) S.clients = { ...DEFAULT_S.clients, ...d.clients, entries: Array.isArray(d.clients.entries) ? d.clients.entries : [] };
     if (d.compta)  S.compta  = Object.assign({}, DEFAULT_S.compta,  d.compta);
     if (d.abonnements) S.abonnements = { ...DEFAULT_S.abonnements, ...d.abonnements, entries: Array.isArray(d.abonnements.entries) ? d.abonnements.entries : [] };
@@ -8488,23 +8515,10 @@ window.binRestore = function(itemId) {
     if (!Array.isArray(S.mission.cgvSections)) S.mission.cgvSections = [];
     const insertAt = Math.min(item.payload.originalIndex || S.mission.cgvSections.length, S.mission.cgvSections.length);
     S.mission.cgvSections.splice(insertAt, 0, item.payload.section);
-  } else if (item.kind === "devisChain") {
-    // Restaure toute la chaîne : entries + S.suivi.devis pour chaque rev.
-    if (!S.suivi) S.suivi = { entries: [], devis: {} };
-    if (!Array.isArray(S.suivi.entries)) S.suivi.entries = [];
-    if (!S.suivi.devis) S.suivi.devis = {};
-    const ids = item.payload.devisIds || [];
-    ids.forEach((id, idx) => {
-      const dv = (item.payload.devis || [])[idx];
-      if (dv) S.suivi.devis[id] = JSON.parse(JSON.stringify(dv));
-    });
-    for (const e of (item.payload.entries || [])) {
-      // Évite les doublons si l'entry existe déjà (cas rare mais safe).
-      if (!S.suivi.entries.find(x => x.id === e.id)) {
-        S.suivi.entries.push(JSON.parse(JSON.stringify(e)));
-      }
-    }
   }
+  // Note : kind="devisChain" obsolète — les devis ont leur propre corbeille
+  // dans S.suivi.bin (vue Historique > Corbeille). Anciens items éventuels
+  // ignorés ici pour ne pas réinjecter dans le mauvais store.
   S.bin.items.splice(idx, 1);
   save();
   render();
@@ -8618,7 +8632,7 @@ window.binModalToggle = function() {
 function rBinModal() {
   if (!binModalOpen) return "";
   const items = (S.bin && S.bin.items) || [];
-  const KIND_LBL = { cgvSection: "Section CGV", devisChain: "Devis" };
+  const KIND_LBL = { cgvSection: "Section CGV" };
   return `<div class="modal-overlay" onclick="if(event.target===this)binModalToggle()">
     <div class="modal-card" style="max-width:640px">
       <div class="modal-title">🗑 Corbeille <span style="font-size:11px;color:var(--text-dim);font-weight:500;margin-left:6px">(${items.length} élément${items.length > 1 ? "s" : ""})</span></div>
@@ -8681,7 +8695,7 @@ function rMAJ() {
     }
   }
   return `
-    <h1 class="page-title" style="display:flex;align-items:center;gap:10px">${ICO_SZ('lightbulb', 22)}<span>Mises à jour</span></h1>
+    <h1 class="page-title" style="display:flex;align-items:center;gap:10px">${ICO_SZ('lightbulb', 22)}<span>${esc(pageTitle("majlog"))}</span></h1>
     <div class="hint" style="margin-bottom:var(--space-lg)">Ce qui a évolué dans l'application, du plus récent au plus ancien.</div>
     <div class="maj-list">
       ${APP_CHANGELOG.map(entry => `
@@ -10130,7 +10144,7 @@ function rMS() {
   if (noneTouched) _editSectionOpen.identification = true;
 
   return `
-    <h1 class="page-title">Mission <span id="savedFlash" class="saved"></span></h1>
+    <h1 class="page-title">${esc(pageTitle("mission"))} <span id="savedFlash" class="saved"></span></h1>
     <div class="mission-toolbar" id="missionToolbar">${rMissionToolbarInner()}</div>
     <div class="devis-banners" id="devisBanners">${rDevisBanners()}</div>
     ${rDevisAccordion()}
@@ -10636,17 +10650,19 @@ function devisPrincipal(lignes) {
 }
 
 // ---- Filter bar (single-select principal) ----
-// Chaque chip est aussi un compteur : label + nombre de devis concernés.
-// Le filtre année est désormais accessible via le menu de l'en-tête « Date ».
+// Vue Historique = devis terminés (soldés / refusés / annulés). Les devis
+// vivants (envoye / attente / en_cours) sont gérés depuis l'Accueil.
+// Chips : Tous (terminés cumulés), Soldé, Refusé/Annulé, Corbeille.
 function suiviLegendHtml() {
   const f = suiviFilterPrincipal;
   const all = suiviGroupsAll();
-  const totalAll = all.length;
-  const count = (predicate) => all.filter(predicate).length;
+  // Tous = devis dont le statut principal est dans le set "clos".
+  const closed = all.filter(g => g.statutPrin === "termine" || g.statutPrin === "refuse" || g.statutPrin === "annule");
+  const totalClosed = closed.length;
+  const count = (predicate) => closed.filter(predicate).length;
+  const binCount = (S.suivi && S.suivi.bin && Array.isArray(S.suivi.bin.items)) ? S.suivi.bin.items.length : 0;
   const chips = [
-    ["all",     "Tous",     "●",  totalAll],
-    ["envoye",  "Envoyé",   null, count(g => g.statutPrin === "envoye")],
-    ["en_cours","En cours", null, count(g => g.statutPrin === "en_cours")],
+    ["all",     "Tous",     "●",  totalClosed],
     ["termine", "Soldé",    null, count(g => g.statutPrin === "termine")]
   ];
   const refusedCount = count(g => g.statutPrin === "refuse" || g.statutPrin === "annule");
@@ -10658,9 +10674,13 @@ function suiviLegendHtml() {
       const cls = `suv-chip ${on ? 'on' : ''} ${k === 'all' ? 'suv-chip-all' : ''}`;
       return `<button type="button" class="${cls}" onclick="suiviSetFilterPrincipal('${k}')" aria-pressed="${on}">${dot}${esc(l)} <span class="suv-chip-count">${n}</span></button>`;
     }).join("")}
-    ${refusedCount > 0 ? `<button type="button" class="suv-chip ${f === 'refuse' ? 'on' : ''}"
+    <button type="button" class="suv-chip ${f === 'refuse' ? 'on' : ''}"
         onclick="suiviSetFilterPrincipal('refuse')" aria-pressed="${f === 'refuse'}"
-        title="Voir les devis refusés (avant acceptation) ou annulés (après acceptation)"><span class="pst" data-s="refuse"></span>Refusé / Annulé <span class="suv-chip-count">${refusedCount}</span></button>` : ''}
+        title="Voir les devis refusés (avant acceptation) ou annulés (après acceptation)"><span class="pst" data-s="refuse"></span>Refusé / Annulé <span class="suv-chip-count">${refusedCount}</span></button>
+    <span class="suv-chip-sep" aria-hidden="true"></span>
+    <button type="button" class="suv-chip suv-chip-bin ${f === 'corbeille' ? 'on' : ''}"
+        onclick="suiviSetFilterPrincipal('corbeille')" aria-pressed="${f === 'corbeille'}"
+        title="Devis supprimés — restaurables ou suppression définitive">${ICO_SZ('trash', 13)}Corbeille <span class="suv-chip-count">${binCount}</span></button>
   </div>`;
 }
 
@@ -11605,8 +11625,9 @@ function suiviAddLigne(devisId) {
 window.suiviAddLigne = suiviAddLigne;
 
 // Supprime un devis ET toute sa chaîne de révisions. Pousse une copie complète
-// (devis + entries de chaque rev) dans la corbeille (kind="devisChain") pour
-// permettre la restauration via binRestore.
+// (devis + entries de chaque rev) dans la corbeille DÉDIÉE aux devis
+// (S.suivi.bin) — séparée de la corbeille générale S.bin (sections CGV…).
+// Restauration via suiviBinRestore depuis la vue Historique > Corbeille.
 function suiviDelDevis(devisId) {
   const ids = chainOf(devisId);
   if (!ids.length) ids.push(devisId);
@@ -11619,7 +11640,14 @@ function suiviDelDevis(devisId) {
     devis: ids.map(id => map[id] || null),
     entries: (S.suivi.entries || []).filter(e => ids.includes(e.devisId)).map(e => JSON.parse(JSON.stringify(e)))
   };
-  binPush("devisChain", payload, label);
+  if (!S.suivi.bin || !Array.isArray(S.suivi.bin.items)) S.suivi.bin = { items: [] };
+  S.suivi.bin.items.unshift({
+    id: uid(),
+    label,
+    payload,
+    deletedAt: Date.now()
+  });
+  if (S.suivi.bin.items.length > 30) S.suivi.bin.items.length = 30;
   // Suppression effective.
   S.suivi.entries = S.suivi.entries.filter(e => !ids.includes(e.devisId));
   if (S.suivi.devis) for (const id of ids) delete S.suivi.devis[id];
@@ -11629,6 +11657,58 @@ function suiviDelDevis(devisId) {
   render();
 }
 window.suiviDelDevis = suiviDelDevis;
+
+// ▼ suiviBinRestore — restaure un devis (chaîne complète) depuis S.suivi.bin.
+window.suiviBinRestore = function(itemId) {
+  if (!S.suivi.bin || !Array.isArray(S.suivi.bin.items)) return;
+  const idx = S.suivi.bin.items.findIndex(x => x.id === itemId);
+  if (idx < 0) return;
+  const item = S.suivi.bin.items[idx];
+  if (!S.suivi.devis) S.suivi.devis = {};
+  if (!Array.isArray(S.suivi.entries)) S.suivi.entries = [];
+  const ids = (item.payload && item.payload.devisIds) || [];
+  ids.forEach((id, i) => {
+    const dv = (item.payload.devis || [])[i];
+    if (dv) S.suivi.devis[id] = JSON.parse(JSON.stringify(dv));
+  });
+  for (const e of (item.payload.entries || [])) {
+    if (!S.suivi.entries.find(x => x.id === e.id)) {
+      S.suivi.entries.push(JSON.parse(JSON.stringify(e)));
+    }
+  }
+  S.suivi.bin.items.splice(idx, 1);
+  save();
+  render();
+};
+
+// ▼ suiviBinPurge — supprime définitivement un item de S.suivi.bin.
+window.suiviBinPurge = async function(itemId) {
+  if (!S.suivi.bin || !Array.isArray(S.suivi.bin.items)) return;
+  const item = S.suivi.bin.items.find(x => x.id === itemId);
+  if (!item) return;
+  const ok = await uiConfirm(
+    `Supprimer définitivement le devis « ${esc(item.label || "(sans nom)")} » ? Cette action est irréversible.`,
+    { title: "Supprimer définitivement", confirmLabel: "Supprimer", kind: "danger" }
+  );
+  if (!ok) return;
+  S.suivi.bin.items = S.suivi.bin.items.filter(x => x.id !== itemId);
+  save();
+  render();
+};
+
+// ▼ suiviBinClear — vide complètement S.suivi.bin (avec confirm).
+window.suiviBinClear = async function() {
+  if (!S.suivi.bin || !S.suivi.bin.items.length) return;
+  const n = S.suivi.bin.items.length;
+  const ok = await uiConfirm(
+    `Vider la corbeille des devis (${n} élément${n > 1 ? "s" : ""}) ? Cette action est irréversible.`,
+    { confirmLabel: "Vider", kind: "danger" }
+  );
+  if (!ok) return;
+  S.suivi.bin.items = [];
+  save();
+  render();
+};
 
 // Wrapper avec confirmation pour la suppression d'un devis depuis le volet inline.
 // Indique explicitement le nombre de révisions concernées (toute la chaîne
@@ -12529,22 +12609,25 @@ function suiviGroups() {
       prestation: lead.prestation || ""
     });
   }
-  // Le devis dont le volet est déplié est exempté de tous les filtres : ainsi
-  // les actions internes (paiement, accept, refus, undo) qui changent son
-  // statut ne le font pas disparaître sous l'utilisateur. La pastille évolue
-  // visuellement, mais le devis reste à sa place. Le filtre se réapplique
-  // quand l'utilisateur referme le volet ou change un filtre (suiviSet*).
+  // Vue Historique : on ne montre QUE les devis clos (terminés / refusés /
+  // annulés). Les devis vivants (envoye / attente / en_cours) sont gérés
+  // depuis l'Accueil. Le sticky reste exempté pour éviter la disparition
+  // d'un devis en cours d'action (transition de statut).
   const sticky = suiviExpandedDevis;
+  list = list.filter(g => g.devisId === sticky
+    || g.statutPrin === "termine"
+    || g.statutPrin === "refuse"
+    || g.statutPrin === "annule");
 
-  // Filtre principal (single-select, exclusif)
-  if (suiviFilterPrincipal !== "all") {
-    if (suiviFilterPrincipal === "refuse") {
-      // Le chip "Refusé / Annulé" agrège les deux statuts post-clôture.
-      list = list.filter(g => g.devisId === sticky || g.statutPrin === "refuse" || g.statutPrin === "annule");
-    } else {
-      list = list.filter(g => g.devisId === sticky || g.statutPrin === suiviFilterPrincipal);
-    }
+  // Filtre principal (single-select, exclusif). "corbeille" est traité par
+  // rSV directement (pas une liste de devis classique). Sur les autres
+  // filtres on reste dans le set "clos".
+  if (suiviFilterPrincipal === "refuse") {
+    list = list.filter(g => g.devisId === sticky || g.statutPrin === "refuse" || g.statutPrin === "annule");
+  } else if (suiviFilterPrincipal === "termine") {
+    list = list.filter(g => g.devisId === sticky || g.statutPrin === "termine");
   }
+  // "all" : déjà filtré sur les clos ci-dessus, on laisse passer.
   // Filtre année (existant)
   if (suiviFilterYears.size > 0) list = list.filter(g => g.devisId === sticky || g.lignes.some(e => suiviFilterYears.has((e.date || "").slice(0, 4))));
 
@@ -12625,6 +12708,10 @@ function suiviTimelineStepHtml(e) {
 // ============================================================================
 // ▼ rSV — RENDERER onglet Suivi
 function rSV() {
+  // Mode corbeille : vue dédiée — liste les devis supprimés (S.suivi.bin).
+  if (suiviFilterPrincipal === "corbeille") {
+    return rSuiviBinView();
+  }
   const list = suiviGroups();
   const totalEntries = S.suivi.entries.length;
 
@@ -12678,7 +12765,7 @@ function rSV() {
   }
 
   return `
-    <h1 class="page-title">Suivi <span id="savedFlash" class="saved"></span></h1>
+    <h1 class="page-title">${esc(pageTitle("suivi"))} <span id="savedFlash" class="saved"></span></h1>
 
     ${suiviLegendHtml()}
 
@@ -12706,6 +12793,61 @@ function rSV() {
     </table>`}
 
     ${suiviHeaderMenu === "date" ? suiviDateMenuHtml() : ""}
+  `;
+}
+
+// ▼ rSuiviBinView — vue Corbeille (devis supprimés) dans l'onglet Historique.
+// Liste les items de S.suivi.bin avec restauration / purge. Séparé de la
+// corbeille générale (S.bin) qui reçoit les sections CGV et autres types.
+function rSuiviBinView() {
+  const items = (S.suivi && S.suivi.bin && Array.isArray(S.suivi.bin.items))
+    ? S.suivi.bin.items : [];
+  const stop = "event.stopPropagation();";
+  const rowsHtml = items.map(it => {
+    const dvs = (it.payload && it.payload.devis) || [];
+    const ents = (it.payload && it.payload.entries) || [];
+    const dates = ents.map(e => e.date).filter(Boolean).sort();
+    const dateLbl = dates[0] ? dateFR(dates[0]) : "—";
+    const total = ents.reduce((s, e) => s + num(e.montant), 0);
+    const revCount = (it.payload && it.payload.devisIds && it.payload.devisIds.length) || 1;
+    const ago = (typeof bugRelativeTime === "function") ? bugRelativeTime(it.deletedAt) : "";
+    return `<tr class="suv-bin-row">
+      <td class="suv-nowrap">${esc(dateLbl)}</td>
+      <td class="ref-cell suv-nowrap">${esc(it.label || "(sans nom)")}${revCount > 1 ? ` <span class="suv-rev-tag">${revCount} rev</span>` : ""}</td>
+      <td class="suv-nowrap"><span class="muted">${esc(ago)}</span></td>
+      <td class="amt">${fmt(total)}</td>
+      <td style="text-align:right">
+        <button class="btn ghost suv-hist-action" onclick="${stop}suiviBinRestore('${esc(it.id)}')" title="Restaurer ce devis dans l'historique">${ICO_SZ('rotateCcw',13)} Restaurer</button>
+        <button class="btn ghost suv-hist-action btn-danger-ghost" onclick="${stop}suiviBinPurge('${esc(it.id)}')" title="Supprimer définitivement">${ICO_SZ('trash',13)}</button>
+      </td>
+    </tr>`;
+  }).join("");
+
+  const empty = items.length === 0
+    ? `<div class="empty">Corbeille vide. Les devis supprimés depuis Historique apparaissent ici (rétention sur les 30 derniers).</div>`
+    : "";
+
+  return `
+    <h1 class="page-title">${esc(pageTitle("suivi"))} <span id="savedFlash" class="saved"></span></h1>
+
+    ${suiviLegendHtml()}
+
+    ${empty || `
+    <div class="toolbar" style="display:flex;justify-content:flex-end">
+      <button class="btn ghost" onclick="suiviBinClear()" style="color:var(--danger);border-color:var(--danger)">${ICO_SZ('trash',13)} Vider la corbeille</button>
+    </div>
+    <table class="hist">
+      <thead>
+        <tr>
+          <th style="width:120px">Date</th>
+          <th>Devis</th>
+          <th style="width:140px">Supprimé</th>
+          <th style="width:120px;text-align:right">Montant</th>
+          <th style="width:200px;text-align:right">Actions</th>
+        </tr>
+      </thead>
+      <tbody>${rowsHtml}</tbody>
+    </table>`}
   `;
 }
 
@@ -13304,7 +13446,7 @@ function rCL() {
   setTimeout(() => clientsApplyFilters(), 0);
 
   return `
-    <h1 class="page-title">Clients <span class="meta">— ${total}</span> <span id="savedFlash" class="saved"></span></h1>
+    <h1 class="page-title">${esc(pageTitle("clients"))} <span class="meta">— ${total}</span> <span id="savedFlash" class="saved"></span></h1>
 
     <div class="cli-toolbar">
       <button class="btn" onclick="clientsAdd()">${ICONS.plus}Ajouter</button>
@@ -13924,7 +14066,7 @@ function rCP() {
   const stop = "event.stopPropagation();";
 
   return `
-    <h1 class="page-title">Comptabilité <span id="savedFlash" class="saved"></span></h1>
+    <h1 class="page-title">${esc(pageTitle("compta"))} <span id="savedFlash" class="saved"></span></h1>
 
     <div class="cp-kpi-grid">
       <div class="cp-kpi"><span class="cp-kpi-label">CA mois (${esc(MOIS_FR[today.getMonth()])} ${esc(currentYear)})</span><strong class="cp-kpi-value">${fmt(caMois)}</strong></div>
@@ -14026,7 +14168,7 @@ function rCatalogue() {
     </tr>`;
   }).join("");
   return `
-    <h1 class="page-title">Catalogue <span id="savedFlash" class="saved"></span></h1>
+    <h1 class="page-title">${esc(pageTitle("tarifs"))} <span id="savedFlash" class="saved"></span></h1>
     <h3>Prestations &amp; tarifs (€/h)</h3>
     <div class="hint" style="max-width:880px">Saisis le <strong>tarif final</strong> facturé au client (TTC, URSSAF incluse, à droite). Le tableau remonte le calcul : <strong>− URSSAF − coût matériel = Net</strong> qui te reste pour ton temps. Le coût matériel se règle dans l'onglet « Achats / Abonnements ».</div>
     <table class="hist" style="max-width:880px">
@@ -14100,7 +14242,7 @@ function rAchats() {
   const tm = tauxMatos();
 
   return `
-    <h1 class="page-title">Achats / Abonnements <span id="savedFlash" class="saved"></span></h1>
+    <h1 class="page-title">${esc(pageTitle("achats"))} <span id="savedFlash" class="saved"></span></h1>
 
     <h3>Synthèse coûts horaires</h3>
     <div class="hint" style="max-width:780px">Coût horaire à intégrer dans tes tarifs (Net = Tarif − URSSAF − ce coût). Heures : estimation prudente ≈ 900 h/an. Facteur sécurité : marge pour les imprévus (ex. 15 %).</div>
@@ -14340,7 +14482,7 @@ function rAC() {
   };
 
   return `
-    <h1 class="page-title">Accueil <span id="savedFlash" class="saved"></span></h1>
+    <h1 class="page-title">${esc(pageTitle("accueil"))} <span id="savedFlash" class="saved"></span></h1>
 
     <div class="cp-kpi-grid">
       <div class="cp-kpi"><span class="cp-kpi-label">CA mois (${esc(MOIS_FR[today.getMonth()])} ${esc(currentYear)})</span><strong class="cp-kpi-value">${fmt(caMois)}</strong></div>
@@ -14419,7 +14561,7 @@ function rPF() {
   const isFranchise = id.regimeTVA === "franchise";
 
   return `
-    <h1 class="page-title">Profil <span id="savedFlash" class="saved"></span></h1>
+    <h1 class="page-title">${esc(pageTitle("profil"))} <span id="savedFlash" class="saved"></span></h1>
     <div class="hint" style="max-width:780px;margin-bottom:20px">
       Identité de l'émetteur. Ces informations alimentent automatiquement l'en-tête et les mentions légales de tous tes devis et factures. Mentions obligatoires : SIRET, forme juridique, mention « EI » si applicable, médiateur conso si tu vends à des particuliers (art. L612-1 C. conso. — sanction 3 000 € si oublié).
     </div>
@@ -14589,7 +14731,7 @@ function rPF() {
 // préférences, partage workspace, sauvegarde. Templates Gmail dans rTemplates (vue séparée).
 function rParametres() {
   return `
-    <h1 class="page-title">Paramètres <span id="savedFlash" class="saved"></span></h1>
+    <h1 class="page-title">${esc(pageTitle("parametres"))} <span id="savedFlash" class="saved"></span></h1>
 
     <h3>Préférences</h3>
     <div class="row">
@@ -14609,7 +14751,7 @@ function rParametres() {
 // via le menu user. Wrap le helper rGmailTemplatesSection existant.
 function rTemplates() {
   return `
-    <h1 class="page-title">Templates <span id="savedFlash" class="saved"></span></h1>
+    <h1 class="page-title">${esc(pageTitle("templates"))} <span id="savedFlash" class="saved"></span></h1>
     ${rGmailTemplatesSection()}
   `;
 }
@@ -14869,7 +15011,7 @@ function rBG() {
   const nOpen = allItems.filter(it => !it.validated).length;
   const nDone = allItems.filter(it => it.validated).length;
 
-  let h = `<h1 class="page-title">Notes <span id="savedFlash" class="saved"></span></h1>`;
+  let h = `<h1 class="page-title">${esc(pageTitle("bugs"))} <span id="savedFlash" class="saved"></span></h1>`;
   h += `<div class="fb-bar">
     <div class="fb-title">Notes &amp; Remarques</div>
     <button class="fb-copy-btn" onclick="bugCopy()" id="bug-copy-btn">📋 Copier toutes les actions en cours</button>

@@ -111,6 +111,8 @@ Source : `index.html` (bloc `const DEFAULT_S = { ... };`).
 - **suivi** _(object)_
   - **entries** _(array (empty))_
   - **devis** _(object)_
+  - **bin** _(object)_
+    - **items** _(array (empty))_
 - **clients** _(object)_
   - **entries** _(array (empty))_
 - **compta** _(object)_
