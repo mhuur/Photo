@@ -1195,6 +1195,8 @@
   table.hist tr.row-empty{background:rgba(245,158,11,.06)}
   table.hist tr.row-inactive{opacity:.65}
   table.hist tr.row-amorti{background:rgba(34,197,94,.04)}
+  /* Catalogue — toolbar (toggle Déclaré/Au noir + actions) */
+  .catalog-toolbar{display:flex;align-items:center;gap:var(--space-md);margin:var(--space-md) 0 var(--space-md);flex-wrap:wrap}
   /* Status badges in Tarifs view (Investissements) */
   .tr-badge{padding:3px 8px;border-radius:10px;font-size:13px;font-weight:600;text-transform:uppercase;display:inline-block;line-height:1.4}
   .tr-badge.ok{background:var(--success-soft);color:var(--success)}
@@ -2802,22 +2804,24 @@ let wsUnsubscribeData = null;     // unsubscribe de onSnapshot users/<ownerUid>
 let wsUnsubscribeMeta = null;     // unsubscribe de onSnapshot workspaces/<ownerUid>
 let _lastLocalSaveTs = 0;         // timestamp du dernier save local (anti-écho)
 
+// Schéma item catalogue : { k (clé technique), l (libellé), p (tarif €/h),
+// d (description optionnelle, affichée en sous-ligne dans Catalogue) }.
 const DEFAULT_CATALOG = [
-  { k:"shoot_solo_dehors",   l:"SHOOT SOLO - DEHORS",                       p:60  },
-  { k:"shoot_solo_prive",    l:"SHOOT SOLO - LIEU PRIVÉ",                   p:65  },
-  { k:"shoot_solo_studio",   l:"SHOOT SOLO - STUDIO",                       p:75  },
-  { k:"corporate",           l:"CORPORATE / COMMERCE LOCAL",                p:50  },
-  { k:"shoot_duo_dehors",    l:"SHOOT DUO - DEHORS",                        p:45  },
-  { k:"shoot_duo_prive",     l:"SHOOT DUO - LIEU PRIVÉ",                    p:120 },
-  { k:"shoot_duo_studio",    l:"SHOOT DUO - STUDIO",                        p:100 },
-  { k:"shoot_groupe_dehors", l:"SHOOT GROUPE - DEHORS",                     p:100 },
-  { k:"shoot_groupe_prive",  l:"SHOOT GROUPE - LIEU PRIVÉ",                 p:120 },
-  { k:"shoot_groupe_studio", l:"SHOOT GROUPE - STUDIO",                     p:150 },
-  { k:"concert",             l:"SHOOT CONCERT",                             p:78  },
-  { k:"mariage",             l:"MARIAGE PHOTO",                             p:160 },
-  { k:"tournage_short",      l:"TOURNAGE VIDÉO - SHORT RÉSEAUX SOCIAUX",    p:90  },
-  { k:"clip",                l:"TOURNAGE - CLIP MUSICAL",                   p:0   },
-  { k:"captation",           l:"CAPTATIONS VIDÉO + PHOTO + ITW",            p:0   }
+  { k:"shoot_solo_dehors",   l:"SHOOT SOLO - DEHORS",                       p:60,  d:"" },
+  { k:"shoot_solo_prive",    l:"SHOOT SOLO - LIEU PRIVÉ",                   p:65,  d:"" },
+  { k:"shoot_solo_studio",   l:"SHOOT SOLO - STUDIO",                       p:75,  d:"" },
+  { k:"corporate",           l:"CORPORATE / COMMERCE LOCAL",                p:50,  d:"" },
+  { k:"shoot_duo_dehors",    l:"SHOOT DUO - DEHORS",                        p:45,  d:"" },
+  { k:"shoot_duo_prive",     l:"SHOOT DUO - LIEU PRIVÉ",                    p:120, d:"" },
+  { k:"shoot_duo_studio",    l:"SHOOT DUO - STUDIO",                        p:100, d:"" },
+  { k:"shoot_groupe_dehors", l:"SHOOT GROUPE - DEHORS",                     p:100, d:"" },
+  { k:"shoot_groupe_prive",  l:"SHOOT GROUPE - LIEU PRIVÉ",                 p:120, d:"" },
+  { k:"shoot_groupe_studio", l:"SHOOT GROUPE - STUDIO",                     p:150, d:"" },
+  { k:"concert",             l:"SHOOT CONCERT",                             p:78,  d:"" },
+  { k:"mariage",             l:"MARIAGE PHOTO",                             p:160, d:"" },
+  { k:"tournage_short",      l:"TOURNAGE VIDÉO - SHORT RÉSEAUX SOCIAUX",    p:90,  d:"" },
+  { k:"clip",                l:"TOURNAGE - CLIP MUSICAL",                   p:0,   d:"" },
+  { k:"captation",           l:"CAPTATIONS VIDÉO + PHOTO + ITW",            p:0,   d:"" }
 ];
 
 // =============================================================
@@ -2860,7 +2864,6 @@ const DEFAULT_S = {
     autres:      { desc: "", montant: "0" },
     declare: true,
     blackMode: "reduit",
-    urssafPct: "22",
     tarifHOverride: "",
     remisePct: "0",
     notes: "",
@@ -2890,7 +2893,8 @@ const DEFAULT_S = {
     mediateur: { nom: "", adresse: "", url: "" },
     bank: { banque: "", titulaire: "", iban: "", bic: "" },
     clienteleType: "mixte",
-    logoUrl: ""
+    logoUrl: "",
+    urssafPct: "22"
   },
   devis:    {},
   suivi:    { entries: [], devis: {}, bin: { items: [] } },
@@ -2898,7 +2902,7 @@ const DEFAULT_S = {
   compta:   {},
   abonnements: { entries: [] },
   investissements: { entries: [] },
-  tarifs: { catalog: JSON.parse(JSON.stringify(DEFAULT_CATALOG)), heuresAnnuelles: "900", facteurSecurite: "0" },
+  tarifs: { catalog: JSON.parse(JSON.stringify(DEFAULT_CATALOG)), heuresAnnuelles: "900", facteurSecurite: "0", viewMode: "declare" },
   bin:    { items: [] },
   bugs: { items: [] },
   prefs: {
@@ -2986,9 +2990,12 @@ S.clients.entries.forEach(c => {
 migrateClientNums();
 if (!S.abonnements || !Array.isArray(S.abonnements.entries)) S.abonnements = { ...DEFAULT_S.abonnements };
 if (!S.investissements || !Array.isArray(S.investissements.entries)) S.investissements = { ...DEFAULT_S.investissements };
-if (!S.tarifs || !Array.isArray(S.tarifs.catalog) || !S.tarifs.catalog.length) S.tarifs = { catalog: JSON.parse(JSON.stringify(DEFAULT_CATALOG)), heuresAnnuelles: "900", facteurSecurite: "0" };
+if (!S.tarifs || !Array.isArray(S.tarifs.catalog) || !S.tarifs.catalog.length) S.tarifs = { catalog: JSON.parse(JSON.stringify(DEFAULT_CATALOG)), heuresAnnuelles: "900", facteurSecurite: "0", viewMode: "declare" };
 if (!S.tarifs.heuresAnnuelles) S.tarifs.heuresAnnuelles = "900";
 if (typeof S.tarifs.facteurSecurite === "undefined") S.tarifs.facteurSecurite = "0";
+if (S.tarifs.viewMode !== "declare" && S.tarifs.viewMode !== "noir") S.tarifs.viewMode = "declare";
+// Backfill : tout item du catalog sans champ `d` (libellé description)
+for (const c of S.tarifs.catalog) { if (typeof c.d !== "string") c.d = ""; }
 if (!S.bugs || (!Array.isArray(S.bugs.items) && !Array.isArray(S.bugs.entries) && typeof S.bugs.html !== "string")) S.bugs = { items: [] };
 if (!S.bin || !Array.isArray(S.bin.items)) S.bin = { items: [] };
 if (!Array.isArray(S.bugs.items)) S.bugs.items = [];
@@ -3183,6 +3190,16 @@ if (S.mission) {
     S.identite.logoUrl = S.mission.logoUrl;
     S.mission.logoUrl = "";
   }
+  // Migration urssafPct : source unique partagée. Si l'user avait un taux
+  // custom dans S.mission (ex. 23,1 % avec CFP), on le remonte dans S.identite
+  // pour que Catalogue + Mission lisent la même valeur. Puis cleanup du
+  // champ sur la mission EN COURS (les snapshots archivés gardent le leur).
+  if (S.identite && S.mission && S.mission.urssafPct != null && S.mission.urssafPct !== "") {
+    if (S.mission.urssafPct !== "22" && S.identite.urssafPct === "22") {
+      S.identite.urssafPct = String(S.mission.urssafPct);
+    }
+    delete S.mission.urssafPct;
+  }
   recomputeRef();
 }
 
@@ -3199,6 +3216,9 @@ if (S.mission && S.mission.ref && S.suivi && S.suivi.devis) {
     delete sm.revisesDevisId;
     delete sm.majTrameDevisId;
     delete sm.editDevisId;
+    // urssafPct vit sur S.identite ; on fige la valeur globale au moment du
+    // backfill pour ce snapshot ad hoc (immutable historique).
+    if (!sm.urssafPct) sm.urssafPct = String(S.identite?.urssafPct ?? "22");
     dv.snapshotMission = sm;
   }
 }
@@ -4007,7 +4027,7 @@ function upd(path, val) {
     refreshRefDisplay();
   }
   save();
-  if (path.startsWith("mission.prep") || path.startsWith("mission.prod") || path.startsWith("mission.postprod") || path.startsWith("mission.deplacement") || path.startsWith("mission.autres") || path.startsWith("mission.lignes") || path === "mission.remisePct" || path === "mission.object" || path === "mission.objectText" || path === "mission.paiement.margeAvance" || path === "mission.urssafPct" || path === "mission.blackMode" || path === "mission.dureeValidite" || path === "mission.tarifHOverride") {
+  if (path.startsWith("mission.prep") || path.startsWith("mission.prod") || path.startsWith("mission.postprod") || path.startsWith("mission.deplacement") || path.startsWith("mission.autres") || path.startsWith("mission.lignes") || path === "mission.remisePct" || path === "mission.object" || path === "mission.objectText" || path === "mission.paiement.margeAvance" || path === "identite.urssafPct" || path === "mission.blackMode" || path === "mission.dureeValidite" || path === "mission.tarifHOverride") {
     refreshTotals();
   }
 }
@@ -4333,7 +4353,7 @@ function urssafUnlock() {
 window.urssafUnlock = urssafUnlock;
 
 function urssafResetDefault() {
-  S.mission.urssafPct = "22";
+  if (S.identite) S.identite.urssafPct = "22";
   urssafUnlocked = false;
   const p = document.getElementById("urssafMenu");
   if (p) p.classList.remove("open");
@@ -5064,7 +5084,7 @@ function rDevisPreview() {
   // Au black (declare === false) → no URSSAF compensation, no marge avance.
   const _isDeclared = d.declare !== false;
   const ma = _isDeclared ? num((d.paiement || {}).margeAvance ?? 0) : 0;
-  const mu = _isDeclared ? num(d.urssafPct ?? 22) : 0;
+  const mu = _isDeclared ? getUrssafPct(d) : 0;
   let linesHtml = "";
   let lineNum = 0;
   // Sous-totaux par catégorie (C3) — affichés dans dp-totals si ≥ 2 catégories actives.
@@ -5874,6 +5894,16 @@ function cliPickSaveCreate() {
 window.cliPickSaveCreate = cliPickSaveCreate;
 
 // ============ TARIFS (catalog editing) ============
+// ▼ getUrssafPct — source unique de vérité pour le taux URSSAF micro-BNC.
+// Préfère le taux figé sur un snapshot devis archivé (immutable, historique
+// commercial) ; sinon retombe sur S.identite.urssafPct (paramètre global).
+// Fallback final : 22 % (default micro-BNC sans CFP).
+function getUrssafPct(scope) {
+  if (scope && scope.urssafPct != null && scope.urssafPct !== "") return num(scope.urssafPct);
+  return num(S.identite?.urssafPct ?? 22);
+}
+window.getUrssafPct = getUrssafPct;
+
 function tarifEdit(idx, field, val) {
   if (!S.tarifs.catalog[idx]) return;
   if (field === "p") S.tarifs.catalog[idx][field] = num(val);
@@ -5881,6 +5911,65 @@ function tarifEdit(idx, field, val) {
   save();
 }
 window.tarifEdit = tarifEdit;
+
+// ▼ tarifAdd — ajoute une nouvelle prestation vide en bas du catalogue.
+// Clé technique générée via uid(), libellé/tarif/description vides : l'user
+// remplit en place. Re-render pour faire apparaître la ligne.
+function tarifAdd() {
+  const k = "presta_" + uid();
+  S.tarifs.catalog.push({ k, l: "", p: 0, d: "" });
+  save();
+  render();
+  // Focus la nouvelle ligne (input libellé) pour saisie immédiate
+  requestAnimationFrame(() => {
+    const inputs = document.querySelectorAll('.tr-cell-input[data-tarif-libelle]');
+    const last = inputs[inputs.length - 1];
+    if (last) { last.focus(); last.select(); }
+  });
+}
+window.tarifAdd = tarifAdd;
+
+// ▼ tarifDel — supprime une ligne avec toast Undo (5 s pour annuler).
+// Pas de uiConfirm : suppression instantanée + restore immédiat dispo.
+function tarifDel(idx) {
+  if (!S.tarifs.catalog[idx]) return;
+  const removed = S.tarifs.catalog.splice(idx, 1)[0];
+  save();
+  render();
+  if (typeof showUndoToast === "function") {
+    const label = removed.l ? `« ${removed.l} »` : "prestation";
+    showUndoToast(`${label} supprimée`, () => {
+      const arr = S.tarifs.catalog;
+      const insertAt = Math.min(idx, arr.length);
+      arr.splice(insertAt, 0, removed);
+      save();
+      render();
+    });
+  }
+}
+window.tarifDel = tarifDel;
+
+// ▼ tarifReorder — déplace l'item d'une position à une autre (utilisé par le
+// drag & drop). from/to sont des index dans S.tarifs.catalog.
+function tarifReorder(from, to) {
+  const arr = S.tarifs.catalog;
+  if (from < 0 || from >= arr.length || to < 0 || to >= arr.length || from === to) return;
+  const [item] = arr.splice(from, 1);
+  arr.splice(to, 0, item);
+  save();
+  render();
+}
+window.tarifReorder = tarifReorder;
+
+// ▼ tarifViewMode — bascule l'affichage du Catalogue entre Déclaré et Au noir.
+// N'affecte que la vue (recalcul colonnes URSSAF/Net), pas les tarifs persistés.
+function tarifViewMode(mode) {
+  if (mode !== "declare" && mode !== "noir") return;
+  S.tarifs.viewMode = mode;
+  save();
+  render();
+}
+window.tarifViewMode = tarifViewMode;
 
 async function tarifReset() {
   if (!await uiConfirm("Réinitialiser le catalogue aux tarifs par défaut ? Les modifications seront perdues.", { title: "Réinitialiser le catalogue", confirmLabel: "Réinitialiser", kind: "warn" })) return;
@@ -6925,7 +7014,7 @@ window.showPaiementInfo = function(evt, kind, id) {
   const p = m.paiement || {};
   const isDeclared = m.declare !== false;
   const margeAvance = isDeclared ? num(p.margeAvance ?? 0) : 0;
-  const margeUrssaf = isDeclared ? num(m.urssafPct ?? 22) : 0;
+  const margeUrssaf = isDeclared ? getUrssafPct(m) : 0;
   if (kind === "ligne") {
     const l = S.mission.lignes.find(x => x.id === id);
     if (l && l.type === "materiel") {
@@ -7341,7 +7430,9 @@ function reconstructMissionFromSuivi(devisId, opts) {
   const recovered = [];
 
   // Préserve la config courante (rates, modalités, CGV, signature, etc.)
-  fresh.urssafPct      = cur.urssafPct      ?? dm.urssafPct;
+  // urssafPct vit désormais sur S.identite (source unique) ; on fige la valeur
+  // globale au moment de la reconstruction pour ce snapshot legacy.
+  fresh.urssafPct      = cur.urssafPct ?? S.identite?.urssafPct ?? "22";
   fresh.dureeValidite  = cur.dureeValidite  ?? dm.dureeValidite;
   fresh.declare        = cur.declare        ?? dm.declare;
   fresh.blackMode      = cur.blackMode      ?? dm.blackMode;
@@ -7980,7 +8071,7 @@ function totals() {
   const _override = num(d.tarifHOverride);
   const _baseTotal = _override > 0 ? _override : (cat ? num(cat.p) : 0);
   const _isDecTot = d.declare !== false;
-  const _urssafFactorTot = 1 - (num(d.urssafPct ?? 22)) / 100; // e.g., 0.78 for 22%
+  const _urssafFactorTot = 1 - (getUrssafPct(d)) / 100; // e.g., 0.78 for 22%
   // Tarif horaire :
   //   - Déclaré : tarif catalogue tel quel (gross facturé)
   //   - Au black "taux fixe" : même prix que déclaré (photographe garde l'URSSAF)
@@ -7997,9 +8088,10 @@ function totals() {
             : 0));
   const HOURS_PER_DAY = 8;
   // Marge rates: au black ⇒ no compensation (everything raw).
-  // URSSAF rate read from the unique source of truth (mission.urssafPct).
+  // URSSAF rate read via getUrssafPct (source unique : S.identite.urssafPct,
+  // ou snapshot.urssafPct figé pour les devis archivés).
   const margeAvancePct = _isDecTot ? num(d.paiement?.margeAvance ?? 0) : 0;
-  const margeUrssafPct = _isDecTot ? num(d.urssafPct ?? 22) : 0;
+  const margeUrssafPct = _isDecTot ? getUrssafPct(d) : 0;
   // First pass: walk lignes — accumulate hours and per-line final amounts.
   // For Principal items, use ligneDisplayInfo() to compute the final (post-URSSAF, post-avance)
   // amount with the inverse formula. The sum is what the client owes.
@@ -9792,7 +9884,7 @@ function computeRemiseInfo() {
   const d = S.mission;
   const t = totals();
   const declared = d.declare !== false;
-  const urssafFactor = declared ? (1 - num(d.urssafPct ?? 22) / 100) : 1; // au black: pas d'URSSAF
+  const urssafFactor = declared ? (1 - getUrssafPct(d) / 100) : 1; // au black: pas d'URSSAF
   // Coût matos horaire (depuis Frais & Tarifs) × heures totales
   let matosCost = 0;
   try {
@@ -9874,7 +9966,7 @@ function buildRemiseTooltipHtml(ri) {
     <table class="remise-tt-table">
       <tr><td>Total HT (avant remise)</td><td>${fmt(ri.totalSansRemise)}</td></tr>
       ${ri.declared
-        ? `<tr class="muted"><td>− URSSAF (${num(S.mission.urssafPct ?? 22).toString().replace(".",",")} %)</td><td>−${fmt(ri.urssafActuelle)}</td></tr>`
+        ? `<tr class="muted"><td>− URSSAF (${getUrssafPct(S.mission).toString().replace(".",",")} %)</td><td>−${fmt(ri.urssafActuelle)}</td></tr>`
         : `<tr class="muted"><td>− URSSAF</td><td>au black</td></tr>`}
       <tr><td>= Net encaissé</td><td>${fmt(ri.netActuel)}</td></tr>
     </table>
@@ -9932,7 +10024,7 @@ function tarifBreakdown(includeDepl) {
   const tm = tauxMatos();
   const final = num(cat.p);
   if (final <= 0) return null;
-  const urssafPct = num(d.urssafPct ?? 22);
+  const urssafPct = getUrssafPct(d);
   const urssafFactor = 1 - urssafPct / 100; // e.g., 0.78 for 22%
   const blackMode = d.blackMode || "reduit";
   const matos = tm.tauxAvecSecurite;
@@ -10045,7 +10137,7 @@ function devisSectionSummaries() {
   const remiseClass = remisePct > ri.remiseMaxPct ? "warn" : (remisePct > 0 ? "amt" : "");
   const adjBits = [];
   if (remisePct > 0) adjBits.push(`<span class="${remiseClass}">${remisePct.toString().replace(".",",")}% remise</span>`);
-  if (d.declare !== false) adjBits.push(`<span>URSSAF ${num(d.urssafPct ?? 22).toString().replace(".",",")}%</span>`);
+  if (d.declare !== false) adjBits.push(`<span>URSSAF ${getUrssafPct(d).toString().replace(".",",")}%</span>`);
   const adjSummary = adjBits.length ? adjBits.join('<span class="dot"></span>') : `<span>Par défaut</span>`;
 
   // 5. Modalités — somme des % + IBAN
@@ -10200,6 +10292,12 @@ window.suiviUpdateSnapshot = async function() {
   // structurée éditable. Permet de rendre révisable un ancien devis dès
   // que l'user le ré-édite.
   const snapMission = JSON.parse(JSON.stringify(m));
+  // Préserve l'urssafPct figé à la création du devis (immutable). Si absent
+  // (devis legacy), prend la valeur globale courante au moment de l'édition.
+  if (!snapMission.urssafPct) {
+    const prev = e.snap.snapshotMission && e.snap.snapshotMission.urssafPct;
+    snapMission.urssafPct = String(prev ?? S.identite?.urssafPct ?? "22");
+  }
   delete snapMission.revisesDevisId;
   delete snapMission.majTrameDevisId;
   delete snapMission.editDevisId;
@@ -10225,7 +10323,7 @@ window.suiviUpdateSnapshot = async function() {
   const client = m.client.name || "";
   const prestation = cat ? cat.l : "";
   const isDeclared = m.declare !== false;
-  const urssafPct = num(m.urssafPct ?? 22);
+  const urssafPct = getUrssafPct(m);
   const tm = tauxMatos();
   const tresoRatio = (t.tarifH > 0 && tm.tauxAvecSecurite > 0) ? (tm.tauxAvecSecurite / t.tarifH) : 0;
   const mkLine = (echeance, montant, heures, statut) => {
@@ -10677,7 +10775,7 @@ function rDevisSectionAjustements() {
     <div class="row">
       <div class="field" style="max-width:200px"><label>Taux URSSAF</label>
         <div class="lock-field with-unit">
-          <input id="urssafInput" type="number" step="0.1" value="${esc(d.urssafPct ?? "22")}" ${urssafUnlocked ? `oninput="upd('mission.urssafPct', this.value)"` : "disabled"}>
+          <input id="urssafInput" type="number" step="0.1" value="${esc(S.identite?.urssafPct ?? "22")}" ${urssafUnlocked ? `oninput="upd('identite.urssafPct', this.value)"` : "disabled"}>
           <span class="lock-unit">%</span>
           <button class="lock-menu-btn" onclick="urssafToggleMenu()" title="Options">⋮</button>
           <div class="lock-popup" id="urssafMenu">
@@ -11234,6 +11332,12 @@ async function suiviAdd() {
       dvOrig.snapshotPaiementDelai = (m.paiement && m.paiement.delai) || "30j_fdm";
       dvOrig.snapshotDatePrestation = m.datePrestation || "";
       const snapMission = JSON.parse(JSON.stringify(m));
+      // Préserve l'urssafPct figé d'origine si présent ; sinon prend la valeur
+      // globale courante (fallback pour devis legacy reconstruit).
+      if (!snapMission.urssafPct) {
+        const prev = dvOrig.snapshotMission && dvOrig.snapshotMission.urssafPct;
+        snapMission.urssafPct = String(prev ?? S.identite?.urssafPct ?? "22");
+      }
       delete snapMission.revisesDevisId;
       delete snapMission.majTrameDevisId;
       // Note : on GARDE tarifHOverride dans snapMission Maj Trame in-place,
@@ -11346,6 +11450,9 @@ async function suiviAdd() {
   // Snapshot mission structuré : permet la re-édition (Réviser) en chargeant
   // l'éditable original. snapshotHtml seul ne suffit pas car c'est du HTML rendu.
   const snapshotMission = JSON.parse(JSON.stringify(m));
+  // Fige la valeur URSSAF globale au moment de l'archivage (immutable historique).
+  // Le champ ne vit plus sur la mission EN COURS, mais sur les snapshots oui.
+  snapshotMission.urssafPct = String(S.identite?.urssafPct ?? "22");
   // On retire les marqueurs transient (drapeaux de flow, pas de contenu).
   delete snapshotMission.revisesDevisId;
   delete snapshotMission.majTrameDevisId;
@@ -11382,7 +11489,7 @@ async function suiviAdd() {
   //                qui finance matos+abos+sécurité (constant pour tout le devis)
   //   Salaire net = montant − URSSAF − Trésorerie
   const isDeclared = m.declare !== false;
-  const urssafPct  = num(m.urssafPct ?? 22);
+  const urssafPct  = getUrssafPct(m);
   const tm         = tauxMatos();
   const tresoRatio = (t.tarifH > 0 && tm.tauxAvecSecurite > 0) ? (tm.tauxAvecSecurite / t.tarifH) : 0;
 
@@ -14332,44 +14439,68 @@ function rCP() {
 
 // ▼ rTR — RENDERER onglet Tarifs
 // ▼ rCatalogue — vue Catalogue (anciennement rTR « Frais & Tarifs »).
-// Liste éditable des prestations + tarifs €/h. Le calcul Net/Coût matériel/Tarif
-// utilise le coût horaire matériel (tm) issu de l'onglet « Achats / Abonnements ».
+// Liste éditable des prestations + tarifs €/h. Le calcul Net/URSSAF/Coût matériel
+// utilise le coût horaire matériel (tm) issu de l'onglet « Achats / Abonnements »
+// et le taux URSSAF global (S.identite.urssafPct).
+//
+// Toggle Déclaré / Au noir (S.tarifs.viewMode) : décompose le tarif TTC en
+//   Déclaré : Tarif − URSSAF − Coût matériel = Net
+//   Au noir : Tarif − Coût matériel = Net (la colonne URSSAF disparaît)
 function rCatalogue() {
   const cat = S.tarifs.catalog || DEFAULT_CATALOG;
   const tm = tauxMatos();
-  const urssafPct = num(S.mission && S.mission.urssafPct) || 22;
-  const urssafFactor = 1 - urssafPct / 100;
-  const tarifRows3col = cat.map((c, idx) => {
+  const urssafPct = getUrssafPct();
+  const mode = S.tarifs.viewMode === "noir" ? "noir" : "declare";
+  const isDecl = mode === "declare";
+  const tarifRows = cat.map((c, idx) => {
     const final = num(c.p);
-    const sansUrssaf = final > 0 ? r2(final * urssafFactor) : 0;
-    const net = final > 0 ? r2(sansUrssaf - tm.tauxRetenu) : 0;
+    const urssafAmt = (isDecl && final > 0) ? r2(final * urssafPct / 100) : 0;
+    const net = final > 0 ? r2(final - urssafAmt - tm.tauxRetenu) : 0;
+    const empty = final === 0;
+    const urssafCell = isDecl
+      ? `<td class="amount muted-cell ${empty ? 'dim' : ''}">${empty ? "—" : `−${fmt(urssafAmt)}`}</td>`
+      : "";
     return `
-    <tr ${final === 0 ? 'class="row-empty"' : ''}>
+    <tr ${empty ? 'class="row-empty"' : ''}>
       <td><input type="text" value="${esc(c.l)}" oninput="tarifEdit(${idx},'l',this.value)" placeholder="Libellé prestation" class="tr-cell-input"></td>
-      <td class="amount net-cell ${final > 0 ? (net >= 0 ? 'ok' : 'bad') : 'dim'}">${final > 0 ? fmt(net) : "—"}</td>
-      <td class="amount muted-cell ${final > 0 ? '' : 'dim'}">${final > 0 ? fmt(tm.tauxRetenu) : "—"}</td>
       <td class="amount tarif-cell">
         <div class="tarif-input-wrap">
           <input type="number" step="0.5" value="${esc(c.p || "")}" oninput="tarifEdit(${idx},'p',this.value)" placeholder="—" class="tr-tarif-input">
           <span class="unit">€/h</span>
         </div>
       </td>
+      ${urssafCell}
+      <td class="amount muted-cell ${empty ? 'dim' : ''}">${empty ? "—" : `−${fmt(tm.tauxRetenu)}`}</td>
+      <td class="amount net-cell ${empty ? 'dim' : (net >= 0 ? 'ok' : 'bad')}">${empty ? "—" : fmt(net)}</td>
     </tr>`;
   }).join("");
+  const urssafHead = isDecl
+    ? `<th style="width:110px;text-align:right">URSSAF<div style="font-size:13px;font-weight:400;color:var(--text-muted);margin-top:1px">${urssafPct.toString().replace(".", ",")} %</div></th>`
+    : "";
+  const hint = isDecl
+    ? `Saisis le <strong>tarif final</strong> facturé au client (TTC, URSSAF incluse). Décomposition : <strong>Tarif − URSSAF − Coût matériel = Net</strong> qui te reste pour ton temps.`
+    : `Saisis le <strong>tarif final</strong> facturé au client. Au noir, pas d'URSSAF : <strong>Tarif − Coût matériel = Net</strong> qui te reste pour ton temps.`;
   return `
     <h1 class="page-title">${esc(pageTitle("tarifs"))} <span id="savedFlash" class="saved"></span></h1>
     <h3>Prestations &amp; tarifs (€/h)</h3>
-    <div class="hint" style="max-width:880px">Saisis le <strong>tarif final</strong> facturé au client (TTC, URSSAF incluse, à droite). Le tableau remonte le calcul : <strong>− URSSAF − coût matériel = Net</strong> qui te reste pour ton temps. Le coût matériel se règle dans l'onglet « Achats / Abonnements ».</div>
+    <div class="catalog-toolbar" style="max-width:880px">
+      <div class="seg seg-neon">
+        <button class="${isDecl?"on ok":""}" onclick="tarifViewMode('declare')">${ICO_SZ('check', 14)} Déclaré</button>
+        <button class="${!isDecl?"on warn":""}" onclick="tarifViewMode('noir')">${ICO_SZ('circleFilled', 12)} Au black</button>
+      </div>
+    </div>
+    <div class="hint" style="max-width:880px">${hint} Le coût matériel se règle dans l'onglet « Achats / Abonnements », le taux URSSAF dans la section Ajustements d'un devis.</div>
     <table class="hist" style="max-width:880px">
       <thead>
         <tr>
           <th>Libellé</th>
-          <th style="width:110px;text-align:right">Net<div style="font-size:13px;font-weight:400;color:var(--text-muted);margin-top:1px">pour ton temps</div></th>
+          <th style="width:120px;text-align:right">Tarif final<div style="font-size:13px;font-weight:400;color:var(--text-muted);margin-top:1px">prix client TTC</div></th>
+          ${urssafHead}
           <th style="width:110px;text-align:right">Coût matériel<div style="font-size:13px;font-weight:400;color:var(--text-muted);margin-top:1px">amortissement</div></th>
-          <th style="width:110px;text-align:right">Tarif final<div style="font-size:13px;font-weight:400;color:var(--text-muted);margin-top:1px">prix client TTC</div></th>
+          <th style="width:110px;text-align:right">Net<div style="font-size:13px;font-weight:400;color:var(--text-muted);margin-top:1px">pour ton temps</div></th>
         </tr>
       </thead>
-      <tbody>${tarifRows3col}</tbody>
+      <tbody>${tarifRows}</tbody>
     </table>
     <div style="margin-top:10px;display:flex;justify-content:flex-end;max-width:880px">
       <button class="btn ghost" onclick="tarifReset()" style="font-size:13px">↺ Réinitialiser aux tarifs par défaut</button>

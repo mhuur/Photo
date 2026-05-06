@@ -49,7 +49,6 @@ Source : `index.html` (bloc `const DEFAULT_S = { ... };`).
     - **montant**: string _(default `"0"`)_
   - **declare**: boolean _(default `true`)_
   - **blackMode**: string _(default `"reduit"`)_
-  - **urssafPct**: string _(default `"22"`)_
   - **tarifHOverride**: string _(default `""`)_
   - **remisePct**: string _(default `"0"`)_
   - **notes**: string _(default `""`)_
@@ -107,6 +106,7 @@ Source : `index.html` (bloc `const DEFAULT_S = { ... };`).
     - **bic**: string _(default `""`)_
   - **clienteleType**: string _(default `"mixte"`)_
   - **logoUrl**: string _(default `""`)_
+  - **urssafPct**: string _(default `"22"`)_
 - **devis** _(object)_
 - **suivi** _(object)_
   - **entries** _(array (empty))_
@@ -124,6 +124,7 @@ Source : `index.html` (bloc `const DEFAULT_S = { ... };`).
   - **catalog**: string _(default `"<DEFAULT_CATALOG>"`)_
   - **heuresAnnuelles**: string _(default `"900"`)_
   - **facteurSecurite**: string _(default `"0"`)_
+  - **viewMode**: string _(default `"declare"`)_
 - **bin** _(object)_
   - **items** _(array (empty))_
 - **bugs** _(object)_
