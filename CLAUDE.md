@@ -123,6 +123,15 @@ Pour devis archivés sans `snapshotHtml` : `reconstructMissionFromSuivi(devisId)
 
 Logo unique partagé sur tous les devis (data URL inline, max ~800 KB). Migration au boot copie `S.mission.logoUrl` → `S.identite.logoUrl` (one-shot), puis vide le legacy. La preview `rDevisPreview` utilise le fallback `d.logoUrl || S.identite.logoUrl` pour préserver les snapshots archivés. Édité dans l'onglet Profil (`rPF` → `rLogoField()`).
 
+### URSSAF (`S.identite.urssafPct`) — source unique partagée
+
+Taux URSSAF micro-BNC unifié dans toute l'app (ex. "22" par défaut, "23.1" avec CFP). Lu via le helper `getUrssafPct(scope)` :
+- `scope = snapshot devis archivé` → préfère `scope.urssafPct` figé (immutable historique commercial)
+- `scope = S.mission` (mission en cours) ou `null` → retombe sur `S.identite.urssafPct`
+- Fallback final : 22
+
+**Plus jamais de `d.urssafPct ?? 22` ni `m.urssafPct ?? 22` dans du nouveau code** — utiliser `getUrssafPct(scope)`. Migration au boot remonte un urssafPct custom de `S.mission` vers `S.identite` puis `delete` le champ sur la mission EN COURS. `DEFAULT_S.mission.urssafPct` retiré : seul `S.identite.urssafPct` est canonique. Les snapshots devis archivés gardent leur taux figé partout (`suiviAdd`, `suiviUpdateSnapshot`, `majTrameStart`, `ensureLegacySnapshot`, backfill boot 3217). Si un nouveau point de création de snapshot apparaît : penser à figer `snapshotMission.urssafPct = String(S.identite?.urssafPct ?? "22")`.
+
 ### Corbeilles : `S.bin.items[]` + `S.suivi.bin.items[]` (séparées)
 
 **Deux corbeilles distinctes**, chacune avec sa rétention 30 récents et sa vue dédiée.
