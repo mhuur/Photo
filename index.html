@@ -82,17 +82,16 @@
   .sb-user-menu button svg{flex-shrink:0;width:18px;height:18px}
   .sb-user-menu-count{display:inline-block;font-size:10px;font-weight:600;color:var(--accent);background:rgba(99,102,241,.12);border:1px solid rgba(99,102,241,.30);border-radius:var(--radius-sm);padding:1px 5px;margin-left:6px;letter-spacing:.3px}
   .sb-user-menu-dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--warning);box-shadow:0 0 6px rgba(251,191,36,.6);margin-left:6px;vertical-align:middle}
-  /* Modale Mises à jour — changelog vulgarisé pour l'utilisateur */
-  .maj-modal{max-width:680px;max-height:80vh;display:flex;flex-direction:column}
-  .maj-modal .maj-list{flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:var(--space-xl);padding-right:6px;margin-top:var(--space-md)}
+  /* Vue Mises à jour — changelog vulgarisé pour l'utilisateur (onglet majlog) */
+  .maj-list{display:flex;flex-direction:column;gap:var(--space-xl);max-width:880px}
   .maj-entry{background:var(--surface);border:1px solid var(--border-soft);border-radius:var(--radius-lg);padding:var(--space-lg)}
   .maj-entry-head{display:flex;align-items:baseline;gap:var(--space-md);margin-bottom:var(--space-md);padding-bottom:var(--space-sm);border-bottom:1px solid var(--border-soft)}
   .maj-entry-date{font-size:11px;color:var(--text-muted);font-variant-numeric:tabular-nums;text-transform:uppercase;letter-spacing:.04em;flex-shrink:0}
-  .maj-entry-title{margin:0;font-size:15px;font-weight:600;color:var(--text)}
+  .maj-entry-title{margin:0;font-size:16px;font-weight:600;color:var(--text)}
   .maj-entry-items{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:var(--space-md)}
   .maj-entry-items li{display:flex;flex-direction:column;gap:4px;padding-left:var(--space-md);border-left:2px solid rgba(99,102,241,.30)}
   .maj-entry-items li strong{font-size:13px;font-weight:600;color:var(--text)}
-  .maj-entry-items li p{margin:0;font-size:12px;line-height:1.5;color:var(--text-muted)}
+  .maj-entry-items li p{margin:0;font-size:13px;line-height:1.55;color:var(--text-muted)}
   /* Trigger : avatar + label email à droite, full-width comme un tab */
   .sb-user-trigger{display:flex;align-items:center;gap:11px;width:100%;background:none;border:0;color:var(--text-muted);padding:10px 16px;text-align:left;cursor:pointer;font:inherit;font-size:13px;border-left:3px solid transparent;transition:background .12s,color .12s}
   .sb-user-trigger:hover{background:var(--surface);color:var(--text)}
@@ -8042,7 +8041,7 @@ function render() {
     return;
   }
   // owner / member → app normale
-  const renderers = { accueil: rAC, mission: rMS, profil: rPF, suivi: rSV, clients: rCL, tarifs: rCatalogue, achats: rAchats, compta: rCP, bugs: rBG, parametres: rParametres, templates: rTemplates };
+  const renderers = { accueil: rAC, mission: rMS, profil: rPF, suivi: rSV, clients: rCL, tarifs: rCatalogue, achats: rAchats, compta: rCP, bugs: rBG, parametres: rParametres, templates: rTemplates, majlog: rMAJ };
   const view = (renderers[tab] || (() => ""))();
   // Badge "owner" ou "membre" en bas de la sidebar
   const pendingCount = Object.keys(workspaceState.pendingRequests || {}).length;
@@ -8079,7 +8078,7 @@ function render() {
             <button type="button" role="menuitem" onclick="userMenuClose();setTab('profil')">${ICONS.user}<span>Profil</span></button>
             <button type="button" role="menuitem" onclick="userMenuClose();setTab('templates')">${ICONS.mail}<span>Templates</span></button>
             <button type="button" role="menuitem" onclick="userMenuClose();setTab('parametres')">${ICONS.settings}<span>Paramètres</span></button>
-            <button type="button" role="menuitem" onclick="userMenuClose();majLogModalToggle()">${ICONS.lightbulb}<span>Mises à jour${majLogHasUnread() ? ` <span class="sb-user-menu-dot" title="Nouvelles mises à jour"></span>` : ""}</span></button>
+            <button type="button" role="menuitem" onclick="userMenuClose();setTab('majlog')">${ICONS.lightbulb}<span>Mises à jour${majLogHasUnread() ? ` <span class="sb-user-menu-dot" title="Nouvelles mises à jour"></span>` : ""}</span></button>
             <button type="button" role="menuitem" onclick="userMenuClose();binModalToggle()">${ICONS.trash}<span>Corbeille${(() => { const n = (S.bin && S.bin.items && S.bin.items.length) || 0; return n > 0 ? ` <span class="sb-user-menu-count">${n}</span>` : ""; })()}</span></button>
             <button type="button" role="menuitem" onclick="userMenuClose();signOut()">${ICONS.logOut}<span>Se déconnecter</span></button>
           </div>
@@ -8098,7 +8097,6 @@ function render() {
     ${rBugLightbox()}
     ${rCgvSectionEditModal()}
     ${rBinModal()}
-    ${rMajLogModal()}
     ${rPrintTipModal()}
 `;
 }
@@ -8688,24 +8686,41 @@ const APP_CHANGELOG = [
   }
 ];
 
-// ▼ majLog — modale Mises à jour (changelog vulgarisé pour l'utilisateur).
-// Accessible via le menu Mon compte. Marque les nouveautés comme vues
-// (S.prefs.lastSeenMajVersion = id du plus récent) à l'ouverture, pour
-// retirer le badge « nouveau » du menu.
-let majLogModalOpen = false;
-window.majLogModalToggle = function() {
-  majLogModalOpen = !majLogModalOpen;
-  // À l'ouverture, on marque la dernière entrée comme vue.
-  if (majLogModalOpen && APP_CHANGELOG.length > 0) {
+// ▼ rMAJ — vue plein écran « Mises à jour » (changelog vulgarisé).
+// Accessible via le menu Mon compte (setTab('majlog')). Pas dans la sidebar
+// TABS — vue secondaire. À l'ouverture, on marque la dernière entrée comme
+// vue (S.prefs.lastSeenMajVersion) pour retirer le dot « nouveau » du menu.
+function rMAJ() {
+  if (APP_CHANGELOG.length > 0) {
     if (!S.prefs) S.prefs = {};
     const latest = APP_CHANGELOG[0].id;
     if (S.prefs.lastSeenMajVersion !== latest) {
       S.prefs.lastSeenMajVersion = latest;
-      save();
+      // Save asynchrone pour ne pas réentrer dans le render courant.
+      setTimeout(save, 0);
     }
   }
-  render();
-};
+  return `
+    <h1 class="page-title" style="display:flex;align-items:center;gap:10px">${ICO_SZ('lightbulb', 22)}<span>Mises à jour</span></h1>
+    <div class="hint" style="margin-bottom:var(--space-lg)">Ce qui a évolué dans l'application, du plus récent au plus ancien.</div>
+    <div class="maj-list">
+      ${APP_CHANGELOG.map(entry => `
+        <section class="maj-entry">
+          <header class="maj-entry-head">
+            <span class="maj-entry-date">${esc(dateFR(entry.date))}</span>
+            <h3 class="maj-entry-title">${esc(entry.title)}</h3>
+          </header>
+          <ul class="maj-entry-items">
+            ${entry.items.map(it => `
+              <li>
+                <strong>${esc(it.h)}</strong>
+                <p>${esc(it.b)}</p>
+              </li>`).join("")}
+          </ul>
+        </section>`).join("")}
+    </div>
+  `;
+}
 
 // Renvoie true s'il y a au moins une entrée plus récente que ce que l'user
 // a déjà ouvert. Sert à afficher un point « nouveau » sur l'icône menu.
@@ -8713,36 +8728,6 @@ function majLogHasUnread() {
   if (!APP_CHANGELOG.length) return false;
   const seen = (S.prefs && S.prefs.lastSeenMajVersion) || "";
   return seen !== APP_CHANGELOG[0].id;
-}
-
-function rMajLogModal() {
-  if (!majLogModalOpen) return "";
-  const stop = "event.stopPropagation();";
-  return `<div class="modal-overlay" onclick="if(event.target===this)majLogModalToggle()">
-    <div class="modal-card maj-modal" onclick="${stop}">
-      <div class="modal-title" style="display:flex;align-items:center;gap:8px">${ICO_SZ('lightbulb', 18)}<span>Mises à jour</span></div>
-      <div class="modal-sub">Ce qui a évolué dans l'application.</div>
-      <div class="maj-list">
-        ${APP_CHANGELOG.map(entry => `
-          <section class="maj-entry">
-            <header class="maj-entry-head">
-              <span class="maj-entry-date">${esc(dateFR(entry.date))}</span>
-              <h3 class="maj-entry-title">${esc(entry.title)}</h3>
-            </header>
-            <ul class="maj-entry-items">
-              ${entry.items.map(it => `
-                <li>
-                  <strong>${esc(it.h)}</strong>
-                  <p>${esc(it.b)}</p>
-                </li>`).join("")}
-            </ul>
-          </section>`).join("")}
-      </div>
-      <div class="modal-actions">
-        <button class="btn" onclick="majLogModalToggle()">Fermer</button>
-      </div>
-    </div>
-  </div>`;
 }
 
 function rCgvSectionEditModal() {
