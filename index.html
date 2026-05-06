@@ -3056,6 +3056,8 @@ if (S.mission && S.mission.ref && S.suivi && S.suivi.devis) {
     if (!dv || dv.snapshotMission || dv.ref !== S.mission.ref) continue;
     const sm = JSON.parse(JSON.stringify(S.mission));
     delete sm.revisesDevisId;
+    delete sm.majTrameDevisId;
+    delete sm.editDevisId;
     dv.snapshotMission = sm;
   }
 }
@@ -3280,7 +3282,8 @@ window.uiChoice = function(message, opts = {}) {
     _uiChoiceMap = choices.map(c => c.value);
     const choicesHtml = choices.map((c, i) => {
       const cls = c.kind === "danger" ? "btn-add-neon danger" : c.kind === "ghost" ? "btn-add-neon ghost" : "btn-add-neon";
-      return `<button class="${cls}" onclick="_uiChoicePick(${i})">${esc(c.label)}</button>`;
+      const tip = c.tooltip ? ` title="${esc(c.tooltip)}"` : "";
+      return `<button class="${cls}"${tip} onclick="_uiChoicePick(${i})">${esc(c.label)}</button>`;
     }).join("");
     const html = `<div class="modal-overlay ui-dialog-overlay" id="ui-dialog-overlay" onclick="if(event.target===this)_uiDialogClose(null)">
       <div class="modal-card modal-dialog modal-dialog-${kind}" role="dialog" aria-modal="true">
@@ -4032,8 +4035,10 @@ async function missionNew(presetClient) {
   m.contratHorsEtab = false;
   // Override tarif (legacy reconstruction) : spécifique au devis, pas config.
   m.tarifHOverride = "";
-  // Marker transient (cas reviseDevisStart pas finalisé) nettoyé
+  // Markers transients nettoyés (cas reviseDevisStart/editDevisStart/majTrameStart pas finalisés)
   delete m.revisesDevisId;
+  delete m.majTrameDevisId;
+  delete m.editDevisId;
   // Régénère la ref auto
   if (typeof recomputeRef === "function") recomputeRef();
   save();
@@ -4099,6 +4104,7 @@ async function missionCancel() {
   // Markers transients
   delete m.revisesDevisId;
   delete m.majTrameDevisId;
+  delete m.editDevisId;
   // Régénère la ref auto
   if (typeof recomputeRef === "function") recomputeRef();
   save();
@@ -4583,7 +4589,18 @@ window.devisActionMenu = async function(devisId) {
   const nextRev = Math.max(0, chainNextRevNum(devisId) - 1);
   const choices = [];
   if (check.ok) {
-    choices.push({ label: `Réviser → rev${nextRev}`, value: "revise", kind: "ghost" });
+    choices.push({
+      label: "Éditer",
+      value: "edit",
+      kind: "ghost",
+      tooltip: "Modifie ce devis EN PLACE sans créer de nouvelle version. Mêmes ref et dates conservées. À utiliser pour un correctif mineur (typo, oubli, mise à jour de format) qui ne change pas le sens du devis pour le client."
+    });
+    choices.push({
+      label: `Réviser → rev${nextRev}`,
+      value: "revise",
+      kind: "ghost",
+      tooltip: `Crée une nouvelle version (rev${nextRev}) de ce devis. La version actuelle reste accessible dans l'historique. À utiliser pour une modification substantielle (changement de prestation, prix, dates) qu'on veut formaliser comme une nouvelle proposition.`
+    });
   }
   choices.push({ label: "Imprimer", value: "print", kind: "ghost" });
   choices.push({ label: "Imprimer et envoyer", value: "printSend" });
@@ -4591,7 +4608,9 @@ window.devisActionMenu = async function(devisId) {
     title: "Devis", choices, cancelLabel: "Annuler"
   });
   if (!choice) return;
-  if (choice === "revise") {
+  if (choice === "edit") {
+    editDevisStart(devisId);
+  } else if (choice === "revise") {
     reviseDevisStart(devisId);
   } else if (choice === "print") {
     _pendingEnvoiPopup = { kind: "devis", devisId };
@@ -6973,6 +6992,8 @@ function formatRef(ref, type) {
 //   - Réviser en cours : rev = rev(target) + 1 (la nouvelle qui sera créée).
 function currentRevForPreview() {
   const m = S.mission;
+  // Édition en place : pas de bump, on garde la rev du devis édité.
+  if (m.editDevisId)     return computeRevisionNumber(m.editDevisId);
   if (m.majTrameDevisId) return computeRevisionNumber(m.majTrameDevisId);
   // Réviser : la prochaine rev créée portera chainNextRevNum (= max+1 dans
   // la chaîne, saute au-dessus si versions intermédiaires restaurées). Affichage
@@ -7602,6 +7623,61 @@ window.reviseDevisStart = async function(devisId) {
       "Devis ancien sans snapshot complet : reconstruction partielle.\n\n" +
       "Récupéré : " + (recovered.length ? recovered.join(", ") : "rien d'exploitable") + ".\n\n" +
       "Complète manuellement les lignes (matériel, cession, déplacement détaillé), les durées par poste si nécessaire, et autres champs avant d'enregistrer.",
+      { title: "Reconstruction partielle", kind: "warn" }
+    ), 50);
+  }
+};
+
+// ▼ editDevisStart — édition EN PLACE d'un devis sans bump de révision.
+// Charge le snapshotMission dans Mission, pose le marqueur transient
+// editDevisId. À la sauvegarde, suiviAdd détecte le marqueur et met à jour
+// le snapshot du même devisId (ref/dateEmission/chainId/revNum/factures
+// préservés). Cas d'usage : correction mineure (typo, oubli), pas une
+// nouvelle proposition commerciale. Si tu veux créer une nouvelle version,
+// utilise Réviser à la place.
+window.editDevisStart = async function(devisId) {
+  const check = canReviseDevis(devisId);
+  if (!check.ok) {
+    uiAlert(check.reason, { kind: "warn" });
+    return;
+  }
+  const dv = S.suivi.devis[devisId];
+  const hasDraft = !devisCurrentSuiviEntry()
+    && S.mission
+    && ((S.mission.client && (S.mission.client.id || S.mission.client.name))
+        || (S.mission.lignes && S.mission.lignes.length > 0));
+  if (hasDraft) {
+    const ok = await uiConfirm(
+      `Tu as un brouillon en cours dans Mission qui n'a pas été enregistré dans Suivi.\n\n` +
+      `Charger ${dv.ref || devisId} pour édition va écraser ce brouillon.`,
+      { title: "Brouillon en cours", confirmLabel: "Écraser et charger", kind: "warn" }
+    );
+    if (!ok) return;
+  }
+  let recovered = [];
+  if (dv.snapshotMission && !dv.legacyReconstructed) {
+    S.mission = JSON.parse(JSON.stringify(dv.snapshotMission));
+  } else {
+    const r = reconstructMissionFromSuivi(devisId, { mode: "edit" });
+    S.mission = r.mission;
+    recovered = r.recovered;
+  }
+  // Dates et ref figées (édition en place — aucune nouvelle proposition).
+  S.mission.ref = dv.ref || S.mission.ref;
+  if (!S.mission.objectDate || S.mission.objectDate > S.mission.dateEmission) {
+    S.mission.objectDate = S.mission.dateEmission;
+  }
+  S.mission.editDevisId = devisId;
+  delete S.mission.revisesDevisId;
+  delete S.mission.majTrameDevisId;
+  save();
+  tab = "mission";
+  render();
+  if (check.partial) {
+    setTimeout(() => uiAlert(
+      "Devis ancien sans snapshot complet : reconstruction partielle.\n\n" +
+      "Récupéré : " + (recovered.length ? recovered.join(", ") : "rien d'exploitable") + ".\n\n" +
+      "Complète manuellement les lignes avant d'enregistrer.",
       { title: "Reconstruction partielle", kind: "warn" }
     ), 50);
   }
@@ -9814,34 +9890,73 @@ window.suiviUpdateSnapshot = async function() {
   // que l'user le ré-édite.
   const snapMission = JSON.parse(JSON.stringify(m));
   delete snapMission.revisesDevisId;
+  delete snapMission.majTrameDevisId;
+  delete snapMission.editDevisId;
   e.snap.snapshotMission = snapMission;
 
-  // 3. Vérifie qu'il y a bien des entries Suivi pour ce devis. Si tout a été
-  // supprimé manuellement (ou si le devis a été enregistré avec un ancien flux
-  // qui ne créait pas d'entries), on les recrée pour que le devis apparaisse
-  // dans la liste Suivi.
+  // 3. Recalcule les entries Suivi (acompte / reste / débours) à partir des
+  // nouveaux montants. Conserve les statuts existants par classification
+  // d'échéance — un acompte déjà soldé reste soldé, idem refusé/annulé.
+  // Si aucune entry n'existe (devis legacy ou supprimées manuellement), on
+  // recrée tout en envoye.
   const existingEntries = S.suivi.entries.filter(en => en.devisId === e.id);
-  if (existingEntries.length === 0) {
-    const cat = (S.tarifs.catalog || DEFAULT_CATALOG).find(c => c.k === m.object);
-    const hoursTotal = (m.lignes || []).filter(l => l.type === "heures")
-      .reduce((s, l) => s + num(l.duree) * (l.unit === "j" ? HOURS_PER_DAY : 1), 0);
-    const date = m.objectDate || new Date().toISOString().slice(0, 10);
-    const client = m.client.name || "";
-    const prestation = cat ? cat.l : "";
-    const mkLine = (echeance, montant, heures) => ({
+  const oldStatus = { acompte: null, reste: null, frais: null };
+  const oldDate = (existingEntries[0] && existingEntries[0].date) || "";
+  for (const en of existingEntries) {
+    const c = suiviClassifyEcheance(en.echeance);
+    if (c && oldStatus[c] === null) oldStatus[c] = en.statut || "envoye";
+  }
+  S.suivi.entries = S.suivi.entries.filter(en => en.devisId !== e.id);
+  const cat = (S.tarifs.catalog || DEFAULT_CATALOG).find(c => c.k === m.object);
+  const hoursTotal = (m.lignes || []).filter(l => l.type === "heures")
+    .reduce((s, l) => s + num(l.duree) * (l.unit === "j" ? HOURS_PER_DAY : 1), 0);
+  const date = m.objectDate || oldDate || new Date().toISOString().slice(0, 10);
+  const client = m.client.name || "";
+  const prestation = cat ? cat.l : "";
+  const isDeclared = m.declare !== false;
+  const urssafPct = num(m.urssafPct ?? 22);
+  const tm = tauxMatos();
+  const tresoRatio = (t.tarifH > 0 && tm.tauxAvecSecurite > 0) ? (tm.tauxAvecSecurite / t.tarifH) : 0;
+  const mkLine = (echeance, montant, heures, statut) => {
+    const ursaf = isDeclared ? r2(montant * urssafPct / 100) : 0;
+    const tresorerie = r2(montant * tresoRatio);
+    const salaire = r2(montant - ursaf - tresorerie);
+    return {
       id: uid(), devisId: e.id, date, client, prestation,
       montant: montant.toFixed(2),
-      heures:  heures.toFixed(2),
+      heures: heures.toFixed(2),
       echeance,
       paiement: montant.toFixed(2),
-      ca: montant.toFixed(2),
-      salaire: "0", ursaf: "0", tresorerie: "0", frais: "0",
-      commentaires: "", statut: "envoye"
+      ca: isDeclared ? montant.toFixed(2) : "0.00",
+      salaire: salaire.toFixed(2),
+      ursaf: ursaf.toFixed(2),
+      tresorerie: tresorerie.toFixed(2),
+      frais: "0",
+      commentaires: "",
+      statut: statut || "envoye"
+    };
+  };
+  const acompte = mkLine("Acompte 30 %", t.acompte, hoursTotal * 0.30, oldStatus.acompte);
+  const reste = mkLine("Reste à payer 70 %", t.reste, hoursTotal * 0.70, oldStatus.reste);
+  S.suivi.entries.unshift(acompte, reste);
+  if (t.debours > 0) {
+    S.suivi.entries.unshift({
+      id: uid(), devisId: e.id, date, client, prestation,
+      montant: t.debours.toFixed(2),
+      heures: "0.00",
+      echeance: "Frais de débours",
+      paiement: t.debours.toFixed(2),
+      ca: "0.00", salaire: "0.00", ursaf: "0.00", tresorerie: "0.00",
+      frais: t.debours.toFixed(2),
+      commentaires: "",
+      statut: oldStatus.frais || "envoye"
     });
-    const acompte = mkLine("Acompte 30 %", t.acompte, hoursTotal * 0.30);
-    const reste   = mkLine("Reste à payer 70 %", t.reste, hoursTotal * 0.70);
-    S.suivi.entries.unshift(acompte, reste);
   }
+
+  // Édition en place : nettoie le marqueur transient pour ne pas le
+  // ré-injecter au prochain save (sinon le panneau devis-en-cours pense
+  // qu'on est encore en édition).
+  delete S.mission.editDevisId;
 
   save();
   render();
@@ -10743,6 +10858,8 @@ function missionStripForCompare(m) {
   delete x.dateEmission;
   delete x.ref;
   delete x.revisesDevisId;
+  delete x.majTrameDevisId;
+  delete x.editDevisId;
   delete x.objectDate;
   // Les ids des lignes peuvent différer si l'utilisateur a recréé une ligne
   // mais avec les mêmes champs ; on les neutralise pour ne pas induire de
