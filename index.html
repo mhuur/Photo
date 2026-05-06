@@ -1221,9 +1221,16 @@
   .devis-preview .dp-header-left{font-size:13px;color:var(--text);line-height:1.6;white-space:pre-wrap;padding-right:0;overflow-wrap:anywhere}
   .devis-preview .dp-header-left.empty{color:var(--text-dim);font-style:italic;font-size:13px}
   .devis-preview .dp-header-left:has(.dp-emetteur-name){white-space:normal}
-  .devis-preview .dp-header-left .dp-emetteur-name{font-weight:400;font-size:13px;color:var(--text);margin-bottom:1px}
-  .devis-preview .dp-header-left .dp-emetteur-profession{font-size:13px;color:var(--text-dim);margin-bottom:6px}
-  .devis-preview .dp-header-left .dp-emetteur-meta{margin-top:6px;font-size:12px;color:var(--text-dim);font-variant-numeric:tabular-nums}
+  .devis-preview .dp-header-left .dp-emetteur-name{font-weight:600;font-size:14px;color:var(--text);margin-bottom:1px;letter-spacing:.01em}
+  .devis-preview .dp-header-left .dp-emetteur-profession{font-size:12.5px;color:var(--text-dim);margin-bottom:0;font-style:italic}
+  /* 3 blocs distincts dans l'émetteur : Identité / Coordonnées / Mentions
+     légales. Espacement plus généreux entre eux pour aérer. Mentions
+     légales typo plus petite + couleur muted (info obligatoire mais ne
+     doit pas concurrencer le branding). */
+  .devis-preview .dp-header-left .dp-emetteur-section + .dp-emetteur-section{margin-top:10px}
+  .devis-preview .dp-header-left .dp-emetteur-contact{font-size:12px;color:var(--text);line-height:1.5}
+  .devis-preview .dp-header-left .dp-emetteur-legal{font-size:11px;color:var(--text-dim);line-height:1.4;padding-top:6px;border-top:1px solid var(--border-soft)}
+  .devis-preview .dp-header-left .dp-emetteur-meta{font-size:11px;color:var(--text-dim);font-variant-numeric:tabular-nums;margin:0}
   /* Mediateur conso block (B2C / mixte) */
   .devis-preview .dp-mediateur{margin-top:14px;padding:8px 12px;border:1px dashed var(--border);border-radius:6px;font-size:12px;color:var(--text-dim);line-height:1.5}
   .devis-preview .dp-mediateur-title{font-weight:400;color:var(--text-dim);font-size:12px;margin-bottom:3px}
@@ -1245,8 +1252,8 @@
   .devis-preview .dp-meta-block .ref{color:var(--text);font-weight:700;font-size:17px;font-variant-numeric:tabular-nums;margin-bottom:10px;letter-spacing:.01em}
   .devis-preview .dp-validity-mention{font-size:12px;color:var(--text-dim);margin-top:6px;line-height:1.4;max-width:240px;margin-left:auto}
   .devis-preview .dp-meta-block strong{color:var(--text);font-weight:700}
-  .devis-preview .dp-client-block{text-align:right;font-size:13px;color:var(--text);line-height:1.6;padding:0;min-width:220px;margin-top:0}
-  .devis-preview .dp-client-block .name{font-weight:400;font-size:13px;color:var(--text);display:block}
+  .devis-preview .dp-client-block{text-align:right;font-size:13px;color:var(--text);line-height:1.55;padding:0;min-width:220px;margin-top:0}
+  .devis-preview .dp-client-block .name{font-weight:600;font-size:14px;color:var(--text);display:block;letter-spacing:.01em;margin-bottom:2px}
   .devis-preview .dp-client-block .dp-client-meta{font-size:11px;color:var(--text-muted);margin-top:2px;font-variant-numeric:tabular-nums}
   /* Meta + client : hiérarchie typographique sans encadré */
   .devis-preview .dp-meta-block.dp-meta-box{padding:0;background:transparent;border:0;min-width:240px}
@@ -1364,11 +1371,9 @@
         font-family: -apple-system, "Segoe UI", "Helvetica Neue", Helvetica, Arial, sans-serif;
         font-size: 7pt; font-style: italic; color: #888;
       }
-      @bottom-center {
-        content: "Photographe à Nantes — disponible partout en France";
-        font-family: -apple-system, "Segoe UI", "Helvetica Neue", Helvetica, Arial, sans-serif;
-        font-size: 7pt; font-style: italic; color: #888;
-      }
+      /* Centre laissé vide volontairement : éviter le marketing en pied de
+         page d'un document commercial. Les mentions légales (SIRET, statut)
+         figurent déjà dans l'émetteur en haut de page. */
       @bottom-right {
         content: "Page " counter(page) " / " counter(pages);
         font-family: -apple-system, "Segoe UI", "Helvetica Neue", Helvetica, Arial, sans-serif;
@@ -1526,15 +1531,29 @@
     .view-devis-snapshot .dp-header-left:has(.dp-emetteur-name) { white-space: normal !important; }
     .devis-preview .dp-header-left .dp-emetteur-name,
     .view-devis-snapshot .dp-header-left .dp-emetteur-name {
-      font-weight: 400 !important; font-size: 9pt !important; color: #1a1a1a !important; margin-bottom: 0.5pt !important;
+      font-weight: 700 !important; font-size: 10pt !important; color: #1a1a1a !important; margin-bottom: 0.5pt !important; letter-spacing: 0.01em !important;
     }
     .devis-preview .dp-header-left .dp-emetteur-profession,
     .view-devis-snapshot .dp-header-left .dp-emetteur-profession {
-      font-size: 9pt !important; color: #888 !important; margin-bottom: 4pt !important;
+      font-size: 8.5pt !important; color: #888 !important; margin-bottom: 0 !important; font-style: italic !important;
+    }
+    /* 3 blocs distincts en print aussi */
+    .devis-preview .dp-header-left .dp-emetteur-section + .dp-emetteur-section,
+    .view-devis-snapshot .dp-header-left .dp-emetteur-section + .dp-emetteur-section {
+      margin-top: 6pt !important;
+    }
+    .devis-preview .dp-header-left .dp-emetteur-contact,
+    .view-devis-snapshot .dp-header-left .dp-emetteur-contact {
+      font-size: 8.5pt !important; color: #1a1a1a !important; line-height: 1.45 !important;
+    }
+    .devis-preview .dp-header-left .dp-emetteur-legal,
+    .view-devis-snapshot .dp-header-left .dp-emetteur-legal {
+      font-size: 7pt !important; color: #666 !important; line-height: 1.4 !important;
+      padding-top: 4pt !important; border-top: 0.5pt solid #d0d0d0 !important;
     }
     .devis-preview .dp-header-left .dp-emetteur-meta,
     .view-devis-snapshot .dp-header-left .dp-emetteur-meta {
-      margin-top: 3pt !important; font-size: 7pt !important; color: #666 !important;
+      margin: 0 !important; font-size: 7pt !important; color: #666 !important;
     }
     /* Mediateur conso (print): visible if filled, hidden if empty (don't print warning) */
     .devis-preview .dp-mediateur, .view-devis-snapshot .dp-mediateur {
@@ -1620,7 +1639,8 @@
       border: 0 !important; padding: 0 !important; margin-top: 8pt !important; background: transparent !important;
     }
     .devis-preview .dp-client-label, .view-devis-snapshot .dp-client-label {
-      font-size: 7pt !important; color: #888 !important; font-weight: 400 !important; margin-bottom: 2pt !important;
+      font-size: 7pt !important; color: #888 !important; font-weight: 600 !important; margin-bottom: 3pt !important;
+      text-transform: uppercase !important; letter-spacing: 0.06em !important;
     }
     .devis-preview .dp-validity-mention, .view-devis-snapshot .dp-validity-mention {
       font-size: 7pt !important;
@@ -1634,9 +1654,11 @@
       color: #1a1a1a !important;
     }
     .devis-preview .dp-client-block .name, .view-devis-snapshot .dp-client-block .name {
-      font-weight: 400 !important;
-      font-size: 9pt !important;
+      font-weight: 700 !important;
+      font-size: 10pt !important;
       color: #1a1a1a !important;
+      letter-spacing: 0.01em !important;
+      margin-bottom: 1.5pt !important;
     }
 
     /* === OBJET === */
@@ -4865,24 +4887,36 @@ function genHeaderEmetteur(identite, photographeRichtext) {
   }
   const displayName = (id.denomination || `${id.prenom || ""} ${id.nom || ""}`.trim()) || "—";
   const cityLine = [id.cp, id.ville].filter(Boolean).join(" ").trim();
+  // Mentions légales : statut + SIRET + APE + RCS + capital. Reléguées en
+  // dernier bloc, plus discrètes (cf charte des outils pros : ces infos
+  // sont obligatoires mais ne doivent pas concurrencer le branding).
   const meta = [];
-  const isEIish = id.formeJuridique === "ei" || id.formeJuridique === "micro-bnc";
-  meta.push(statusLabel(id));            // ex: "Micro-entrepreneur" ou "Micro-entrepreneur · EI"
+  meta.push(statusLabel(id));
   if (id.siret) meta.push("SIRET " + formatSiret(id.siret));
   if (id.ape)   meta.push("APE " + id.ape);
   if (id.rcs)   meta.push("RCS " + id.rcs);
   if (id.capitalSocial) meta.push("Capital " + fmt(id.capitalSocial));
-  const lines = [
+  // 3 blocs visuels distincts pour aérer : Identité / Coordonnées / Mentions.
+  const identityBlock = [
     `<div class="dp-emetteur-name">${esc(displayName)}</div>`,
-    id.profession ? `<div class="dp-emetteur-profession">${esc(id.profession)}</div>` : "",
+    id.profession ? `<div class="dp-emetteur-profession">${esc(id.profession)}</div>` : ""
+  ].filter(Boolean).join("");
+  const contactBlock = [
     id.adresse   ? `<div>${esc(id.adresse)}</div>`   : "",
     cityLine     ? `<div>${esc(cityLine)}</div>`     : "",
     id.email     ? `<div>${esc(id.email)}</div>`     : "",
     id.telephone ? `<div>${esc(id.telephone)}</div>` : "",
-    id.siteWeb   ? `<div>${esc(id.siteWeb)}</div>`   : "",
-    meta.length  ? `<div class="dp-emetteur-meta">${meta.map(esc).join(" · ")}</div>` : ""
+    id.siteWeb   ? `<div>${esc(id.siteWeb)}</div>`   : ""
+  ].filter(Boolean).join("");
+  const legalBlock = meta.length
+    ? `<div class="dp-emetteur-meta">${meta.map(esc).join(" · ")}</div>`
+    : "";
+  const sections = [
+    identityBlock ? `<div class="dp-emetteur-section dp-emetteur-id">${identityBlock}</div>` : "",
+    contactBlock  ? `<div class="dp-emetteur-section dp-emetteur-contact">${contactBlock}</div>` : "",
+    legalBlock    ? `<div class="dp-emetteur-section dp-emetteur-legal">${legalBlock}</div>` : ""
   ].filter(Boolean);
-  return lines.join("");
+  return sections.join("");
 }
 
 // Returns the mediateur conso block HTML (or empty string if not applicable).
@@ -5240,7 +5274,7 @@ function rDevisPreview() {
 
     <div class="dp-page-footer-preview" aria-hidden="true">
       <span class="lft">Original — ne tient pas lieu de facture</span>
-      <span class="ctr">Photographe à Nantes — disponible partout en France</span>
+      <span class="ctr"></span>
       <span class="rgt">Page 1 / N</span>
     </div>
   </div>`;
