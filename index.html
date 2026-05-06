@@ -1325,12 +1325,17 @@
 
   /* Payment info: right-aligned column, same width as totals, all stacked vertically */
   .devis-preview .dp-payment-info{margin-top:24px;padding-top:14px;border-top:1px solid var(--border-light);max-width:340px;margin-left:auto;width:100%}
-  .devis-preview .dp-payment-info h4{margin:0 0 12px;border:0;padding:0;font-size:12px;font-weight:400;color:var(--text-dim)}
-  .devis-preview .dp-payment-block{font-size:13px;line-height:1.6;color:var(--text)}
-  .devis-preview .dp-paiement-line{display:flex;justify-content:space-between;align-items:baseline;padding:5px 0;font-size:13px;color:var(--text)}
+  .devis-preview .dp-payment-info h4{margin:0 0 12px;border:0;padding:0;font-size:11px;font-weight:600;color:var(--text-dim);text-transform:uppercase;letter-spacing:.06em}
+  /* Timeline échéances : padding-left + border-left vertical sur le bloc
+     échéances (.dp-payment-block sans .dp-bank). Chaque .dp-paiement-line
+     porte un bullet ::before qui chevauche la ligne verticale. */
+  .devis-preview .dp-payment-block:not(.dp-bank){font-size:13px;line-height:1.6;color:var(--text);position:relative;padding-left:18px;border-left:1.5px solid var(--border-light);margin-left:2px}
+  .devis-preview .dp-payment-block.dp-bank{font-size:13px;line-height:1.6;color:var(--text)}
+  .devis-preview .dp-paiement-line{display:flex;justify-content:space-between;align-items:baseline;padding:5px 0;font-size:13px;color:var(--text);position:relative}
+  .devis-preview .dp-payment-block:not(.dp-bank) > .dp-paiement-line::before{content:"";position:absolute;left:-22px;top:11px;width:8px;height:8px;border-radius:50%;background:var(--text-dim);border:2px solid var(--surface)}
   .devis-preview .dp-paiement-line .lbl{color:var(--text)}
   .devis-preview .dp-paiement-line .pct{color:var(--text-dim);font-size:12px;margin-left:2px}
-  .devis-preview .dp-paiement-line .amt{font-variant-numeric:tabular-nums;font-weight:400}
+  .devis-preview .dp-paiement-line .amt{font-variant-numeric:tabular-nums;font-weight:600}
   .devis-preview .dp-paiement-line.dp-delai{margin-top:8px;padding-top:8px;border-top:1px dashed var(--border-soft);color:var(--text-dim);font-size:12px}
   .devis-preview .dp-paiement-line.dp-delai .lbl{color:var(--text-dim);font-size:12px;font-weight:400}
   .devis-preview .dp-paiement-line.dp-delai .amt{font-weight:400;color:var(--text);font-variant-numeric:normal}
@@ -1772,12 +1777,19 @@
       font-weight: 700 !important;
       padding: 8pt 10pt !important;
       margin: 4pt 0 0 !important;
-      border-top: 1.5pt solid #1a1a1a !important;
+      border-top: 1.5pt solid #1e3a8a !important;
       color: #1a1a1a !important;
       background: #f5f5f5 !important;
       border-radius: 3pt !important;
       -webkit-print-color-adjust: exact !important;
       print-color-adjust: exact !important;
+    }
+    /* Accent couleur (bleu marine sobre) sur le montant clé du devis : la
+       somme à payer ressort visuellement sans casser le caractère B&W
+       global. Spécificité 0,4,2 > règle universelle .devis-preview *. */
+    .devis-preview .dp-totals .dp-line.grand .amt,
+    .view-devis-snapshot .dp-totals .dp-line.grand .amt {
+      color: #1e3a8a !important;
     }
     .devis-preview .dp-totals .dp-line.grand .lbl, .view-devis-snapshot .dp-totals .dp-line.grand .lbl,
     .devis-preview .dp-totals .dp-line.grand .amt, .view-devis-snapshot .dp-totals .dp-line.grand .amt {
@@ -1927,13 +1939,39 @@
       border: 0 !important;
       padding: 0 !important;
       font-size: 7pt !important;
-      font-weight: 400 !important;
+      font-weight: 600 !important;
       color: #888 !important;
+      text-transform: uppercase !important;
+      letter-spacing: 0.06em !important;
     }
     .devis-preview .dp-bank, .view-devis-snapshot .dp-bank {
       margin-top: 8pt !important;
       padding-top: 6pt !important;
       border-top: 0.3pt dashed #bbb !important;
+    }
+    /* Timeline échéances en print : ligne verticale + bullets pour chaque
+       étape de paiement. Reste B&W (palette grise). */
+    .devis-preview .dp-payment-block:not(.dp-bank), .view-devis-snapshot .dp-payment-block:not(.dp-bank) {
+      position: relative !important;
+      padding-left: 12pt !important;
+      border-left: 1pt solid #bbb !important;
+      margin-left: 1.5pt !important;
+    }
+    .devis-preview .dp-payment-block:not(.dp-bank) > .dp-paiement-line, .view-devis-snapshot .dp-payment-block:not(.dp-bank) > .dp-paiement-line {
+      position: relative !important;
+    }
+    .devis-preview .dp-payment-block:not(.dp-bank) > .dp-paiement-line::before, .view-devis-snapshot .dp-payment-block:not(.dp-bank) > .dp-paiement-line::before {
+      content: "" !important;
+      position: absolute !important;
+      left: -16pt !important;
+      top: 5pt !important;
+      width: 5pt !important;
+      height: 5pt !important;
+      border-radius: 50% !important;
+      background: #1a1a1a !important;
+      border: 1.5pt solid #fff !important;
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
     }
     .devis-preview .dp-paiement-line, .view-devis-snapshot .dp-paiement-line {
       display: flex !important;
@@ -1951,7 +1989,7 @@
     }
     .devis-preview .dp-paiement-line .amt, .view-devis-snapshot .dp-paiement-line .amt {
       font-variant-numeric: tabular-nums !important;
-      font-weight: 400 !important;
+      font-weight: 600 !important;
       color: #1a1a1a !important;
     }
     .devis-preview .dp-payment-text, .view-devis-snapshot .dp-payment-text {
@@ -2098,11 +2136,11 @@
     /* CGV body: 2 cols, sections inside columns. flex:1 to fill page between header and footer */
     .devis-preview .dp-cgv-body, .view-devis-snapshot .dp-cgv-body {
       column-count: 2 !important;
-      column-gap: 14pt !important;
+      column-gap: 16pt !important;
       column-rule: 0.3pt solid #d8d8d8 !important;
       column-fill: balance !important;
-      font-size: 8.5pt !important;
-      line-height: 1.4 !important;
+      font-size: 9pt !important;
+      line-height: 1.5 !important;
       color: #1a1a1a !important;
       text-align: justify !important;
       hyphens: auto !important;
@@ -2116,18 +2154,18 @@
     .devis-preview .dp-cgv-body .cgv-paragraph, .view-devis-snapshot .dp-cgv-body .cgv-paragraph {
       column-span: all !important;
       -webkit-column-span: all !important;
-      margin: 0 0 5pt !important;
-      font-size: 8.5pt !important;
-      line-height: 1.4 !important;
+      margin: 0 0 7pt !important;
+      font-size: 9pt !important;
+      line-height: 1.5 !important;
       color: #1a1a1a !important;
       text-align: justify !important;
       font-style: normal !important;
     }
     /* Numbered section: bold inline title + body, same typography as preamble */
     .devis-preview .dp-cgv-body .cgv-section, .view-devis-snapshot .dp-cgv-body .cgv-section {
-      margin: 0 0 4pt !important;
-      font-size: 8.5pt !important;
-      line-height: 1.4 !important;
+      margin: 0 0 7pt !important;
+      font-size: 9pt !important;
+      line-height: 1.5 !important;
       color: #1a1a1a !important;
       text-align: justify !important;
       break-inside: avoid !important;
@@ -2136,6 +2174,7 @@
     .devis-preview .dp-cgv-body .cgv-section-title, .view-devis-snapshot .dp-cgv-body .cgv-section-title {
       font-weight: 700 !important;
       color: #1a1a1a !important;
+      letter-spacing: 0.005em !important;
     }
     /* CGV mentions footer — pinned at bottom via flex parent + margin-top auto-ish */
     .devis-preview .dp-cgv-mentions, .view-devis-snapshot .dp-cgv-mentions {
