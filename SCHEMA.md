@@ -50,6 +50,9 @@ Source : `index.html` (bloc `const DEFAULT_S = { ... };`).
   - **declare**: boolean _(default `true`)_
   - **blackMode**: string _(default `"fixe"`)_
   - **tarifHOverride**: string _(default `""`)_
+  - **arrondi** _(object)_
+    - **active**: boolean _(default `false`)_
+    - **precision**: string _(default `"0.01"`)_
   - **remisePct**: string _(default `"0"`)_
   - **notes**: string _(default `""`)_
   - **contratHorsEtab**: boolean _(default `false`)_

@@ -2953,6 +2953,7 @@ const DEFAULT_S = {
     declare: true,
     blackMode: "fixe",
     tarifHOverride: "",
+    arrondi: { active: false, precision: "0.01" },
     remisePct: "0",
     notes: "",
     contratHorsEtab: false,
@@ -3301,6 +3302,10 @@ if (S.mission) {
       // num() pas encore déclaré ici → on prend la valeur string telle quelle
       S.identite.remiseNoirePct = String(S.identite.urssafPct ?? "22");
     }
+  }
+  // Init arrondi (nouveau champ) — désactivé par défaut, précision centime
+  if (S.mission && (!S.mission.arrondi || typeof S.mission.arrondi !== "object")) {
+    S.mission.arrondi = { active: false, precision: "0.01" };
   }
   recomputeRef();
 }
@@ -4132,11 +4137,33 @@ function upd(path, val) {
     refreshRefDisplay();
   }
   save();
-  if (path.startsWith("mission.prep") || path.startsWith("mission.prod") || path.startsWith("mission.postprod") || path.startsWith("mission.deplacement") || path.startsWith("mission.autres") || path.startsWith("mission.lignes") || path === "mission.remisePct" || path === "mission.object" || path === "mission.objectText" || path === "mission.paiement.margeAvance" || path === "identite.urssafPct" || path === "identite.remiseNoirePct" || path === "mission.blackMode" || path === "mission.dureeValidite" || path === "mission.tarifHOverride") {
+  if (path.startsWith("mission.prep") || path.startsWith("mission.prod") || path.startsWith("mission.postprod") || path.startsWith("mission.deplacement") || path.startsWith("mission.autres") || path.startsWith("mission.lignes") || path === "mission.remisePct" || path === "mission.object" || path === "mission.objectText" || path === "mission.paiement.margeAvance" || path === "identite.urssafPct" || path === "identite.remiseNoirePct" || path === "mission.blackMode" || path === "mission.dureeValidite" || path === "mission.tarifHOverride" || path === "mission.arrondi.active" || path === "mission.arrondi.precision") {
     refreshTotals();
   }
 }
 window.upd = upd;
+
+// ▼ updArrondi — active/désactive l'arrondi global du devis. En option C
+// (cf APP_CHANGELOG), chaque poste (heures, matériel, cession, déplacement)
+// est arrondi à la précision choisie ; la somme tombe juste par construction.
+function updArrondi(active) {
+  if (!S.mission.arrondi) S.mission.arrondi = { active: false, precision: "0.01" };
+  S.mission.arrondi.active = !!active;
+  save();
+  refreshTotals();
+  render();
+}
+window.updArrondi = updArrondi;
+
+// ▼ updArrondiPrecision — précision : "0.01" centime / "0.10" dixième / "1" euro / "10" dizaine
+function updArrondiPrecision(precision) {
+  if (!["0.01","0.10","1","10"].includes(precision)) return;
+  if (!S.mission.arrondi) S.mission.arrondi = { active: false, precision: "0.01" };
+  S.mission.arrondi.precision = precision;
+  save();
+  refreshTotals();
+}
+window.updArrondiPrecision = updArrondiPrecision;
 
 // Clamp remise input to [0, max]. Called by the Remise input.
 // If user types over max, force it back to max immediately.
@@ -8347,6 +8374,13 @@ function delaiPaiementLabel(k) {
 // ▼ totals — calcul HT/TVA/TTC, brut/net, débours, marge avance
 function totals() {
   const d = S.mission;
+  // Arrondi (option C) — chaque poste est arrondi à la précision voulue.
+  // La somme de multiples étant un multiple, le total HT tombe juste par
+  // construction. Inactif (centime "0.01") = comportement standard r2().
+  const _arr = d.arrondi || { active: false, precision: "0.01" };
+  const _arrPrec = num(_arr.precision) || 0.01;
+  const _arrActive = !!_arr.active && _arrPrec > 0.01;
+  const roundP = (v) => _arrActive ? Math.round(num(v) / _arrPrec) * _arrPrec : r2(v);
   // Hourly rate logic. The catalog price `cat.p` is the photographer's gross billed price
   // (CA déclaré, URSSAF incluse). For French auto-entrepreneur, URSSAF = X% du CA :
   //   net before matos = gross × (1 - URSSAF%)
@@ -8408,14 +8442,15 @@ function totals() {
       totalHeures = r2(totalHeures + h);
       heuresHList.push(h);
     } else if (l.type === "cession") {
-      const p = r2(num(l.prix));
+      // Cession : prix forfaitaire facturé → arrondi à la précision.
+      const p = roundP(num(l.prix));
       materielPrincipalFinal = r2(materielPrincipalFinal + p);
       totalPrincipalBase = r2(totalPrincipalBase + p);
       totalAcompteMateriel = r2(totalAcompteMateriel + p);
     } else if (l.type === "materiel") {
-      const p = r2(num(l.prix));
+      const p = r2(num(l.prix)); // base au centime près pour les calculs intermédiaires
       if (l.devis === "debours") {
-        // Débours: hors CA, no markup. Acompte → débours bucket; Fact.Direct → its own bucket.
+        // Débours : montant refacturé au centime (pas d'arrondi spécial — feuille séparée).
         if (l.paiementType === "fact-direct") {
           totalFactDirect = r2(totalFactDirect + p);
         } else {
@@ -8424,8 +8459,9 @@ function totals() {
         }
       } else {
         // Principal: apply the markup formula (avance first, then URSSAF inverse)
+        // Le montant final facturé (info.amount) est arrondi à la précision.
         const info = ligneDisplayInfo(l.devis, l.paiementType, l.prix, margeAvancePct, margeUrssafPct, false);
-        materielPrincipalFinal = r2(materielPrincipalFinal + info.amount);
+        materielPrincipalFinal = r2(materielPrincipalFinal + roundP(info.amount));
         totalPrincipalBase = r2(totalPrincipalBase + p);
         totalAvanceMontant = r2(totalAvanceMontant + info.avanceAmt);
         totalUrssafMontant = r2(totalUrssafMontant + info.urssafAmt);
@@ -8451,7 +8487,8 @@ function totals() {
   let deplFinal = depl;
   if (depl > 0 && deplGoesToPrincipal) {
     const dInfo = ligneDisplayInfo("principal", d.deplacement.paiementType, depl, margeAvancePct, margeUrssafPct, false);
-    deplFinal = dInfo.amount;
+    // Déplacement principal facturé → arrondi à la précision.
+    deplFinal = roundP(dInfo.amount);
     totalPrincipalBase = r2(totalPrincipalBase + depl);
     totalAvanceMontant = r2(totalAvanceMontant + dInfo.avanceAmt);
     totalUrssafMontant = r2(totalUrssafMontant + dInfo.urssafAmt);
@@ -8472,9 +8509,10 @@ function totals() {
     tarifHEff = r2(tarifH + deplPerHour);
   }
   // Heures amount (per-ligne rounding for stable totals)
+  // Chaque ligne d'heures est arrondie à la précision voulue (option C).
   let heuresAmount = 0;
   for (const h of heuresHList) {
-    heuresAmount = r2(heuresAmount + r2(h * tarifHEff));
+    heuresAmount = r2(heuresAmount + roundP(h * tarifHEff));
   }
   const lignesAmount = r2(heuresAmount + materielPrincipalFinal);
   if (deplGoesToDebours && d.deplacement.paiementType !== "fact-direct") debours = r2(debours + depl);
@@ -8487,7 +8525,10 @@ function totals() {
   const deplShownAsLine = deplGoesToPrincipal && (deplAfficheMode === "afficher" || (deplAfficheMode === "lisser" && totalHeures === 0));
   const effectiveDeplMode = deplShownAsLine ? "principal" : (deplLisser ? "lisser" : deplMode);
   const subtotal = r2(lignesAmount + (deplShownAsLine ? deplFinal : 0));
-  const remise = r2(subtotal * num(d.remisePct) / 100);
+  // Remise arrondie à la précision pour que (subtotal − remise) reste un
+  // multiple de la précision : sinon le total final pourrait ressortir avec
+  // des centimes alors que tous les postes sont ronds.
+  const remise = roundP(subtotal * num(d.remisePct) / 100);
   const total = r2(subtotal - remise);
   // Acompte suggested % : pourcentage minimum à charger en acompte pour couvrir
   // les items marqués « acompte » (cession + matériel acompte + déplacement
@@ -9224,6 +9265,21 @@ function rBinModal() {
 // l'utilisateur. Plus récent en premier. id = clé stable, sert au "lu/non-lu".
 // Format des items : { h: titre court, b: explication 1-3 phrases }.
 const APP_CHANGELOG = [
+  {
+    id: "2026-05-arrondi-devis",
+    date: "2026-05-06",
+    title: "Arrondir le devis aux centimes, dixièmes, euros ou dizaines",
+    items: [
+      {
+        h: "Toggle « Arrondir le devis ? » dans Mission > Majorations & paiements",
+        b: "Pour les clients qui demandent des prix ronds, un toggle Oui/Non en tête de la section Ajustements. Si Oui, choix de la précision : Centime / Dixième / Euro / Dizaine. Réglage par devis (S.mission.arrondi), figé dans le snapshot à l'archivage."
+      },
+      {
+        h: "Chaque poste arrondi à la précision voulue",
+        b: "Heures, matériel, cession, déplacement et remise commerciale sont tous arrondis à la précision choisie. Le total HT tombe juste par construction (somme de multiples = multiple). Précision « Centime » = comportement standard, autres précisions appliquent l'arrondi visible. Les snapshots devis archivés conservent leur mode arrondi figé (immutable)."
+      }
+    ]
+  },
   {
     id: "2026-05-tarif-au-black",
     date: "2026-05-06",
@@ -11138,8 +11194,27 @@ function rDevisSectionAjustements() {
   const d = S.mission;
   const declare = d.declare !== false;
   const ri = computeRemiseInfo();
+  const arr = d.arrondi || { active: false, precision: "0.01" };
+  const arrActive = !!arr.active;
+  const arrPrecision = arr.precision || "0.01";
 
   return `
+    <h5>Arrondi du devis</h5>
+    <div class="presta-status-row">
+      <div class="seg seg-neon">
+        <button class="${!arrActive?"on ok":""}" onclick="updArrondi(false)" title="Pas d'arrondi spécial — montants au centime près">${ICO_SZ('check', 14)} Non</button>
+        <button class="${arrActive?"on warn":""}" onclick="updArrondi(true)" title="Arrondir tous les postes à la précision choisie pour un total propre">${ICO_SZ('circleFilled', 12)} Oui</button>
+      </div>
+      ${arrActive ? `<div class="seg seg-neon violet" title="Précision d'arrondi appliquée à chaque poste">
+        <button class="${arrPrecision==='0.01'?'on':''}" onclick="updArrondiPrecision('0.01')">Centime</button>
+        <button class="${arrPrecision==='0.10'?'on':''}" onclick="updArrondiPrecision('0.10')">Dixième</button>
+        <button class="${arrPrecision==='1'?'on':''}" onclick="updArrondiPrecision('1')">Euro</button>
+        <button class="${arrPrecision==='10'?'on':''}" onclick="updArrondiPrecision('10')">Dizaine</button>
+      </div>` : ""}
+    </div>
+    ${arrActive && arrPrecision !== "0.01" ? `<div class="hint" style="margin:8px 0 14px;color:var(--text-muted)">${ICO_SZ('info', 13)} Chaque ligne du devis (heures, matériel, cession, déplacement) est arrondie à <strong>${arrPrecision === "10" ? "10 €" : arrPrecision === "1" ? "1 €" : arrPrecision === "0.10" ? "10 centimes" : "1 centime"}</strong> près. Le total HT tombe juste par construction.</div>` : ""}
+
+    <h5>Remise &amp; URSSAF</h5>
     <div class="row">
       <div class="field" style="max-width:200px">
         <label>Remise</label>
