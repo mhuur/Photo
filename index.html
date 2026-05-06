@@ -8992,6 +8992,29 @@ function rBinModal() {
 // Format des items : { h: titre court, b: explication 1-3 phrases }.
 const APP_CHANGELOG = [
   {
+    id: "2026-05-catalogue-refonte",
+    date: "2026-05-06",
+    title: "Catalogue revu : ajout, suppression, descriptions, vue Déclaré/Au black",
+    items: [
+      {
+        h: "Toggle Déclaré / Au black + colonne URSSAF €/h",
+        b: "L'onglet Catalogue se met dans la même langue que la section Mission. Un toggle néon (vert Déclaré / orange Au black) en tête de page bascule la vue. En mode Déclaré, une colonne URSSAF €/h apparaît entre le tarif et le coût matériel, pour montrer la décomposition complète : Tarif − URSSAF − Coût matériel = Net qui te reste. En mode Au black, la colonne URSSAF disparaît (puisque tu n'en payes pas)."
+      },
+      {
+        h: "Ajout, suppression et réorganisation des prestations",
+        b: "Bouton « Nouvelle prestation » néon en haut à droite pour étoffer ton catalogue à la volée. Icône poubelle au bout de chaque ligne pour supprimer (avec toast Undo 5 s en bas-droite si tu te trompes). Une poignée à gauche permet de glisser-déposer pour réorganiser l'ordre."
+      },
+      {
+        h: "Description par prestation (sous le libellé)",
+        b: "Sous chaque libellé, un champ « Description (facultatif) » te permet de préciser ce qu'inclut la prestation (durée type, nombre de photos livrées, retouches, etc.). Persisté avec le reste du catalogue."
+      },
+      {
+        h: "URSSAF unifié dans toute l'app",
+        b: "Le taux URSSAF (22 % par défaut) devient une donnée d'identité partagée : modifiable depuis Mission > Ajustements OU depuis le Catalogue, c'est la même valeur partout. Les devis déjà archivés conservent leur taux d'origine figé (immutable)."
+      }
+    ]
+  },
+  {
     id: "2026-05-historique-modales-v2",
     date: "2026-05-06",
     title: "Historique simplifié + style néon partout",
