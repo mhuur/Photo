@@ -1248,12 +1248,15 @@
   .catalog-remise-field{display:flex;align-items:center;gap:var(--space-sm)}
   .catalog-remise-field label{font-size:13px;color:var(--text-muted);display:flex;align-items:center;gap:6px;margin:0;white-space:nowrap}
   .catalog-remise-range{font-size:12px;color:var(--text-dim);font-weight:normal;font-variant-numeric:tabular-nums}
-  /* Colonne Cible TTC (saisie principale, bordurée) */
+  /* Colonne Cible TTC (saisie principale — input clairement éditable, bordurée) */
   .catalog-table th.catalog-th-cell-cible,
-  .catalog-table td.cible-cell{border-left:1px solid rgba(74,158,255,.20);border-right:1px solid rgba(74,158,255,.20);background:rgba(74,158,255,.025)}
+  .catalog-table td.cible-cell{border-left:1px solid rgba(74,158,255,.20);border-right:1px solid rgba(74,158,255,.20);background:rgba(74,158,255,.04)}
   .catalog-table td.cible-cell{text-align:right;padding:6px 10px}
-  .catalog-table td.cible-cell .tr-tarif-input{font-size:14px;font-weight:700;color:#7eb8ff;text-shadow:0 0 4px rgba(74,158,255,.25)}
-  .catalog-table td.cible-cell .tarif-input-wrap .unit{color:var(--text-muted);font-weight:600}
+  .catalog-table td.cible-cell .tr-tarif-input{font-size:14px;font-weight:700;color:#7eb8ff;width:80px;background:rgba(0,0,0,.30);border:1px solid rgba(74,158,255,.45);border-radius:6px;padding:4px 10px;text-shadow:0 0 4px rgba(74,158,255,.25)}
+  .catalog-table td.cible-cell .tr-tarif-input:hover{border-color:var(--primary);background:rgba(74,158,255,.10);box-shadow:0 0 8px rgba(74,158,255,.18)}
+  .catalog-table td.cible-cell .tr-tarif-input:focus{outline:none;border-color:var(--primary);background:rgba(74,158,255,.12);box-shadow:inset 0 0 0 1px rgba(74,158,255,.30),0 0 12px rgba(74,158,255,.40),0 0 24px rgba(74,158,255,.15)}
+  .catalog-table td.cible-cell .tarif-input-wrap{gap:6px}
+  .catalog-table td.cible-cell .tarif-input-wrap .unit{color:#7eb8ff;font-weight:600;font-size:12px}
   /* Colonne Tarif final (déclaré ou au black, dynamique) */
   .catalog-table td.tarif-final-cell{font-variant-numeric:tabular-nums;text-align:right;font-weight:700;font-size:14px;padding-right:14px}
   .catalog-table td.tarif-final-cell.decl{color:#7eb8ff;text-shadow:0 0 4px rgba(74,158,255,.2)}
@@ -6065,6 +6068,20 @@ function tarifToggleDesc(k) {
   });
 }
 window.tarifToggleDesc = tarifToggleDesc;
+
+// ▼ tarifDescBlur — referme l'input description quand l'user en sort si elle
+// est restée vide (a juste cliqué sur « + » sans rien saisir). Sinon laisse
+// affiché car la valeur est utile.
+function tarifDescBlur(k) {
+  const c = (S.tarifs.catalog || []).find(x => x.k === k);
+  if (!c) return;
+  const desc = (c.d || "").trim();
+  if (!desc && _catalogExpanded.has(k)) {
+    _catalogExpanded.delete(k);
+    render();
+  }
+}
+window.tarifDescBlur = tarifDescBlur;
 
 // ▼ tarifAdd — ajoute une nouvelle prestation vide en bas du catalogue.
 // Clé technique générée via uid(), libellé/tarif/description vides : l'user
@@ -14882,7 +14899,7 @@ function rCatalogue() {
               <input type="text" value="${esc(c.l)}" oninput="tarifEdit(${idx},'l',this.value)" placeholder="Libellé prestation" class="tr-cell-input catalog-libelle" data-tarif-libelle>
               ${!showDesc ? `<button type="button" class="catalog-desc-toggle" onclick="tarifToggleDesc('${esc(c.k)}')" title="Ajouter une description" aria-label="Ajouter une description">${ICO_SZ('plus', 12)}</button>` : ''}
             </div>
-            ${showDesc ? `<input type="text" value="${esc(c.d || "")}" oninput="tarifEdit(${idx},'d',this.value)" placeholder="Description (facultatif)" class="tr-cell-input catalog-desc">` : ''}
+            ${showDesc ? `<input type="text" value="${esc(c.d || "")}" oninput="tarifEdit(${idx},'d',this.value)" onblur="tarifDescBlur('${esc(c.k)}')" placeholder="Description (facultatif)" class="tr-cell-input catalog-desc">` : ''}
           </td>
           <td class="amount cible-cell">
             <div class="tarif-input-wrap">
@@ -14909,7 +14926,7 @@ function rCatalogue() {
     : `<strong>Tarif au black − Taux matériel = Salaire net</strong> · URSSAF non payée`;
   // Sous-toolbar Au black : input remise non déclarée (curseur 0 → URSSAF%)
   const blackSubToolbar = !isDecl ? `
-    <div class="catalog-subtoolbar" style="max-width:880px">
+    <div class="catalog-subtoolbar" style="max-width:1080px">
       <div class="catalog-remise-field" title="Remise non déclarée — restitue une partie de l'URSSAF économisée">
         <label>Remise non déclarée
           <span class="catalog-remise-range">(0 à ${urssafPct.toString().replace(".", ",")} %)</span>
@@ -14924,7 +14941,7 @@ function rCatalogue() {
     </div>` : "";
   return `
     <h1 class="page-title">${esc(pageTitle("tarifs"))} <span class="page-counter">· ${esc(counters)}</span> <span id="savedFlash" class="saved"></span></h1>
-    <div class="catalog-toolbar" style="max-width:880px">
+    <div class="catalog-toolbar" style="max-width:1080px">
       <div class="seg seg-neon">
         <button class="${isDecl?"on ok":""}" onclick="tarifViewMode('declare')">${ICO_SZ('check', 14)} Déclaré</button>
         <button class="${!isDecl?"on warn":""}" onclick="tarifViewMode('noir')">${ICO_SZ('circleFilled', 12)} Au black</button>
@@ -14935,8 +14952,8 @@ function rCatalogue() {
       </div>
     </div>
     ${blackSubToolbar}
-    <div class="hint" style="max-width:880px">${hint}</div>
-    <table class="hist catalog-table" style="max-width:880px">
+    <div class="hint" style="max-width:1080px">${hint}</div>
+    <table class="hist catalog-table" style="max-width:1080px">
       <thead>
         <tr>
           <th style="width:24px"></th>
@@ -14951,7 +14968,7 @@ function rCatalogue() {
       </thead>
       <tbody>${tarifRows}</tbody>
     </table>
-    <div class="catalog-footer" style="max-width:880px">
+    <div class="catalog-footer" style="max-width:1080px">
       <a class="catalog-reset-link" onclick="tarifReset()" title="Réinitialiser le catalogue aux 15 prestations par défaut" tabindex="0" role="button">Réinitialiser aux tarifs par défaut</a>
     </div>
   `;
