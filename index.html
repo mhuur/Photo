@@ -1230,7 +1230,13 @@
   .devis-preview .dp-header-left .dp-emetteur-section + .dp-emetteur-section{margin-top:10px}
   .devis-preview .dp-header-left .dp-emetteur-contact{font-size:12px;color:var(--text);line-height:1.5}
   .devis-preview .dp-header-left .dp-emetteur-legal{font-size:11px;color:var(--text-dim);line-height:1.4;padding-top:6px;border-top:1px solid var(--border-soft)}
-  .devis-preview .dp-header-left .dp-emetteur-meta{font-size:11px;color:var(--text-dim);font-variant-numeric:tabular-nums;margin:0}
+  /* Fallback rétroactif : sur les snapshots archivés (sans .dp-emetteur-section
+     wrapper), .dp-emetteur-meta porte le styling de séparation directement
+     pour que la zone Mentions légales reste démarquée visuellement. */
+  .devis-preview .dp-header-left .dp-emetteur-meta,
+  .view-devis-snapshot .dp-header-left .dp-emetteur-meta{font-size:11px;color:var(--text-dim);font-variant-numeric:tabular-nums;margin-top:8px;padding-top:6px;border-top:1px solid var(--border-soft);line-height:1.4}
+  .devis-preview .dp-header-left .dp-emetteur-legal .dp-emetteur-meta,
+  .view-devis-snapshot .dp-header-left .dp-emetteur-legal .dp-emetteur-meta{margin-top:0;padding-top:0;border-top:0}
   /* Mediateur conso block (B2C / mixte) */
   .devis-preview .dp-mediateur{margin-top:14px;padding:8px 12px;border:1px dashed var(--border);border-radius:6px;font-size:12px;color:var(--text-dim);line-height:1.5}
   .devis-preview .dp-mediateur-title{font-weight:400;color:var(--text-dim);font-size:12px;margin-bottom:3px}
@@ -1243,7 +1249,11 @@
   /* Pied de page (preview écran qui mime @page bottom-* en print) */
   .devis-preview .dp-page-footer-preview{display:flex;justify-content:space-between;align-items:baseline;gap:14px;margin-top:24px;padding-top:8px;border-top:1px dashed var(--border-soft);font-size:12px;color:var(--text-dim);line-height:1.4}
   .devis-preview .dp-page-footer-preview .lft{flex:0 0 auto;text-align:left}
-  .devis-preview .dp-page-footer-preview .ctr{flex:1;text-align:center}
+  /* .ctr neutralisé rétroactivement (le marketing « Photographe à Nantes »
+     a été retiré). Caché aussi sur les snapshots existants qui le
+     contiennent encore. */
+  .devis-preview .dp-page-footer-preview .ctr,
+  .view-devis-snapshot .dp-page-footer-preview .ctr{display:none!important}
   .devis-preview .dp-page-footer-preview .rgt{flex:0 0 auto;text-align:right;font-style:normal}
   .devis-preview .dp-justif-badge{display:inline-block;font-size:12px;padding:1px 6px;border:1px solid var(--success,#2e7d32);color:var(--success,#2e7d32);border-radius:3px;font-weight:700;letter-spacing:.02em;margin-left:4px}
   .devis-preview .dp-justif-badge.dp-justif-pending{border-color:var(--warning,#f57c00);color:var(--warning,#f57c00)}
@@ -1551,9 +1561,18 @@
       font-size: 7pt !important; color: #666 !important; line-height: 1.4 !important;
       padding-top: 4pt !important; border-top: 0.5pt solid #d0d0d0 !important;
     }
+    /* Fallback rétroactif : sur les snapshots archivés (sans wrapper
+       .dp-emetteur-section), .dp-emetteur-meta porte la séparation
+       visuelle (border-top + padding) directement. */
     .devis-preview .dp-header-left .dp-emetteur-meta,
     .view-devis-snapshot .dp-header-left .dp-emetteur-meta {
-      margin: 0 !important; font-size: 7pt !important; color: #666 !important;
+      margin-top: 5pt !important; padding-top: 4pt !important;
+      border-top: 0.5pt solid #d0d0d0 !important;
+      font-size: 7pt !important; color: #666 !important; line-height: 1.4 !important;
+    }
+    .devis-preview .dp-header-left .dp-emetteur-legal .dp-emetteur-meta,
+    .view-devis-snapshot .dp-header-left .dp-emetteur-legal .dp-emetteur-meta {
+      margin-top: 0 !important; padding-top: 0 !important; border-top: 0 !important;
     }
     /* Mediateur conso (print): visible if filled, hidden if empty (don't print warning) */
     .devis-preview .dp-mediateur, .view-devis-snapshot .dp-mediateur {
