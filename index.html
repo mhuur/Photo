@@ -464,14 +464,15 @@
   .ac-row-panel{background:var(--surface);border:1px solid var(--border-light);border-top:0;border-radius:0 0 8px 8px;padding:14px 16px;animation:acPanelIn .15s ease-out}
   @keyframes acPanelIn{from{opacity:0;transform:translateY(-3px)}to{opacity:1;transform:translateY(0)}}
   .ac-row-active{background:var(--surface-hi)!important;border-color:var(--primary)!important}
-  .ac-row{display:grid;grid-template-columns:80px 1fr 170px 100px 36px;gap:12px;align-items:center;padding:8px 14px;background:var(--surface);border:1px solid var(--border-light);border-radius:8px;cursor:pointer;transition:background .12s,border-color .12s;font-size:13px}
+  .ac-row{display:grid;grid-template-columns:80px 1fr 210px 100px 36px;gap:12px;align-items:center;padding:8px 14px;background:var(--surface);border:1px solid var(--border-light);border-radius:8px;cursor:pointer;transition:background .12s,border-color .12s;font-size:13px}
   .ac-row-gmail{background:transparent;border:1px solid var(--border-soft);color:var(--text-dim);width:30px;height:30px;border-radius:6px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;transition:all .12s;padding:0}
   .ac-row-gmail svg{width:14px;height:14px}
   .ac-row-gmail:hover{background:var(--primary-soft);color:var(--primary);border-color:var(--primary)}
   .ac-row:hover{background:var(--surface-hi);border-color:var(--text-muted)}
   .ac-row-date{font-size:11px;color:var(--text-muted);font-variant-numeric:tabular-nums;white-space:nowrap}
   .ac-row-client{font-weight:500;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px}
-  .ac-row-ref{font-size:11px;color:var(--text-muted);font-variant-numeric:tabular-nums;text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .ac-row-ref{font-size:11px;color:var(--text-muted);font-variant-numeric:tabular-nums;display:flex;align-items:center;justify-content:flex-end;gap:6px;white-space:nowrap;min-width:0}
+  .ac-row-ref .suv-rev-tag{margin-left:0;flex-shrink:0}
   .ac-row-amt{font-weight:600;font-variant-numeric:tabular-nums;text-align:right;color:var(--text);font-size:13px;white-space:nowrap}
   .ac-row.ac-late .ac-row-date{color:var(--warning);font-weight:600}
   .ac-empty{padding:14px;color:var(--text-muted);font-size:13px;background:var(--surface);border:1px dashed var(--border-light);border-radius:8px;max-width:880px}
@@ -3476,7 +3477,7 @@ async function loadFromCloud(ownerUid) {
       if (S.mission && !S.mission.dateEmission) {
         S.mission.dateEmission = new Date().toISOString().slice(0, 10);
       }
-      suiviMigrate();
+      const chainsMigrated = suiviMigrate();
       migrateClientNums();
       const phonesFixed = migratePhoneLeadingZero();
       // migrateLegacyReconstructedFlag() DÉSACTIVÉ : faux positifs sur les
@@ -3487,8 +3488,12 @@ async function loadFromCloud(ownerUid) {
       // Auto-cleanup si le doc approche la limite Firestore 1 MB.
       const cleanedUp = await autoCleanupDoc();
       recomputeRef();
-      // Si la migration phones a corrigé OU le cleanup a libéré, propage au cloud.
-      if (phonesFixed || cleanedUp) saveToCloud();
+      // Si une migration locale a touché S, propage au cloud pour qu'au prochain
+      // boot/sync les autres devices reçoivent le state migré (sinon la
+      // migration re-tourne à chaque ouverture, et plus problématique : le
+      // live sync subscribeWorkspaceData écraserait nos changements à la
+      // première update Firestore — voir ce site pour le miroir).
+      if (chainsMigrated || phonesFixed || cleanedUp) saveToCloud();
       // Adopte le timestamp cloud comme nouveau référentiel local (sinon
       // notre prochain save aurait un localCts plus ancien que le cloud
       // alors qu'on vient de tout merger).
@@ -3725,6 +3730,12 @@ function subscribeWorkspaceData(ownerUid) {
     if (d.bin)     S.bin     = { items: Array.isArray(d.bin.items) ? d.bin.items : [] };
     if (d.prefs)   S.prefs   = { ...DEFAULT_S.prefs, ...d.prefs };
     // migrateLegacyReconstructedFlag() DÉSACTIVÉ ici aussi (cf. loadFromCloud).
+    // Migration chaînes de révision (idempotente). Doit tourner sur chaque
+    // snapshot reçu sinon les données live écrasent chainId/revNum/isActive
+    // posés au boot — bug visible : Suivi/Accueil ré-affichent les anciennes
+    // revs comme des devis indépendants après n'importe quelle update cloud.
+    const chainsMigratedLive = (typeof migrateRevisionChains === "function")
+      ? migrateRevisionChains() : false;
     // Migration phones (idempotente, ne corrige que ce qui a 9 chiffres FR
     // sans 0 initial). Tourne sur chaque snapshot live pour rattraper le cas
     // où le boot loadFromCloud n'a pas suffi (ex : data injectée depuis un
@@ -3734,7 +3745,7 @@ function subscribeWorkspaceData(ownerUid) {
     // notre prochain save aurait un localCts plus ancien que le cloud).
     if (cloudCts > 0) S._localChangeTs = cloudCts;
     localStorage.setItem(SK, JSON.stringify(S));
-    if (phonesFixedLive) saveToCloud();
+    if (chainsMigratedLive || phonesFixedLive) saveToCloud();
     // Préserve le focus de l'input courant pendant le re-render
     const active = document.activeElement;
     const id = active && active.id;
@@ -10581,6 +10592,9 @@ function migratePhoneLeadingZero() {
   return changed;
 }
 
+// Retourne true si la migration des chaînes de révision a fait des changements
+// (utilisé par les call sites pour décider d'un saveToCloud post-migration et
+// persister chainId/revNum/isActive en base).
 function suiviMigrate() {
   if (!S.suivi.devis) S.suivi.devis = {};
 
@@ -10598,13 +10612,13 @@ function suiviMigrate() {
   // Migration chaînes de révision (one-shot, idempotent) : pose
   // chainId/revNum/isActive et restaure les statuts auto-annulés sur les
   // anciennes révisions. Voir migrateRevisionChains pour les détails.
-  migrateRevisionChains();
+  const chainsChanged = migrateRevisionChains();
 
   const ungrouped = S.suivi.entries.filter(e => !e.devisId);
   if (ungrouped.length === 0) {
     // Even when nothing to group, refs may still need recomputing
     suiviRecomputeRefs();
-    return;
+    return chainsChanged;
   }
 
   const byKey = new Map();
@@ -10662,6 +10676,7 @@ function suiviMigrate() {
   }
   // After grouping is done, auto-recompute any missing/malformed refs
   suiviRecomputeRefs();
+  return chainsChanged;
 }
 
 // Auto-recompute Suivi refs at load time (and any time we want).
