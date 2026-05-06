@@ -1267,7 +1267,8 @@
   .catalog-table td.net-cell.bad{color:var(--danger);text-shadow:0 0 6px rgba(239,68,68,.3)}
   .catalog-table td.net-cell.dim{color:var(--text-dim)}
   /* En-tête tableau Catalogue : titre + sous-titre centrés (bloc inline-flex) */
-  .catalog-table thead th{padding:12px 10px;vertical-align:middle}
+  .catalog-table thead th{padding:12px 10px;vertical-align:middle;text-align:center}
+  .catalog-table thead th:nth-child(2){text-align:left}
   .catalog-th{display:inline-flex;flex-direction:column;align-items:center;gap:2px;line-height:1.2;width:100%}
   .catalog-th-left{align-items:flex-start}
   .catalog-th-title{font-size:13px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.04em}
@@ -2947,7 +2948,7 @@ const DEFAULT_S = {
     deplacement: { mode: "voiture", km: "0", peages: "0", tauxKm: "0.40", trajetH: "0", ticket: "0", devis: "principal", afficheMode: "afficher", paiementType: "acompte" },
     autres:      { desc: "", montant: "0" },
     declare: true,
-    blackMode: "reduit",
+    blackMode: "fixe",
     tarifHOverride: "",
     remisePct: "0",
     notes: "",
@@ -3285,6 +3286,17 @@ if (S.mission) {
       S.identite.urssafPct = String(S.mission.urssafPct);
     }
     delete S.mission.urssafPct;
+  }
+  // Migration blackMode : "reduit" (Prix compétitif) déprécié. Le toggle
+  // binaire Net max / Prix compétitif est remplacé par un curseur % continu
+  // (S.identite.remiseNoirePct, 0 à URSSAF%). Conversion :
+  //   "reduit" + remiseNoirePct = 0 → "fixe" + remiseNoirePct = URSSAF (calcul équivalent)
+  // Les snapshots archivés gardent leur blackMode d'origine (immutable).
+  if (S.mission && S.mission.blackMode === "reduit") {
+    S.mission.blackMode = "fixe";
+    if (S.identite && (!S.identite.remiseNoirePct || S.identite.remiseNoirePct === "0")) {
+      S.identite.remiseNoirePct = String(num(S.identite.urssafPct ?? 22));
+    }
   }
   recomputeRef();
 }
@@ -6191,19 +6203,16 @@ window.tarifViewBlackMode = tarifViewBlackMode;
 function tarifRefreshBlackCells() {
   const cat = S.tarifs.catalog || DEFAULT_CATALOG;
   const tm = tauxMatos();
-  const urssafPct = getUrssafPct();
   const remiseNoirePct = getRemiseNoirePct();
-  const isNetMax = S.tarifs.viewBlackMode === "fixe";
   const isDecl = S.tarifs.viewMode !== "noir";
   // En mode déclaré, rien à mettre à jour côté tarif au black (la colonne 2
   // affiche le tarif final déclaré = cible elle-même, indépendant de la remise).
   if (isDecl) return;
-  const rate = isNetMax ? remiseNoirePct : urssafPct;
   document.querySelectorAll('tr[data-tarif-key]').forEach(tr => {
     const c = cat.find(x => x.k === tr.dataset.tarifKey);
     if (!c || c.type === "group") return;
     const cible = num(c.p);
-    const tarifFinal = cible > 0 ? r2(cible * (1 - rate / 100)) : 0;
+    const tarifFinal = cible > 0 ? r2(cible * (1 - remiseNoirePct / 100)) : 0;
     const finalCell = tr.querySelector('.tarif-final-cell');
     if (finalCell) finalCell.textContent = cible > 0 ? fmt(tarifFinal) : "—";
     const net = cible > 0 ? r2(tarifFinal - tm.tauxRetenu) : 0;
@@ -6216,9 +6225,9 @@ function tarifRefreshBlackCells() {
   // Met à jour le sous-titre du <th> « Tarif final au black »
   const sub = document.querySelector('[data-th-tarif-final] .catalog-th-sub');
   if (sub) {
-    sub.textContent = isNetMax
-      ? (remiseNoirePct > 0 ? `−${remiseNoirePct.toString().replace(".", ",")} %` : `Net maximisé`)
-      : `−${urssafPct.toString().replace(".", ",")} %`;
+    sub.textContent = remiseNoirePct > 0
+      ? `−${remiseNoirePct.toString().replace(".", ",")} %`
+      : `remise 0 %`;
   }
 }
 window.tarifRefreshBlackCells = tarifRefreshBlackCells;
@@ -8345,7 +8354,7 @@ function totals() {
   //   - Au black "taux réduit" (Prix compétitif) : tarif × (1 − URSSAF%) (le client
   //     économise l'URSSAF entière).
   // /!\ La remiseNoirePct ne s'applique qu'aux HEURES, pas matériel/cession/déplacement.
-  const _blackMode = d.blackMode || "reduit";
+  const _blackMode = d.blackMode || "fixe";
   const _remiseNoirePct = (!_isDecTot && _blackMode === "fixe") ? getRemiseNoirePct(d) : 0;
   const _remiseNoireFactor = 1 - _remiseNoirePct / 100;
   // Si tarifHOverride est posé (reconstitution legacy), il est ABSOLU :
@@ -10339,7 +10348,7 @@ function tarifBreakdown(includeDepl) {
   if (final <= 0) return null;
   const urssafPct = getUrssafPct(d);
   const urssafFactor = 1 - urssafPct / 100; // e.g., 0.78 for 22%
-  const blackMode = d.blackMode || "reduit";
+  const blackMode = d.blackMode || "fixe";
   // Remise non déclarée (au black + Net max uniquement) — restitue une part
   // de l'URSSAF économisée au client. Plafonné par l'URSSAF (sinon on perd
   // de l'argent vs le mode déclaré).
@@ -10970,14 +10979,8 @@ function rDevisSectionPrestations() {
         <button class="${!declare?"on warn":""}" onclick="updMissionDeclare(false)">${ICO_SZ('circleFilled', 12)} Au black</button>
       </div>
       ${!declare ? (() => {
-        const bm = d.blackMode || "reduit";
         const urssafPctVal = getUrssafPct(d);
-        return `<div class="seg seg-neon violet" title="Stratégie de prix au black">
-          <button class="${bm==='fixe'?'on':''}" onclick="updBlackMode('fixe')" title="On garde le tarif catalogue : tu encaisses la part qui aurait été versée à l'URSSAF en bonus.">Net maximisé</button>
-          <button class="${bm==='reduit'?'on':''}" onclick="updBlackMode('reduit')" title="On retire la part URSSAF du tarif catalogue : le client paie moins cher, tu touches l'équivalent du net déclaré.">Prix compétitif</button>
-        </div>
-        ${bm === 'fixe' ? `
-        <div class="presta-remise-noire" title="Remise non déclarée — restitue une part de l'URSSAF économisée">
+        return `<div class="presta-remise-noire" title="Remise non déclarée — restitue une part de l'URSSAF économisée">
           <label>Remise non déclarée
             <span class="catalog-remise-range">(0 à ${urssafPctVal.toString().replace(".", ",")} %)</span>
             <button type="button" class="lg-info-icon" tabindex="0" aria-label="À quoi sert cette remise"
@@ -10987,7 +10990,7 @@ function rDevisSectionPrestations() {
             <input type="number" step="0.5" min="0" max="${urssafPctVal}" value="${esc(S.identite?.remiseNoirePct ?? "0")}" data-remise-noire oninput="updRemiseNoire(this.value)">
             <span class="lock-unit">%</span>
           </div>
-        </div>` : ""}`;
+        </div>`;
       })() : ""}
     </div>
     ${!declare ? `<div class="black-warning" role="alert"><strong>${ICO_SZ('alertTriangle', 14)} Mode au black</strong> — pas de débours, pas d'URSSAF, pas de marge sur avance applicable. Tous les matériels et déplacements sont au prix brut, payés via l'acompte.</div>` : ""}
@@ -14816,17 +14819,16 @@ function rCatalogue() {
   const remiseNoirePct = getRemiseNoirePct();
   const mode = S.tarifs.viewMode === "noir" ? "noir" : "declare";
   const isDecl = mode === "declare";
-  const blackMode = S.tarifs.viewBlackMode === "fixe" ? "fixe" : "reduit";
-  const isNetMax = blackMode === "fixe";
   // Calcule le « Tarif final » selon le mode actif :
   //   Déclaré  : tarif final = cible TTC (1:1, URSSAF incluse dans la cible)
-  //   Au black "fixe"   (Net max)        : cible × (1 − remiseNoirePct/100)
-  //   Au black "reduit" (Prix compétitif): cible × (1 − urssafPct/100)
+  //   Au black : cible × (1 − remiseNoirePct/100)
+  //     remiseNoirePct = 0      → tu gardes l'URSSAF entière (ex Net max)
+  //     remiseNoirePct = URSSAF → tu rends l'URSSAF entière au client (ex Prix compétitif)
+  //     entre les deux → restitution partielle (situation intermédiaire)
   const computeTarifFinal = (cible) => {
     if (cible <= 0) return 0;
     if (isDecl) return cible;
-    const rate = isNetMax ? remiseNoirePct : urssafPct;
-    return r2(cible * (1 - rate / 100));
+    return r2(cible * (1 - remiseNoirePct / 100));
   };
   // Compteurs (intégrés au H1)
   const presta = cat.filter(c => c.type !== "group");
@@ -14901,20 +14903,13 @@ function rCatalogue() {
   const tarifFinalTitle = isDecl ? "Tarif final déclaré" : "Tarif final au black";
   const tarifFinalSubtitle = isDecl
     ? "URSSAF incluse"
-    : (isNetMax
-        ? (remiseNoirePct > 0 ? `−${remiseNoirePct.toString().replace(".", ",")} %` : "Net maximisé")
-        : `−${urssafPct.toString().replace(".", ",")} %`);
+    : (remiseNoirePct > 0 ? `−${remiseNoirePct.toString().replace(".", ",")} %` : "remise 0 %");
   const hint = isDecl
     ? `<strong>Cible TTC − URSSAF − Taux matériel = Salaire net</strong>`
     : `<strong>Tarif au black − Taux matériel = Salaire net</strong> · URSSAF non payée`;
-  // Sous-toolbar Au black : toggle Net max/Prix compétitif + input remise (si Net max)
+  // Sous-toolbar Au black : input remise non déclarée (curseur 0 → URSSAF%)
   const blackSubToolbar = !isDecl ? `
     <div class="catalog-subtoolbar" style="max-width:880px">
-      <div class="seg seg-neon violet" title="Stratégie de prix au black">
-        <button class="${isNetMax?'on':''}" onclick="tarifViewBlackMode('fixe')" title="Tu gardes le tarif catalogue : tu encaisses la part qui aurait été versée à l'URSSAF en bonus.">Net maximisé</button>
-        <button class="${!isNetMax?'on':''}" onclick="tarifViewBlackMode('reduit')" title="On retire la part URSSAF du tarif catalogue : le client paie moins cher, tu touches l'équivalent du net déclaré.">Prix compétitif</button>
-      </div>
-      ${isNetMax ? `
       <div class="catalog-remise-field" title="Remise non déclarée — restitue une partie de l'URSSAF économisée">
         <label>Remise non déclarée
           <span class="catalog-remise-range">(0 à ${urssafPct.toString().replace(".", ",")} %)</span>
@@ -14925,7 +14920,7 @@ function rCatalogue() {
           <input type="number" step="0.5" min="0" max="${urssafPct}" value="${esc(S.identite?.remiseNoirePct ?? "0")}" data-remise-noire oninput="updRemiseNoire(this.value)">
           <span class="lock-unit">%</span>
         </div>
-      </div>` : ""}
+      </div>
     </div>` : "";
   return `
     <h1 class="page-title">${esc(pageTitle("tarifs"))} <span class="page-counter">· ${esc(counters)}</span> <span id="savedFlash" class="saved"></span></h1>

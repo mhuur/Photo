@@ -48,7 +48,7 @@ Source : `index.html` (bloc `const DEFAULT_S = { ... };`).
     - **desc**: string _(default `""`)_
     - **montant**: string _(default `"0"`)_
   - **declare**: boolean _(default `true`)_
-  - **blackMode**: string _(default `"reduit"`)_
+  - **blackMode**: string _(default `"fixe"`)_
   - **tarifHOverride**: string _(default `""`)_
   - **remisePct**: string _(default `"0"`)_
   - **notes**: string _(default `""`)_
