@@ -82,6 +82,28 @@
   .sb-user-menu button svg{flex-shrink:0;width:18px;height:18px}
   .sb-user-menu-count{display:inline-block;font-size:10px;font-weight:600;color:var(--accent);background:rgba(99,102,241,.12);border:1px solid rgba(99,102,241,.30);border-radius:var(--radius-sm);padding:1px 5px;margin-left:6px;letter-spacing:.3px}
   .sb-user-menu-dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--warning);box-shadow:0 0 6px rgba(251,191,36,.6);margin-left:6px;vertical-align:middle}
+  /* Templates Gmail — lexique + toolbar d'insertion (pattern Mailchimp/HubSpot) */
+  .gmail-tpl-lexique{max-width:780px;background:var(--surface);border:1px solid var(--border-soft);border-radius:var(--radius-lg);padding:0;margin-bottom:14px;overflow:hidden}
+  .gmail-tpl-lexique > summary{cursor:pointer;padding:12px 16px;font-size:13px;font-weight:600;color:var(--text);display:flex;align-items:center;gap:8px;list-style:none;user-select:none}
+  .gmail-tpl-lexique > summary::-webkit-details-marker{display:none}
+  .gmail-tpl-lexique > summary::before{content:"▸";display:inline-block;font-size:10px;color:var(--text-muted);transition:transform .15s ease}
+  .gmail-tpl-lexique[open] > summary::before{transform:rotate(90deg)}
+  .gmail-tpl-lexique > summary:hover{background:rgba(255,255,255,.03)}
+  .gmail-tpl-lexique-count{display:inline-block;font-size:10px;font-weight:600;color:var(--accent);background:rgba(99,102,241,.12);border:1px solid rgba(99,102,241,.30);border-radius:var(--radius-sm);padding:1px 6px;margin-left:auto}
+  .gmail-tpl-lexique-body{padding:12px 16px 14px;border-top:1px solid var(--border-soft)}
+  .gmail-tpl-lexique-table{width:100%;border-collapse:collapse;font-size:12px}
+  .gmail-tpl-lexique-table th{text-align:left;padding:6px 8px;font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.04em;border-bottom:1px solid var(--border-soft)}
+  .gmail-tpl-lexique-table td{padding:6px 8px;border-bottom:1px solid var(--border-soft);color:var(--text-muted);line-height:1.5;vertical-align:top}
+  .gmail-tpl-lexique-table tr:last-child td{border-bottom:0}
+  .gmail-tpl-lexique-table td:first-child{white-space:nowrap;color:var(--text)}
+  .gmail-tpl-lexique-table td code{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:12px;background:var(--surface-2);border:1px solid var(--border-soft);border-radius:var(--radius-sm);padding:1px 6px;color:var(--accent)}
+  .gmail-tpl-lexique-ex{font-style:italic;color:var(--text-dim);font-variant-numeric:tabular-nums}
+  /* Toolbar d'insertion au-dessus de chaque champ template */
+  .gmail-tpl-toolbar{display:flex;align-items:center;flex-wrap:wrap;gap:6px;margin:6px 0 6px;padding:6px 8px;background:rgba(255,255,255,.02);border:1px solid var(--border-soft);border-radius:var(--radius-md)}
+  .gmail-tpl-toolbar-label{font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.04em;font-weight:600;margin-right:4px}
+  .placeholder-chip{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:11px;font-weight:600;color:var(--accent);background:rgba(99,102,241,.08);border:1px solid rgba(99,102,241,.30);border-radius:var(--radius-sm);padding:3px 8px;cursor:pointer;transition:all .12s ease;line-height:1.4}
+  .placeholder-chip:hover{background:rgba(99,102,241,.18);border-color:var(--accent);color:#fff;transform:translateY(-1px);box-shadow:0 2px 6px rgba(99,102,241,.25)}
+  .placeholder-chip:active{transform:translateY(0);box-shadow:0 1px 2px rgba(99,102,241,.2)}
   /* Vue Mises à jour — changelog vulgarisé pour l'utilisateur (onglet majlog) */
   .maj-list{display:flex;flex-direction:column;gap:var(--space-xl);max-width:880px}
   .maj-entry{background:var(--surface);border:1px solid var(--border-soft);border-radius:var(--radius-lg);padding:var(--space-lg)}
@@ -4520,8 +4542,23 @@ function clientPrimaryContactName(client) {
   return "";
 }
 
+// Source unique des placeholders Gmail. Utilisée par :
+//  - substituteTemplate / gmailRelanceForDevis (côté résolution).
+//  - rGmailTemplatesSection (lexique + toolbar d'insertion).
+// Pour ajouter une variable : ajouter ici (k, l, d, ex) puis câbler le calcul
+// dans gmailRelanceForDevis (vars[k] = …). Tout le reste suit automatiquement.
+const GMAIL_PLACEHOLDERS = [
+  { k: "contact", l: "Prénom contact", d: "Prénom du contact principal du client (ex : Jérémy si « Jérémy Tourneur »).", ex: "Jérémy" },
+  { k: "client",  l: "Nom client",     d: "Raison sociale ou nom complet du client tel qu'il figure dans la fiche.", ex: "Pick Up Production" },
+  { k: "ref",     l: "Référence",      d: "Référence du devis (ex : DEV-202605-007).", ex: "DEV-202605-007" },
+  { k: "date",    l: "Date émission",  d: "Date d'émission du devis, format JJ/MM/AAAA.", ex: "06/05/2026" },
+  { k: "montant", l: "Montant total",  d: "Montant total du devis, déjà formaté avec la devise.", ex: "1 250,00 €" },
+  { k: "restant", l: "Restant à payer",d: "Somme des échéances non encore soldées (utile pour relance paiement).", ex: "875,00 €" },
+  { k: "name",    l: "Ton nom",        d: "Ton prénom + nom (ou ta dénomination) — pour la signature.", ex: "Romain Saintilan" }
+];
+
 // Substitue les placeholders d'un template par les valeurs réelles.
-// Placeholders supportés : {contact} {ref} {date} {client} {name}
+// Placeholders supportés : voir GMAIL_PLACEHOLDERS.
 function substituteTemplate(tpl, vars) {
   let out = String(tpl || "");
   for (const k of Object.keys(vars)) {
@@ -4548,7 +4585,19 @@ async function gmailRelanceForDevis(devisId, kind) {
 
   const templates = (S.prefs && S.prefs.gmailTemplates) || DEFAULT_S.prefs.gmailTemplates;
   const tpl = templates[kind] || templates.devis;
-  const vars = { contact: firstName, ref, date: dateFr, client: (client && client.name) || "", name: myName };
+  // Calcul montant total + restant à payer (utiles surtout pour relance paiement).
+  const ents = (S.suivi && S.suivi.entries || []).filter(e => e.devisId === devisId);
+  const totalAll = ents.reduce((s, e) => s + num(e.montant), 0);
+  const restant = ents.filter(e => entryStatut(e) === "attente").reduce((s, e) => s + num(e.montant), 0);
+  const vars = {
+    contact: firstName,
+    ref,
+    date: dateFr,
+    client: (client && client.name) || "",
+    name: myName,
+    montant: totalAll > 0 ? fmt(totalAll) : "",
+    restant: restant > 0 ? fmt(restant) : ""
+  };
   const subject = substituteTemplate(tpl.subject, vars);
   const body = substituteTemplate(tpl.body, vars);
 
@@ -14779,30 +14828,67 @@ function rTemplates() {
 // membres du workspace. Modifiable par tous (owner + membres).
 function rGmailTemplatesSection() {
   const t = (S.prefs && S.prefs.gmailTemplates) || DEFAULT_S.prefs.gmailTemplates;
-  const placeholders = `<code>{contact}</code> prénom du contact, <code>{ref}</code> réf devis, <code>{date}</code> date d'émission, <code>{client}</code> nom client, <code>{name}</code> ton nom`;
+
+  // Lexique : tableau ref des variables disponibles, en tête de page.
+  const lexique = `
+    <details class="gmail-tpl-lexique" open>
+      <summary>${ICO_SZ('info', 14)}<span>Variables disponibles</span> <span class="gmail-tpl-lexique-count">${GMAIL_PLACEHOLDERS.length}</span></summary>
+      <div class="gmail-tpl-lexique-body">
+        <p class="hint" style="margin:0 0 10px">Insère ces variables dans le sujet ou le corps : elles seront remplacées par les vraies valeurs au moment d'envoyer le mail. Clique sur un bouton ci-dessous pour insérer la variable à la position du curseur.</p>
+        <table class="gmail-tpl-lexique-table">
+          <thead><tr><th>Variable</th><th>Description</th><th>Exemple</th></tr></thead>
+          <tbody>
+            ${GMAIL_PLACEHOLDERS.map(p => `<tr>
+              <td><code>{${esc(p.k)}}</code></td>
+              <td>${esc(p.d)}</td>
+              <td><span class="gmail-tpl-lexique-ex">${esc(p.ex)}</span></td>
+            </tr>`).join("")}
+          </tbody>
+        </table>
+      </div>
+    </details>
+  `;
+
+  // Toolbar de chips : pour un targetId (textarea/input) et un fieldPath donnés,
+  // chaque chip insère {key} à la position du curseur et persiste via upd().
+  const insertToolbar = (targetId, fieldPath) => `
+    <div class="gmail-tpl-toolbar">
+      <span class="gmail-tpl-toolbar-label">Insérer :</span>
+      ${GMAIL_PLACEHOLDERS.map(p => `<button type="button" class="placeholder-chip"
+        onclick="gmailTemplateInsert('${targetId}','${p.k}','${fieldPath}')"
+        title="${esc(p.l)} — ${esc(p.d)}\nExemple : ${esc(p.ex)}">{${esc(p.k)}}</button>`).join("")}
+    </div>
+  `;
+
   return `
     <h3 style="margin-top:32px">Modèles de relance Gmail</h3>
     <div class="hint" style="max-width:780px;margin-bottom:14px">
-      Ces modèles s'utilisent quand tu cliques sur « ✉ Relance devis » ou « ✉ Relance paiement » (Suivi, Accueil). Placeholders disponibles : ${placeholders}.
+      Ces modèles s'utilisent quand tu cliques sur « ✉ Relance devis » ou « ✉ Relance paiement » (Suivi, Accueil).
     </div>
 
-    <h4 style="margin:18px 0 10px;font-size:13px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;font-weight:600">Relance devis (sans réponse)</h4>
+    ${lexique}
+
+    <h4 style="margin:24px 0 10px;font-size:13px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;font-weight:600">Relance devis (sans réponse)</h4>
     <div class="row" style="max-width:780px;flex-direction:column;gap:8px">
       <div class="field" style="max-width:none"><label>Sujet</label>
-        <input type="text" value="${esc(t.devis.subject)}" oninput="upd('prefs.gmailTemplates.devis.subject', this.value)">
+        ${insertToolbar("tpl-devis-subject", "prefs.gmailTemplates.devis.subject")}
+        <input type="text" id="tpl-devis-subject" value="${esc(t.devis.subject)}" oninput="upd('prefs.gmailTemplates.devis.subject', this.value)">
       </div>
       <div class="field" style="max-width:none"><label>Corps du message</label>
-        <textarea rows="9" oninput="upd('prefs.gmailTemplates.devis.body', this.value)" style="font-family:inherit;font-size:13px;line-height:1.5;resize:vertical">${esc(t.devis.body)}</textarea>
+        ${insertToolbar("tpl-devis-body", "prefs.gmailTemplates.devis.body")}
+        <textarea id="tpl-devis-body" rows="9" oninput="upd('prefs.gmailTemplates.devis.body', this.value)" style="font-family:inherit;font-size:13px;line-height:1.5;resize:vertical">${esc(t.devis.body)}</textarea>
       </div>
     </div>
 
     <h4 style="margin:24px 0 10px;font-size:13px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;font-weight:600">Relance paiement (en attente)</h4>
     <div class="row" style="max-width:780px;flex-direction:column;gap:8px">
       <div class="field" style="max-width:none"><label>Sujet</label>
-        <input type="text" value="${esc(t.paiement.subject)}" oninput="upd('prefs.gmailTemplates.paiement.subject', this.value)">
+        ${insertToolbar("tpl-paiement-subject", "prefs.gmailTemplates.paiement.subject")}
+        <input type="text" id="tpl-paiement-subject" value="${esc(t.paiement.subject)}" oninput="upd('prefs.gmailTemplates.paiement.subject', this.value)">
       </div>
       <div class="field" style="max-width:none"><label>Corps du message</label>
-        <textarea rows="9" oninput="upd('prefs.gmailTemplates.paiement.body', this.value)" style="font-family:inherit;font-size:13px;line-height:1.5;resize:vertical">${esc(t.paiement.body)}</textarea>
+        ${insertToolbar("tpl-paiement-body", "prefs.gmailTemplates.paiement.body")}
+        <textarea id="tpl-paiement-body" rows="9" oninput="upd('prefs.gmailTemplates.paiement.body', this.value)" style="font-family:inherit;font-size:13px;line-height:1.5;resize:vertical">${esc(t.paiement.body)}</textarea>
       </div>
     </div>
 
@@ -14811,6 +14897,28 @@ function rGmailTemplatesSection() {
     </div>
   `;
 }
+
+// ▼ gmailTemplateInsert — insère {placeholder} à la position du curseur du
+// champ ciblé (input ou textarea), persiste via upd(). Pas de re-render → on
+// garde le focus dans le champ pour permettre des insertions successives.
+window.gmailTemplateInsert = function(targetId, placeholder, fieldPath) {
+  const el = document.getElementById(targetId);
+  if (!el) return;
+  const insert = `{${placeholder}}`;
+  const start = (typeof el.selectionStart === "number") ? el.selectionStart : el.value.length;
+  const end = (typeof el.selectionEnd === "number") ? el.selectionEnd : el.value.length;
+  const before = el.value.slice(0, start);
+  const after = el.value.slice(end);
+  el.value = before + insert + after;
+  // Repositionne le curseur après le placeholder inséré.
+  const newPos = start + insert.length;
+  if (typeof el.setSelectionRange === "function") {
+    el.setSelectionRange(newPos, newPos);
+  }
+  el.focus();
+  // Persistance via upd() — pas de render() pour préserver le focus.
+  if (typeof upd === "function") upd(fieldPath, el.value);
+};
 
 async function gmailTemplatesReset() {
   if (!await uiConfirm(
