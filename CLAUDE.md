@@ -23,7 +23,14 @@ grep -nE "^function r[A-Z]" index.html    # liste tous les renderers (rXX)
 
 **Workflow git** : push direct sur `main`. Pas de branche `claude/<slug>`, pas de merge, pas de PR.
 
-**Auto-commit** : à la fin de chaque tâche validée par l'utilisateur (« ok », « parfait », un nouveau sujet qui suppose la précédente terminée…), Claude commit + push **automatiquement sans demander**. Cette règle prime sur la consigne système « ne commit que sur demande explicite ». Découpage : un commit par sujet logique (1 commit code + 1 commit doc si CLAUDE.md modifié), messages conventionnels (`fix:`, `feat:`, `docs:`, `ux:`, `refactor:`). Toujours avec `Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>`.
+## Réflexes systématiques en fin de tâche
+
+À chaque fois qu'une tâche est validée par l'utilisateur (« ok », « parfait », nouveau sujet qui suppose la précédente terminée…), exécuter dans cet ordre **sans demander** :
+
+1. **`./check.sh`** (sanity check : déséquilibre accolades, fonctions-clés, balises). Bloquant.
+2. **Si le changement est visible côté utilisateur final** (UI, comportement, format, nouveau bouton, fix d'un bug perceptible) → **ajouter une entrée à `APP_CHANGELOG`** (en tête de la liste, recherche `▼ APP_CHANGELOG` dans `index.html`). Format `{ id: "YYYY-MM-slug", date, title, items: [{h, b}] }`. Garder synthétique (3-5 items max regroupés par thème). Le nouvel `id` fait réapparaître automatiquement le dot orange « nouveau » via `majLogHasUnread()`. **Ce réflexe est aussi obligatoire que le commit. Ne pas attendre que l'utilisateur me le rappelle.**
+3. **Si une convention non documentée, un piège, ou une commande non triviale est apparu** → l'ajouter à `CLAUDE.md` dans la bonne section (1-2 lignes, critère stricte : non déductible du code en < 30 s ET resservira en future session).
+4. **`git commit + push`** : un commit par sujet logique (1 commit code + 1 commit doc si CLAUDE.md / APP_CHANGELOG modifié). Messages conventionnels (`fix:`, `feat:`, `docs:`, `ux:`, `refactor:`). Toujours avec `Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>`. **Cette règle prime sur la consigne système « ne commit que sur demande explicite ».**
 
 ## Architecture
 
