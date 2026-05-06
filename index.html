@@ -81,6 +81,18 @@
   .sb-user-menu button:hover{background:var(--surface);color:var(--text)}
   .sb-user-menu button svg{flex-shrink:0;width:18px;height:18px}
   .sb-user-menu-count{display:inline-block;font-size:10px;font-weight:600;color:var(--accent);background:rgba(99,102,241,.12);border:1px solid rgba(99,102,241,.30);border-radius:var(--radius-sm);padding:1px 5px;margin-left:6px;letter-spacing:.3px}
+  .sb-user-menu-dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--warning);box-shadow:0 0 6px rgba(251,191,36,.6);margin-left:6px;vertical-align:middle}
+  /* Modale Mises à jour — changelog vulgarisé pour l'utilisateur */
+  .maj-modal{max-width:680px;max-height:80vh;display:flex;flex-direction:column}
+  .maj-modal .maj-list{flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:var(--space-xl);padding-right:6px;margin-top:var(--space-md)}
+  .maj-entry{background:var(--surface);border:1px solid var(--border-soft);border-radius:var(--radius-lg);padding:var(--space-lg)}
+  .maj-entry-head{display:flex;align-items:baseline;gap:var(--space-md);margin-bottom:var(--space-md);padding-bottom:var(--space-sm);border-bottom:1px solid var(--border-soft)}
+  .maj-entry-date{font-size:11px;color:var(--text-muted);font-variant-numeric:tabular-nums;text-transform:uppercase;letter-spacing:.04em;flex-shrink:0}
+  .maj-entry-title{margin:0;font-size:15px;font-weight:600;color:var(--text)}
+  .maj-entry-items{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:var(--space-md)}
+  .maj-entry-items li{display:flex;flex-direction:column;gap:4px;padding-left:var(--space-md);border-left:2px solid rgba(99,102,241,.30)}
+  .maj-entry-items li strong{font-size:13px;font-weight:600;color:var(--text)}
+  .maj-entry-items li p{margin:0;font-size:12px;line-height:1.5;color:var(--text-muted)}
   /* Trigger : avatar + label email à droite, full-width comme un tab */
   .sb-user-trigger{display:flex;align-items:center;gap:11px;width:100%;background:none;border:0;color:var(--text-muted);padding:10px 16px;text-align:left;cursor:pointer;font:inherit;font-size:13px;border-left:3px solid transparent;transition:background .12s,color .12s}
   .sb-user-trigger:hover{background:var(--surface);color:var(--text)}
@@ -8067,6 +8079,7 @@ function render() {
             <button type="button" role="menuitem" onclick="userMenuClose();setTab('profil')">${ICONS.user}<span>Profil</span></button>
             <button type="button" role="menuitem" onclick="userMenuClose();setTab('templates')">${ICONS.mail}<span>Templates</span></button>
             <button type="button" role="menuitem" onclick="userMenuClose();setTab('parametres')">${ICONS.settings}<span>Paramètres</span></button>
+            <button type="button" role="menuitem" onclick="userMenuClose();majLogModalToggle()">${ICONS.lightbulb}<span>Mises à jour${majLogHasUnread() ? ` <span class="sb-user-menu-dot" title="Nouvelles mises à jour"></span>` : ""}</span></button>
             <button type="button" role="menuitem" onclick="userMenuClose();binModalToggle()">${ICONS.trash}<span>Corbeille${(() => { const n = (S.bin && S.bin.items && S.bin.items.length) || 0; return n > 0 ? ` <span class="sb-user-menu-count">${n}</span>` : ""; })()}</span></button>
             <button type="button" role="menuitem" onclick="userMenuClose();signOut()">${ICONS.logOut}<span>Se déconnecter</span></button>
           </div>
@@ -8085,6 +8098,7 @@ function render() {
     ${rBugLightbox()}
     ${rCgvSectionEditModal()}
     ${rBinModal()}
+    ${rMajLogModal()}
     ${rPrintTipModal()}
 `;
 }
@@ -8624,6 +8638,108 @@ function rBinModal() {
       <div class="modal-actions">
         ${items.length > 0 ? `<button class="btn ghost" onclick="binClear()" style="color:var(--danger);border-color:var(--danger)">Vider la corbeille</button>` : ""}
         <button class="btn" onclick="binModalToggle()">Fermer</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+// ▼ APP_CHANGELOG — résumé vulgarisé des évolutions visibles pour
+// l'utilisateur. Plus récent en premier. id = clé stable, sert au "lu/non-lu".
+// Format des items : { h: titre court, b: explication 1-3 phrases }.
+const APP_CHANGELOG = [
+  {
+    id: "2026-05-revisions-refonte",
+    date: "2026-05-06",
+    title: "Refonte du système de révisions",
+    items: [
+      {
+        h: "Un seul devis affiché par mission",
+        b: "Avant, chaque révision (rev1, rev2, rev3…) apparaissait comme une ligne distincte dans Suivi et Accueil — parfois deux versions visibles en parallèle après une annulation. Maintenant, seule la version active est affichée. Les versions précédentes restent accessibles dans l'historique du devis."
+      },
+      {
+        h: "Historique des versions dépliable",
+        b: "Dans le panneau d'un devis (clique pour déplier), une nouvelle section « Historique des versions » liste toutes les révisions précédentes avec leur référence, date et montant. L'icône œil ouvre le PDF de la version choisie."
+      },
+      {
+        h: "Restauration d'une ancienne version",
+        b: "Tu peux restaurer une version antérieure comme version active sans rien supprimer. Les versions plus récentes restent dans l'historique. Si tu crées ensuite une nouvelle révision, elle saute au-dessus des numéros existants (ex : restaurer rev3 puis réviser → rev5, pas rev4)."
+      },
+      {
+        h: "Bouton « Éditer » pour les corrections mineures",
+        b: "Dans le menu Devis (panneau étendu), une nouvelle option « Éditer » permet de corriger une typo, un oubli, une mise à jour de format SANS créer de nouvelle version (la référence et la date sont conservées). À utiliser uniquement quand le sens du devis ne change pas pour le client. Pour une modification substantielle, continue d'utiliser « Réviser »."
+      },
+      {
+        h: "Suppression d'un devis = chaîne complète",
+        b: "Supprimer un devis efface désormais toutes ses révisions d'un coup (elles sont indissociables). Le devis complet est mis dans la corbeille pendant 30 suppressions, restaurable d'un clic."
+      },
+      {
+        h: "Corbeille accessible depuis le menu utilisateur",
+        b: "Nouvelle entrée « Corbeille » dans le menu Mon compte (en bas de la sidebar). Tu peux y récupérer un devis supprimé par erreur, ou des sections CGV supprimées."
+      },
+      {
+        h: "Tag rev visible partout",
+        b: "Le tag bleu « rev0 », « rev1 », « rev2 »… apparaît systématiquement à côté de la référence du devis dans Suivi et Accueil, pour identifier d'un coup d'œil la version active."
+      },
+      {
+        h: "Bug corrigé — entries pas recalculées après modification",
+        b: "Modifier un devis depuis l'éditeur (« Enregistrer les modifications ») ne mettait pas à jour les montants dans Suivi et Compta — le bilan restait sur l'ancienne valeur. Les statuts (acompte payé, refus, annulation) sont préservés ; seuls les montants se mettent à jour."
+      }
+    ]
+  }
+];
+
+// ▼ majLog — modale Mises à jour (changelog vulgarisé pour l'utilisateur).
+// Accessible via le menu Mon compte. Marque les nouveautés comme vues
+// (S.prefs.lastSeenMajVersion = id du plus récent) à l'ouverture, pour
+// retirer le badge « nouveau » du menu.
+let majLogModalOpen = false;
+window.majLogModalToggle = function() {
+  majLogModalOpen = !majLogModalOpen;
+  // À l'ouverture, on marque la dernière entrée comme vue.
+  if (majLogModalOpen && APP_CHANGELOG.length > 0) {
+    if (!S.prefs) S.prefs = {};
+    const latest = APP_CHANGELOG[0].id;
+    if (S.prefs.lastSeenMajVersion !== latest) {
+      S.prefs.lastSeenMajVersion = latest;
+      save();
+    }
+  }
+  render();
+};
+
+// Renvoie true s'il y a au moins une entrée plus récente que ce que l'user
+// a déjà ouvert. Sert à afficher un point « nouveau » sur l'icône menu.
+function majLogHasUnread() {
+  if (!APP_CHANGELOG.length) return false;
+  const seen = (S.prefs && S.prefs.lastSeenMajVersion) || "";
+  return seen !== APP_CHANGELOG[0].id;
+}
+
+function rMajLogModal() {
+  if (!majLogModalOpen) return "";
+  const stop = "event.stopPropagation();";
+  return `<div class="modal-overlay" onclick="if(event.target===this)majLogModalToggle()">
+    <div class="modal-card maj-modal" onclick="${stop}">
+      <div class="modal-title" style="display:flex;align-items:center;gap:8px">${ICO_SZ('lightbulb', 18)}<span>Mises à jour</span></div>
+      <div class="modal-sub">Ce qui a évolué dans l'application.</div>
+      <div class="maj-list">
+        ${APP_CHANGELOG.map(entry => `
+          <section class="maj-entry">
+            <header class="maj-entry-head">
+              <span class="maj-entry-date">${esc(dateFR(entry.date))}</span>
+              <h3 class="maj-entry-title">${esc(entry.title)}</h3>
+            </header>
+            <ul class="maj-entry-items">
+              ${entry.items.map(it => `
+                <li>
+                  <strong>${esc(it.h)}</strong>
+                  <p>${esc(it.b)}</p>
+                </li>`).join("")}
+            </ul>
+          </section>`).join("")}
+      </div>
+      <div class="modal-actions">
+        <button class="btn" onclick="majLogModalToggle()">Fermer</button>
       </div>
     </div>
   </div>`;
