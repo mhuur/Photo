@@ -3962,47 +3962,50 @@ function updDeplDevis(val) {
 window.updDeplDevis = updDeplDevis;
 
 // Compute the next chronologically-unique reference for the current mission.
-// Format : DEVIS-NUM-YYYY-MM-NNN (NUM = n° client, NNN = séquence reset chaque mois).
-// Sans n° client (ex: client non sélectionné) → DEVIS-YYYY-MM-NNN.
-// La séquence cherche le NNN max parmi les devis déjà émis ce mois (tous clients confondus, tous formats)
-// et ajoute 1 — sauf si la mission elle-même est déjà dans le suivi (auquel cas on garde son ref).
-// ▼ recomputeRef — génère DEVIS-NUM-YYYY-MM-NNN
+// Format : DEV-YYYYMM-NNN (préfixe court, année+mois compactés, séquence
+// mensuelle remise à zéro chaque mois). Pas de num client dans la ref —
+// il figure déjà dans le doc et n'a aucune valeur pour le destinataire.
+// La séquence cherche le NNN max parmi tous les devis du même mois (TOUS
+// formats acceptés : nouveau DEV-YYYYMM-NNN ET legacy DEVIS-…-YYYY-MM-NNN
+// ou DEVIS-…-YYYY-MM-DD), pour éviter toute collision avec l'historique.
+// Refs déjà archivées = immutables (engagement commercial) — on ne renumérote
+// jamais l'historique, le nouveau format s'applique uniquement aux nouveaux.
+// ▼ recomputeRef — génère DEV-YYYYMM-NNN
 function recomputeRef() {
   const date = S.mission.dateEmission || "";
   if (!date || date.length < 7) {
     S.mission.ref = "";
     return;
   }
-  const clientNum = (S.mission.client && String(S.mission.client.num || "").trim()) || "";
   const currentRef = S.mission.ref || "";
   const existing = (S.suivi && S.suivi.devis && typeof S.suivi.devis === "object") ? S.suivi.devis : {};
-  // Protection : si la ref de la mission correspond à un devis déjà archivé ET
-  // que son format reflète le client courant, on ne la régénère pas. Sinon
-  // (changement de client, ancien format sans num, etc.), on génère une neuve.
+  // Protection : si la ref de la mission correspond à un devis déjà archivé,
+  // on ne la régénère pas — quel que soit son format (legacy ou nouveau).
   const isInSuivi = !!currentRef && Object.values(existing).some(d => d && d.ref === currentRef);
-  if (isInSuivi) {
-    const matchesClient = clientNum
-      ? currentRef.startsWith(`DEVIS-${clientNum}-`)
-      : /^DEVIS-\d{4}-\d{2}-\d+$/.test(currentRef);
-    if (matchesClient) return;
-  }
+  if (isInSuivi) return;
+  // Si la ref courante est déjà au nouveau format pour le bon mois, on garde.
   const ym = date.slice(0, 7); // "YYYY-MM"
-  // Regex tolérante : accepte "DEVIS-YYYY-MM-NNN" et "DEVIS-NUM-YYYY-MM-NNN"
-  const re = /^DEVIS-(?:\d+-)?(\d{4})-(\d{2})-(\d+)$/;
+  const ymCompact = ym.replace("-", ""); // "YYYYMM"
+  if (currentRef && new RegExp(`^DEV-${ymCompact}-\\d+$`).test(currentRef)) return;
+  // Calcul du max séquence pour ce mois, tous formats confondus.
+  // - DEV-YYYYMM-NNN (nouveau)
+  // - DEVIS-NUM-YYYY-MM-NNN (legacy avec num client)
+  // - DEVIS-YYYY-MM-NNN (legacy sans num client)
+  // - DEVIS-NUM-YYYY-MM-DD (legacy historique avec date complète, ignoré pour la séquence
+  //   car DD chevauche le NNN — collision résolue par l'unicité du devisId)
+  const reNew = new RegExp(`^DEV-${ymCompact}-(\\d+)$`);
+  const reLegacy = new RegExp(`^DEVIS-(?:\\d+-)?${ym}-(\\d+)$`);
   let maxN = 0;
   for (const k of Object.keys(existing)) {
     const r = (existing[k] && existing[k].ref) || "";
-    const m = r.match(re);
-    if (m && `${m[1]}-${m[2]}` === ym) {
-      const n = parseInt(m[3], 10);
+    let m = r.match(reNew) || r.match(reLegacy);
+    if (m) {
+      const n = parseInt(m[1], 10);
       if (n > maxN) maxN = n;
     }
   }
-  const next = maxN + 1;
-  const seq = String(next).padStart(3, "0");
-  S.mission.ref = clientNum
-    ? `DEVIS-${clientNum}-${ym}-${seq}`
-    : `DEVIS-${ym}-${seq}`;
+  const seq = String(maxN + 1).padStart(3, "0");
+  S.mission.ref = `DEV-${ymCompact}-${seq}`;
 }
 
 // ▼ missionHasDraft — détecte si le brouillon Mission contient quelque chose
@@ -5388,7 +5391,7 @@ function rFacturePreview(opts) {
   }
   const sel = d.client.id ? S.clients.entries.find(x => x.id === d.client.id) : null;
   const cli = sel || d.client;
-  const ref = (d.ref || "DEVIS-…-…").replace(/^DEVIS/, "FACTURE");
+  const ref = (d.ref || "DEV-…-…").replace(/^(DEVIS|DEV)/, "FACTURE");
 
   const tarifH = t.tarifHEff || t.tarifH;
   const cat = (S.tarifs.catalog || DEFAULT_CATALOG).find(c => c.k === d.object);
@@ -6835,14 +6838,14 @@ const INFO_HTML = {
   `,
   ref: `
     <div class="tt-title" style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:8px">Format de la référence</div>
-    <p style="margin:0 0 8px;font-size:12px;line-height:1.5"><code style="font-family:monospace;background:var(--surface-2);padding:1px 6px;border-radius:3px">DEVIS-NUM-YYYY-MM-NNN</code></p>
+    <p style="margin:0 0 8px;font-size:12px;line-height:1.5"><code style="font-family:monospace;background:var(--surface-2);padding:1px 6px;border-radius:3px">DEV-YYYYMM-NNN</code></p>
     <ul style="margin:0 0 8px;padding-left:18px;font-size:12px;line-height:1.6">
-      <li><strong>DEVIS</strong> — préfixe (toujours)</li>
-      <li><strong>NUM</strong> — n° du client (ex : 7 pour Clément Bretaud)</li>
-      <li><strong>YYYY-MM</strong> — année et mois d'émission</li>
+      <li><strong>DEV</strong> — préfixe (toujours)</li>
+      <li><strong>YYYYMM</strong> — année et mois d'émission (ex : 202605)</li>
       <li><strong>NNN</strong> — séquence du mois, tous clients confondus (001, 002, 003…)</li>
     </ul>
-    <p style="margin:0;font-size:12px;line-height:1.5;color:var(--text-muted)">Exemple : <code style="font-family:monospace">DEVIS-7-2026-05-003</code> = 3<sup>e</sup> devis de mai 2026 émis pour le client n°7. Si le client n'a pas de numéro, le segment NUM est omis.</p>
+    <p style="margin:0;font-size:12px;line-height:1.5;color:var(--text-muted)">Exemple : <code style="font-family:monospace">DEV-202605-003</code> = 3<sup>e</sup> devis de mai 2026.</p>
+    <p style="margin:6px 0 0;font-size:12px;line-height:1.5;color:var(--text-muted)">Les devis émis avant la bascule au nouveau format conservent leur référence d'origine (<code style="font-family:monospace">DEVIS-…</code>) — engagement commercial immutable.</p>
   `,
   contratHorsEtab: `
     <div class="tt-title" style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:8px">Contrat signé hors établissement</div>
@@ -7018,8 +7021,9 @@ function r2(v) { return Math.round((+v + Number.EPSILON) * 100) / 100; }
 function formatRef(ref, type) {
   const labels = { devis: "Devis", debours: "Débours", facture: "Facture" };
   const label = labels[type] || "Devis";
-  if (!ref || ref === "DEVIS-…-…") return `${label} n° …`;
-  const stripped = ref.replace(/^(DEVIS|DEBOURS|FACTURE|FACT)-/i, "");
+  if (!ref || ref === "DEVIS-…-…" || ref === "DEV-…-…") return `${label} n° …`;
+  // DEVIS doit précéder DEV dans l'alternance (ordre = priorité de match).
+  const stripped = ref.replace(/^(DEVIS|DEBOURS|FACTURE|FACT|DEV)-/i, "");
   return `${label} n° ${stripped}`;
 }
 
@@ -7277,26 +7281,27 @@ function reconstructMissionFromSuivi(devisId, opts) {
   const dates = ents.map(e => e.date).filter(d => d && d.length >= 10).sort();
   fresh.dateEmission = dates[0] || new Date().toISOString().slice(0, 10);
 
-  // Ref rétroactive au format actuel DEVIS-NUM-YYYY-MM-NNN.
+  // Ref rétroactive au format actuel DEV-YYYYMM-NNN.
   // Calcul direct (n'appelle pas recomputeRef qui mute S.mission).
+  // Inspecte tous les formats existants pour le mois cible (nouveau + legacy)
+  // afin d'éviter toute collision de séquence.
   const ym = fresh.dateEmission.slice(0, 7);
-  const clientNum = (fresh.client && String(fresh.client.num || "").trim()) || "";
-  const re = /^DEVIS-(?:\d+-)?(\d{4})-(\d{2})-(\d+)$/;
+  const ymCompact = ym.replace("-", "");
+  const reNew = new RegExp(`^DEV-${ymCompact}-(\\d+)$`);
+  const reLegacy = new RegExp(`^DEVIS-(?:\\d+-)?${ym}-(\\d+)$`);
   let maxN = 0;
   const allDevis = (S.suivi && S.suivi.devis) || {};
   for (const k of Object.keys(allDevis)) {
     if (k === devisId) continue;
     const r = (allDevis[k] && allDevis[k].ref) || "";
-    const m = r.match(re);
-    if (m && `${m[1]}-${m[2]}` === ym) {
-      const n = parseInt(m[3], 10);
+    const m = r.match(reNew) || r.match(reLegacy);
+    if (m) {
+      const n = parseInt(m[1], 10);
       if (n > maxN) maxN = n;
     }
   }
   const seq = String(maxN + 1).padStart(3, "0");
-  fresh.ref = clientNum
-    ? `DEVIS-${clientNum}-${ym}-${seq}`
-    : `DEVIS-${ym}-${seq}`;
+  fresh.ref = `DEV-${ymCompact}-${seq}`;
 
   return { mission: fresh, recovered };
 }
@@ -7374,8 +7379,13 @@ function ensureLegacySnapshot(devisId) {
   if (snapshotHtml) snapshotHtml = banner + snapshotHtml;
   if (snapshotDeboursHtml) snapshotDeboursHtml = banner + snapshotDeboursHtml;
 
-  // Ref rétroactive si manquante / format non conforme (DEVIS- ou DEVIS-NUM-).
-  if (!dv.ref || !/^DEVIS-(?:\d+-)?\d{4}-\d{2}-\d+$/.test(dv.ref)) {
+  // Ref rétroactive si manquante / format non conforme (nouveau ou legacy).
+  const refOk = dv.ref && (
+    /^DEV-\d{6}-\d+$/.test(dv.ref) ||
+    /^DEVIS-(?:\d+-)?\d{4}-\d{2}-\d+$/.test(dv.ref) ||
+    /^DEVIS-\d+-\d{4}-\d{2}-\d{2}$/.test(dv.ref)
+  );
+  if (!refOk) {
     dv.ref = synth.ref || dv.ref || "";
   }
 
@@ -9165,7 +9175,7 @@ function computePrintFilename() {
     const m = S.mission || {};
     const cli = (m.client && (m.client.name || "Client")) || "Client";
     const ref = m.ref || "DEVIS";
-    const refClean = ref.replace(/^(DEVIS|DEBOURS|FACTURE)-?/i, "");
+    const refClean = ref.replace(/^(DEVIS|DEBOURS|FACTURE|DEV)-?/i, "");
     return sanitizeFilename(`${cli} - ${kind} ${refClean}`);
   }
   // Try to get prestation from the first suivi entry of this devis
@@ -9891,7 +9901,7 @@ function validateDevis() {
   const errors = [];
   const warnings = [];
 
-  if (!d.ref || d.ref === "DEVIS-…-…") errors.push("Référence du devis manquante");
+  if (!d.ref || d.ref === "DEVIS-…-…" || d.ref === "DEV-…-…") errors.push("Référence du devis manquante");
   const cliName = (d.client && d.client.name) ||
     (d.client && d.client.id && (S.clients.entries.find(c => c.id === d.client.id) || {}).name);
   if (!cliName) errors.push("Aucun client sélectionné");
@@ -10919,34 +10929,42 @@ function suiviRecomputeRefs() {
     if (!byDevisId.has(e.devisId)) byDevisId.set(e.devisId, []);
     byDevisId.get(e.devisId).push(e);
   }
-  // Pattern: DEVIS-<NUM>-<YYYY-MM-DD>
-  const validRefPattern = /^DEVIS-\d+-\d{4}-\d{2}-\d{2}$/i;
+  // Patterns valides : nouveau DEV-YYYYMM-NNN, ou legacy DEVIS-… (avec ou
+  // sans num client, terminé par séquence NNN ou date DD).
+  const validRefPatterns = [
+    /^DEV-\d{6}-\d+$/i,                      // nouveau format
+    /^DEVIS-\d+-\d{4}-\d{2}-\d{2}$/i,        // legacy avec num + date
+    /^DEVIS-(?:\d+-)?\d{4}-\d{2}-\d+$/i      // legacy avec/sans num + séquence
+  ];
+  // Cache de la séquence par mois — alimenté au fur et à mesure pour éviter
+  // les collisions si plusieurs devis sans ref tombent dans le même mois.
+  const seqByMonth = {};
+  const computeNextSeq = (ymCompact) => {
+    if (seqByMonth[ymCompact] === undefined) {
+      let max = 0;
+      const reNew = new RegExp(`^DEV-${ymCompact}-(\\d+)$`);
+      const ym = `${ymCompact.slice(0, 4)}-${ymCompact.slice(4, 6)}`;
+      const reLegacy = new RegExp(`^DEVIS-(?:\\d+-)?${ym}-(\\d+)$`);
+      for (const k of Object.keys(S.suivi.devis)) {
+        const r = (S.suivi.devis[k] && S.suivi.devis[k].ref) || "";
+        const m = r.match(reNew) || r.match(reLegacy);
+        if (m) { const n = parseInt(m[1], 10); if (n > max) max = n; }
+      }
+      seqByMonth[ymCompact] = max;
+    }
+    seqByMonth[ymCompact] += 1;
+    return seqByMonth[ymCompact];
+  };
   for (const [devisId, lignes] of byDevisId.entries()) {
     if (!S.suivi.devis[devisId]) S.suivi.devis[devisId] = { ref: "" };
     const currentRef = (S.suivi.devis[devisId].ref || "").trim();
-    if (currentRef && validRefPattern.test(currentRef)) continue; // already valid, skip
-    // Earliest date among lignes (fallback: first non-empty)
+    if (currentRef && validRefPatterns.some(p => p.test(currentRef))) continue; // already valid, skip
     const dates = lignes.map(l => l.date).filter(Boolean).sort();
     const date = dates[0] || "";
-    if (!date) continue; // no usable date → skip silently
-    // Find the client num — use cleanClientLabel logic but keep the num
-    const rawClient = lignes.find(l => l.client)?.client || "";
-    let num = "";
-    const m = String(rawClient).trim().match(/^#(\d+)\s*(.*)$/);
-    if (m) num = m[1];
-    // Try to match a fiche client (by num first, then by name) and use its num
-    if (S.clients && Array.isArray(S.clients.entries)) {
-      const cleanedName = m ? m[2].trim() : rawClient.trim();
-      let found = null;
-      if (num) found = S.clients.entries.find(c => (c.num || "").trim() === num);
-      if (!found && cleanedName) {
-        const lower = cleanedName.toLowerCase();
-        found = S.clients.entries.find(c => (c.name || "").trim().toLowerCase() === lower);
-      }
-      if (found && found.num) num = String(found.num).trim();
-    }
-    if (!num) continue; // no usable num → skip silently (don't generate broken refs)
-    S.suivi.devis[devisId].ref = `DEVIS-${num}-${date}`;
+    if (!date) continue;
+    const ymCompact = date.slice(0, 7).replace("-", "");
+    const seq = String(computeNextSeq(ymCompact)).padStart(3, "0");
+    S.suivi.devis[devisId].ref = `DEV-${ymCompact}-${seq}`;
   }
 }
 
