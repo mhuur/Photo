@@ -3254,6 +3254,7 @@ const ICONS = {
   unlock:         _ICO('<rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 9.9-1"/>'),
   rotateCcw:      _ICO('<path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/>'),
   eye:            _ICO('<path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/>'),
+  printer:        _ICO('<polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/>'),
   rotateCw:       _ICO('<path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/>'),
   check:          _ICO('<polyline points="20 6 9 17 4 12"/>'),
   x:              _ICO('<path d="M18 6 6 18"/><path d="m6 6 12 12"/>'),
@@ -3290,6 +3291,8 @@ const ICO_SZ = (key, sz) => {
     alertOctagon: '<polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/>',
     send: '<line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>',
     trash: '<path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>',
+    printer: '<polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/>',
+    camera: '<path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/>',
     lightbulb: '<path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5"/><path d="M9 18h6"/><path d="M10 22h4"/>',
     clipboard: '<rect width="8" height="4" x="8" y="2" rx="1" ry="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/>',
     fileText: '<path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><polyline points="14 2 14 8 20 8"/><line x1="16" x2="8" y1="13" y2="13"/><line x1="16" x2="8" y1="17" y2="17"/><polyline points="10 9 9 9 8 9"/>',
@@ -5648,7 +5651,7 @@ function rFacturePreview(opts) {
 
 
     <div class="dp-actions">
-      <button class="btn ghost" onclick="window.print()">🖨️ Imprimer</button>
+      <button class="btn-add-neon ghost" onclick="window.print()">${ICO_SZ('printer',13)} Imprimer</button>
     </div>
   </div>`;
 }
@@ -8819,8 +8822,8 @@ function rBinModal() {
               <button class="bin-item-purge" onclick="binPurge('${esc(it.id)}')" title="Supprimer définitivement">×</button>
             </div>`).join("")}</div>`}
       <div class="modal-actions">
-        ${items.length > 0 ? `<button class="btn ghost" onclick="binClear()" style="color:var(--danger);border-color:var(--danger)">Vider la corbeille</button>` : ""}
-        <button class="btn" onclick="binModalToggle()">Fermer</button>
+        ${items.length > 0 ? `<button class="btn-add-neon danger" onclick="binClear()">Vider la corbeille</button>` : ""}
+        <button class="btn-add-neon" onclick="binModalToggle()">Fermer</button>
       </div>
     </div>
   </div>`;
@@ -8936,10 +8939,10 @@ function rCgvSectionEditModal() {
         <textarea class="cgv-edit-modal-textarea" rows="8" placeholder="Contenu de la section…" oninput="cgvSectionUpdate('${esc(sec.id)}', 'body', this.value)">${esc(sec.body || "")}</textarea>
       </div>
       <div class="modal-actions">
-        <button class="btn ghost cgv-edit-move" onclick="cgvSectionMoveUp('${esc(sec.id)}')" ${idx === 0 ? 'disabled' : ''} title="Monter cette section">↑ Monter</button>
-        <button class="btn ghost cgv-edit-move" onclick="cgvSectionMoveDown('${esc(sec.id)}')" ${idx === total - 1 ? 'disabled' : ''} title="Descendre cette section">↓ Descendre</button>
-        <button class="btn ghost cgv-edit-remove" style="margin-left:auto" onclick="cgvSectionRemoveAndClose('${esc(sec.id)}')" title="Supprimer cette section">× Supprimer</button>
-        <button class="btn" onclick="cgvSectionEditClose()">Fermer</button>
+        <button class="btn-add-neon ghost cgv-edit-move" onclick="cgvSectionMoveUp('${esc(sec.id)}')" ${idx === 0 ? 'disabled' : ''} title="Monter cette section">↑ Monter</button>
+        <button class="btn-add-neon ghost cgv-edit-move" onclick="cgvSectionMoveDown('${esc(sec.id)}')" ${idx === total - 1 ? 'disabled' : ''} title="Descendre cette section">↓ Descendre</button>
+        <button class="btn-add-neon danger" style="margin-left:auto" onclick="cgvSectionRemoveAndClose('${esc(sec.id)}')" title="Supprimer cette section">${ICO_SZ('trash',13)} Supprimer</button>
+        <button class="btn-add-neon" onclick="cgvSectionEditClose()">Fermer</button>
       </div>
     </div>
   </div>`;
@@ -9085,8 +9088,8 @@ function rTextEditorModal() {
       </div>
       <div id="rich-editor" class="rich-editor" contenteditable="true" spellcheck="true">${initialHtml}</div>
       <div class="modal-actions">
-        <button class="btn ghost" onclick="textEditorClose(false)">Annuler</button>
-        <button class="btn" onclick="textEditorClose(true)">✓ Enregistrer</button>
+        <button class="btn-add-neon ghost" onclick="textEditorClose(false)">Annuler</button>
+        <button class="btn-add-neon" onclick="textEditorClose(true)">${ICO_SZ('check',13)} Enregistrer</button>
       </div>
     </div>
   </div>`;
@@ -9246,8 +9249,8 @@ function rLogoField() {
     return `<div class="logo-field has-logo">
       <img src="${esc(url)}" alt="Logo" class="logo-preview">
       <div class="logo-actions">
-        <label class="btn ghost">📷 Remplacer<input type="file" accept="image/*" onchange="logoUpload(this)" hidden></label>
-        <button class="btn ghost" onclick="logoRemove()">× Retirer</button>
+        <label class="btn-add-neon ghost">${ICO_SZ('camera',13)} Remplacer<input type="file" accept="image/*" onchange="logoUpload(this)" hidden></label>
+        <button class="btn-add-neon ghost" onclick="logoRemove()">${ICO_SZ('x',13)} Retirer</button>
       </div>
     </div>`;
   }
@@ -9443,7 +9446,7 @@ function rPrintTipModal() {
   if (!printTipModalOpen) return "";
   return `<div class="modal-overlay" onclick="if(event.target===this)printTipDismiss(false)">
     <div class="modal-card" style="max-width:480px">
-      <div class="modal-title">🖨️ Préparation de l'impression</div>
+      <div class="modal-title" style="display:flex;align-items:center;gap:8px">${ICO_SZ('printer',16)} Préparation de l'impression</div>
       <div style="padding:8px 0 4px;font-size:13px;line-height:1.6;color:var(--text)">
         Pour un PDF propre, sans bandeau « date · titre du site » en haut de chaque page :
         <ol style="margin:14px 0 0;padding-left:22px;line-height:1.7">
@@ -9456,8 +9459,8 @@ function rPrintTipModal() {
         </div>
       </div>
       <div class="modal-actions">
-        <button class="btn ghost" onclick="printTipDismiss(false)">Annuler</button>
-        <button class="btn" onclick="printTipDismiss(true)">Continuer vers l'impression</button>
+        <button class="btn-add-neon ghost" onclick="printTipDismiss(false)">Annuler</button>
+        <button class="btn-add-neon" onclick="printTipDismiss(true)">Continuer vers l'impression</button>
       </div>
     </div>
   </div>`;
@@ -9482,7 +9485,7 @@ function rViewDevisModal() {
     <button class="${view==='devis'?'on':''}" onclick="viewDevisSetView('devis')">📄 Devis</button>
     <button class="${view==='debours'?'on':''}" onclick="viewDevisSetView('debours')">💸 Débours${dv.snapshotDebours ? ` <span class="badge">${fmt(dv.snapshotDebours)}</span>` : ""}</button>
   </div>` : "";
-  const printLabel = (view === "debours") ? "🖨️ Imprimer débours" : "🖨️ Imprimer devis";
+  const printLabel = (view === "debours") ? "Imprimer débours" : "Imprimer devis";
   const titleRef = (view === "debours") ? formatRef(ref, "debours") : formatRef(ref, "devis");
   return `<div class="modal-overlay" onclick="if(event.target===this)viewDevisClose()">
     <div class="modal-card modal-card-lg">
@@ -9495,8 +9498,8 @@ function rViewDevisModal() {
             Aucun snapshot disponible pour ce devis.<br><span style="font-size:13px;color:var(--text-dim)">Les snapshots sont créés à partir de l'émission depuis l'onglet Mission « + Enregistrer dans Suivi ».</span>
            </div>`}
       <div class="modal-actions">
-        ${snapshot ? `<button class="btn ghost" onclick="printWithTip()">${printLabel}</button>` : ""}
-        <button class="btn" onclick="viewDevisClose()">Fermer</button>
+        ${snapshot ? `<button class="btn-add-neon ghost" onclick="printWithTip()">${ICO_SZ('printer',13)} ${printLabel}</button>` : ""}
+        <button class="btn-add-neon" onclick="viewDevisClose()">Fermer</button>
       </div>
     </div>
   </div>`;
@@ -9669,7 +9672,7 @@ function rViewFactureModal() {
       <div class="modal-card">
         <div class="modal-title">Facture indisponible</div>
         <div class="empty" style="padding:30px;text-align:center">Aucun snapshot devis pour ce devis.<br><span style="font-size:13px;color:var(--text-dim)">Émets d'abord le devis (« + Enregistrer dans Suivi »).</span></div>
-        <div class="modal-actions"><button class="btn" onclick="viewFactureClose()">Fermer</button></div>
+        <div class="modal-actions"><button class="btn-add-neon" onclick="viewFactureClose()">Fermer</button></div>
       </div>
     </div>`;
   }
@@ -9690,7 +9693,7 @@ function rViewFactureModal() {
       <div class="modal-card">
         <div class="modal-title">${type === "acompte" ? "Facture d'acompte" : "Facture de solde"} — pas encore émissible</div>
         <div class="empty" style="padding:24px;line-height:1.5">${esc(reason)}</div>
-        <div class="modal-actions"><button class="btn" onclick="viewFactureClose()">Fermer</button></div>
+        <div class="modal-actions"><button class="btn-add-neon" onclick="viewFactureClose()">Fermer</button></div>
       </div>
     </div>`;
   }
@@ -9754,8 +9757,8 @@ function rViewFactureModal() {
         })()}
       </div>
       <div class="modal-actions">
-        <button class="btn ghost" onclick="printWithTip()">🖨️ Imprimer</button>
-        <button class="btn" onclick="viewFactureClose()">Fermer</button>
+        <button class="btn-add-neon ghost" onclick="printWithTip()">${ICO_SZ('printer',13)} Imprimer</button>
+        <button class="btn-add-neon" onclick="viewFactureClose()">Fermer</button>
       </div>
     </div>
   </div>`;
@@ -12617,8 +12620,8 @@ function rClientInfoModal() {
       ${bizHtml ? `<h4 class="ci-section-title">Identification</h4>${bizHtml}` : ""}
       ${rencontre}
       <div class="modal-actions">
-        <button class="btn ghost" onclick="clientInfoModalGoToFiche()">Voir la fiche complète →</button>
-        <button class="btn" onclick="clientInfoModalClose()">Fermer</button>
+        <button class="btn-add-neon ghost" onclick="clientInfoModalClose()">Fermer</button>
+        <button class="btn-add-neon" onclick="clientInfoModalGoToFiche()">Voir la fiche complète →</button>
       </div>
     </div>
   </div>`;
