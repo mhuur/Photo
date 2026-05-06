@@ -1219,6 +1219,15 @@
   .catalog-table tr[draggable="true"]{transition:opacity .12s,background .12s}
   .catalog-table tr.dragging{opacity:.4}
   .catalog-table tr.catalog-drag-over{background:rgba(74,158,255,.10);box-shadow:inset 0 2px 0 rgba(74,158,255,.6)}
+  /* Lignes de groupe (séparateurs visuels) */
+  .catalog-table tr.catalog-group-row{background:linear-gradient(90deg,rgba(74,158,255,.10),rgba(74,158,255,.02))}
+  .catalog-table tr.catalog-group-row td{border-top:1px solid rgba(74,158,255,.4);padding-top:10px;padding-bottom:10px}
+  .catalog-table td.catalog-group-cell{padding:6px 8px}
+  .catalog-table .catalog-group-libelle{font-weight:700;text-transform:uppercase;letter-spacing:.06em;font-size:13px;color:var(--primary);background:transparent;border-color:transparent}
+  .catalog-table .catalog-group-libelle:focus{background:var(--surface-2);border-color:var(--primary)}
+  .catalog-table .catalog-group-libelle::placeholder{font-weight:600;color:var(--text-dim);text-transform:uppercase}
+  /* Toolbar : groupe (séparateur) + nouvelle prestation alignés à droite */
+  .catalog-add-group{margin-left:auto;display:flex;gap:var(--space-sm)}
   /* Status badges in Tarifs view (Investissements) */
   .tr-badge{padding:3px 8px;border-radius:10px;font-size:13px;font-weight:600;text-transform:uppercase;display:inline-block;line-height:1.4}
   .tr-badge.ok{background:var(--success-soft);color:var(--success)}
@@ -5953,6 +5962,22 @@ function tarifAdd() {
 }
 window.tarifAdd = tarifAdd;
 
+// ▼ tarifAddGroup — ajoute un séparateur de groupe en bas du catalogue. Un
+// groupe n'a pas de tarif, sert juste à organiser visuellement la liste.
+// Drag & drop normal (handle) pour le déplacer où on veut.
+function tarifAddGroup() {
+  const k = "group_" + uid();
+  S.tarifs.catalog.push({ k, type: "group", l: "" });
+  save();
+  render();
+  requestAnimationFrame(() => {
+    const inputs = document.querySelectorAll('.catalog-group-libelle');
+    const last = inputs[inputs.length - 1];
+    if (last) { last.focus(); last.select(); }
+  });
+}
+window.tarifAddGroup = tarifAddGroup;
+
 // ▼ tarifDel — supprime une ligne avec toast Undo (5 s pour annuler).
 // Pas de uiConfirm : suppression instantanée + restore immédiat dispo.
 function tarifDel(idx) {
@@ -10676,14 +10701,36 @@ function rDevisSectionPrestations() {
         ? `Vide → tarif catalogue (${_catTarif.toFixed(2).replace('.',',')} €/h). <a href="#" onclick="setTab('tarifs');return false">Modifier le catalogue →</a>`
         : `Renseigne pour forcer un tarif horaire manuel.`);
 
+  // Construit les <optgroup> du dropdown catalogue : on regroupe les
+  // prestations par séparateur de groupe rencontré dans S.tarifs.catalog.
+  const _catSrc = S.tarifs.catalog || DEFAULT_CATALOG;
+  const _catBuckets = [];
+  let _catBuf = { groupLabel: null, options: [] };
+  for (const c of _catSrc) {
+    if (c.type === "group") {
+      if (_catBuf.options.length || _catBuf.groupLabel) _catBuckets.push(_catBuf);
+      _catBuf = { groupLabel: c.l || "Sans nom", options: [] };
+    } else {
+      _catBuf.options.push(c);
+    }
+  }
+  if (_catBuf.options.length || _catBuf.groupLabel) _catBuckets.push(_catBuf);
+  const _catOptionsHtml = _catBuckets.map(g => {
+    const opts = g.options.map(c =>
+      `<option value="${c.k}" ${d.object===c.k?"selected":""}>${esc(c.l)}</option>`
+    ).join("");
+    return g.groupLabel
+      ? `<optgroup label="${esc(g.groupLabel)}">${opts}</optgroup>`
+      : opts;
+  }).join("");
+
   return `
     <h5>Type de prestation</h5>
     <div class="row">
       <div class="field lg"><label>Catalogue</label>
         <select onchange="pickObject(this.value)">
           <option value="">— choisir —</option>
-          ${(S.tarifs.catalog || DEFAULT_CATALOG).map(c =>
-            `<option value="${c.k}" ${d.object===c.k?"selected":""}>${esc(c.l)}</option>`).join("")}
+          ${_catOptionsHtml}
         </select>
       </div>
       <div class="field"><label>Objet (libre)</label>
@@ -14542,15 +14589,35 @@ function rCatalogue() {
   const mode = S.tarifs.viewMode === "noir" ? "noir" : "declare";
   const isDecl = mode === "declare";
   const tarifRows = cat.length === 0
-    ? `<tr><td colspan="${isDecl ? 7 : 6}" class="catalog-empty">Aucune prestation. Clique sur « Nouvelle prestation » pour démarrer.</td></tr>`
+    ? `<tr><td colspan="7" class="catalog-empty">Aucune prestation. Clique sur « Nouvelle prestation » pour démarrer.</td></tr>`
     : cat.map((c, idx) => {
+        // Lignes de type "group" : séparateur visuel éditable, occupe toute la
+        // largeur des colonnes du milieu. Pas de tarif/URSSAF/calcul.
+        if (c.type === "group") {
+          return `
+        <tr class="catalog-group-row" draggable="true" data-tarif-key="${esc(c.k)}"
+            ondragstart="tarifDragStart(event,'${esc(c.k)}')"
+            ondragend="tarifDragEnd(event)"
+            ondragover="tarifDragOver(event)"
+            ondrop="tarifDrop(event,'${esc(c.k)}')">
+          <td class="catalog-drag-handle" title="Glisser pour réordonner">${ICO_SZ('gripVertical', 14)}</td>
+          <td colspan="5" class="catalog-group-cell">
+            <input type="text" value="${esc(c.l)}" oninput="tarifEdit(${idx},'l',this.value)" placeholder="Nom du groupe (ex : Photo, Vidéo, Événementiel)" class="tr-cell-input catalog-group-libelle">
+          </td>
+          <td class="actions catalog-action-cell">
+            <button type="button" class="catalog-row-del" title="Supprimer ce groupe" onclick="tarifDel(${idx})" aria-label="Supprimer">${ICO_SZ('trash', 14)}</button>
+          </td>
+        </tr>`;
+        }
         const final = num(c.p);
         const urssafAmt = (isDecl && final > 0) ? r2(final * urssafPct / 100) : 0;
         const net = final > 0 ? r2(final - urssafAmt - tm.tauxRetenu) : 0;
         const empty = final === 0;
-        const urssafCell = isDecl
-          ? `<td class="amount muted-cell ${empty ? 'dim' : ''}">${empty ? "—" : `−${fmt(urssafAmt)}`}</td>`
-          : "";
+        // Cellule URSSAF : toujours présente. En Au black, on affiche "—" (vide).
+        const urssafCellContent = !isDecl
+          ? "—"
+          : (empty ? "—" : `−${fmt(urssafAmt)}`);
+        const urssafCellClass = (!isDecl || empty) ? "dim" : "";
         return `
         <tr ${empty ? 'class="row-empty"' : ''} draggable="true" data-tarif-key="${esc(c.k)}"
             ondragstart="tarifDragStart(event,'${esc(c.k)}')"
@@ -14568,7 +14635,7 @@ function rCatalogue() {
               <span class="unit">€/h</span>
             </div>
           </td>
-          ${urssafCell}
+          <td class="amount muted-cell ${urssafCellClass}">${urssafCellContent}</td>
           <td class="amount muted-cell ${empty ? 'dim' : ''}">${empty ? "—" : `−${fmt(tm.tauxRetenu)}`}</td>
           <td class="amount net-cell ${empty ? 'dim' : (net >= 0 ? 'ok' : 'bad')}">${empty ? "—" : fmt(net)}</td>
           <td class="actions catalog-action-cell">
@@ -14576,12 +14643,13 @@ function rCatalogue() {
           </td>
         </tr>`;
       }).join("");
-  const urssafHead = isDecl
-    ? `<th style="width:110px;text-align:right">URSSAF<div style="font-size:13px;font-weight:400;color:var(--text-muted);margin-top:1px">${urssafPct.toString().replace(".", ",")} %</div></th>`
-    : "";
+  const urssafHeadSubtitle = isDecl
+    ? `${urssafPct.toString().replace(".", ",")} %`
+    : `au black`;
+  const urssafHead = `<th style="width:110px;text-align:right">URSSAF<div style="font-size:13px;font-weight:400;color:var(--text-muted);margin-top:1px">${urssafHeadSubtitle}</div></th>`;
   const hint = isDecl
     ? `Saisis le <strong>tarif final</strong> facturé au client (TTC, URSSAF incluse). Décomposition : <strong>Tarif − URSSAF − Coût matériel = Net</strong> qui te reste pour ton temps.`
-    : `Saisis le <strong>tarif final</strong> facturé au client. Au noir, pas d'URSSAF : <strong>Tarif − Coût matériel = Net</strong> qui te reste pour ton temps.`;
+    : `Saisis le <strong>tarif final</strong> facturé au client. Au black, pas d'URSSAF : <strong>Tarif − Coût matériel = Net</strong> qui te reste pour ton temps.`;
   return `
     <h1 class="page-title">${esc(pageTitle("tarifs"))} <span id="savedFlash" class="saved"></span></h1>
     <h3>Prestations &amp; tarifs (€/h)</h3>
@@ -14590,7 +14658,10 @@ function rCatalogue() {
         <button class="${isDecl?"on ok":""}" onclick="tarifViewMode('declare')">${ICO_SZ('check', 14)} Déclaré</button>
         <button class="${!isDecl?"on warn":""}" onclick="tarifViewMode('noir')">${ICO_SZ('circleFilled', 12)} Au black</button>
       </div>
-      <button type="button" class="btn-add-neon catalog-add-btn" onclick="tarifAdd()">${ICO_SZ('plus', 14)} Nouvelle prestation</button>
+      <div class="catalog-add-group">
+        <button type="button" class="btn-add-neon ghost" onclick="tarifAddGroup()" title="Ajouter un séparateur de groupe (ex : Photo, Vidéo, Mariage)">${ICO_SZ('plus', 14)} Groupe</button>
+        <button type="button" class="btn-add-neon" onclick="tarifAdd()">${ICO_SZ('plus', 14)} Nouvelle prestation</button>
+      </div>
     </div>
     <div class="hint" style="max-width:880px">${hint} Le coût matériel se règle dans l'onglet « Achats / Abonnements », le taux URSSAF dans la section Ajustements d'un devis.</div>
     <table class="hist catalog-table" style="max-width:880px">
