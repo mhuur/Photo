@@ -1234,6 +1234,7 @@
   .catalog-subtoolbar{display:flex;align-items:center;gap:var(--space-lg);margin:0 0 var(--space-md);flex-wrap:wrap;padding:10px 14px;background:rgba(192,38,211,.05);border:1px solid rgba(192,38,211,.2);border-radius:var(--radius-md)}
   .catalog-remise-field{display:flex;align-items:center;gap:var(--space-sm)}
   .catalog-remise-field label{font-size:13px;color:var(--text-muted);display:flex;align-items:center;gap:6px;margin:0;white-space:nowrap}
+  .catalog-remise-range{font-size:12px;color:var(--text-dim);font-weight:normal;font-variant-numeric:tabular-nums}
   /* Colonne Tarif au black (info, droite du Net) */
   .catalog-table td.tarif-black-cell{font-variant-numeric:tabular-nums;text-align:right;font-weight:600;color:#c026d3;padding-right:14px}
   .catalog-table td.tarif-black-cell.dim{color:var(--text-dim);font-weight:400}
@@ -4097,6 +4098,26 @@ function updRemise(val, max) {
   if (inp && num(inp.value) !== n) inp.value = String(n);
 }
 window.updRemise = updRemise;
+
+// ▼ updRemiseNoire — clamp [0, urssafPct] sur la remise non déclarée.
+// Empêche de saisir une remise > URSSAF (sinon on perd vs déclaré). Appelé
+// depuis les inputs Catalogue ET Mission (source unique S.identite).
+function updRemiseNoire(val) {
+  const max = getUrssafPct();
+  let n = num(val);
+  if (n < 0) n = 0;
+  if (n > max) n = max;
+  if (S.identite) S.identite.remiseNoirePct = String(n);
+  save();
+  // Force-update visuel des inputs si clamping (tape 30 → revient à 22)
+  document.querySelectorAll('input[data-remise-noire]').forEach(inp => {
+    if (num(inp.value) !== n) inp.value = String(n);
+  });
+  // Maj live preview Mission (si on est sur Mission) + cellules Catalogue
+  refreshTotals();
+  if (typeof tarifRefreshBlackCells === "function") tarifRefreshBlackCells();
+}
+window.updRemiseNoire = updRemiseNoire;
 
 function refreshRefDisplay() {
   // The reference now appears in the devis preview; refresh it
@@ -10898,11 +10919,12 @@ function rDevisSectionPrestations() {
         ${bm === 'fixe' ? `
         <div class="presta-remise-noire" title="Remise non déclarée — restitue une part de l'URSSAF économisée">
           <label>Remise non déclarée
+            <span class="catalog-remise-range">(0 à ${urssafPctVal.toString().replace(".", ",")} %)</span>
             <button type="button" class="lg-info-icon" tabindex="0" aria-label="À quoi sert cette remise"
               onmouseenter="showInfo(event, 'remiseNoire')" onmouseleave="hideInfo()" onfocus="showInfo(event, 'remiseNoire')" onblur="hideInfo()">i</button>
           </label>
           <div class="lock-field with-unit">
-            <input type="number" step="0.5" min="0" max="${urssafPctVal}" value="${esc(S.identite?.remiseNoirePct ?? "0")}" oninput="upd('identite.remiseNoirePct', this.value)">
+            <input type="number" step="0.5" min="0" max="${urssafPctVal}" value="${esc(S.identite?.remiseNoirePct ?? "0")}" data-remise-noire oninput="updRemiseNoire(this.value)">
             <span class="lock-unit">%</span>
           </div>
         </div>` : ""}`;
@@ -14825,11 +14847,12 @@ function rCatalogue() {
       ${isNetMax ? `
       <div class="catalog-remise-field" title="Remise non déclarée — restitue une partie de l'URSSAF économisée">
         <label>Remise non déclarée
+          <span class="catalog-remise-range">(0 à ${urssafPct.toString().replace(".", ",")} %)</span>
           <button type="button" class="lg-info-icon" tabindex="0" aria-label="À quoi sert cette remise"
             onmouseenter="showInfo(event, 'remiseNoire')" onmouseleave="hideInfo()" onfocus="showInfo(event, 'remiseNoire')" onblur="hideInfo()">i</button>
         </label>
         <div class="lock-field with-unit">
-          <input type="number" step="0.5" min="0" max="${urssafPct}" value="${esc(S.identite?.remiseNoirePct ?? "0")}" oninput="upd('identite.remiseNoirePct', this.value); tarifRefreshBlackCells()">
+          <input type="number" step="0.5" min="0" max="${urssafPct}" value="${esc(S.identite?.remiseNoirePct ?? "0")}" data-remise-noire oninput="updRemiseNoire(this.value)">
           <span class="lock-unit">%</span>
         </div>
       </div>` : ""}
