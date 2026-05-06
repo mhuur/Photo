@@ -5755,7 +5755,8 @@ function rFacturePreview(opts) {
         <div class="dp-meta-block">
           <div>Émission : <strong>${dateFR(d.dateEmission) || "—"}</strong></div>
         </div>
-        <div class="dp-client-block">
+        <div class="dp-client-block dp-client-box">
+          <div class="dp-client-label">Destinataire</div>
           <span class="name">${esc(cli.name || "(Sélectionner un client)")}</span>
           ${cli.address ? `<div>${esc(cli.address)}</div>` : ""}
           ${cli.cityPostal ? `<div>${esc(cli.cityPostal)}</div>` : ""}
@@ -12770,7 +12771,7 @@ function suiviExpandedPanelHtml(g) {
         const dv = S.suivi.devis && S.suivi.devis[g.devisId];
         const envoiTs = dv && dv.envoiTs;
         const envoiBadge = envoiTs ? `<div class="suv-envoi-tag suv-envoi-undo" title="Cliquer pour annuler la marque d'envoi" onclick="${stop}devisEnvoiUndo('${g.devisId}')">Envoyé le ${esc(dateFR(new Date(envoiTs).toISOString().slice(0,10)))} <span class="suv-envoi-undo-x">${ICO_SZ('x', 10)}</span></div>` : "";
-        return `<div class="suv-action-col"><button class="btn-add-neon ghost" onclick="${stop}devisActionMenu('${g.devisId}')">${ICO_SZ('fileText',13)} Devis</button>${envoiBadge}</div>`;
+        return `<div class="suv-action-col"><button class="btn-add-neon ghost" onclick="${stop}devisActionMenu('${g.devisId}')">${ICO_SZ('eye',13)} Devis</button>${envoiBadge}</div>`;
       })()}
       ${(() => {
         // Bouton Débours masqué si aucun frais débours sur les entries.
