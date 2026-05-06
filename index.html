@@ -1228,6 +1228,15 @@
   .catalog-table .catalog-group-libelle::placeholder{font-weight:600;color:var(--text-dim);text-transform:uppercase}
   /* Toolbar : groupe (séparateur) + nouvelle prestation alignés à droite */
   .catalog-add-group{margin-left:auto;display:flex;gap:var(--space-sm)}
+  /* Sous-toolbar Au black : toggle Net max/Prix compétitif + input remise */
+  .catalog-subtoolbar{display:flex;align-items:center;gap:var(--space-lg);margin:0 0 var(--space-md);flex-wrap:wrap;padding:10px 14px;background:rgba(192,38,211,.05);border:1px solid rgba(192,38,211,.2);border-radius:var(--radius-md)}
+  .catalog-remise-field{display:flex;align-items:center;gap:var(--space-sm)}
+  .catalog-remise-field label{font-size:13px;color:var(--text-muted);display:flex;align-items:center;gap:6px;margin:0}
+  .catalog-remise-field .lock-field{max-width:120px}
+  .catalog-remise-field .lock-field input{width:60px}
+  /* Colonne Tarif au black (info, droite du Net) */
+  .catalog-table td.tarif-black-cell{font-variant-numeric:tabular-nums;text-align:right;font-weight:600;color:#c026d3;padding-right:14px}
+  .catalog-table td.tarif-black-cell.dim{color:var(--text-dim);font-weight:400}
   /* Status badges in Tarifs view (Investissements) */
   .tr-badge{padding:3px 8px;border-radius:10px;font-size:13px;font-weight:600;text-transform:uppercase;display:inline-block;line-height:1.4}
   .tr-badge.ok{background:var(--success-soft);color:var(--success)}
@@ -2736,6 +2745,11 @@
   .presta-status-row{display:flex;flex-direction:column;align-items:flex-start;gap:var(--space-sm);max-width:780px}
   .presta-status-row .seg{width:320px;max-width:100%}
   .presta-status-row .seg button{flex:1;justify-content:center}
+  /* Remise non déclarée (Mission, au black + Net max) */
+  .presta-remise-noire{display:flex;align-items:center;gap:var(--space-sm);margin-top:var(--space-xs)}
+  .presta-remise-noire label{font-size:13px;color:var(--text-muted);display:flex;align-items:center;gap:6px;margin:0}
+  .presta-remise-noire .lock-field{max-width:120px}
+  .presta-remise-noire .lock-field input{width:60px}
 
   /* === Section Identification & client === */
   .identif-dates-row{display:grid;grid-template-columns:minmax(220px,1.4fr) 150px 130px 170px;gap:var(--gap-field);max-width:880px}
@@ -2925,7 +2939,8 @@ const DEFAULT_S = {
     bank: { banque: "", titulaire: "", iban: "", bic: "" },
     clienteleType: "mixte",
     logoUrl: "",
-    urssafPct: "22"
+    urssafPct: "22",
+    remiseNoirePct: "0"
   },
   devis:    {},
   suivi:    { entries: [], devis: {}, bin: { items: [] } },
@@ -2933,7 +2948,7 @@ const DEFAULT_S = {
   compta:   {},
   abonnements: { entries: [] },
   investissements: { entries: [] },
-  tarifs: { catalog: JSON.parse(JSON.stringify(DEFAULT_CATALOG)), heuresAnnuelles: "900", facteurSecurite: "0", viewMode: "declare" },
+  tarifs: { catalog: JSON.parse(JSON.stringify(DEFAULT_CATALOG)), heuresAnnuelles: "900", facteurSecurite: "0", viewMode: "declare", viewBlackMode: "reduit" },
   bin:    { items: [] },
   bugs: { items: [] },
   prefs: {
@@ -3025,6 +3040,7 @@ if (!S.tarifs || !Array.isArray(S.tarifs.catalog) || !S.tarifs.catalog.length) S
 if (!S.tarifs.heuresAnnuelles) S.tarifs.heuresAnnuelles = "900";
 if (typeof S.tarifs.facteurSecurite === "undefined") S.tarifs.facteurSecurite = "0";
 if (S.tarifs.viewMode !== "declare" && S.tarifs.viewMode !== "noir") S.tarifs.viewMode = "declare";
+if (S.tarifs.viewBlackMode !== "fixe" && S.tarifs.viewBlackMode !== "reduit") S.tarifs.viewBlackMode = "reduit";
 // Backfill : tout item du catalog sans champ `d` (libellé description)
 for (const c of S.tarifs.catalog) { if (typeof c.d !== "string") c.d = ""; }
 if (!S.bugs || (!Array.isArray(S.bugs.items) && !Array.isArray(S.bugs.entries) && typeof S.bugs.html !== "string")) S.bugs = { items: [] };
@@ -3247,9 +3263,10 @@ if (S.mission && S.mission.ref && S.suivi && S.suivi.devis) {
     delete sm.revisesDevisId;
     delete sm.majTrameDevisId;
     delete sm.editDevisId;
-    // urssafPct vit sur S.identite ; on fige la valeur globale au moment du
-    // backfill pour ce snapshot ad hoc (immutable historique).
+    // urssafPct/remiseNoirePct vivent sur S.identite ; on fige les valeurs
+    // globales au moment du backfill (immutable historique).
     if (!sm.urssafPct) sm.urssafPct = String(S.identite?.urssafPct ?? "22");
+    if (sm.remiseNoirePct == null) sm.remiseNoirePct = String(S.identite?.remiseNoirePct ?? "0");
     dv.snapshotMission = sm;
   }
 }
@@ -4060,7 +4077,7 @@ function upd(path, val) {
     refreshRefDisplay();
   }
   save();
-  if (path.startsWith("mission.prep") || path.startsWith("mission.prod") || path.startsWith("mission.postprod") || path.startsWith("mission.deplacement") || path.startsWith("mission.autres") || path.startsWith("mission.lignes") || path === "mission.remisePct" || path === "mission.object" || path === "mission.objectText" || path === "mission.paiement.margeAvance" || path === "identite.urssafPct" || path === "mission.blackMode" || path === "mission.dureeValidite" || path === "mission.tarifHOverride") {
+  if (path.startsWith("mission.prep") || path.startsWith("mission.prod") || path.startsWith("mission.postprod") || path.startsWith("mission.deplacement") || path.startsWith("mission.autres") || path.startsWith("mission.lignes") || path === "mission.remisePct" || path === "mission.object" || path === "mission.objectText" || path === "mission.paiement.margeAvance" || path === "identite.urssafPct" || path === "identite.remiseNoirePct" || path === "mission.blackMode" || path === "mission.dureeValidite" || path === "mission.tarifHOverride") {
     refreshTotals();
   }
 }
@@ -5937,6 +5954,18 @@ function getUrssafPct(scope) {
 }
 window.getUrssafPct = getUrssafPct;
 
+// ▼ getRemiseNoirePct — % de remise « non déclarée » offerte au client en mode
+// Au black + Net maximisé. Concrètement : tu gardes l'URSSAF que tu n'auras
+// pas à reverser, et tu en restitues une fraction au client comme remise
+// commerciale (sans aller jusqu'au taux Prix compétitif qui rend tout).
+// Source unique S.identite.remiseNoirePct, snapshot priorité (immutable).
+// Ne s'applique qu'aux HEURES (pas matériel/cession/déplacement).
+function getRemiseNoirePct(scope) {
+  if (scope && scope.remiseNoirePct != null && scope.remiseNoirePct !== "") return num(scope.remiseNoirePct);
+  return num(S.identite?.remiseNoirePct ?? 0);
+}
+window.getRemiseNoirePct = getRemiseNoirePct;
+
 function tarifEdit(idx, field, val) {
   if (!S.tarifs.catalog[idx]) return;
   if (field === "p") S.tarifs.catalog[idx][field] = num(val);
@@ -6061,6 +6090,20 @@ function tarifViewMode(mode) {
   render();
 }
 window.tarifViewMode = tarifViewMode;
+
+// ▼ tarifViewBlackMode — bascule la stratégie au black du Catalogue :
+//   "fixe"   → Net maximisé : tarif au black = tarif catalogue (le photographe
+//              garde l'URSSAF). Avec remise non déclarée optionnelle.
+//   "reduit" → Prix compétitif : tarif au black = tarif × (1 − URSSAF%) (le
+//              client économise l'URSSAF).
+// Les noms internes "fixe"/"reduit" sont alignés sur S.mission.blackMode.
+function tarifViewBlackMode(mode) {
+  if (mode !== "fixe" && mode !== "reduit") return;
+  S.tarifs.viewBlackMode = mode;
+  save();
+  render();
+}
+window.tarifViewBlackMode = tarifViewBlackMode;
 
 async function tarifReset() {
   if (!await uiConfirm("Réinitialiser le catalogue aux tarifs par défaut ? Les modifications seront perdues.", { title: "Réinitialiser le catalogue", confirmLabel: "Réinitialiser", kind: "warn" })) return;
@@ -7169,6 +7212,17 @@ window.hideRemiseInfo = function() {
 // showInfo(event, "key"). Permet de centraliser les textes et de garder les
 // handlers HTML propres (pas de HTML en attribut onmouseenter).
 const INFO_HTML = {
+  remiseNoire: `
+    <div class="tt-title" style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:8px">Remise non déclarée — au black + Net maximisé</div>
+    <p style="margin:0 0 8px;font-size:12px;line-height:1.5">En mode <strong>au black + Net maximisé</strong>, tu factures au tarif catalogue normal et tu gardes la part qui aurait été versée à l'URSSAF (≈ 22 %). Cette remise te permet d'en <strong>restituer une partie au client</strong> à titre commercial, sans tomber dans le mode <em>Prix compétitif</em> qui rend l'intégralité de l'économie URSSAF.</p>
+    <p style="margin:0 0 4px;font-size:12px;line-height:1.5;font-weight:600">Exemple à 22 % d'URSSAF</p>
+    <ul style="margin:0 0 8px;padding-left:18px;font-size:12px;line-height:1.6">
+      <li><strong>Net max + 0 %</strong> : tu encaisses 100 % du tarif (gain max).</li>
+      <li><strong>Net max + 10 %</strong> : tu offres 10 % au client, tu gardes 12 % de marge sur l'URSSAF (vs déclaré).</li>
+      <li><strong>Prix compétitif</strong> : tu offres les 22 % entiers (équivalent net déclaré pour toi).</li>
+    </ul>
+    <p style="margin:0;font-size:12px;line-height:1.5;color:var(--text-muted)">Ne s'applique qu'aux <strong>heures</strong> du devis (pas matériel, cession, ni déplacement). Plafonné au taux URSSAF.</p>
+  `,
   tarifHOverride: `
     <div class="tt-title" style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:8px">Tarif horaire — override manuel</div>
     <p style="margin:0 0 8px;font-size:12px;line-height:1.5">Champ optionnel pour forcer un tarif horaire <strong>différent du catalogue</strong> sur ce devis uniquement.</p>
@@ -7521,9 +7575,11 @@ function reconstructMissionFromSuivi(devisId, opts) {
   const recovered = [];
 
   // Préserve la config courante (rates, modalités, CGV, signature, etc.)
-  // urssafPct vit désormais sur S.identite (source unique) ; on fige la valeur
-  // globale au moment de la reconstruction pour ce snapshot legacy.
+  // urssafPct/remiseNoirePct vivent désormais sur S.identite (source unique) ;
+  // on fige les valeurs globales au moment de la reconstruction pour ce
+  // snapshot legacy.
   fresh.urssafPct      = cur.urssafPct ?? S.identite?.urssafPct ?? "22";
+  fresh.remiseNoirePct = cur.remiseNoirePct ?? S.identite?.remiseNoirePct ?? "0";
   fresh.dureeValidite  = cur.dureeValidite  ?? dm.dureeValidite;
   fresh.declare        = cur.declare        ?? dm.declare;
   fresh.blackMode      = cur.blackMode      ?? dm.blackMode;
@@ -8165,9 +8221,15 @@ function totals() {
   const _urssafFactorTot = 1 - (getUrssafPct(d)) / 100; // e.g., 0.78 for 22%
   // Tarif horaire :
   //   - Déclaré : tarif catalogue tel quel (gross facturé)
-  //   - Au black "taux fixe" : même prix que déclaré (photographe garde l'URSSAF)
-  //   - Au black "taux réduit" : prix réduit (= net déclaré, le client économise l'URSSAF)
+  //   - Au black "taux fixe" (Net max) : tarif catalogue × (1 − remiseNoirePct/100)
+  //     0 % par défaut → même prix que déclaré (photographe garde l'URSSAF). > 0 % :
+  //     restitue une part de l'URSSAF économisée comme remise commerciale.
+  //   - Au black "taux réduit" (Prix compétitif) : tarif × (1 − URSSAF%) (le client
+  //     économise l'URSSAF entière).
+  // /!\ La remiseNoirePct ne s'applique qu'aux HEURES, pas matériel/cession/déplacement.
   const _blackMode = d.blackMode || "reduit";
+  const _remiseNoirePct = (!_isDecTot && _blackMode === "fixe") ? getRemiseNoirePct(d) : 0;
+  const _remiseNoireFactor = 1 - _remiseNoirePct / 100;
   // Si tarifHOverride est posé (reconstitution legacy), il est ABSOLU :
   // on bypasse l'ajustement declare/blackMode pour ne pas altérer le total.
   const tarifH = _override > 0
@@ -8175,7 +8237,7 @@ function totals() {
     : (_isDecTot
         ? _baseTotal
         : (_baseTotal > 0
-            ? (_blackMode === "fixe" ? _baseTotal : r2(_baseTotal * _urssafFactorTot))
+            ? (_blackMode === "fixe" ? r2(_baseTotal * _remiseNoireFactor) : r2(_baseTotal * _urssafFactorTot))
             : 0));
   const HOURS_PER_DAY = 8;
   // Marge rates: au black ⇒ no compensation (everything raw).
@@ -9016,6 +9078,25 @@ function rBinModal() {
 // l'utilisateur. Plus récent en premier. id = clé stable, sert au "lu/non-lu".
 // Format des items : { h: titre court, b: explication 1-3 phrases }.
 const APP_CHANGELOG = [
+  {
+    id: "2026-05-tarif-au-black",
+    date: "2026-05-06",
+    title: "Catalogue : tarif au black + remise non déclarée",
+    items: [
+      {
+        h: "Colonne « Tarif au black » dans le Catalogue",
+        b: "Visible en permanence à droite du Net (en violet). Calcule ce que devient chaque tarif catalogue en stratégie au noir, selon le mode choisi (Net maximisé ou Prix compétitif). Permet de comparer instantanément les deux univers de prix sans changer de vue."
+      },
+      {
+        h: "Toggle Net maximisé / Prix compétitif (catalogue + mission)",
+        b: "En mode Au black, un second toggle violet apparaît avec les deux stratégies, comme dans la section Mission. Net maximisé = tu gardes le tarif catalogue (et donc l'URSSAF). Prix compétitif = tu rends l'URSSAF au client (équivalent au net déclaré)."
+      },
+      {
+        h: "Remise non déclarée (% sur les heures)",
+        b: "En mode Au black + Net maximisé, un nouvel input « Remise non déclarée » te permet d'offrir une remise au client tout en conservant une partie de l'URSSAF économisée (situation intermédiaire entre Net max pur et Prix compétitif). Plafonné au taux URSSAF, ne s'applique qu'aux heures (pas matériel/cession/déplacement). Présent à la fois dans le Catalogue et dans Mission, sources partagées via S.identite. Survol du « i » → explication détaillée avec exemple chiffré."
+      }
+    ]
+  },
   {
     id: "2026-05-catalogue-refonte",
     date: "2026-05-06",
@@ -10141,28 +10222,34 @@ function tarifBreakdown(includeDepl) {
   const urssafPct = getUrssafPct(d);
   const urssafFactor = 1 - urssafPct / 100; // e.g., 0.78 for 22%
   const blackMode = d.blackMode || "reduit";
+  // Remise non déclarée (au black + Net max uniquement) — restitue une part
+  // de l'URSSAF économisée au client. Plafonné par l'URSSAF (sinon on perd
+  // de l'argent vs le mode déclaré).
+  const remiseNoirePct = (!declared && blackMode === "fixe") ? getRemiseNoirePct(d) : 0;
+  const remiseNoireFactor = 1 - remiseNoirePct / 100;
   const matos = tm.tauxAvecSecurite;
   const t = totals();
   const dpH = (includeDepl && t.deplMode === "taux" && t.totalHeures > 0) ? t.deplPerHour : 0;
   // Tarif facturé per hour:
   //   declared      : final + dpH
-  //   black "fixe"  : final + dpH (same as declared, photographer keeps the URSSAF)
+  //   black "fixe"  : final × (1 − remiseNoirePct) + dpH (Net max + remise commerciale)
   //   black "reduit": final × (1-urssaf%) + dpH (discount = URSSAF saved)
+  const finalNetMax = r2(final * remiseNoireFactor);
   const tarifApplique = declared
     ? r2(final + dpH)
     : (blackMode === "fixe"
-        ? r2(final + dpH)
+        ? r2(finalNetMax + dpH)
         : r2(r2(final * urssafFactor) + dpH));
   // URSSAF amount: declared = X% of (final + dpH); au black = X% of theoretical CA (= what they save)
   const urssafAmount = r2((final + dpH) * urssafPct / 100);
   // Net per hour after matos (and minus dpH which is a real cost):
   //   declared      : (final + dpH) × (1-urssaf%) - matos - dpH
-  //   black "fixe"  : final - matos                  (no URSSAF; dpH already invoiced separately)
-  //   black "reduit": final × (1-urssaf%) - matos    (no URSSAF; same net as declared)
+  //   black "fixe"  : final × (1 − remiseNoirePct) - matos  (no URSSAF, dpH facturé séparément)
+  //   black "reduit": final × (1-urssaf%) - matos           (no URSSAF; même net que déclaré)
   const net = declared
     ? r2(r2((final + dpH) * urssafFactor) - matos - dpH)
     : (blackMode === "fixe"
-        ? r2(final - matos)
+        ? r2(finalNetMax - matos)
         : r2(r2(final * urssafFactor) - matos));
   return { net, matos, deplPerHour: dpH, urssafAmount, tarifApplique, declared, blackMode, hasDepl: dpH > 0 };
 }
@@ -10406,11 +10493,15 @@ window.suiviUpdateSnapshot = async function() {
   // structurée éditable. Permet de rendre révisable un ancien devis dès
   // que l'user le ré-édite.
   const snapMission = JSON.parse(JSON.stringify(m));
-  // Préserve l'urssafPct figé à la création du devis (immutable). Si absent
-  // (devis legacy), prend la valeur globale courante au moment de l'édition.
+  // Préserve l'urssafPct/remiseNoirePct figés à la création du devis (immutable).
+  // Si absents (devis legacy), prend la valeur globale courante.
   if (!snapMission.urssafPct) {
     const prev = e.snap.snapshotMission && e.snap.snapshotMission.urssafPct;
     snapMission.urssafPct = String(prev ?? S.identite?.urssafPct ?? "22");
+  }
+  if (snapMission.remiseNoirePct == null) {
+    const prev = e.snap.snapshotMission && e.snap.snapshotMission.remiseNoirePct;
+    snapMission.remiseNoirePct = String(prev ?? S.identite?.remiseNoirePct ?? "0");
   }
   delete snapMission.revisesDevisId;
   delete snapMission.majTrameDevisId;
@@ -10762,10 +10853,22 @@ function rDevisSectionPrestations() {
       </div>
       ${!declare ? (() => {
         const bm = d.blackMode || "reduit";
+        const urssafPctVal = getUrssafPct(d);
         return `<div class="seg seg-neon violet" title="Stratégie de prix au black">
           <button class="${bm==='fixe'?'on':''}" onclick="updBlackMode('fixe')" title="On garde le tarif catalogue : tu encaisses la part qui aurait été versée à l'URSSAF en bonus.">Net maximisé</button>
           <button class="${bm==='reduit'?'on':''}" onclick="updBlackMode('reduit')" title="On retire la part URSSAF du tarif catalogue : le client paie moins cher, tu touches l'équivalent du net déclaré.">Prix compétitif</button>
-        </div>`;
+        </div>
+        ${bm === 'fixe' ? `
+        <div class="presta-remise-noire" title="Remise non déclarée — restitue une part de l'URSSAF économisée">
+          <label>Remise non déclarée
+            <button type="button" class="lg-info-icon" tabindex="0" aria-label="À quoi sert cette remise"
+              onmouseenter="showInfo(event, 'remiseNoire')" onmouseleave="hideInfo()" onfocus="showInfo(event, 'remiseNoire')" onblur="hideInfo()">i</button>
+          </label>
+          <div class="lock-field with-unit">
+            <input type="number" step="0.5" min="0" max="${urssafPctVal}" value="${esc(S.identite?.remiseNoirePct ?? "0")}" oninput="upd('identite.remiseNoirePct', this.value)">
+            <span class="lock-unit">%</span>
+          </div>
+        </div>` : ""}`;
       })() : ""}
     </div>
     ${!declare ? `<div class="black-warning" role="alert"><strong>${ICO_SZ('alertTriangle', 14)} Mode au black</strong> — pas de débours, pas d'URSSAF, pas de marge sur avance applicable. Tous les matériels et déplacements sont au prix brut, payés via l'acompte.</div>` : ""}
@@ -11468,11 +11571,15 @@ async function suiviAdd() {
       dvOrig.snapshotPaiementDelai = (m.paiement && m.paiement.delai) || "30j_fdm";
       dvOrig.snapshotDatePrestation = m.datePrestation || "";
       const snapMission = JSON.parse(JSON.stringify(m));
-      // Préserve l'urssafPct figé d'origine si présent ; sinon prend la valeur
-      // globale courante (fallback pour devis legacy reconstruit).
+      // Préserve l'urssafPct/remiseNoirePct figés d'origine si présents ;
+      // sinon prend la valeur globale courante (fallback devis legacy).
       if (!snapMission.urssafPct) {
         const prev = dvOrig.snapshotMission && dvOrig.snapshotMission.urssafPct;
         snapMission.urssafPct = String(prev ?? S.identite?.urssafPct ?? "22");
+      }
+      if (snapMission.remiseNoirePct == null) {
+        const prev = dvOrig.snapshotMission && dvOrig.snapshotMission.remiseNoirePct;
+        snapMission.remiseNoirePct = String(prev ?? S.identite?.remiseNoirePct ?? "0");
       }
       delete snapMission.revisesDevisId;
       delete snapMission.majTrameDevisId;
@@ -11586,9 +11693,10 @@ async function suiviAdd() {
   // Snapshot mission structuré : permet la re-édition (Réviser) en chargeant
   // l'éditable original. snapshotHtml seul ne suffit pas car c'est du HTML rendu.
   const snapshotMission = JSON.parse(JSON.stringify(m));
-  // Fige la valeur URSSAF globale au moment de l'archivage (immutable historique).
+  // Fige les valeurs globales au moment de l'archivage (immutable historique).
   // Le champ ne vit plus sur la mission EN COURS, mais sur les snapshots oui.
   snapshotMission.urssafPct = String(S.identite?.urssafPct ?? "22");
+  snapshotMission.remiseNoirePct = String(S.identite?.remiseNoirePct ?? "0");
   // On retire les marqueurs transient (drapeaux de flow, pas de contenu).
   delete snapshotMission.revisesDevisId;
   delete snapshotMission.majTrameDevisId;
@@ -14586,10 +14694,21 @@ function rCatalogue() {
   const cat = S.tarifs.catalog || DEFAULT_CATALOG;
   const tm = tauxMatos();
   const urssafPct = getUrssafPct();
+  const remiseNoirePct = getRemiseNoirePct();
   const mode = S.tarifs.viewMode === "noir" ? "noir" : "declare";
   const isDecl = mode === "declare";
+  const blackMode = S.tarifs.viewBlackMode === "fixe" ? "fixe" : "reduit";
+  const isNetMax = blackMode === "fixe";
+  // Calcule le tarif au black d'un tarif déclaré donné, selon viewBlackMode :
+  //   "fixe"   (Net max)        : tarif × (1 − remiseNoirePct/100)
+  //   "reduit" (Prix compétitif): tarif × (1 − urssafPct/100)
+  const computeTarifBlack = (final) => {
+    if (final <= 0) return 0;
+    const rate = isNetMax ? remiseNoirePct : urssafPct;
+    return r2(final * (1 - rate / 100));
+  };
   const tarifRows = cat.length === 0
-    ? `<tr><td colspan="7" class="catalog-empty">Aucune prestation. Clique sur « Nouvelle prestation » pour démarrer.</td></tr>`
+    ? `<tr><td colspan="8" class="catalog-empty">Aucune prestation. Clique sur « Nouvelle prestation » pour démarrer.</td></tr>`
     : cat.map((c, idx) => {
         // Lignes de type "group" : séparateur visuel éditable, occupe toute la
         // largeur des colonnes du milieu. Pas de tarif/URSSAF/calcul.
@@ -14601,7 +14720,7 @@ function rCatalogue() {
             ondragover="tarifDragOver(event)"
             ondrop="tarifDrop(event,'${esc(c.k)}')">
           <td class="catalog-drag-handle" title="Glisser pour réordonner">${ICO_SZ('gripVertical', 14)}</td>
-          <td colspan="5" class="catalog-group-cell">
+          <td colspan="6" class="catalog-group-cell">
             <input type="text" value="${esc(c.l)}" oninput="tarifEdit(${idx},'l',this.value)" placeholder="Nom du groupe (ex : Photo, Vidéo, Événementiel)" class="tr-cell-input catalog-group-libelle">
           </td>
           <td class="actions catalog-action-cell">
@@ -14610,10 +14729,16 @@ function rCatalogue() {
         </tr>`;
         }
         const final = num(c.p);
-        const urssafAmt = (isDecl && final > 0) ? r2(final * urssafPct / 100) : 0;
-        const net = final > 0 ? r2(final - urssafAmt - tm.tauxRetenu) : 0;
         const empty = final === 0;
-        // Cellule URSSAF : toujours présente. En Au black, on affiche "—" (vide).
+        const tarifBlack = computeTarifBlack(final);
+        // URSSAF €/h : seulement en mode Déclaré, sinon "—" (toujours visible).
+        const urssafAmt = (isDecl && final > 0) ? r2(final * urssafPct / 100) : 0;
+        // Net : dépend du mode actif.
+        //   Déclaré  : Net = tarif − URSSAF − coût mat
+        //   Au black : Net = tarif au black − coût mat (utilise le tarif réel facturé)
+        const baseTarif = isDecl ? final : tarifBlack;
+        const baseUrssaf = isDecl ? urssafAmt : 0;
+        const net = final > 0 ? r2(baseTarif - baseUrssaf - tm.tauxRetenu) : 0;
         const urssafCellContent = !isDecl
           ? "—"
           : (empty ? "—" : `−${fmt(urssafAmt)}`);
@@ -14638,6 +14763,7 @@ function rCatalogue() {
           <td class="amount muted-cell ${urssafCellClass}">${urssafCellContent}</td>
           <td class="amount muted-cell ${empty ? 'dim' : ''}">${empty ? "—" : `−${fmt(tm.tauxRetenu)}`}</td>
           <td class="amount net-cell ${empty ? 'dim' : (net >= 0 ? 'ok' : 'bad')}">${empty ? "—" : fmt(net)}</td>
+          <td class="amount tarif-black-cell ${empty ? 'dim' : ''}">${empty ? "—" : fmt(tarifBlack)}</td>
           <td class="actions catalog-action-cell">
             <button type="button" class="catalog-row-del" title="Supprimer cette prestation" onclick="tarifDel(${idx})" aria-label="Supprimer">${ICO_SZ('trash', 14)}</button>
           </td>
@@ -14646,10 +14772,32 @@ function rCatalogue() {
   const urssafHeadSubtitle = isDecl
     ? `${urssafPct.toString().replace(".", ",")} %`
     : `au black`;
-  const urssafHead = `<th style="width:110px;text-align:right">URSSAF<div style="font-size:13px;font-weight:400;color:var(--text-muted);margin-top:1px">${urssafHeadSubtitle}</div></th>`;
+  const tarifBlackHeadSubtitle = isNetMax
+    ? (remiseNoirePct > 0 ? `−${remiseNoirePct.toString().replace(".", ",")} %` : `Net maximisé`)
+    : `−${urssafPct.toString().replace(".", ",")} %`;
   const hint = isDecl
-    ? `Saisis le <strong>tarif final</strong> facturé au client (TTC, URSSAF incluse). Décomposition : <strong>Tarif − URSSAF − Coût matériel = Net</strong> qui te reste pour ton temps.`
-    : `Saisis le <strong>tarif final</strong> facturé au client. Au black, pas d'URSSAF : <strong>Tarif − Coût matériel = Net</strong> qui te reste pour ton temps.`;
+    ? `Saisis le <strong>tarif final</strong> facturé au client (TTC, URSSAF incluse). Décomposition : <strong>Tarif − URSSAF − Coût matériel = Net</strong>. La colonne <strong>Tarif au black</strong> à droite calcule ce que ce tarif deviendrait en stratégie au noir (selon le mode choisi ci-dessous).`
+    : `En mode au black, le tarif final TTC reste affiché à titre de référence. Le client paie le <strong>Tarif au black</strong> (à droite). Décomposition : <strong>Tarif au black − Coût matériel = Net</strong>.`;
+  // Sous-toolbar : visible seulement en mode Au black (toggle Net max/Prix
+  // compétitif + input remise non déclarée).
+  const blackSubToolbar = !isDecl ? `
+    <div class="catalog-subtoolbar" style="max-width:880px">
+      <div class="seg seg-neon violet" title="Stratégie de prix au black">
+        <button class="${isNetMax?'on':''}" onclick="tarifViewBlackMode('fixe')" title="Tu gardes le tarif catalogue : tu encaisses la part qui aurait été versée à l'URSSAF en bonus.">Net maximisé</button>
+        <button class="${!isNetMax?'on':''}" onclick="tarifViewBlackMode('reduit')" title="On retire la part URSSAF du tarif catalogue : le client paie moins cher, tu touches l'équivalent du net déclaré.">Prix compétitif</button>
+      </div>
+      ${isNetMax ? `
+      <div class="catalog-remise-field" title="Remise non déclarée — restitue une partie de l'URSSAF économisée">
+        <label>Remise non déclarée
+          <button type="button" class="lg-info-icon" tabindex="0" aria-label="À quoi sert cette remise"
+            onmouseenter="showInfo(event, 'remiseNoire')" onmouseleave="hideInfo()" onfocus="showInfo(event, 'remiseNoire')" onblur="hideInfo()">i</button>
+        </label>
+        <div class="lock-field with-unit">
+          <input type="number" step="0.5" min="0" max="${urssafPct}" value="${esc(S.identite?.remiseNoirePct ?? "0")}" oninput="upd('identite.remiseNoirePct', this.value)">
+          <span class="lock-unit">%</span>
+        </div>
+      </div>` : ""}
+    </div>` : "";
   return `
     <h1 class="page-title">${esc(pageTitle("tarifs"))} <span id="savedFlash" class="saved"></span></h1>
     <h3>Prestations &amp; tarifs (€/h)</h3>
@@ -14663,16 +14811,18 @@ function rCatalogue() {
         <button type="button" class="btn-add-neon" onclick="tarifAdd()">${ICO_SZ('plus', 14)} Nouvelle prestation</button>
       </div>
     </div>
-    <div class="hint" style="max-width:880px">${hint} Le coût matériel se règle dans l'onglet « Achats / Abonnements », le taux URSSAF dans la section Ajustements d'un devis.</div>
+    ${blackSubToolbar}
+    <div class="hint" style="max-width:880px">${hint}</div>
     <table class="hist catalog-table" style="max-width:880px">
       <thead>
         <tr>
           <th style="width:24px"></th>
           <th>Libellé</th>
           <th style="width:120px;text-align:right">Tarif final<div style="font-size:13px;font-weight:400;color:var(--text-muted);margin-top:1px">prix client TTC</div></th>
-          ${urssafHead}
+          <th style="width:110px;text-align:right">URSSAF<div style="font-size:13px;font-weight:400;color:var(--text-muted);margin-top:1px">${urssafHeadSubtitle}</div></th>
           <th style="width:110px;text-align:right">Coût matériel<div style="font-size:13px;font-weight:400;color:var(--text-muted);margin-top:1px">amortissement</div></th>
           <th style="width:110px;text-align:right">Net<div style="font-size:13px;font-weight:400;color:var(--text-muted);margin-top:1px">pour ton temps</div></th>
+          <th style="width:120px;text-align:right">Tarif au black<div style="font-size:13px;font-weight:400;color:var(--text-muted);margin-top:1px">${tarifBlackHeadSubtitle}</div></th>
           <th style="width:36px"></th>
         </tr>
       </thead>
