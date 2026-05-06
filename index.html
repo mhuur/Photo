@@ -1667,7 +1667,7 @@
       font-size: 9pt !important;
       color: #666 !important;
       font-variant-numeric: tabular-nums !important;
-      font-weight: 500 !important;
+      font-weight: 400 !important;
     }
     .devis-preview .dp-line .lbl, .view-devis-snapshot .dp-line .lbl {
       font-weight: 400 !important;
@@ -1717,7 +1717,7 @@
     }
     .devis-preview .dp-totals .dp-line.grand, .view-devis-snapshot .dp-totals .dp-line.grand {
       font-size: 12pt !important;
-      font-weight: 800 !important;
+      font-weight: 700 !important;
       padding: 6pt 0 3pt 0 !important;
       margin-top: 4pt !important;
       border-top: 1pt solid #1a1a1a !important;
@@ -1830,8 +1830,11 @@
       font-size: 9pt !important;
       line-height: 1.6 !important;
       color: #1a1a1a !important;
-      page-break-before: always !important;
-      break-before: page !important;
+      /* Pas de saut de page forcé : la signature s'inscrit naturellement
+         à la fin de la page courante si elle tient (bcp de devis courts
+         tiennent en 1 page). Si elle déborde, le navigateur la pousse en
+         page suivante de lui-même. break-inside:avoid empêche qu'elle
+         soit coupée en deux. */
       page-break-inside: avoid !important;
       break-inside: avoid !important;
     }
@@ -5140,13 +5143,10 @@ function rDevisPreview() {
       <div class="dp-debours-total"><span class="lbl">Total débours</span><span class="amt">${fmt(t.debours)}</span></div>
     </div>` : ""}
 
-    ${t.totalFactDirect > 0 ? `<div class="dp-fact-direct-block">
-      <div class="dp-fact-direct-line">
-        <span class="lbl">À régler directement au fournisseur</span>
-        <span class="amt">${fmt(t.totalFactDirect)}</span>
-      </div>
-      <div class="dp-fact-direct-note">Hors devis — vous réglez ces frais directement auprès du prestataire concerné.</div>
-    </div>` : ""}
+    ${/* Débours directs (le client règle le fournisseur direct) : n'apparaissent
+         PAS sur le devis (CGI 267-II-1° : opération hors champ TVA, à laquelle
+         le photographe n'est pas partie). Documentés uniquement dans la feuille
+         débours dédiée (rDeboursPreview), imprimable séparément depuis Suivi. */ ""}
 
     ${(() => {
       const p = d.paiement || {};
