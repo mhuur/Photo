@@ -1289,8 +1289,12 @@
   .devis-preview .dp-fact-direct-block .dp-line{display:flex;justify-content:space-between;align-items:flex-start;grid-template-columns:none;gap:14px}
   .devis-preview .dp-fact-direct-block .dp-line .lbl{flex:1;min-width:0}
   .devis-preview .dp-debours-total{display:flex;justify-content:space-between;padding-top:6px;margin-top:4px;border-top:1px dashed var(--border);font-size:13px;font-weight:700;color:var(--text)}
-  /* Bloc "À régler directement au fournisseur" : aligné droite sous les totaux, plus discret */
-  .devis-preview .dp-fact-direct-block{margin:8px 0 0 auto;max-width:340px;width:100%;padding-top:8px;border-top:1px dashed var(--border)}
+  /* Bloc "À régler directement au fournisseur" — RETIRÉ du devis (CGI 267-II-1°,
+     ces frais ne doivent pas figurer sur le doc commercial). Caché côté CSS
+     pour les anciens snapshots qui le contenaient encore. Documentés
+     uniquement dans la feuille débours dédiée. */
+  .devis-preview .dp-fact-direct-block,
+  .view-devis-snapshot .dp-fact-direct-block{display:none!important}
   .devis-preview .dp-fact-direct-line{display:flex;justify-content:space-between;gap:14px;font-size:13px;color:var(--text-dim)}
   .devis-preview .dp-fact-direct-line .amt{font-variant-numeric:tabular-nums;flex-shrink:0}
   .devis-preview .dp-fact-direct-note{font-size:12px;color:var(--text-dim);margin-top:3px;text-align:right;line-height:1.35}
