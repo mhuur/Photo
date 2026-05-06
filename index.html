@@ -1200,22 +1200,35 @@
   /* Catalogue — toolbar (toggle Déclaré/Au noir + bouton Nouvelle prestation) */
   .catalog-toolbar{display:flex;align-items:center;gap:var(--space-md);margin:var(--space-md) 0 var(--space-md);flex-wrap:wrap}
   .catalog-add-btn{margin-left:auto}
-  /* Cellule libellé : libellé principal + description en sous-ligne */
-  .catalog-libelle-cell{padding-top:6px;padding-bottom:6px}
+  /* Compteur de prestations dans le H1 (« Catalogue · 12 prestations · 2 groupes ») */
+  .page-counter{font-size:14px;font-weight:400;color:var(--text-muted);margin-left:6px;letter-spacing:0;text-transform:none}
+  /* Cellule libellé : libellé principal + bouton « + » description (repliée par défaut) */
+  .catalog-libelle-cell{padding:4px 8px;vertical-align:top}
+  .catalog-libelle-row{display:flex;align-items:center;gap:4px}
   .catalog-libelle-cell .tr-cell-input{display:block;width:100%}
-  .catalog-libelle-cell .catalog-libelle{font-weight:600;height:30px}
+  .catalog-libelle-cell .catalog-libelle{font-weight:600;height:30px;flex:1;min-width:0}
   .catalog-libelle-cell .catalog-desc{margin-top:2px;font-size:12px;font-style:italic;color:var(--text-muted);height:26px;padding:3px 8px}
   .catalog-libelle-cell .catalog-desc:focus{font-style:normal;color:var(--text)}
+  .catalog-desc-toggle{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;background:transparent;border:1px solid transparent;border-radius:4px;color:var(--text-dim);cursor:pointer;padding:0;transition:all .12s;flex-shrink:0;opacity:0}
+  tr:hover .catalog-desc-toggle{opacity:.7}
+  .catalog-desc-toggle:hover{opacity:1!important;color:var(--primary);border-color:rgba(74,158,255,.3);background:rgba(74,158,255,.06)}
   /* Cellule action (suppression) à droite */
-  .catalog-action-cell{text-align:center;padding:4px}
-  .catalog-row-del{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;background:transparent;border:1px solid transparent;border-radius:6px;color:var(--text-dim);cursor:pointer;transition:all .15s;padding:0}
-  .catalog-row-del:hover{color:var(--danger);border-color:rgba(239,68,68,.4);background:rgba(239,68,68,.08);box-shadow:inset 0 0 0 1px rgba(239,68,68,.18),0 0 8px rgba(239,68,68,.18)}
-  /* Footer (bouton réinitialiser, aligné droite) */
-  .catalog-footer{margin-top:var(--space-md);display:flex;justify-content:flex-end}
+  .catalog-action-cell{text-align:center;padding:4px;vertical-align:top}
+  .catalog-row-del{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;background:transparent;border:1px solid transparent;border-radius:6px;color:var(--text-dim);cursor:pointer;transition:all .15s;padding:0;opacity:0}
+  tr:hover .catalog-row-del{opacity:.7}
+  .catalog-row-del:hover{opacity:1!important;color:var(--danger);border-color:rgba(239,68,68,.4);background:rgba(239,68,68,.08);box-shadow:inset 0 0 0 1px rgba(239,68,68,.18),0 0 8px rgba(239,68,68,.18)}
+  /* Footer (lien réinitialiser discret, aligné droite) */
+  .catalog-footer{margin-top:var(--space-lg);display:flex;justify-content:flex-end}
+  .catalog-reset-link{font-size:12px;color:var(--text-dim);text-decoration:underline;text-decoration-color:rgba(255,255,255,.15);cursor:pointer;transition:color .12s,text-decoration-color .12s}
+  .catalog-reset-link:hover{color:var(--text-muted);text-decoration-color:var(--text-muted)}
   /* Catalogue vide */
   .catalog-table td.catalog-empty{text-align:center;color:var(--text-muted);font-style:italic;padding:var(--space-xl)}
+  /* Compacité : padding cellules réduit + alignement vertical haut */
+  .catalog-table tbody td{padding:4px 8px;vertical-align:top}
+  /* Hover row (lecture facilitée) */
+  .catalog-table tbody tr:not(.catalog-group-row):hover{background:rgba(74,158,255,.04)}
   /* Drag & drop : handle visuelle à gauche, état dragging, état drop-target */
-  .catalog-table td.catalog-drag-handle{width:24px;color:var(--text-dim);cursor:grab;text-align:center;padding:4px;user-select:none}
+  .catalog-table td.catalog-drag-handle{width:24px;color:var(--text-dim);cursor:grab;text-align:center;padding:8px 4px;user-select:none}
   .catalog-table td.catalog-drag-handle:hover{color:var(--primary)}
   .catalog-table td.catalog-drag-handle:active{cursor:grabbing}
   .catalog-table tr[draggable="true"]{transition:opacity .12s,background .12s}
@@ -1230,32 +1243,41 @@
   .catalog-table .catalog-group-libelle::placeholder{font-weight:600;color:var(--text-dim);text-transform:uppercase}
   /* Toolbar : groupe (séparateur) + nouvelle prestation alignés à droite */
   .catalog-add-group{margin-left:auto;display:flex;gap:var(--space-sm)}
-  /* Sous-toolbar Au black : toggle Net max/Prix compétitif + input remise */
-  .catalog-subtoolbar{display:flex;align-items:center;gap:var(--space-lg);margin:0 0 var(--space-md);flex-wrap:wrap;padding:10px 14px;background:rgba(192,38,211,.05);border:1px solid rgba(192,38,211,.2);border-radius:var(--radius-md)}
+  /* Sous-toolbar Au black : toggle Net max/Prix compétitif + input remise (orange cohérent) */
+  .catalog-subtoolbar{display:flex;align-items:center;gap:var(--space-lg);margin:0 0 var(--space-md);flex-wrap:wrap;padding:10px 14px;background:rgba(251,191,36,.04);border:1px solid rgba(251,191,36,.18);border-radius:var(--radius-md)}
   .catalog-remise-field{display:flex;align-items:center;gap:var(--space-sm)}
   .catalog-remise-field label{font-size:13px;color:var(--text-muted);display:flex;align-items:center;gap:6px;margin:0;white-space:nowrap}
   .catalog-remise-range{font-size:12px;color:var(--text-dim);font-weight:normal;font-variant-numeric:tabular-nums}
-  /* Colonne Tarif au black (orange — palette warning) */
-  .catalog-table td.tarif-black-cell{font-variant-numeric:tabular-nums;text-align:right;font-weight:700;font-size:14px;color:#fbbf24;padding-right:14px;text-shadow:0 0 6px rgba(251,191,36,.3)}
-  .catalog-table td.tarif-black-cell.dim{color:var(--text-dim);font-weight:400;text-shadow:none}
-  /* Colonne Net mise en valeur (résultat principal — vert) */
-  .catalog-table td.net-cell{font-size:14px;font-weight:700;padding-right:14px}
-  .catalog-table td.net-cell.ok{text-shadow:0 0 6px rgba(34,197,94,.3)}
-  .catalog-table td.net-cell.bad{text-shadow:0 0 6px rgba(239,68,68,.3)}
-  /* Colonne Tarif final mise en valeur (input — bleu primary) */
-  .catalog-table td.tarif-cell .tr-tarif-input{font-size:14px;font-weight:700;color:#7eb8ff;text-shadow:0 0 4px rgba(74,158,255,.25)}
-  .catalog-table td.tarif-cell .tarif-input-wrap .unit{color:var(--text-muted);font-weight:600}
+  /* Colonne Cible TTC (saisie principale, bordurée) */
+  .catalog-table th.catalog-th-cell-cible,
+  .catalog-table td.cible-cell{border-left:1px solid rgba(74,158,255,.20);border-right:1px solid rgba(74,158,255,.20);background:rgba(74,158,255,.025)}
+  .catalog-table td.cible-cell{text-align:right;padding:6px 10px}
+  .catalog-table td.cible-cell .tr-tarif-input{font-size:14px;font-weight:700;color:#7eb8ff;text-shadow:0 0 4px rgba(74,158,255,.25)}
+  .catalog-table td.cible-cell .tarif-input-wrap .unit{color:var(--text-muted);font-weight:600}
+  /* Colonne Tarif final (déclaré ou au black, dynamique) */
+  .catalog-table td.tarif-final-cell{font-variant-numeric:tabular-nums;text-align:right;font-weight:700;font-size:14px;padding-right:14px}
+  .catalog-table td.tarif-final-cell.decl{color:#7eb8ff;text-shadow:0 0 4px rgba(74,158,255,.2)}
+  .catalog-table td.tarif-final-cell.black{color:#fbbf24;text-shadow:0 0 6px rgba(251,191,36,.3)}
+  .catalog-table td.tarif-final-cell.dim{color:var(--text-dim);font-weight:400;text-shadow:none}
+  /* Colonne Salaire net mise en valeur (résultat principal — vert) — séparateur visuel */
+  .catalog-table th.catalog-th-cell-net,
+  .catalog-table td.net-cell{border-left:1px solid rgba(255,255,255,.05)}
+  .catalog-table td.net-cell{font-size:14px;font-weight:700;padding-right:14px;text-align:right;font-variant-numeric:tabular-nums}
+  .catalog-table td.net-cell.ok{color:var(--success);text-shadow:0 0 6px rgba(34,197,94,.3)}
+  .catalog-table td.net-cell.bad{color:var(--danger);text-shadow:0 0 6px rgba(239,68,68,.3)}
+  .catalog-table td.net-cell.dim{color:var(--text-dim)}
   /* En-tête tableau Catalogue : titre + sous-titre centrés (bloc inline-flex) */
   .catalog-table thead th{padding:12px 10px;vertical-align:middle}
   .catalog-th{display:inline-flex;flex-direction:column;align-items:center;gap:2px;line-height:1.2;width:100%}
   .catalog-th-left{align-items:flex-start}
   .catalog-th-title{font-size:13px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.04em}
   .catalog-th-sub{font-size:11px;font-weight:400;color:var(--text-dim);text-transform:none;letter-spacing:0}
-  /* Colonnes mises en valeur (Tarif final + Tarif au black + Net) — header coloré */
+  /* Colonnes mises en valeur — header coloré */
   .catalog-th-key .catalog-th-title{font-size:14px;font-weight:700;letter-spacing:.05em}
-  .catalog-th-final .catalog-th-title{color:#7eb8ff}
+  .catalog-th-cible .catalog-th-title{color:#7eb8ff}
+  .catalog-th-final-decl .catalog-th-title{color:#7eb8ff}
+  .catalog-th-final-black .catalog-th-title{color:#fcd34d}
   .catalog-th-net .catalog-th-title{color:#86efac}
-  .catalog-th-black .catalog-th-title{color:#fcd34d}
   /* Status badges in Tarifs view (Investissements) */
   .tr-badge{padding:3px 8px;border-radius:10px;font-size:13px;font-weight:600;text-transform:uppercase;display:inline-block;line-height:1.4}
   .tr-badge.ok{background:var(--success-soft);color:var(--success)}
@@ -6011,6 +6033,27 @@ function tarifEdit(idx, field, val) {
 }
 window.tarifEdit = tarifEdit;
 
+// État local : items dont la description est dépliée par l'utilisateur (clic
+// sur le « + » à droite du libellé). Une description non vide reste toujours
+// visible quel que soit ce flag.
+const _catalogExpanded = new Set();
+
+// ▼ tarifToggleDesc — déplie/replie l'input description sous le libellé.
+// Re-render et focus l'input description pour saisie immédiate.
+function tarifToggleDesc(k) {
+  if (_catalogExpanded.has(k)) _catalogExpanded.delete(k);
+  else _catalogExpanded.add(k);
+  render();
+  requestAnimationFrame(() => {
+    const tr = document.querySelector(`tr[data-tarif-key="${CSS.escape(k)}"]`);
+    if (tr) {
+      const desc = tr.querySelector('.catalog-desc');
+      if (desc) { desc.focus(); desc.select(); }
+    }
+  });
+}
+window.tarifToggleDesc = tarifToggleDesc;
+
 // ▼ tarifAdd — ajoute une nouvelle prestation vide en bas du catalogue.
 // Clé technique générée via uid(), libellé/tarif/description vides : l'user
 // remplit en place. Re-render pour faire apparaître la ligne.
@@ -6142,9 +6185,9 @@ function tarifViewBlackMode(mode) {
 }
 window.tarifViewBlackMode = tarifViewBlackMode;
 
-// ▼ tarifRefreshBlackCells — maj LIVE des cellules « Tarif au black » +
-// recalcul Net en mode Au black, sans re-render complet (préserve le focus
-// sur l'input Remise non déclarée pendant la frappe).
+// ▼ tarifRefreshBlackCells — maj LIVE des cellules « Tarif final au black » +
+// recalcul Salaire net en mode Au black, sans re-render complet (préserve le
+// focus sur l'input Remise non déclarée pendant la frappe).
 function tarifRefreshBlackCells() {
   const cat = S.tarifs.catalog || DEFAULT_CATALOG;
   const tm = tauxMatos();
@@ -6152,27 +6195,26 @@ function tarifRefreshBlackCells() {
   const remiseNoirePct = getRemiseNoirePct();
   const isNetMax = S.tarifs.viewBlackMode === "fixe";
   const isDecl = S.tarifs.viewMode !== "noir";
+  // En mode déclaré, rien à mettre à jour côté tarif au black (la colonne 2
+  // affiche le tarif final déclaré = cible elle-même, indépendant de la remise).
+  if (isDecl) return;
   const rate = isNetMax ? remiseNoirePct : urssafPct;
-  // Met à jour chaque ligne
   document.querySelectorAll('tr[data-tarif-key]').forEach(tr => {
     const c = cat.find(x => x.k === tr.dataset.tarifKey);
     if (!c || c.type === "group") return;
-    const final = num(c.p);
-    const tarifBlack = final > 0 ? r2(final * (1 - rate / 100)) : 0;
-    const blackCell = tr.querySelector('.tarif-black-cell');
-    if (blackCell) blackCell.textContent = final > 0 ? fmt(tarifBlack) : "—";
-    // En mode Au black, le Net dépend du tarif au black → à recalculer aussi
-    if (!isDecl) {
-      const net = final > 0 ? r2(tarifBlack - tm.tauxRetenu) : 0;
-      const netCell = tr.querySelector('.net-cell');
-      if (netCell) {
-        netCell.textContent = final > 0 ? fmt(net) : "—";
-        netCell.className = `amount net-cell ${final === 0 ? 'dim' : (net >= 0 ? 'ok' : 'bad')}`;
-      }
+    const cible = num(c.p);
+    const tarifFinal = cible > 0 ? r2(cible * (1 - rate / 100)) : 0;
+    const finalCell = tr.querySelector('.tarif-final-cell');
+    if (finalCell) finalCell.textContent = cible > 0 ? fmt(tarifFinal) : "—";
+    const net = cible > 0 ? r2(tarifFinal - tm.tauxRetenu) : 0;
+    const netCell = tr.querySelector('.net-cell');
+    if (netCell) {
+      netCell.textContent = cible > 0 ? fmt(net) : "—";
+      netCell.className = `amount net-cell ${cible === 0 ? 'dim' : (net >= 0 ? 'ok' : 'bad')}`;
     }
   });
-  // Met à jour le sous-titre du <th> « Tarif au black »
-  const sub = document.querySelector('[data-th-tarif-black] .catalog-th-sub');
+  // Met à jour le sous-titre du <th> « Tarif final au black »
+  const sub = document.querySelector('[data-th-tarif-final] .catalog-th-sub');
   if (sub) {
     sub.textContent = isNetMax
       ? (remiseNoirePct > 0 ? `−${remiseNoirePct.toString().replace(".", ",")} %` : `Net maximisé`)
@@ -14776,16 +14818,25 @@ function rCatalogue() {
   const isDecl = mode === "declare";
   const blackMode = S.tarifs.viewBlackMode === "fixe" ? "fixe" : "reduit";
   const isNetMax = blackMode === "fixe";
-  // Calcule le tarif au black d'un tarif déclaré donné, selon viewBlackMode :
-  //   "fixe"   (Net max)        : tarif × (1 − remiseNoirePct/100)
-  //   "reduit" (Prix compétitif): tarif × (1 − urssafPct/100)
-  const computeTarifBlack = (final) => {
-    if (final <= 0) return 0;
+  // Calcule le « Tarif final » selon le mode actif :
+  //   Déclaré  : tarif final = cible TTC (1:1, URSSAF incluse dans la cible)
+  //   Au black "fixe"   (Net max)        : cible × (1 − remiseNoirePct/100)
+  //   Au black "reduit" (Prix compétitif): cible × (1 − urssafPct/100)
+  const computeTarifFinal = (cible) => {
+    if (cible <= 0) return 0;
+    if (isDecl) return cible;
     const rate = isNetMax ? remiseNoirePct : urssafPct;
-    return r2(final * (1 - rate / 100));
+    return r2(cible * (1 - rate / 100));
   };
+  // Compteurs (intégrés au H1)
+  const presta = cat.filter(c => c.type !== "group");
+  const groupes = cat.filter(c => c.type === "group");
+  const counters = `${presta.length} prestation${presta.length > 1 ? "s" : ""}${groupes.length ? ` · ${groupes.length} groupe${groupes.length > 1 ? "s" : ""}` : ""}`;
+  // Nombre total de colonnes (varie selon mode)
+  const colCount = isDecl ? 8 : 7;
+  const groupColspan = isDecl ? 6 : 5;
   const tarifRows = cat.length === 0
-    ? `<tr><td colspan="8" class="catalog-empty">Aucune prestation. Clique sur « Nouvelle prestation » pour démarrer.</td></tr>`
+    ? `<tr><td colspan="${colCount}" class="catalog-empty">Aucune prestation. Clique sur « Nouvelle prestation » pour démarrer.</td></tr>`
     : cat.map((c, idx) => {
         // Lignes de type "group" : séparateur visuel éditable, occupe toute la
         // largeur des colonnes du milieu. Pas de tarif/calcul.
@@ -14797,7 +14848,7 @@ function rCatalogue() {
             ondragover="tarifDragOver(event)"
             ondrop="tarifDrop(event,'${esc(c.k)}')">
           <td class="catalog-drag-handle" title="Glisser pour réordonner">${ICO_SZ('gripVertical', 14)}</td>
-          <td colspan="6" class="catalog-group-cell">
+          <td colspan="${groupColspan}" class="catalog-group-cell">
             <input type="text" value="${esc(c.l)}" oninput="tarifEdit(${idx},'l',this.value)" placeholder="Nom du groupe (ex : Photo, Vidéo, Événementiel)" class="tr-cell-input catalog-group-libelle">
           </td>
           <td class="actions catalog-action-cell">
@@ -14805,20 +14856,18 @@ function rCatalogue() {
           </td>
         </tr>`;
         }
-        const final = num(c.p);
-        const empty = final === 0;
-        const tarifBlack = computeTarifBlack(final);
-        // Net : dépend du mode actif.
-        //   Déclaré  : Net = tarif − URSSAF − coût mat
-        //   Au black : Net = tarif au black − coût mat (utilise le tarif réel facturé)
-        const urssafAmt = isDecl && final > 0 ? r2(final * urssafPct / 100) : 0;
-        const baseTarif = isDecl ? final - urssafAmt : tarifBlack;
-        const net = final > 0 ? r2(baseTarif - tm.tauxRetenu) : 0;
-        // Cellule URSSAF : montant en mode Déclaré, "—" en Au black (pas d'URSSAF facturé)
-        const urssafCellContent = !isDecl
-          ? "—"
-          : (empty ? "—" : `−${fmt(urssafAmt)}`);
-        const urssafCellClass = (!isDecl || empty) ? "dim" : "";
+        const cible = num(c.p);
+        const empty = cible === 0;
+        const tarifFinal = computeTarifFinal(cible);
+        // Salaire net = tarif final − URSSAF (si déclaré) − coût matériel
+        const urssafAmt = isDecl && cible > 0 ? r2(cible * urssafPct / 100) : 0;
+        const baseTarif = isDecl ? cible - urssafAmt : tarifFinal;
+        const net = cible > 0 ? r2(baseTarif - tm.tauxRetenu) : 0;
+        // Description : repliée par défaut, déployée si remplie ou si l'user a cliqué sur le « + »
+        const hasDesc = (c.d || "").trim().length > 0;
+        const expanded = _catalogExpanded.has(c.k);
+        const showDesc = hasDesc || expanded;
+        const tarifFinalCellClass = empty ? "dim" : (isDecl ? "decl" : "black");
         return `
         <tr ${empty ? 'class="row-empty"' : ''} draggable="true" data-tarif-key="${esc(c.k)}"
             ondragstart="tarifDragStart(event,'${esc(c.k)}')"
@@ -14827,17 +14876,20 @@ function rCatalogue() {
             ondrop="tarifDrop(event,'${esc(c.k)}')">
           <td class="catalog-drag-handle" title="Glisser pour réordonner">${ICO_SZ('gripVertical', 14)}</td>
           <td class="catalog-libelle-cell">
-            <input type="text" value="${esc(c.l)}" oninput="tarifEdit(${idx},'l',this.value)" placeholder="Libellé prestation" class="tr-cell-input catalog-libelle" data-tarif-libelle>
-            <input type="text" value="${esc(c.d || "")}" oninput="tarifEdit(${idx},'d',this.value)" placeholder="Description (facultatif)" class="tr-cell-input catalog-desc">
+            <div class="catalog-libelle-row">
+              <input type="text" value="${esc(c.l)}" oninput="tarifEdit(${idx},'l',this.value)" placeholder="Libellé prestation" class="tr-cell-input catalog-libelle" data-tarif-libelle>
+              ${!showDesc ? `<button type="button" class="catalog-desc-toggle" onclick="tarifToggleDesc('${esc(c.k)}')" title="Ajouter une description" aria-label="Ajouter une description">${ICO_SZ('plus', 12)}</button>` : ''}
+            </div>
+            ${showDesc ? `<input type="text" value="${esc(c.d || "")}" oninput="tarifEdit(${idx},'d',this.value)" placeholder="Description (facultatif)" class="tr-cell-input catalog-desc">` : ''}
           </td>
-          <td class="amount tarif-cell">
+          <td class="amount cible-cell">
             <div class="tarif-input-wrap">
               <input type="number" step="0.5" value="${esc(c.p || "")}" oninput="tarifEdit(${idx},'p',this.value)" placeholder="—" class="tr-tarif-input">
               <span class="unit">€/h</span>
             </div>
           </td>
-          <td class="amount muted-cell ${urssafCellClass}">${urssafCellContent}</td>
-          <td class="amount tarif-black-cell ${empty ? 'dim' : ''}">${empty ? "—" : fmt(tarifBlack)}</td>
+          <td class="amount tarif-final-cell ${tarifFinalCellClass}">${empty ? "—" : fmt(tarifFinal)}</td>
+          ${isDecl ? `<td class="amount muted-cell ${empty ? 'dim' : ''}">${empty ? "—" : `−${fmt(urssafAmt)}`}</td>` : ''}
           <td class="amount muted-cell ${empty ? 'dim' : ''}">${empty ? "—" : `−${fmt(tm.tauxRetenu)}`}</td>
           <td class="amount net-cell ${empty ? 'dim' : (net >= 0 ? 'ok' : 'bad')}">${empty ? "—" : fmt(net)}</td>
           <td class="actions catalog-action-cell">
@@ -14845,17 +14897,17 @@ function rCatalogue() {
           </td>
         </tr>`;
       }).join("");
-  const urssafHeadSubtitle = isDecl
-    ? `${urssafPct.toString().replace(".", ",")} %`
-    : `au black`;
-  const tarifBlackHeadSubtitle = isNetMax
-    ? (remiseNoirePct > 0 ? `−${remiseNoirePct.toString().replace(".", ",")} %` : `Net maximisé`)
-    : `−${urssafPct.toString().replace(".", ",")} %`;
+  // Header dynamique colonne 2 : « Tarif final déclaré » ou « Tarif final au black »
+  const tarifFinalTitle = isDecl ? "Tarif final déclaré" : "Tarif final au black";
+  const tarifFinalSubtitle = isDecl
+    ? "URSSAF incluse"
+    : (isNetMax
+        ? (remiseNoirePct > 0 ? `−${remiseNoirePct.toString().replace(".", ",")} %` : "Net maximisé")
+        : `−${urssafPct.toString().replace(".", ",")} %`);
   const hint = isDecl
-    ? `Saisis le <strong>tarif final</strong> facturé au client (TTC, URSSAF incluse). Décomposition : <strong>Tarif − URSSAF − Coût matériel = Net</strong>. La colonne <strong>Tarif au black</strong> à droite calcule ce que ce tarif deviendrait en stratégie au noir.`
-    : `En mode au black, le tarif final TTC reste affiché à titre de référence. Le client paie le <strong>Tarif au black</strong> (à droite). Décomposition : <strong>Tarif au black − Coût matériel = Net</strong>.`;
-  // Sous-toolbar : visible seulement en mode Au black (toggle Net max/Prix
-  // compétitif + input remise non déclarée).
+    ? `<strong>Cible TTC − URSSAF − Taux matériel = Salaire net</strong>`
+    : `<strong>Tarif au black − Taux matériel = Salaire net</strong> · URSSAF non payée`;
+  // Sous-toolbar Au black : toggle Net max/Prix compétitif + input remise (si Net max)
   const blackSubToolbar = !isDecl ? `
     <div class="catalog-subtoolbar" style="max-width:880px">
       <div class="seg seg-neon violet" title="Stratégie de prix au black">
@@ -14876,8 +14928,7 @@ function rCatalogue() {
       </div>` : ""}
     </div>` : "";
   return `
-    <h1 class="page-title">${esc(pageTitle("tarifs"))} <span id="savedFlash" class="saved"></span></h1>
-    <h3>Prestations &amp; tarifs (€/h)</h3>
+    <h1 class="page-title">${esc(pageTitle("tarifs"))} <span class="page-counter">· ${esc(counters)}</span> <span id="savedFlash" class="saved"></span></h1>
     <div class="catalog-toolbar" style="max-width:880px">
       <div class="seg seg-neon">
         <button class="${isDecl?"on ok":""}" onclick="tarifViewMode('declare')">${ICO_SZ('check', 14)} Déclaré</button>
@@ -14895,18 +14946,18 @@ function rCatalogue() {
         <tr>
           <th style="width:24px"></th>
           <th><span class="catalog-th catalog-th-left">Libellé</span></th>
-          <th style="width:120px"><span class="catalog-th catalog-th-key catalog-th-final"><span class="catalog-th-title">Tarif final</span><span class="catalog-th-sub">prix client TTC</span></span></th>
-          <th style="width:100px"><span class="catalog-th"><span class="catalog-th-title">URSSAF</span><span class="catalog-th-sub">${urssafHeadSubtitle}</span></span></th>
-          <th style="width:120px" data-th-tarif-black><span class="catalog-th catalog-th-key catalog-th-black"><span class="catalog-th-title">Tarif au black</span><span class="catalog-th-sub">${tarifBlackHeadSubtitle}</span></span></th>
-          <th style="width:110px"><span class="catalog-th"><span class="catalog-th-title">Coût matériel</span><span class="catalog-th-sub">amortissement</span></span></th>
-          <th style="width:110px"><span class="catalog-th catalog-th-key catalog-th-net"><span class="catalog-th-title">Net</span><span class="catalog-th-sub">pour ton temps</span></span></th>
+          <th style="width:130px" class="catalog-th-cell-cible"><span class="catalog-th catalog-th-key catalog-th-cible"><span class="catalog-th-title">Cible Tarif TTC</span><span class="catalog-th-sub">prix de référence</span></span></th>
+          <th style="width:130px" data-th-tarif-final><span class="catalog-th catalog-th-key ${isDecl ? 'catalog-th-final-decl' : 'catalog-th-final-black'}"><span class="catalog-th-title">${tarifFinalTitle}</span><span class="catalog-th-sub">${tarifFinalSubtitle}</span></span></th>
+          ${isDecl ? `<th style="width:100px"><span class="catalog-th"><span class="catalog-th-title">URSSAF</span><span class="catalog-th-sub">${urssafPct.toString().replace(".", ",")} %</span></span></th>` : ''}
+          <th style="width:110px"><span class="catalog-th"><span class="catalog-th-title">Taux matériel</span><span class="catalog-th-sub">amortissement</span></span></th>
+          <th style="width:120px" class="catalog-th-cell-net"><span class="catalog-th catalog-th-key catalog-th-net"><span class="catalog-th-title">Salaire net</span><span class="catalog-th-sub">pour ton temps</span></span></th>
           <th style="width:36px"></th>
         </tr>
       </thead>
       <tbody>${tarifRows}</tbody>
     </table>
     <div class="catalog-footer" style="max-width:880px">
-      <button type="button" class="btn-add-neon ghost catalog-reset-btn" onclick="tarifReset()" title="Réinitialiser le catalogue aux 15 prestations par défaut">${ICO_SZ('rotateCcw', 14)} Réinitialiser aux tarifs par défaut</button>
+      <a class="catalog-reset-link" onclick="tarifReset()" title="Réinitialiser le catalogue aux 15 prestations par défaut" tabindex="0" role="button">Réinitialiser aux tarifs par défaut</a>
     </div>
   `;
 }
