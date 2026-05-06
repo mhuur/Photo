@@ -3298,7 +3298,8 @@ if (S.mission) {
   if (S.mission && S.mission.blackMode === "reduit") {
     S.mission.blackMode = "fixe";
     if (S.identite && (!S.identite.remiseNoirePct || S.identite.remiseNoirePct === "0")) {
-      S.identite.remiseNoirePct = String(num(S.identite.urssafPct ?? 22));
+      // num() pas encore déclaré ici → on prend la valeur string telle quelle
+      S.identite.remiseNoirePct = String(S.identite.urssafPct ?? "22");
     }
   }
   recomputeRef();
