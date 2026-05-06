@@ -1212,6 +1212,13 @@
   .catalog-footer{margin-top:var(--space-md);display:flex;justify-content:flex-end}
   /* Catalogue vide */
   .catalog-table td.catalog-empty{text-align:center;color:var(--text-muted);font-style:italic;padding:var(--space-xl)}
+  /* Drag & drop : handle visuelle à gauche, état dragging, état drop-target */
+  .catalog-table td.catalog-drag-handle{width:24px;color:var(--text-dim);cursor:grab;text-align:center;padding:4px;user-select:none}
+  .catalog-table td.catalog-drag-handle:hover{color:var(--primary)}
+  .catalog-table td.catalog-drag-handle:active{cursor:grabbing}
+  .catalog-table tr[draggable="true"]{transition:opacity .12s,background .12s}
+  .catalog-table tr.dragging{opacity:.4}
+  .catalog-table tr.catalog-drag-over{background:rgba(74,158,255,.10);box-shadow:inset 0 2px 0 rgba(74,158,255,.6)}
   /* Status badges in Tarifs view (Investissements) */
   .tr-badge{padding:3px 8px;border-radius:10px;font-size:13px;font-weight:600;text-transform:uppercase;display:inline-block;line-height:1.4}
   .tr-badge.ok{background:var(--success-soft);color:var(--success)}
@@ -3294,6 +3301,7 @@ const ICONS = {
   check:          _ICO('<polyline points="20 6 9 17 4 12"/>'),
   x:              _ICO('<path d="M18 6 6 18"/><path d="m6 6 12 12"/>'),
   moreVertical:   _ICO('<circle cx="12" cy="12" r="1"/><circle cx="12" cy="5" r="1"/><circle cx="12" cy="19" r="1"/>'),
+  gripVertical:   _ICO('<circle cx="9" cy="12" r="1"/><circle cx="9" cy="5" r="1"/><circle cx="9" cy="19" r="1"/><circle cx="15" cy="12" r="1"/><circle cx="15" cy="5" r="1"/><circle cx="15" cy="19" r="1"/>'),
   chevronRight:   _ICO('<path d="m9 18 6-6-6-6"/>'),
   chevronDown:    _ICO('<path d="m6 9 6 6 6-6"/>'),
   circle:         _ICO('<circle cx="12" cy="12" r="10"/>'),
@@ -3319,6 +3327,7 @@ const ICO_SZ = (key, sz) => {
     chevronRight: '<path d="m9 18 6-6-6-6"/>',
     chevronDown: '<path d="m6 9 6 6 6-6"/>',
     moreVertical: '<circle cx="12" cy="12" r="1"/><circle cx="12" cy="5" r="1"/><circle cx="12" cy="19" r="1"/>',
+    gripVertical: '<circle cx="9" cy="12" r="1"/><circle cx="9" cy="5" r="1"/><circle cx="9" cy="19" r="1"/><circle cx="15" cy="12" r="1"/><circle cx="15" cy="5" r="1"/><circle cx="15" cy="19" r="1"/>',
     circle: '<circle cx="12" cy="12" r="10"/>',
     circleFilled: '<circle cx="12" cy="12" r="9" fill="currentColor" stroke="none"/>',
     info: '<circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/>',
@@ -5975,6 +5984,48 @@ function tarifReorder(from, to) {
   render();
 }
 window.tarifReorder = tarifReorder;
+
+// ▼ Drag & drop catalogue — on identifie chaque ligne par sa clé `c.k`
+// (stable, contrairement à l'index qui change après chaque réorganisation).
+let _dragTarifKey = null;
+window.tarifDragStart = function(ev, key) {
+  // Si le drag part d'un input/button/textarea, on annule (laisse le focus natif)
+  const t = ev.target;
+  if (t && (t.tagName === "INPUT" || t.tagName === "BUTTON" || t.tagName === "TEXTAREA")) {
+    ev.preventDefault();
+    return;
+  }
+  _dragTarifKey = key;
+  ev.dataTransfer.effectAllowed = "move";
+  ev.dataTransfer.setData("text/plain", key);
+  const tr = ev.currentTarget;
+  if (tr) tr.classList.add("dragging");
+};
+window.tarifDragEnd = function(ev) {
+  const tr = ev.currentTarget;
+  if (tr) tr.classList.remove("dragging");
+  document.querySelectorAll("tr.catalog-drag-over").forEach(el => el.classList.remove("catalog-drag-over"));
+  _dragTarifKey = null;
+};
+window.tarifDragOver = function(ev) {
+  if (!_dragTarifKey) return;
+  ev.preventDefault();
+  ev.dataTransfer.dropEffect = "move";
+  const tr = ev.currentTarget;
+  if (!tr || tr.dataset.tarifKey === _dragTarifKey) return;
+  document.querySelectorAll("tr.catalog-drag-over").forEach(el => el.classList.remove("catalog-drag-over"));
+  tr.classList.add("catalog-drag-over");
+};
+window.tarifDrop = function(ev, targetKey) {
+  ev.preventDefault();
+  const srcKey = _dragTarifKey;
+  if (!srcKey || srcKey === targetKey) return;
+  const arr = S.tarifs.catalog;
+  const srcIdx = arr.findIndex(c => c.k === srcKey);
+  const tgtIdx = arr.findIndex(c => c.k === targetKey);
+  if (srcIdx < 0 || tgtIdx < 0) return;
+  tarifReorder(srcIdx, tgtIdx);
+};
 
 // ▼ tarifViewMode — bascule l'affichage du Catalogue entre Déclaré et Au noir.
 // N'affecte que la vue (recalcul colonnes URSSAF/Net), pas les tarifs persistés.
@@ -14468,7 +14519,7 @@ function rCatalogue() {
   const mode = S.tarifs.viewMode === "noir" ? "noir" : "declare";
   const isDecl = mode === "declare";
   const tarifRows = cat.length === 0
-    ? `<tr><td colspan="${isDecl ? 6 : 5}" class="catalog-empty">Aucune prestation. Clique sur « Nouvelle prestation » pour démarrer.</td></tr>`
+    ? `<tr><td colspan="${isDecl ? 7 : 6}" class="catalog-empty">Aucune prestation. Clique sur « Nouvelle prestation » pour démarrer.</td></tr>`
     : cat.map((c, idx) => {
         const final = num(c.p);
         const urssafAmt = (isDecl && final > 0) ? r2(final * urssafPct / 100) : 0;
@@ -14478,7 +14529,12 @@ function rCatalogue() {
           ? `<td class="amount muted-cell ${empty ? 'dim' : ''}">${empty ? "—" : `−${fmt(urssafAmt)}`}</td>`
           : "";
         return `
-        <tr ${empty ? 'class="row-empty"' : ''}>
+        <tr ${empty ? 'class="row-empty"' : ''} draggable="true" data-tarif-key="${esc(c.k)}"
+            ondragstart="tarifDragStart(event,'${esc(c.k)}')"
+            ondragend="tarifDragEnd(event)"
+            ondragover="tarifDragOver(event)"
+            ondrop="tarifDrop(event,'${esc(c.k)}')">
+          <td class="catalog-drag-handle" title="Glisser pour réordonner">${ICO_SZ('gripVertical', 14)}</td>
           <td class="catalog-libelle-cell">
             <input type="text" value="${esc(c.l)}" oninput="tarifEdit(${idx},'l',this.value)" placeholder="Libellé prestation" class="tr-cell-input catalog-libelle" data-tarif-libelle>
             <input type="text" value="${esc(c.d || "")}" oninput="tarifEdit(${idx},'d',this.value)" placeholder="Description (facultatif)" class="tr-cell-input catalog-desc">
@@ -14517,6 +14573,7 @@ function rCatalogue() {
     <table class="hist catalog-table" style="max-width:880px">
       <thead>
         <tr>
+          <th style="width:24px"></th>
           <th>Libellé</th>
           <th style="width:120px;text-align:right">Tarif final<div style="font-size:13px;font-weight:400;color:var(--text-muted);margin-top:1px">prix client TTC</div></th>
           ${urssafHead}
