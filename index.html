@@ -80,6 +80,7 @@
   .sb-user-menu button{display:flex;align-items:center;gap:11px;width:100%;background:none;border:0;color:var(--text-muted);padding:10px 16px;text-align:left;cursor:pointer;font:inherit;font-size:13px;border-left:3px solid transparent;transition:background .12s,color .12s}
   .sb-user-menu button:hover{background:var(--surface);color:var(--text)}
   .sb-user-menu button svg{flex-shrink:0;width:18px;height:18px}
+  .sb-user-menu-count{display:inline-block;font-size:10px;font-weight:600;color:var(--accent);background:rgba(99,102,241,.12);border:1px solid rgba(99,102,241,.30);border-radius:var(--radius-sm);padding:1px 5px;margin-left:6px;letter-spacing:.3px}
   /* Trigger : avatar + label email à droite, full-width comme un tab */
   .sb-user-trigger{display:flex;align-items:center;gap:11px;width:100%;background:none;border:0;color:var(--text-muted);padding:10px 16px;text-align:left;cursor:pointer;font:inherit;font-size:13px;border-left:3px solid transparent;transition:background .12s,color .12s}
   .sb-user-trigger:hover{background:var(--surface);color:var(--text)}
@@ -352,6 +353,10 @@
   .suv-hist-amt{font-variant-numeric:tabular-nums;text-align:right;color:var(--text)}
   .suv-hist-actions{display:flex;gap:6px;justify-self:end}
   .suv-hist-action{padding:4px 8px;font-size:11px;height:auto;display:inline-flex;align-items:center;gap:4px}
+  /* Restaurer toujours dans le flux pour garder l'alignement (date, montant,
+     bouton Voir) constant entre la rev active et les autres. Invisible mais
+     occupe sa largeur quand la rev est active. */
+  .suv-hist-action-hidden{visibility:hidden;pointer-events:none}
   /* Bouton danger en mode ghost — discret par défaut, accent rouge au hover */
   .btn.btn-danger-ghost{color:var(--text-dim);border-color:transparent}
   .btn.btn-danger-ghost:hover{background:var(--danger-soft);color:var(--danger);border-color:var(--danger)}
@@ -7983,6 +7988,7 @@ function render() {
             <button type="button" role="menuitem" onclick="userMenuClose();setTab('profil')">${ICONS.user}<span>Profil</span></button>
             <button type="button" role="menuitem" onclick="userMenuClose();setTab('templates')">${ICONS.mail}<span>Templates</span></button>
             <button type="button" role="menuitem" onclick="userMenuClose();setTab('parametres')">${ICONS.settings}<span>Paramètres</span></button>
+            <button type="button" role="menuitem" onclick="userMenuClose();binModalToggle()">${ICONS.trash}<span>Corbeille${(() => { const n = (S.bin && S.bin.items && S.bin.items.length) || 0; return n > 0 ? ` <span class="sb-user-menu-count">${n}</span>` : ""; })()}</span></button>
             <button type="button" role="menuitem" onclick="userMenuClose();signOut()">${ICONS.logOut}<span>Se déconnecter</span></button>
           </div>
           <button class="sb-user-trigger" id="sbUserTrigger" type="button" onclick="userMenuToggle(event)" aria-label="Mon compte" title="${esc(user.email)}">
@@ -11843,9 +11849,9 @@ function suiviHistoryHtml(devisId) {
     const isActive = dv.isActive === true;
     const total = num(dv.snapshotTotal) || ents.reduce((s, e) => s + num(e.montant), 0);
     const activeBadge = isActive ? `<span class="suv-hist-active">active</span>` : "";
-    const restoreBtn = !isActive
-      ? `<button class="btn ghost suv-hist-action" onclick="${stop}suiviRestoreRevision('${id}')" title="Restaurer cette version comme rev active. Les versions plus récentes restent dans l'historique. Une nouvelle révision repartira de cette version avec un numéro qui saute au-dessus de l'historique existant.">${ICO_SZ('rotateCcw',13)} Restaurer</button>`
-      : "";
+    // Bouton Restaurer toujours dans le DOM pour garder le grid stable —
+    // visibility:hidden quand la rev est active (rien à restaurer).
+    const restoreBtn = `<button class="btn ghost suv-hist-action${isActive ? ' suv-hist-action-hidden' : ''}" onclick="${stop}suiviRestoreRevision('${id}')" title="Restaurer cette version comme rev active. Les versions plus récentes restent dans l'historique. Une nouvelle révision repartira de cette version avec un numéro qui saute au-dessus de l'historique existant." ${isActive ? 'tabindex="-1" aria-hidden="true"' : ''}>${ICO_SZ('rotateCcw',13)} Restaurer</button>`;
     return `<div class="suv-hist-row${isActive ? ' active' : ''}">
       <span class="suv-hist-rev">rev${rev}</span>
       <span class="suv-hist-ref">${esc(ref)}${activeBadge}</span>
@@ -12453,10 +12459,7 @@ function rSV() {
           </td>
           <td class="statut">${pastille(g.statutPrin)}</td>
           <td>${dateLabel}</td>
-          <td class="ref-cell suv-nowrap">${esc(g.ref) || `<span class="muted">—</span>`}${(() => {
-            const rev = computeRevisionNumber(g.devisId);
-            return rev > 0 ? ` <span class="suv-rev-tag" title="Numéro de révision active dans la chaîne. Versions précédentes accessibles via l'historique du panneau étendu.">rev${rev}</span>` : "";
-          })()}</td>
+          <td class="ref-cell suv-nowrap">${esc(g.ref) || `<span class="muted">—</span>`} <span class="suv-rev-tag" title="Numéro de révision active dans la chaîne. Versions précédentes accessibles via l'historique du panneau étendu.">rev${computeRevisionNumber(g.devisId)}</span></td>
           <td class="suv-nowrap">
             <strong class="client-link" onclick="${stop}clientInfoModalOpen('${g.devisId}')" title="Voir les infos client">${esc(cleanClientLabel(g.client)) || "—"}</strong>
           </td>
@@ -14128,10 +14131,7 @@ function rAC() {
       <div class="ac-row ${late ? 'ac-late' : ''}${isExpanded ? ' ac-row-active' : ''}" onclick="accueilOpenDevis('${g.devisId}')">
         <div class="ac-row-date">${esc(dateFR(g.dateMin || g.dateMax))}</div>
         <div class="ac-row-client"><span class="client-link" onclick="${stop}clientInfoModalOpen('${g.devisId}')" title="Voir les infos client">${esc(cleanClientLabel(g.client)) || "—"}</span></div>
-        <div class="ac-row-ref">${esc(g.ref) || "—"}${(() => {
-          const rev = computeRevisionNumber(g.devisId);
-          return rev > 0 ? ` <span class="suv-rev-tag">rev${rev}</span>` : "";
-        })()}</div>
+        <div class="ac-row-ref">${esc(g.ref) || "—"} <span class="suv-rev-tag">rev${computeRevisionNumber(g.devisId)}</span></div>
         <div class="ac-row-amt">${fmt(amount)}</div>
         <button class="ac-row-gmail" onclick="${stop}gmailRelanceForDevis('${g.devisId}','${gmailKind}')" title="${gmailTitle}">${ICONS.send}</button>
       </div>
