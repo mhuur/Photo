@@ -8380,6 +8380,22 @@ window.binRestore = function(itemId) {
     if (!Array.isArray(S.mission.cgvSections)) S.mission.cgvSections = [];
     const insertAt = Math.min(item.payload.originalIndex || S.mission.cgvSections.length, S.mission.cgvSections.length);
     S.mission.cgvSections.splice(insertAt, 0, item.payload.section);
+  } else if (item.kind === "devisChain") {
+    // Restaure toute la chaîne : entries + S.suivi.devis pour chaque rev.
+    if (!S.suivi) S.suivi = { entries: [], devis: {} };
+    if (!Array.isArray(S.suivi.entries)) S.suivi.entries = [];
+    if (!S.suivi.devis) S.suivi.devis = {};
+    const ids = item.payload.devisIds || [];
+    ids.forEach((id, idx) => {
+      const dv = (item.payload.devis || [])[idx];
+      if (dv) S.suivi.devis[id] = JSON.parse(JSON.stringify(dv));
+    });
+    for (const e of (item.payload.entries || [])) {
+      // Évite les doublons si l'entry existe déjà (cas rare mais safe).
+      if (!S.suivi.entries.find(x => x.id === e.id)) {
+        S.suivi.entries.push(JSON.parse(JSON.stringify(e)));
+      }
+    }
   }
   S.bin.items.splice(idx, 1);
   save();
@@ -8494,7 +8510,7 @@ window.binModalToggle = function() {
 function rBinModal() {
   if (!binModalOpen) return "";
   const items = (S.bin && S.bin.items) || [];
-  const KIND_LBL = { cgvSection: "Section CGV" };
+  const KIND_LBL = { cgvSection: "Section CGV", devisChain: "Devis" };
   return `<div class="modal-overlay" onclick="if(event.target===this)binModalToggle()">
     <div class="modal-card" style="max-width:640px">
       <div class="modal-title">🗑 Corbeille <span style="font-size:11px;color:var(--text-dim);font-weight:500;margin-left:6px">(${items.length} élément${items.length > 1 ? "s" : ""})</span></div>
@@ -11366,24 +11382,45 @@ function suiviAddLigne(devisId) {
 }
 window.suiviAddLigne = suiviAddLigne;
 
+// Supprime un devis ET toute sa chaîne de révisions. Pousse une copie complète
+// (devis + entries de chaque rev) dans la corbeille (kind="devisChain") pour
+// permettre la restauration via binRestore.
 function suiviDelDevis(devisId) {
-  S.suivi.entries = S.suivi.entries.filter(e => e.devisId !== devisId);
-  if (S.suivi.devis) delete S.suivi.devis[devisId];
-  suiviSelected.delete(devisId);
-  if (suiviExpandedDevis === devisId) suiviExpandedDevis = null;
+  const ids = chainOf(devisId);
+  if (!ids.length) ids.push(devisId);
+  // Snapshot complet de la chaîne pour la corbeille.
+  const map = (S.suivi && S.suivi.devis) || {};
+  const activeRev = map[chainActiveId(devisId)] || map[devisId] || {};
+  const label = (activeRev.ref || devisId) + (ids.length > 1 ? ` (+${ids.length - 1} rev)` : "");
+  const payload = {
+    devisIds: ids,
+    devis: ids.map(id => map[id] || null),
+    entries: (S.suivi.entries || []).filter(e => ids.includes(e.devisId)).map(e => JSON.parse(JSON.stringify(e)))
+  };
+  binPush("devisChain", payload, label);
+  // Suppression effective.
+  S.suivi.entries = S.suivi.entries.filter(e => !ids.includes(e.devisId));
+  if (S.suivi.devis) for (const id of ids) delete S.suivi.devis[id];
+  for (const id of ids) suiviSelected.delete(id);
+  if (ids.includes(suiviExpandedDevis)) suiviExpandedDevis = null;
   save();
   render();
 }
 window.suiviDelDevis = suiviDelDevis;
 
 // Wrapper avec confirmation pour la suppression d'un devis depuis le volet inline.
-// Affiche ref + montant pour éviter les erreurs de cible.
+// Indique explicitement le nombre de révisions concernées (toute la chaîne
+// est supprimée — les révisions d'un même devis sont indissociables).
 async function suiviDelDevisConfirm(devisId) {
+  const ids = chainOf(devisId);
   const lignes = suiviGroupLigne(devisId);
   const total = lignes.reduce((s, e) => s + num(e.montant), 0);
   const dv = S.suivi.devis && S.suivi.devis[devisId];
   const ref = (dv && dv.ref) || devisId;
-  const msg = `Supprimer définitivement le devis « ${ref} » (${fmt(total)}, ${lignes.length} ligne${lignes.length > 1 ? 's' : ''}) ?\n\nCette action est irréversible.`;
+  const revsLabel = ids.length > 1
+    ? `Cette opération supprime aussi les ${ids.length - 1} version${ids.length > 2 ? "s" : ""} précédente${ids.length > 2 ? "s" : ""} (toute la chaîne de révisions).\n\n`
+    : "";
+  const msg = `Supprimer le devis « ${ref} » (${fmt(total)}, ${lignes.length} ligne${lignes.length > 1 ? 's' : ''}) ?\n\n${revsLabel}Récupérable depuis la corbeille pendant 30 suppressions.`;
   if (!await uiConfirm(msg, { title: "Supprimer ce devis", confirmLabel: "Supprimer", kind: "danger" })) return;
   suiviDelDevis(devisId);
 }
