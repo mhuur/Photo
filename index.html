@@ -342,17 +342,18 @@
   .suv-history > summary:hover{background:rgba(255,255,255,.03)}
   .suv-hist-count{display:inline-block;font-size:10px;font-weight:600;color:var(--text-muted);background:var(--bg);border:1px solid var(--border-soft);border-radius:var(--radius-sm);padding:1px 6px;margin-left:auto}
   .suv-hist-list{display:flex;flex-direction:column;border-top:1px solid var(--border-soft)}
-  .suv-hist-row{display:grid;grid-template-columns:48px 1fr 100px 100px auto;gap:12px;align-items:center;padding:8px 14px;border-bottom:1px solid var(--border-soft);font-size:12px;color:var(--text-muted)}
+  /* Ordre des colonnes calé sur l'Accueil : date | ref+rev | montant | actions. */
+  .suv-hist-row{display:grid;grid-template-columns:90px 1fr 110px auto;gap:12px;align-items:center;padding:8px 14px;border-bottom:1px solid var(--border-soft);font-size:12px;color:var(--text-muted)}
   .suv-hist-row:last-child{border-bottom:0}
   .suv-hist-row.active{background:rgba(99,102,241,.06)}
-  .suv-hist-row.active .suv-hist-rev,.suv-hist-row.active .suv-hist-ref{color:var(--text)}
-  .suv-hist-rev{font-size:10px;font-weight:600;color:var(--accent);background:rgba(99,102,241,.12);border:1px solid rgba(99,102,241,.30);border-radius:var(--radius-sm);padding:1px 5px;letter-spacing:.3px;text-align:center;justify-self:start}
-  .suv-hist-ref{font-variant-numeric:tabular-nums;display:flex;align-items:center;gap:8px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  .suv-hist-active{display:inline-block;font-size:9px;font-weight:600;color:var(--success);background:rgba(34,197,94,.10);border:1px solid rgba(34,197,94,.32);border-radius:var(--radius-sm);padding:1px 5px;letter-spacing:.3px;text-transform:uppercase}
   .suv-hist-date{font-variant-numeric:tabular-nums;text-align:left}
+  .suv-hist-ref{font-variant-numeric:tabular-nums;display:flex;align-items:center;gap:6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .suv-hist-ref .suv-rev-tag{margin-left:0;flex-shrink:0}
+  .suv-hist-active{display:inline-block;font-size:9px;font-weight:600;color:var(--success);background:rgba(34,197,94,.10);border:1px solid rgba(34,197,94,.32);border-radius:var(--radius-sm);padding:1px 5px;letter-spacing:.3px;text-transform:uppercase;flex-shrink:0}
   .suv-hist-amt{font-variant-numeric:tabular-nums;text-align:right;color:var(--text)}
   .suv-hist-actions{display:flex;gap:6px;justify-self:end}
   .suv-hist-action{padding:4px 8px;font-size:11px;height:auto;display:inline-flex;align-items:center;gap:4px}
+  .suv-hist-action-icon{padding:5px 7px}
   /* Restaurer toujours dans le flux pour garder l'alignement (date, montant,
      bouton Voir) constant entre la rev active et les autres. Invisible mais
      occupe sa largeur quand la rev est active. */
@@ -3109,6 +3110,7 @@ const ICONS = {
   save:           _ICO('<path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/>'),
   unlock:         _ICO('<rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 9.9-1"/>'),
   rotateCcw:      _ICO('<path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/>'),
+  eye:            _ICO('<path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/>'),
   rotateCw:       _ICO('<path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/>'),
   check:          _ICO('<polyline points="20 6 9 17 4 12"/>'),
   x:              _ICO('<path d="M18 6 6 18"/><path d="m6 6 12 12"/>'),
@@ -11853,12 +11855,11 @@ function suiviHistoryHtml(devisId) {
     // visibility:hidden quand la rev est active (rien à restaurer).
     const restoreBtn = `<button class="btn ghost suv-hist-action${isActive ? ' suv-hist-action-hidden' : ''}" onclick="${stop}suiviRestoreRevision('${id}')" title="Restaurer cette version comme rev active. Les versions plus récentes restent dans l'historique. Une nouvelle révision repartira de cette version avec un numéro qui saute au-dessus de l'historique existant." ${isActive ? 'tabindex="-1" aria-hidden="true"' : ''}>${ICO_SZ('rotateCcw',13)} Restaurer</button>`;
     return `<div class="suv-hist-row${isActive ? ' active' : ''}">
-      <span class="suv-hist-rev">rev${rev}</span>
-      <span class="suv-hist-ref">${esc(ref)}${activeBadge}</span>
       <span class="suv-hist-date">${esc(dateLbl)}</span>
+      <span class="suv-hist-ref">${esc(ref)} <span class="suv-rev-tag">rev${rev}</span>${activeBadge}</span>
       <span class="suv-hist-amt">${fmt(total)}</span>
       <span class="suv-hist-actions">
-        <button class="btn ghost suv-hist-action" onclick="${stop}viewDevisOpen('${id}')" title="Voir le PDF de cette version">${ICO_SZ('search',13)} Voir</button>
+        <button class="btn ghost suv-hist-action suv-hist-action-icon" onclick="${stop}viewDevisOpen('${id}')" title="Voir le PDF de cette version" aria-label="Voir le PDF de cette version">${ICO_SZ('eye',14)}</button>
         ${restoreBtn}
       </span>
     </div>`;
