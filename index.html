@@ -503,6 +503,9 @@
   .ac-section h3{margin:0 0 10px;font-size:14px;font-weight:600;color:var(--text);display:flex;align-items:center;gap:8px}
   .ac-section h3 .ac-count{font-size:11px;font-weight:600;color:var(--text-muted);background:var(--surface);border:1px solid var(--border-light);padding:2px 8px;border-radius:10px}
   .ac-list{display:flex;flex-direction:column;gap:6px;max-width:880px}
+  /* Séparateur d'année dans la vue Historique (entre groupes annuels) */
+  .ac-year-sep{margin:14px 0 4px;padding:0 4px 4px;font-size:11px;font-weight:600;color:var(--text-dim);text-transform:uppercase;letter-spacing:.12em;border-bottom:1px solid var(--border-soft)}
+  .ac-year-sep:first-child{margin-top:0}
   .ac-row-wrap{display:flex;flex-direction:column;gap:0}
   .ac-row-wrap.expanded{gap:0}
   .ac-row-wrap.expanded .ac-row{border-radius:8px 8px 0 0;border-bottom:0}
@@ -12903,57 +12906,47 @@ function suiviTimelineStepHtml(e) {
 // Une ligne par devis. Click ligne → modale timeline. Édition avancée
 // toujours accessible via la modale ou via "⋮" qui ouvre le panneau hérité.
 // ============================================================================
-// ▼ rSV — RENDERER onglet Suivi
+// ▼ rSV — RENDERER onglet Historique (devis clos uniquement)
+// Adopte le même pattern de ligne que l'Accueil (.ac-row) : date | client |
+// ref+rev | montant. Click ligne → toggle panneau étendu inline. Tri par
+// date décroissante. Séparateurs d'année quand pertinent. Plus de
+// checkboxes, plus de pastilles, plus de bouton supprimer en toolbar
+// (le bouton supprimer est dans le panneau étendu de chaque devis).
 function rSV() {
   // Mode corbeille : vue dédiée — liste les devis supprimés (S.suivi.bin).
   if (suiviFilterPrincipal === "corbeille") {
     return rSuiviBinView();
   }
   const list = suiviGroups();
+  // Tri par date décroissante (plus récent d'abord) — convention Accueil.
+  list.sort((a, b) => (b.dateMax || b.dateMin || "").localeCompare(a.dateMax || a.dateMin || ""));
   const totalEntries = S.suivi.entries.length;
-
   const stop = "event.stopPropagation();";
 
-  // Séparateur d'années visible UNIQUEMENT quand le tri est sur la colonne Date.
-  // Sur tout autre tri (client, montant, ref, statut), un séparateur "par année"
-  // apparaîtrait à des endroits aléatoires → on le désactive.
-  const showYearSep = suiviSort.field === "date";
+  // Séparateur d'année (titre discret entre les groupes annuels).
   let lastYear = null;
-
   const rowsHtml = list.map(g => {
-    const selected = suiviSelected.has(g.devisId);
-    const dateLabel = g.dateMin === g.dateMax
-      ? esc(dateFR(g.dateMin))
-      : `${esc(dateFR(g.dateMin))} → ${esc(dateFR(g.dateMax))}`;
-
-    // Année de la ligne — utilise dateMax (clé de tri) puis dateMin en fallback.
     const rowYear = (g.dateMax || g.dateMin || "").slice(0, 4);
     let yearSep = "";
-    if (showYearSep && rowYear && rowYear !== lastYear) {
-      yearSep = `<tbody class="suv-year-sep"><tr><td colspan="6">${esc(rowYear)}</td></tr></tbody>`;
+    if (rowYear && rowYear !== lastYear) {
+      yearSep = `<div class="ac-year-sep">${esc(rowYear)}</div>`;
       lastYear = rowYear;
     }
-
-    return yearSep + `
-      <tbody class="devis-grp${selected ? ' sel' : ''}">
-        <tr class="suv-row clickable ${suiviExpandedDevis === g.devisId ? 'on' : ''}" onclick="suiviExpandedToggle('${g.devisId}')">
-          <td class="cb" onclick="${stop}">
-            <input type="checkbox" ${selected ? 'checked' : ''}
-              onclick="suiviToggleOne('${g.devisId}', this.checked, event)">
-          </td>
-          <td class="statut">${pastille(g.statutPrin)}</td>
-          <td>${dateLabel}</td>
-          <td class="ref-cell suv-nowrap">${esc(g.ref) || `<span class="muted">—</span>`} <span class="suv-rev-tag" title="Numéro de révision active dans la chaîne. Versions précédentes accessibles via l'historique du panneau étendu.">rev${computeRevisionNumber(g.devisId)}</span></td>
-          <td class="suv-nowrap">
-            <strong class="client-link" onclick="${stop}clientInfoModalOpen('${g.devisId}')" title="Voir les infos client">${esc(cleanClientLabel(g.client)) || "—"}</strong>
-          </td>
-          <td class="amt">${fmt(g.total)}</td>
-        </tr>
-        ${suiviExpandedRowHtml(g)}
-      </tbody>`;
+    const isExpanded = suiviExpandedDevis === g.devisId;
+    const panel = isExpanded
+      ? `<div class="ac-row-panel" onclick="${stop}">${suiviExpandedPanelHtml(g)}</div>`
+      : "";
+    return yearSep + `<div class="ac-row-wrap${isExpanded ? ' expanded' : ''}">
+      <div class="ac-row${isExpanded ? ' ac-row-active' : ''}" onclick="suiviExpandedToggle('${g.devisId}')">
+        <div class="ac-row-date">${esc(dateFR(g.dateMin || g.dateMax))}</div>
+        <div class="ac-row-client"><span class="client-link" onclick="${stop}clientInfoModalOpen('${g.devisId}')" title="Voir les infos client">${esc(cleanClientLabel(g.client)) || "—"}</span></div>
+        <div class="ac-row-ref">${esc(g.ref) || "—"} <span class="suv-rev-tag" title="Numéro de révision active dans la chaîne. Versions précédentes accessibles via l'historique du panneau étendu.">rev${computeRevisionNumber(g.devisId)}</span></div>
+        <div class="ac-row-amt">${fmt(g.total)}</div>
+      </div>
+      ${panel}
+    </div>`;
   }).join("");
 
-  // États vides spécialisés
   let emptyHtml = "";
   if (totalEntries === 0) {
     emptyHtml = `<div class="empty">Aucun devis enregistré. Depuis l'onglet Devis, clique sur « + Enregistrer dans Suivi ».</div>`;
@@ -12963,33 +12956,8 @@ function rSV() {
 
   return `
     <h1 class="page-title">${esc(pageTitle("suivi"))} <span id="savedFlash" class="saved"></span></h1>
-
     ${suiviLegendHtml()}
-
-    <div class="toolbar">
-      <span id="suiviSelInfo">${suiviSelInfoHtml()}</span>
-    </div>
-
-    ${emptyHtml || `
-    <table class="hist">
-      <thead>
-        <tr>
-          <th style="width:34px;text-align:center" title="Tout sélectionner / désélectionner">
-            <input type="checkbox" id="suiviSelectAll"
-              ${list.length > 0 && list.every(g => suiviSelected.has(g.devisId)) ? "checked" : ""}
-              onclick="suiviSelectAll(this.checked)">
-          </th>
-          <th class="sortable" style="width:80px;text-align:center" onclick="suiviSortKey('statut')">Statut${arr('statut')}</th>
-          <th class="sortable th-date" style="width:160px" onclick="suiviHeaderMenuToggleDate()">Date${arr('date')}${suiviFilterYears.size > 0 ? `<span class="th-filter-badge">${suiviFilterYears.size === 1 ? esc([...suiviFilterYears][0]) : suiviFilterYears.size + ' ans'}</span>` : ""}</th>
-          <th class="sortable" style="width:170px" onclick="suiviSortKey('ref')">Numéro${arr('ref')}</th>
-          <th class="sortable" onclick="suiviSortKey('client')">Client${arr('client')}</th>
-          <th class="sortable" style="width:120px;text-align:right" onclick="suiviSortKey('montant')">Montant${arr('montant')}</th>
-        </tr>
-      </thead>
-      ${rowsHtml}
-    </table>`}
-
-    ${suiviHeaderMenu === "date" ? suiviDateMenuHtml() : ""}
+    ${emptyHtml || `<div class="ac-list">${rowsHtml}</div>`}
   `;
 }
 
