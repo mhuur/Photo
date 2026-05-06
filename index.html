@@ -8648,39 +8648,19 @@ const APP_CHANGELOG = [
   {
     id: "2026-05-revisions-refonte",
     date: "2026-05-06",
-    title: "Refonte du système de révisions",
+    title: "Révisions, édition et corbeille",
     items: [
       {
-        h: "Un seul devis affiché par mission",
-        b: "Avant, chaque révision (rev1, rev2, rev3…) apparaissait comme une ligne distincte dans Suivi et Accueil — parfois deux versions visibles en parallèle après une annulation. Maintenant, seule la version active est affichée. Les versions précédentes restent accessibles dans l'historique du devis."
-      },
-      {
-        h: "Historique des versions dépliable",
-        b: "Dans le panneau d'un devis (clique pour déplier), une nouvelle section « Historique des versions » liste toutes les révisions précédentes avec leur référence, date et montant. L'icône œil ouvre le PDF de la version choisie."
-      },
-      {
-        h: "Restauration d'une ancienne version",
-        b: "Tu peux restaurer une version antérieure comme version active sans rien supprimer. Les versions plus récentes restent dans l'historique. Si tu crées ensuite une nouvelle révision, elle saute au-dessus des numéros existants (ex : restaurer rev3 puis réviser → rev5, pas rev4)."
+        h: "Un seul devis par mission",
+        b: "Les révisions (rev1, rev2…) ne génèrent plus de doublons dans Suivi et Accueil. Seule la version active est affichée. Les anciennes restent disponibles dans l'historique du devis (clique pour déplier le panneau), avec possibilité de les visualiser ou de les restaurer comme version active."
       },
       {
         h: "Bouton « Éditer » pour les corrections mineures",
-        b: "Dans le menu Devis (panneau étendu), une nouvelle option « Éditer » permet de corriger une typo, un oubli, une mise à jour de format SANS créer de nouvelle version (la référence et la date sont conservées). À utiliser uniquement quand le sens du devis ne change pas pour le client. Pour une modification substantielle, continue d'utiliser « Réviser »."
+        b: "Dans le menu Devis, deux actions distinctes maintenant : « Éditer » pour un correctif sans changer de version (typo, oubli, mise à jour de format) et « Réviser » pour une modification substantielle qui crée une nouvelle version. Tooltips au survol pour rappeler la différence."
       },
       {
-        h: "Suppression d'un devis = chaîne complète",
-        b: "Supprimer un devis efface désormais toutes ses révisions d'un coup (elles sont indissociables). Le devis complet est mis dans la corbeille pendant 30 suppressions, restaurable d'un clic."
-      },
-      {
-        h: "Corbeille accessible depuis le menu utilisateur",
-        b: "Nouvelle entrée « Corbeille » dans le menu Mon compte (en bas de la sidebar). Tu peux y récupérer un devis supprimé par erreur, ou des sections CGV supprimées."
-      },
-      {
-        h: "Tag rev visible partout",
-        b: "Le tag bleu « rev0 », « rev1 », « rev2 »… apparaît systématiquement à côté de la référence du devis dans Suivi et Accueil, pour identifier d'un coup d'œil la version active."
-      },
-      {
-        h: "Bug corrigé — entries pas recalculées après modification",
-        b: "Modifier un devis depuis l'éditeur (« Enregistrer les modifications ») ne mettait pas à jour les montants dans Suivi et Compta — le bilan restait sur l'ancienne valeur. Les statuts (acompte payé, refus, annulation) sont préservés ; seuls les montants se mettent à jour."
+        h: "Corbeille pour récupérer un devis supprimé",
+        b: "Supprimer un devis le met dans la corbeille (accessible depuis le menu Mon compte). Restauration en un clic, rétention sur les 30 dernières suppressions."
       }
     ]
   }
