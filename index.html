@@ -3288,6 +3288,8 @@ const ICO_SZ = (key, sz) => {
     info: '<circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/>',
     alertTriangle: '<path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/>',
     alertOctagon: '<polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/>',
+    send: '<line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>',
+    trash: '<path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>',
     lightbulb: '<path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5"/><path d="M9 18h6"/><path d="M10 22h4"/>',
     clipboard: '<rect width="8" height="4" x="8" y="2" rx="1" ry="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/>',
     fileText: '<path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><polyline points="14 2 14 8 20 8"/><line x1="16" x2="8" y1="13" y2="13"/><line x1="16" x2="8" y1="17" y2="17"/><polyline points="10 9 9 9 8 9"/>',
@@ -12220,7 +12222,7 @@ function suiviExpandedPanelHtml(g) {
   // Actions au niveau devis (mêmes règles que l'ancien rSuiviTimelineModal).
   const undoLabel = suiviDevisUndoLabel(g);
   const undoBtn = undoLabel
-    ? `<button class="btn ghost" title="Revenir en arrière sur la dernière action" onclick="${stop}suiviDevisUndo('${g.devisId}')">↩ ${esc(undoLabel)}</button>`
+    ? `<button class="btn-add-neon ghost" title="Revenir en arrière sur la dernière action" onclick="${stop}suiviDevisUndo('${g.devisId}')">↩ ${esc(undoLabel)}</button>`
     : "";
   let devisLevelAction = "";
   if (statutPrin === "envoye") {
@@ -12228,7 +12230,7 @@ function suiviExpandedPanelHtml(g) {
       <button class="btn-act act-vert" onclick="${stop}suiviDevisAccepter('${g.devisId}')"><span class="ico">✓</span> Accepté</button>
       <button class="btn-act act-rouge" onclick="${stop}suiviDevisRefuser('${g.devisId}')"><span class="ico">✗</span> Refusé</button>`;
   } else if (statutPrin === "en_cours" || statutPrin === "termine") {
-    devisLevelAction = `<button class="btn ghost" onclick="${stop}suiviDevisAnnuler('${g.devisId}')">🚫 Annuler la mission</button>${undoBtn}`;
+    devisLevelAction = `<button class="btn-add-neon danger" onclick="${stop}suiviDevisAnnuler('${g.devisId}')">${ICO_SZ('alertOctagon',13)} Annuler la mission</button>${undoBtn}`;
   } else {
     devisLevelAction = undoBtn;
   }
@@ -12248,25 +12250,25 @@ function suiviExpandedPanelHtml(g) {
         if (lastRel) {
           return `<span class="suv-last-relance" title="Cliquer pour annuler la relance et faire réapparaître le devis dans « À relancer »" onclick="${stop}relanceUndo('${g.devisId}')">↻ Relancé le ${esc(dateFR(lastRel.slice(0,10)))} <span class="suv-last-relance-undo">✕</span></span>`;
         }
-        return `<button class="btn ghost suv-gmail-btn" onclick="${stop}gmailRelanceForDevis('${g.devisId}','${kind}')" title="Ouvrir Gmail avec un template de relance pré-rempli. Au retour, popup pour confirmer si le mail a été envoyé.">✉ Relancer</button>`;
+        return `<button class="btn-add-neon ghost suv-gmail-btn" onclick="${stop}gmailRelanceForDevis('${g.devisId}','${kind}')" title="Ouvrir Gmail avec un template de relance pré-rempli. Au retour, popup pour confirmer si le mail a été envoyé.">${ICO_SZ('send',13)} Relancer</button>`;
       })()}
       ${(() => {
         // Bouton Devis ▾ — popup 3 options (Réviser / Imprimer / Imprimer + envoyer)
         const dv = S.suivi.devis && S.suivi.devis[g.devisId];
         const envoiTs = dv && dv.envoiTs;
         const envoiBadge = envoiTs ? `<div class="suv-envoi-tag suv-envoi-undo" title="Cliquer pour annuler la marque d'envoi" onclick="${stop}devisEnvoiUndo('${g.devisId}')">Envoyé le ${esc(dateFR(new Date(envoiTs).toISOString().slice(0,10)))} <span class="suv-envoi-undo-x">${ICO_SZ('x', 10)}</span></div>` : "";
-        return `<div class="suv-action-col"><button class="btn ghost" onclick="${stop}devisActionMenu('${g.devisId}')">${ICONS.fileText} Devis</button>${envoiBadge}</div>`;
+        return `<div class="suv-action-col"><button class="btn-add-neon ghost" onclick="${stop}devisActionMenu('${g.devisId}')">${ICO_SZ('fileText',13)} Devis</button>${envoiBadge}</div>`;
       })()}
       ${(() => {
         // Bouton Débours masqué si aucun frais débours sur les entries.
         const totalDebours = lignes.reduce((s, e) => s + num(e.frais), 0);
         if (totalDebours <= 0) return "";
-        return `<button class="btn ghost" onclick="${stop}viewDeboursOpen('${g.devisId}')">${ICONS.fileText} Débours</button>`;
+        return `<button class="btn-add-neon ghost" onclick="${stop}viewDeboursOpen('${g.devisId}')">${ICO_SZ('fileText',13)} Débours</button>`;
       })()}
       ${(() => {
         // Boutons Facture ▾ par type (acompte / solde) avec popup 2 options.
         if (isDevisAuNoir(g.devisId)) {
-          return `<button class="btn ghost" disabled title="Devis au noir (CA déclaré = 0). La facturation est désactivée." style="opacity:.5;cursor:not-allowed">${ICONS.fileText} Facture</button>`;
+          return `<button class="btn-add-neon ghost" disabled title="Devis au noir (CA déclaré = 0). La facturation est désactivée." style="opacity:.5;cursor:not-allowed">${ICO_SZ('fileText',13)} Facture</button>`;
         }
         const facA = findFactureFor(g.devisId, "acompte");
         const facS = findFactureFor(g.devisId, "solde");
@@ -12277,16 +12279,16 @@ function suiviExpandedPanelHtml(g) {
           if (!fac) {
             // Facture pas encore émise → bouton classique pour la créer
             const lbl = type === "acompte" ? "Émettre acompte" : "Émettre solde";
-            return `<button class="btn ghost" onclick="${stop}viewFactureOpen('${g.devisId}','${type}')">${ICONS.fileText} ${lbl}</button>`;
+            return `<button class="btn-add-neon ghost" onclick="${stop}viewFactureOpen('${g.devisId}','${type}')">${ICO_SZ('fileText',13)} ${lbl}</button>`;
           }
           const envoiTs = fac.envoiTs;
           const envoiBadge = envoiTs ? `<div class="suv-envoi-tag suv-envoi-undo" title="Cliquer pour annuler la marque d'envoi" onclick="${stop}factureEnvoiUndo('${g.devisId}','${type}')">Envoyée le ${esc(dateFR(new Date(envoiTs).toISOString().slice(0,10)))} <span class="suv-envoi-undo-x">${ICO_SZ('x', 10)}</span></div>` : "";
           const lbl = type === "acompte" ? `Acompte ${formatRef(fac.ref, "facture")}` : `Solde ${formatRef(fac.ref, "facture")}`;
-          return `<div class="suv-action-col"><button class="btn ghost" onclick="${stop}factureActionMenu('${g.devisId}','${type}')">${ICONS.fileText} ${esc(lbl)}</button>${envoiBadge}</div>`;
+          return `<div class="suv-action-col"><button class="btn-add-neon ghost" onclick="${stop}factureActionMenu('${g.devisId}','${type}')">${ICO_SZ('fileText',13)} ${esc(lbl)}</button>${envoiBadge}</div>`;
         };
         let html = factureCol("acompte", facA, appA) + factureCol("solde", facS, appS);
         if (!html) {
-          html = `<button class="btn ghost" disabled title="Au moins un paiement reçu nécessaire pour émettre une facture" style="opacity:.5;cursor:not-allowed">${ICONS.fileText} Facture</button>`;
+          html = `<button class="btn-add-neon ghost" disabled title="Au moins un paiement reçu nécessaire pour émettre une facture" style="opacity:.5;cursor:not-allowed">${ICO_SZ('fileText',13)} Facture</button>`;
         }
         return html;
       })()}
@@ -12298,13 +12300,13 @@ function suiviExpandedPanelHtml(g) {
         if (!isLegacy) return "";
         const tipMaj = "Charge ce devis legacy dans l'éditeur pour mettre à jour la trame (libellé, prestation catalogue, heures détaillées). Tarif horaire préservé pour garder le total V1. Si le total reste identique à l'enregistrement → mise à jour en place ; si le total change → bascule en nouvelle révision.";
         if (check.ok) {
-          return `<button class="btn ghost" onclick="${stop}majTrameStart('${g.devisId}')" title="${esc(tipMaj)}">${ICO_SZ('rotateCcw',14)} Maj Trame</button>`;
+          return `<button class="btn-add-neon ghost" onclick="${stop}majTrameStart('${g.devisId}')" title="${esc(tipMaj)}">${ICO_SZ('rotateCcw',13)} Maj Trame</button>`;
         } else {
-          return `<button class="btn ghost" disabled title="${esc(check.reason)}" style="opacity:.5;cursor:not-allowed">${ICO_SZ('rotateCcw',14)} Maj Trame</button>`;
+          return `<button class="btn-add-neon ghost" disabled title="${esc(check.reason)}" style="opacity:.5;cursor:not-allowed">${ICO_SZ('rotateCcw',13)} Maj Trame</button>`;
         }
       })()}
       <span style="flex:1"></span>
-      <button class="btn ghost btn-danger-ghost" title="Supprimer définitivement ce devis (devis créé par erreur)" onclick="${stop}suiviDelDevisConfirm('${g.devisId}')">${ICONS.trash} Supprimer</button>
+      <button class="btn-add-neon danger" title="Supprimer définitivement ce devis (devis créé par erreur)" onclick="${stop}suiviDelDevisConfirm('${g.devisId}')">${ICO_SZ('trash',13)} Supprimer</button>
     </div>
     ${suiviHistoryHtml(g.devisId)}
   </div>`;
