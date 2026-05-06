@@ -33,7 +33,9 @@ grep -nE "^function r[A-Z]" index.html    # liste tous les renderers (rXX)
 - `hooks/` — git hooks.
 - **Workspace cloud** : doc unique `users/<ownerUid>` partagé via `workspaces/<ownerUid>.members`. Sync live `onSnapshot` + anti-écho `_lastWriteBy` (fenêtre 2s).
 
-**Renderers par onglet** : `rMS` Mission/Devis, `rPF` Profil, `rTR` Tarifs, `rSV` Suivi, `rCL` Clients, `rCP` Compta, `rBG` Notes, `rMAJ` Mises à jour. Helpers : `esc() save() render() upd() num() fmt() r2() dateFR() uid()`.
+**Renderers par onglet** : `rMS` Mission, `rPF` Profil, `rCatalogue`/`rAchats` Catalogue/Achats, `rSV` Historique (ex-Suivi), `rCL` Clients, `rCP` Compta, `rAC` Accueil, `rBG` Notes, `rMAJ` Mises à jour, `rParametres`, `rTemplates`. Helpers : `esc() save() render() upd() num() fmt() r2() dateFR() uid()`.
+
+**Titres de page liés au menu** : tout h1 utilise `${esc(pageTitle("<tab>"))}` (helper qui lit `TABS` + `TABS_AUX_LABELS`). Single source : renommer un label dans la liste propage à la sidebar ET au h1, plus de drift possible. Pour ajouter un onglet secondaire (menu user, hors sidebar), l'enregistrer dans `TABS_AUX_LABELS`.
 
 ## Conventions
 
@@ -41,7 +43,8 @@ grep -nE "^function r[A-Z]" index.html    # liste tous les renderers (rXX)
 - **`esc()` obligatoire** sur toute valeur dynamique injectée en HTML (XSS).
 - **Identifiants courts** (cf. liste ci-dessus). Pose une ancre `// ▼ <nom>` au-dessus de toute fonction-clé que tu ajoutes.
 - **Tout nouveau champ ajouté à `S`** doit être : (1) initialisé dans `DEFAULT_S`, (2) inclus dans le merge `loadFromCloud`, (3) inclus dans le payload `saveToCloud`. Exception : champs runtime transient sur entries existantes (ex. `e.pmtTs`) — à nettoyer (`delete`) à la transition inverse.
-- **Renumérotation/rename client** : propager `S.clients.entries[].num` à 5 endroits — `S.mission.client.num`, `S.suivi.devis[].ref` (regex `^DEVIS-NUM-YYYY-MM-NNN$`), `snapshotMission.client.num`, `S.suivi.entries[].client` (legacy `#NUM Nom`). Voir `clientsRenumberAll()`.
+- **Référence devis** : nouveau format `DEV-YYYYMM-NNN` (séquence mensuelle, pas de num client). Anciens formats legacy conservés en base (immutables) — `recomputeRef` accepte les 3 formats pour le calcul de séquence. Toujours utiliser `formatRef(ref, "devis"|"facture"|"debours")` pour l'affichage (strip préfixe + label).
+- **Renumérotation/rename client** : avec le nouveau format de ref, le num client n'apparaît plus dans la ref → cette propagation devient sans objet sur les nouveaux devis. Reste utile pour les anciens DEVIS-NUM-…. Voir `clientsRenumberAll()`. À 4 endroits : `S.mission.client.num`, `snapshotMission.client.num`, `S.suivi.entries[].client` (legacy `#NUM Nom`), refs legacy seulement.
 - **`missionNew(presetClient?)`** : garde la config (taux, urssafPct, paiement, échéances, CGV, déplacement.mode), efface les données spécifiques. Tout nouveau champ `S.mission` doit être catégorisé.
 - **Lookup client depuis devis** : toujours via `findClientForDevis(devisId)` (3 stratégies en cascade), jamais ad hoc.
 - **Pop-up : `uiAlert/uiConfirm/uiPrompt` PAS `alert/confirm/prompt`** — natifs interdits (style blanc cassé, alignés top, sortent du thème). Helpers async dans le module `uiDialog` ([index.html](index.html), recherche `▼ uiAlert`). API : `await uiAlert(msg, { title?, kind:"info"|"warn"|"danger", confirmLabel? })`, `await uiConfirm(...)` → bool, `await uiPrompt(...)` → string|null. ESC=cancel, Enter=confirm, click overlay=cancel (sauf alert pure). **Toute fonction qui appelle `await uiConfirm/uiPrompt` doit être `async`** — propager aux callers (souvent juste rendre la fonction `async`, les onclick le tolèrent). Pour les `onclick="if(confirm())xxx()"` inline, créer un wrapper async `xxxConfirm(id)` (cf. `clientsDelConfirm`, `deleteAbonnementConfirm`). Choix de `kind` : `danger` = suppression définitive ou écrasement, `warn` = action destructrice réversible / validation, `info` = confirmation neutre / succès.
@@ -113,20 +116,42 @@ Pour devis archivés sans `snapshotHtml` : `reconstructMissionFromSuivi(devisId)
 
 Logo unique partagé sur tous les devis (data URL inline, max ~800 KB). Migration au boot copie `S.mission.logoUrl` → `S.identite.logoUrl` (one-shot), puis vide le legacy. La preview `rDevisPreview` utilise le fallback `d.logoUrl || S.identite.logoUrl` pour préserver les snapshots archivés. Édité dans l'onglet Profil (`rPF` → `rLogoField()`).
 
-### Corbeille `S.bin.items[]`
+### Corbeilles : `S.bin.items[]` + `S.suivi.bin.items[]` (séparées)
 
-Stocke les éléments supprimés réversibles (limite 30 récents). Schéma : `{ id, kind, label, payload, deletedAt }`. Helpers : `binPush(kind, payload, label)` push avant suppression ; `binRestore(itemId)` ré-insère selon `kind` ; `binPurge(itemId)` / `binClear()` purge définitive.
+**Deux corbeilles distinctes**, chacune avec sa rétention 30 récents et sa vue dédiée.
 
-**Toast Undo immédiat** : `showUndoToast(label, restoreFn)` apparaît 5 s en bas-droite — réutilisable pour toute suppression locale réversible. Pour ajouter un nouveau `kind` : étendre `binRestore` (switch sur `kind`) et `KIND_LBL` dans `rBinModal()`.
+- **`S.bin.items[]`** : corbeille générale (sections CGV supprimées, futurs kinds…). Accessible via menu Mon compte > Corbeille (`binModalToggle`). Schéma `{ id, kind, label, payload, deletedAt }`. Helpers : `binPush(kind, payload, label)`, `binRestore(itemId)`, `binPurge`, `binClear`. Étendre `binRestore` + `KIND_LBL` pour un nouveau kind.
+- **`S.suivi.bin.items[]`** : corbeille DÉDIÉE aux devis supprimés (chaîne complète d'une suppression). Accessible via Historique > chip Corbeille (filtre `suiviFilterPrincipal === "corbeille"`). Helpers indépendants : `suiviBinRestore` / `suiviBinPurge` / `suiviBinClear`. Schéma item : `{ id, label, payload: { devisIds, devis[], entries[] }, deletedAt }` (pas de `kind` — type implicite).
+
+**Pourquoi séparées** : un devis = engagement commercial, mérite son propre tiroir avec UX adaptée (montant total, nb revs, timestamp). La corbeille générale agrège des kinds hétérogènes.
+
+**Toast Undo immédiat** : `showUndoToast(label, restoreFn)` apparaît 5 s en bas-droite — réutilisable pour toute suppression locale réversible.
+
+### Chaîne de révisions (`chainId / revNum / isActive`)
+
+Un devis = une chaîne de révisions partageant un `chainId` (= devisId du root). Chaque rev porte un `revNum` figé à la création (1-indexé en stockage, affiché 0-indexé via `computeRevisionNumber`). **Une seule rev `isActive=true` par chaîne** — c'est elle qui est exposée dans Suivi/Accueil (filtre `_isActiveEntry`). Les autres restent en base (snapshots immutables) mais cachées des listes principales.
+
+- **Helpers** : `chainOf(id)` (trie par revNum), `chainActiveId(id)`, `chainNextRevNum(id)` (= max+1, **saute** au-dessus si versions intermédiaires restaurées : restaurer rev3 puis réviser rev1..rev4 → rev5).
+- **`replaces`** conservé (info historique, parent direct). **`replacedBy` SUPPRIMÉ** (ambigu en présence de restauration).
+- **3 flows distincts** sur un devis archivé :
+  - **`reviseDevisStart`** → crée une nouvelle rev (rev<N+1>), pose `revisesDevisId`. À la save (`suiviAdd`), nouveau devisId, nouvelle ref, isActive flip.
+  - **`editDevisStart`** → édition EN PLACE (correctif typo, oubli, format). Conserve devisId/ref/dates. Pose `editDevisId`. La toolbar Mission route vers `suiviUpdateSnapshot` qui recalcule les entries (acompte/reste/débours) en préservant les statuts par classification d'échéance.
+  - **`majTrameStart`** (legacy uniquement) → reformate la trame d'un devis legacy. Si total inchangé → MAJ EN PLACE, sinon bascule auto en révision.
+- **Restauration** (`suiviRestoreRevision`) : flip `isActive` non destructif. Aucune rev supprimée.
+- **`suiviAdd` plus jamais d'auto-annulation** des V<N-1> à la création de V<N+1> — l'invisibilité passe par `isActive`, pas par bascule de statut. Les statuts originels sont préservés (info commerciale).
+- **Migration** au boot via `migrateRevisionChains()` (one-shot, idempotent). Doit tourner dans `loadFromCloud` ET `subscribeWorkspaceData` avec `saveToCloud()` derrière (sinon le live sync écrase ; cf piège plus bas).
 
 ## Workflows fréquents
 
-### Maj Trame vs Réviser (devis legacy)
+### Éditer vs Réviser vs Maj Trame (3 flows distincts)
 
-Deux flows distincts, ne pas confondre :
+3 modes d'édition d'un devis archivé. Tous démarrent par charger `snapshotMission` dans `S.mission` + poser un marqueur transient distinct ; `missionTerminer` route ensuite via `devisCurrentSuiviEntry()` (présence de la ref) entre `suiviAdd` (création) et `suiviUpdateSnapshot` (maj en place).
 
-- **🖼 Maj Trame** (`majTrameStart`) — uniquement sur devis legacy (`legacyReconstructed=true` ou `!snapshotMission`). Marqueur `S.mission.majTrameDevisId`. À l'enregistrement (`suiviAdd` détecte le marqueur), si total HT inchangé → MAJ EN PLACE (même `devisId`, même ref, dates V1 conservées, `legacyReconstructed` retiré). Si total a changé → confirm puis bascule en révision standard.
-- **↻ Réviser → rev<N+1>** (`reviseDevisStart`) — sur tous devis non payés/facturés. Marqueur `S.mission.revisesDevisId`. Crée V<N+1> date du jour, V<N> annulée. Si aucun changement hors dates → confirm « rafraîchir la date ? ». Numérotation 0-indexée via `computeRevisionNumber(devisId)`.
+- **✏ Éditer** (`editDevisStart`) — correctif sans bump de rev. Marqueur `S.mission.editDevisId`. Conserve devisId, ref, dateEmission, `chainId/revNum/isActive`, factures, replaces. À la save → `suiviUpdateSnapshot` (route via ref existante) qui recalcule les entries en préservant les statuts par classification d'échéance (acompte/reste/frais). Bouton dispo dans le menu Devis (panneau Suivi étendu) si `canReviseDevis()` ok. Tooltip dédié.
+- **↻ Réviser → rev<N+1>** (`reviseDevisStart`) — nouvelle proposition commerciale. Marqueur `S.mission.revisesDevisId`. À la save → `suiviAdd` crée un nouveau devisId, dateEmission = aujourd'hui, ref recalculée, `isActive` flip vers la nouvelle rev (les anciennes restent dans la chaîne, accessibles via Historique des versions). `chainNextRevNum` peut sauter au-dessus si versions restaurées. Si aucun changement hors dates → confirm « rafraîchir la date ? ».
+- **🖼 Maj Trame** (`majTrameStart`) — devis legacy uniquement (`legacyReconstructed=true` ou `!snapshotMission`). Marqueur `S.mission.majTrameDevisId`. Si total HT inchangé à la save → MAJ EN PLACE (`legacyReconstructed` retiré), sinon confirm + bascule auto en révision standard.
+
+**Markers transients à nettoyer partout** : `revisesDevisId`, `editDevisId`, `majTrameDevisId` doivent être supprimés dans `missionNew`, `missionCancel`, `missionStripForCompare`, et avant chaque sérialisation `snapshotMission` (`suiviAdd`, `suiviUpdateSnapshot`, et le maj trame in-place). Sinon ils ressortent au reload.
 
 ### Tarif horaire override
 
@@ -160,6 +185,10 @@ Dissociation explicite ouverture / marquage. Cliquer ✉ Relance (`gmailRelanceF
 - **Réconciliation `_localChangeTs`** — `save()` bump le timestamp. Lu par `loadFromCloud` (boot) ET `subscribeWorkspaceData` (live) : si `cloud._localChangeTs < S._localChangeTs` → SKIP merge cloud + PUSH local. Évite la perte de modifs faites avant l'expiration du debounce save (200ms) sur reload rapide.
 - **Beforeunload/pagehide flush** : `flushSaveBeforeUnload` clear `cloudT` et appelle `saveToCloud()` synchrone (best-effort). Combiné au timestamp + debounce 200ms, fenêtre de perte quasi-nulle.
 - **`recomputeRef`** : régénère ref si format obsolète OU si client courant a un num qui ne match pas. Protection : si la ref correspond à un devis archivé ET son format reflète le client courant, on ne touche pas.
+- **Snapshots HTML figés (devis archivés)** — `dv.snapshotHtml` stocke le HTML rendu au moment du `suiviAdd`. Modifier `rDevisPreview` n'affecte QUE les nouveaux rendus, pas les anciens. Pour un fix visuel **rétroactif** (ex. retirer un bloc / changer un style sur tous les devis existants), passer par CSS global avec sélecteur `.view-devis-snapshot` en plus de `.devis-preview`. Pour un fix **structurel** (nouveau wrapper HTML), prévoir un fallback CSS qui marche aussi sur l'ancienne structure (cf. `.dp-emetteur-meta` qui porte le styling de séparation directement, redondant avec le wrapper `.dp-emetteur-section`).
+- **Migration locale doit `saveToCloud()`** — `loadFromCloud` ET `subscribeWorkspaceData` peuvent lancer une migration (ex. `migrateRevisionChains`, `migratePhoneLeadingZero`). Si on `save()` localement seulement, le snapshot Firestore suivant écrase nos changements car `subscribeWorkspaceData` re-merge depuis le cloud non migré. **Toujours appeler `saveToCloud()` après une mig qui a changé quelque chose** (les helpers retournent un boolean dans ce but). Symptôme typique : la mig tourne au boot mais re-tourne à chaque reload, et les filtres qui en dépendent (ex. `_isActiveEntry`) échouent silencieusement.
+- **2 dictionnaires d'icônes séparés** — `ICONS` (template literals, API par clé : `${ICONS.eye}`) et `ICO_SZ.map` (API à taille variable : `${ICO_SZ('eye', 14)}`). Ajouter une icône Lucide nécessite de **mettre à jour les DEUX maps**, sinon `ICO_SZ` retourne du SVG vide (placeholder muet, pas d'erreur). Pattern récurrent à attraper en code review.
+- **Accent couleur dans le devis imprimé** — règle universelle `.devis-preview *, .view-devis-snapshot * { color:#1a1a1a !important }` (zone print) impose tout en gris foncé. Pour un accent (ex. bleu marine `#1e3a8a` sur le Total HT), il faut une **spécificité supérieure à 0,1,1** (ex. `.devis-preview .dp-totals .dp-line.grand .amt = 0,4,2`) + `!important`. La spécificité gagne, le print color adjust suit avec `-webkit-print-color-adjust:exact`.
 
 ## Hors-périmètre
 
@@ -195,6 +224,7 @@ Règles que je suis à chaque session sur ce CLAUDE.md.
 - **Nettoyage** : je supprime sans hésiter ce qui est obsolète, redondant ou trivial. Court et juste > long et flou.
 - **Format** : phrases courtes, listes à puces, code en `backticks`. Pas de « il est important de noter que », « par ailleurs », « en effet ».
 - **Délégation** : si l'info est dans `SCHEMA.md`, `check.sh`, ou `gen-schema.py` → référencer le fichier, ne pas dupliquer.
+- **`APP_CHANGELOG` à maintenir manuellement** — la liste affichée dans l'onglet « Mises à jour » est en dur dans `index.html` (constante `APP_CHANGELOG`, recherche `▼ APP_CHANGELOG`). Pas d'auto-détection git. **À chaque session qui livre des changements visibles utilisateur**, ajouter une entrée en TÊTE de la liste ({ id stable type `YYYY-MM-slug`, date, title, items: [{h, b}] }). Garder synthétique : 3-5 items max regroupés par thème (≠ liste exhaustive de commits). Le nouvel `id` fait réapparaître le dot orange via `majLogHasUnread()`.
 - **Code mort / obsolète — pas de big-bang** : l'utilisateur ne lit pas le code, donc ne peut pas valider ligne par ligne. Sans tests + avec `window.X` exposées via `onclick="..."` strings, le risque de régression silencieuse en supprimant du code "mort" est asymétrique vs le gain de fluidité. Donc :
   - **Nettoyage à la marge** : à chaque fois que je touche une zone, je supprime autour le mort évident (helper sans caller, branche commentée, `setTimeout` mort) — tant que c'est local et certain.
   - **Audit déclenché par symptôme** : si une zone précise me freine en grep/lecture (ex. renderer trop long), je le signale à l'utilisateur et on cible.
