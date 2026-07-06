@@ -296,6 +296,14 @@
   table.hist tr.suv-row.clickable.on td{background:var(--primary-soft)}
   table.hist tr.suv-expanded-row td{background:var(--surface-2);padding:0;border-bottom:1px solid var(--border)}
   .suv-expanded-panel{padding:14px 18px 16px;display:flex;flex-direction:column;gap:10px}
+  /* Bandeau « Prochaine étape » — guide l'utilisateur sur l'action à faire. */
+  .suv-next-step{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;padding:8px 12px;border-radius:var(--radius-md);border:1px solid transparent}
+  .suv-next-step .suv-next-ico{flex-shrink:0;display:flex}
+  .suv-next-action{color:#7eb8ff;background:rgba(74,158,255,.08);border-color:rgba(74,158,255,.35);box-shadow:inset 0 0 0 1px rgba(74,158,255,.22),0 0 12px rgba(74,158,255,.14)}
+  .suv-next-wait{color:var(--text-muted);background:rgba(148,163,184,.06);border-color:var(--border-soft)}
+  .suv-next-done{color:#86efac;background:rgba(34,197,94,.08);border-color:rgba(34,197,94,.3)}
+  .suv-next-stop{color:var(--text-muted);background:rgba(148,163,184,.05);border-color:var(--border-soft)}
+  .suv-livree-tag{color:#86efac !important;border-color:rgba(34,197,94,.3) !important;cursor:pointer}
   /* === Panneau Suivi déplié — actions uniformes (32px, style moderne) === */
   .suv-expanded-actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding-bottom:10px;border-bottom:1px solid var(--border-soft)}
   .suv-expanded-print{display:flex;gap:8px;flex-wrap:wrap;align-items:flex-start;padding-top:10px;border-top:1px solid var(--border-soft)}
@@ -7666,9 +7674,9 @@ function isDevisAuNoir(devisId) {
 // - Échéance d'ACOMPTE (non-solde) : émissible quand SON échéance est encaissée
 //   (statut "termine") — l'acompte est versé, la facture le constate.
 // - Échéance de SOLDE (dernière) : émissible dès que TOUS les acomptes sont
-//   encaissés ET le devis est accepté, SANS attendre le paiement du solde — la
-//   facture de solde s'émet à la livraison, le client paie ensuite dans le délai.
-//   Cas « 100 % à la livraison » (aucun acompte) : émissible dès l'acceptation.
+//   encaissés, le devis accepté ET la prestation marquée LIVRÉE (dv.livreeTs) —
+//   la facture de solde s'émet à la livraison, le client paie ensuite. Sans le
+//   jalon livraison, le bouton solde n'apparaît pas (parcours guidé séquentiel).
 // Bloque l'émission si le devis est au noir (cf isDevisAuNoir).
 function isFactureApplicable(devisId, ech) {
   if (isDevisAuNoir(devisId)) return false;
@@ -7677,7 +7685,9 @@ function isFactureApplicable(devisId, ech) {
   if (ech.isSolde) {
     const accepted = ech.statut === "attente" || ech.statut === "termine";
     const acomptesOk = list.filter(e => !e.isSolde).every(e => e.statut === "termine");
-    return accepted && acomptesOk;
+    const dv = S.suivi.devis && S.suivi.devis[devisId];
+    const livree = !!(dv && dv.livreeTs);
+    return accepted && acomptesOk && livree;
   }
   return ech.statut === "termine";
 }
@@ -11574,6 +11584,72 @@ async function confirmRemoveFactures(list, actionLabel) {
   );
 }
 
+// ▼ suiviMarkLivree / suiviUnmarkLivree — jalon « Prestation livrée » (dv.livreeTs).
+// Débloque la facture de solde (facture à la livraison). Champ additif sur le
+// devis (absent = non livrée), pas de migration.
+window.suiviMarkLivree = function(devisId) {
+  if (!S.suivi.devis) S.suivi.devis = {};
+  if (!S.suivi.devis[devisId]) S.suivi.devis[devisId] = { ref: "" };
+  S.suivi.devis[devisId].livreeTs = Date.now();
+  save();
+  render();
+};
+window.suiviUnmarkLivree = async function(devisId) {
+  const dv = S.suivi.devis && S.suivi.devis[devisId];
+  if (!dv || !dv.livreeTs) return;
+  // Annuler la livraison retire la facture de solde si elle a été émise (elle
+  // n'était plus justifiée sans livraison).
+  const soldeEch = devisEcheances(devisId).find(e => e.isSolde);
+  const fs = soldeEch && findFactureForEch(devisId, soldeEch);
+  if (fs && !(await confirmRemoveFactures([fs], "Annuler la livraison"))) return;
+  if (fs) removeFactures(devisId, [fs]);
+  delete dv.livreeTs;
+  save();
+  render();
+};
+
+// ▼ nextStepHint — guide « Prochaine étape » d'un devis. Retourne { text, kind }
+// (kind : "action" | "wait" | "done" | "stop"), ou null si pas d'entries.
+// Parcours séquentiel : devis → accord → acomptes (encaisser puis facturer) →
+// livraison → facture de solde → paiement solde → terminé.
+function nextStepHint(devisId) {
+  const dv = (S.suivi.devis && S.suivi.devis[devisId]) || {};
+  const lignes = suiviGroupLigne(devisId);
+  if (!lignes.length) return null;
+  const statut = devisPrincipal(lignes);
+  if (statut === "refuse") return { text: "Devis refusé par le client.", kind: "stop" };
+  if (statut === "annule") return { text: "Mission annulée.", kind: "stop" };
+  if (statut === "envoye") {
+    return dv.envoiTs
+      ? { text: "En attente de l'accord du client — tu peux le relancer.", kind: "wait" }
+      : { text: "Prochaine étape : envoie le devis au client.", kind: "action" };
+  }
+  // Devis accepté : on avance échéance par échéance.
+  const list = devisEcheances(devisId);
+  const acomptes = list.filter(e => !e.isSolde);
+  const solde = list.find(e => e.isSolde);
+  for (const ech of acomptes) {
+    if (ech.statut !== "termine") {
+      return { text: `En attente du versement de l'acompte « ${ech.label} ».`, kind: "wait" };
+    }
+    if (!findFactureForEch(devisId, ech)) {
+      return { text: `Acompte encaissé : envoie la facture d'acompte « ${ech.label} ».`, kind: "action" };
+    }
+  }
+  if (!dv.livreeTs) {
+    return { text: "Réalise la prestation et livre-la, puis clique « Prestation livrée ».", kind: "action" };
+  }
+  if (solde) {
+    if (!findFactureForEch(devisId, solde)) {
+      return { text: "Prestation livrée : envoie la facture de solde.", kind: "action" };
+    }
+    if (solde.statut !== "termine") {
+      return { text: "En attente du paiement du solde.", kind: "wait" };
+    }
+  }
+  return { text: "Terminé — prestation soldée.", kind: "done" };
+}
+
 // ▼ migrateLegacyReconstructedFlag — nettoie les flags `legacyReconstructed`
 // stale laissés par l'ancien sync (avant fix `update()` du commit 11d6818).
 // Avant ce commit, `delete dvOrig.legacyReconstructed` n'était pas propagé
@@ -12911,6 +12987,12 @@ function suiviExpandedPanelHtml(g) {
   }
 
   return `<div class="suv-expanded-panel">
+    ${(() => {
+      const h = nextStepHint(g.devisId);
+      if (!h) return "";
+      const ico = h.kind === "action" ? "send" : h.kind === "done" ? "check" : h.kind === "wait" ? "circle" : "info";
+      return `<div class="suv-next-step suv-next-${h.kind}"><span class="suv-next-ico">${ICO_SZ(ico, 14)}</span><span>${esc(h.text)}</span></div>`;
+    })()}
     ${devisLevelAction ? `<div class="suv-expanded-actions">${devisLevelAction}</div>` : ''}
     <div class="suv-tl">${lignes.map(suiviTimelineStepHtml).join("")}</div>
     <div class="suv-expanded-print">
@@ -12934,6 +13016,17 @@ function suiviExpandedPanelHtml(g) {
         const envoiTs = dv && dv.envoiTs;
         const envoiBadge = envoiTs ? `<div class="suv-envoi-tag suv-envoi-undo" title="Cliquer pour annuler la marque d'envoi" onclick="${stop}devisEnvoiUndo('${g.devisId}')">Envoyé le ${esc(dateFR(new Date(envoiTs).toISOString().slice(0,10)))} <span class="suv-envoi-undo-x">${ICO_SZ('x', 10)}</span></div>` : "";
         return `<div class="suv-action-col"><button class="btn-add-neon ghost" onclick="${stop}devisActionMenu('${g.devisId}')">${ICO_SZ('fileText',13)} Devis</button>${envoiBadge}</div>`;
+      })()}
+      ${(() => {
+        // Jalon « Prestation livrée » — visible une fois le devis accepté.
+        // Débloque la facture de solde (facture à la livraison).
+        if (!(statutPrin === "attente" || statutPrin === "en_cours" || statutPrin === "termine")) return "";
+        const dv = S.suivi.devis && S.suivi.devis[g.devisId];
+        const livreeTs = dv && dv.livreeTs;
+        if (livreeTs) {
+          return `<div class="suv-action-col"><span class="suv-envoi-tag suv-livree-tag" title="Prestation livrée — cliquer pour annuler" onclick="${stop}suiviUnmarkLivree('${g.devisId}')">${ICO_SZ('check',12)} Livrée le ${esc(dateFR(new Date(livreeTs).toISOString().slice(0,10)))} <span class="suv-envoi-undo-x">${ICO_SZ('x', 10)}</span></span></div>`;
+        }
+        return `<button class="btn-add-neon ghost suv-livree-btn" title="Marque la prestation comme réalisée et livrée. Débloque la facture de solde." onclick="${stop}suiviMarkLivree('${g.devisId}')">${ICO_SZ('check',13)} Prestation livrée</button>`;
       })()}
       ${(() => {
         // Bouton Débours masqué si aucun frais débours sur les entries.
