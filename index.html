@@ -296,25 +296,10 @@
   table.hist tr.suv-row.clickable.on td{background:var(--primary-soft)}
   table.hist tr.suv-expanded-row td{background:var(--surface-2);padding:0;border-bottom:1px solid var(--border)}
   .suv-expanded-panel{padding:14px 18px 16px;display:flex;flex-direction:column;gap:10px}
-  /* Bandeau « Prochaine étape » — guide l'utilisateur sur l'action à faire. */
-  .suv-next-step{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;padding:8px 12px;border-radius:var(--radius-md);border:1px solid transparent;flex-wrap:wrap}
-  .suv-next-step .suv-next-ico{flex-shrink:0;display:flex}
-  .suv-next-step .suv-next-txt{flex:1;min-width:160px}
-  .suv-next-step .suv-next-acts{display:flex;gap:8px;margin-left:auto;flex-shrink:0;flex-wrap:wrap;align-items:center}
-  .suv-next-action{color:#7eb8ff;background:rgba(74,158,255,.08);border-color:rgba(74,158,255,.35);box-shadow:inset 0 0 0 1px rgba(74,158,255,.22),0 0 12px rgba(74,158,255,.14)}
-  .suv-next-wait{color:var(--text-muted);background:rgba(148,163,184,.06);border-color:var(--border-soft)}
-  .suv-next-done{color:#86efac;background:rgba(34,197,94,.08);border-color:rgba(34,197,94,.3)}
-  .suv-next-stop{color:var(--text-muted);background:rgba(148,163,184,.05);border-color:var(--border-soft)}
   /* === Panneau Suivi déplié — rangée documents (bas de panneau) === */
   .suv-expanded-print{display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding-top:10px;border-top:1px solid var(--border-soft)}
-  /* Bouton icône seule (undo contextuel, menu ⋮) */
-  .suv-icon-btn{padding:0 9px;min-width:0}
 
-  /* Variante verte de .btn-add-neon (Accepté) — pendant du .danger rouge */
-  .btn-add-neon.ok{color:#22c55e;border-color:#22c55e;box-shadow:inset 0 0 0 1px rgba(34,197,94,.18),0 0 8px rgba(34,197,94,.18);text-shadow:0 0 6px currentColor}
-  .btn-add-neon.ok:hover{color:#86efac;border-color:#4ade80;background:rgba(34,197,94,.10);box-shadow:inset 0 0 10px rgba(34,197,94,.20),0 0 14px rgba(34,197,94,.45),0 0 24px rgba(34,197,94,.18)}
-
-  /* Tag « Relancé le DD/MM/YYYY ✕ » — dans le bandeau, hover = annuler */
+  /* Tag « Relancé le DD/MM/YYYY ✕ » — sur l'étape active du rail, hover = annuler */
   .suv-last-relance{display:inline-flex;align-items:center;gap:4px;height:var(--btn-h-md);padding:0 10px;border-radius:var(--radius-md);border:1px solid rgba(34,197,94,.35);background:var(--success-soft);color:var(--success);font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap;transition:background .12s,color .12s,border-color .12s}
   .suv-last-relance:hover{background:var(--danger-soft);color:var(--danger);border-color:var(--danger)}
   .suv-last-relance-undo{font-size:11px;opacity:.7;margin-left:2px;display:inline-flex}
@@ -418,10 +403,6 @@
   .dv-state.active{color:#fbbf24;background:rgba(245,158,11,.14)}
   .dv-state.upcoming{color:var(--text-dim);background:transparent}
   .dv-state.refused{color:#f0789a;background:transparent}
-  /* bouton d'annulation discret (x) sur une étape jalon franchie (livraison) */
-  .dv-step-x{background:none;border:none;padding:2px;cursor:pointer;color:var(--text-dim);opacity:0;transition:opacity .12s,color .12s;display:inline-flex}
-  .dv-step:hover .dv-step-x{opacity:.7}
-  .dv-step-x:hover{opacity:1;color:var(--danger)}
 
   /* Dropdown ⋮ inline (actions de cycle de vie) — pied de panneau devis */
   .dv-more{position:relative;display:inline-flex}
@@ -434,66 +415,12 @@
   .dv-menu-item.danger .dv-menu-ico{color:#f0789a}
   .dv-menu-divider{height:1px;background:var(--border);margin:5px 4px}
 
-  /* Timeline (étapes) — cartes compactes cliquables, accent border-left par état */
-  /* Timeline étapes paiement — style néon cohérent avec Accepté/Refusé */
-  .suv-tl{display:flex;flex-direction:column;gap:6px;padding:2px 0}
-  .suv-tl-card{display:grid;grid-template-columns:24px minmax(0,1fr) auto max-content 130px;gap:10px;align-items:center;
-    padding:9px 14px;background:transparent;border:1px solid transparent;border-radius:8px;
-    font:inherit;font-size:13px;color:var(--text);text-align:left;transition:background .15s,border-color .15s,box-shadow .15s,opacity .15s;width:100%}
-  .suv-tl-card.clickable{cursor:pointer}
-  /* Lignes « méta » du parcours (envoi/accord, livraison) — même grille, ton
-     plus discret, label étendu jusqu'à la colonne état */
-  .suv-tl-card.meta{padding:6px 14px;font-size:12px}
-  .suv-tl-card.meta .suv-tl-card-label{grid-column:2/5;color:var(--text-muted);font-weight:500}
-  .suv-tl-card.meta.paid .suv-tl-card-label{color:var(--text)}
-  /* Chip facture dans la ligne de son échéance — clic = menu facture */
+  /* Chip facture (badge de la ligne facture du rail) — clic = menu facture */
   .suv-fac-chip{display:inline-flex;align-items:center;gap:5px;padding:3px 9px;font-size:11px;font-weight:600;
     color:var(--text-muted);background:var(--surface);border:1px solid var(--border-light);border-radius:var(--radius-sm);
     cursor:pointer;font-family:inherit;font-variant-numeric:tabular-nums;white-space:nowrap;transition:color .12s,border-color .12s,background .12s}
   .suv-fac-chip:hover{color:var(--primary);border-color:var(--primary);background:rgba(74,158,255,.06)}
   .suv-fac-chip .suv-fac-sent{display:inline-flex;color:var(--success)}
-  .suv-tl-solde-tag{font-size:10px;font-weight:600;color:var(--text-dim);text-transform:uppercase;letter-spacing:.05em;margin-left:6px}
-  /* ✕ d'annulation (jalon livraison) — visible au survol de la ligne */
-  .suv-tl-undo-x{background:none;border:none;padding:2px;cursor:pointer;color:var(--text-dim);opacity:0;transition:opacity .12s,color .12s;display:inline-flex;justify-self:end}
-  .suv-tl-card:hover .suv-tl-undo-x{opacity:.7}
-  .suv-tl-undo-x:hover{opacity:1;color:var(--danger)}
-
-  /* idle — neutre (en attente d'acceptation) */
-  .suv-tl-card.idle{border-color:var(--border-light)}
-  .suv-tl-card.idle .suv-tl-card-ico,.suv-tl-card.idle .suv-tl-card-state{color:var(--text-dim)}
-
-  /* pending — néon orange "à encaisser", action active */
-  .suv-tl-card.pending{
-    border-color:#fbbf24;
-    box-shadow:inset 0 0 0 1px rgba(245,158,11,.32),0 0 10px rgba(245,158,11,.18)
-  }
-  .suv-tl-card.pending.clickable:hover{
-    background:rgba(245,158,11,.06);
-    box-shadow:inset 0 0 12px rgba(245,158,11,.22),0 0 18px rgba(245,158,11,.45),0 0 32px rgba(245,158,11,.18)
-  }
-  .suv-tl-card.pending .suv-tl-card-ico,.suv-tl-card.pending .suv-tl-card-state{color:#fbbf24;text-shadow:0 0 8px rgba(245,158,11,.45)}
-
-  /* paid — néon vert "soldée", validé (légèrement éteint, pulse au hover) */
-  .suv-tl-card.paid{
-    border-color:rgba(34,197,94,.55);
-    box-shadow:inset 0 0 0 1px rgba(34,197,94,.25),0 0 8px rgba(34,197,94,.14);
-    opacity:.95
-  }
-  .suv-tl-card.paid.clickable:hover{
-    background:rgba(34,197,94,.05);
-    box-shadow:inset 0 0 10px rgba(34,197,94,.18),0 0 14px rgba(34,197,94,.35);
-    opacity:1
-  }
-  .suv-tl-card.paid .suv-tl-card-ico,.suv-tl-card.paid .suv-tl-card-state{color:#22c55e;text-shadow:0 0 8px rgba(34,197,94,.4)}
-
-  /* refused/annulé — éteint, juste une trace rouge discrète */
-  .suv-tl-card.refused{border-color:rgba(239,68,68,.4);opacity:.65}
-  .suv-tl-card.refused .suv-tl-card-ico,.suv-tl-card.refused .suv-tl-card-state{color:#ef4444}
-
-  .suv-tl-card-ico{font-size:14px;text-align:center;font-weight:700;line-height:1}
-  .suv-tl-card-label{font-weight:500;color:var(--text);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  .suv-tl-card-amt{font-variant-numeric:tabular-nums;text-align:right;font-weight:600;color:var(--text)}
-  .suv-tl-card-state{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;text-align:right}
 
   /* Facture : bandeau métadonnées + statut imprimé + footer mentions */
   .dp-facture-meta{display:grid;grid-template-columns:auto 1fr;gap:6px 16px;padding:12px 16px;background:var(--surface-2);border:1px solid var(--border-light);border-radius:8px;margin:0 0 14px;font-size:13px}
@@ -4984,7 +4911,7 @@ function openGmailComposeForFacture(devisId, echId) {
 
 // ▼ devisActionMenu — menu du chip Devis (document) : aperçu, impression,
 // envoi, marque d'envoi. Les actions de cycle de vie (éditer / réviser / maj
-// trame / annuler / supprimer) vivent dans suiviMoreMenu (bouton ⋮ du panneau).
+// trame / annuler / supprimer) vivent dans le dropdown ⋮ (suiviMoreMenuHtml).
 window.devisActionMenu = async function(devisId) {
   const dv = S.suivi.devis && S.suivi.devis[devisId];
   const choices = [
@@ -5014,58 +4941,10 @@ window.devisActionMenu = async function(devisId) {
   }
 };
 
-// ▼ suiviMoreMenu — menu ⋮ du panneau étendu : actions de cycle de vie rares
-// (éditer / réviser / maj trame legacy) et destructives (annuler la mission,
-// supprimer). Les options indisponibles sont omises (mêmes conditions que les
-// anciens boutons dédiés du panneau).
-window.suiviMoreMenu = async function(devisId) {
-  const statutPrin = devisPrincipal(suiviGroupLigne(devisId));
-  const check = canReviseDevis(devisId);
-  const dv = S.suivi.devis && S.suivi.devis[devisId];
-  const isLegacy = !dv || !dv.snapshotMission || dv.legacyReconstructed === true;
-  // Affichage user 0-indexé. chainNextRevNum (1-indexé) → -1 pour l'affichage.
-  const nextRev = Math.max(0, chainNextRevNum(devisId) - 1);
-  const choices = [];
-  if (check.ok) {
-    choices.push({
-      label: "Éditer", value: "edit", kind: "ghost",
-      tooltip: "Modifie ce devis EN PLACE sans créer de nouvelle version. Mêmes ref et dates conservées. À utiliser pour un correctif mineur (typo, oubli, mise à jour de format) qui ne change pas le sens du devis pour le client."
-    });
-    choices.push({
-      label: `Réviser → rev${nextRev}`, value: "revise", kind: "ghost",
-      tooltip: `Crée une nouvelle version (rev${nextRev}) de ce devis. La version actuelle reste accessible dans l'historique. À utiliser pour une modification substantielle (changement de prestation, prix, dates) qu'on veut formaliser comme une nouvelle proposition.`
-    });
-    if (isLegacy) {
-      choices.push({
-        label: "Maj Trame", value: "majTrame", kind: "ghost",
-        tooltip: "Charge ce devis legacy dans l'éditeur pour mettre à jour la trame (libellé, prestation catalogue, heures détaillées). Tarif horaire préservé pour garder le total V1. Si le total reste identique à l'enregistrement → mise à jour en place ; si le total change → bascule en nouvelle révision."
-      });
-    }
-  }
-  if (statutPrin === "en_cours" || statutPrin === "termine") {
-    choices.push({
-      label: "Annuler la mission", value: "annuler", kind: "danger",
-      tooltip: "Annulation après acceptation (mission tombée à l'eau) — différent de « Refusé » qui couvre le refus avant acceptation. Réversible via le bouton retour du panneau."
-    });
-  }
-  choices.push({
-    label: "Supprimer le devis", value: "delete", kind: "danger",
-    tooltip: "Suppression définitive de toute la chaîne (devis créé par erreur). Récupérable 30 jours via la corbeille de l'Historique."
-  });
-  const choice = await uiChoice("Autres actions sur ce devis", {
-    title: "Plus d'actions", choices, cancelLabel: "Fermer"
-  });
-  if (!choice) return;
-  if (choice === "edit") editDevisStart(devisId);
-  else if (choice === "revise") reviseDevisStart(devisId);
-  else if (choice === "majTrame") majTrameStart(devisId);
-  else if (choice === "annuler") suiviDevisAnnuler(devisId);
-  else if (choice === "delete") suiviDelDevisConfirm(devisId);
-};
-
-// ▼ devisEnvoyerFlow — action « Envoyer le devis » (bandeau Prochaine étape +
-// menu Devis > Imprimer et envoyer). Aperçu + Gmail pré-rempli + impression,
-// puis popup « envoyé ? » à la fermeture du modal (pose envoiTs).
+// ▼ devisEnvoyerFlow — action « Imprimer et envoyer » du menu Devis (chip Devis
+// PDF du panneau). Aperçu + Gmail pré-rempli + impression, puis popup « envoyé ? »
+// à la fermeture du modal (pose envoiTs). Cf devisEnvoyerCompose (étape « Devis
+// envoyé » du rail) pour la variante sans marquage auto.
 window.devisEnvoyerFlow = function(devisId) {
   _pendingEnvoiPopup = { kind: "devis", devisId };
   viewDevisOpen(devisId);
@@ -9390,6 +9269,29 @@ function rBinModal() {
 // Format des items : { h: titre court, b: explication 1-3 phrases }.
 const APP_CHANGELOG = [
   {
+    id: "2026-07-refonte-rail-parcours",
+    date: "2026-07-06",
+    title: "Suivi : le parcours d'un devis devient un vrai « rail »",
+    items: [
+      {
+        h: "Une colonne reliée, une pastille par étape",
+        b: "Le panneau déplié affiche le parcours comme une timeline verticale reliée : Devis envoyé → Accepté → chaque paiement et chaque facture → Prestation livrée → solde. Chaque étape a sa pastille (verte = faite, bleue clignotante = en cours, grise = à venir), on voit d'un coup d'œil où on en est."
+      },
+      {
+        h: "Les actions sont sur l'étape en cours",
+        b: "Plus de bandeau au-dessus : l'étape active porte directement ses boutons (Envoyer / Valider l'envoi, Accepté / Refusé, Paiement reçu, Émettre la facture, Marquer livré). Une flèche ↺ sur l'étape en cours défait proprement la dernière action (dépaiement, dé-facturation, dé-livraison…)."
+      },
+      {
+        h: "Factures en lignes à part entière",
+        b: "Chaque facture (acompte ou solde) a sa propre ligne dans le parcours, avec son état « à émettre » ou « envoyée » — plus lisible qu'une pastille accrochée. L'ordre reste : on encaisse l'acompte, PUIS on émet sa facture."
+      },
+      {
+        h: "Envoi en deux temps + menu ⋮ déroulant",
+        b: "« Envoyer » (ouvre Gmail) et « Valider l'envoi » (marque le devis comme envoyé) sont désormais deux boutons distincts. Les actions rares (Éditer, Réviser, Maj Trame, Annuler, Supprimer) sont dans un petit menu ⋮ déroulant en bas du panneau."
+      }
+    ]
+  },
+  {
     id: "2026-07-panneau-devis-epure",
     date: "2026-07-06",
     title: "Suivi : panneau de devis épuré — une timeline qui porte tout",
@@ -11839,58 +11741,6 @@ function migrateLivraisonOrpheline() {
   return changed;
 }
 
-// ▼ nextStepHint — guide « Prochaine étape » d'un devis. Retourne { text, kind, act? }
-// (kind : "action" | "wait" | "done" | "stop"), ou null si pas d'entries.
-// `act` = bouton d'action porté par le bandeau : { label, ico, fn } où fn est
-// le code inline de l'onclick. Une étape = une phrase = un bouton.
-// Parcours séquentiel : devis → accord → acomptes (encaisser puis facturer) →
-// livraison → facture de solde → paiement solde → terminé.
-function nextStepHint(devisId) {
-  const dv = (S.suivi.devis && S.suivi.devis[devisId]) || {};
-  const lignes = suiviGroupLigne(devisId);
-  if (!lignes.length) return null;
-  const statut = devisPrincipal(lignes);
-  if (statut === "refuse") return { text: "Devis refusé par le client.", kind: "stop" };
-  if (statut === "annule") return { text: "Mission annulée.", kind: "stop" };
-  if (statut === "envoye") {
-    return dv.envoiTs
-      ? { text: "En attente de l'accord du client — tu peux le relancer.", kind: "wait" }
-      : { text: "Prochaine étape : envoie le devis au client.", kind: "action",
-          act: { label: "Envoyer le devis", ico: "send", fn: `devisEnvoyerFlow('${devisId}')` } };
-  }
-  // Devis accepté : on avance échéance par échéance.
-  // Devis au noir : pas de factures (isDevisAuNoir) → les étapes facture sont sautées.
-  const list = devisEcheances(devisId);
-  const noir = isDevisAuNoir(devisId);
-  const acomptes = list.filter(e => !e.isSolde);
-  const solde = list.find(e => e.isSolde);
-  for (const ech of acomptes) {
-    if (ech.statut !== "termine") {
-      return { text: `En attente du versement de l'acompte « ${ech.label} » (${fmt(ech.montant)}).`, kind: "wait",
-        act: { label: "Acompte reçu", ico: "check", fn: `suiviLigneTogglePaiement('${ech.entry.id}')` } };
-    }
-    if (!noir && !findFactureForEch(devisId, ech)) {
-      return { text: `Acompte encaissé : envoie la facture d'acompte « ${ech.label} ».`, kind: "action",
-        act: { label: "Émettre et envoyer", ico: "fileText", fn: `factureEmettreEnvoyerFlow('${devisId}','${ech.echId}')` } };
-    }
-  }
-  if (!dv.livreeTs) {
-    return { text: "Réalise la prestation et livre-la au client.", kind: "action",
-      act: { label: "Prestation livrée", ico: "check", fn: `suiviMarkLivree('${devisId}')` } };
-  }
-  if (solde) {
-    if (!noir && !findFactureForEch(devisId, solde)) {
-      return { text: "Prestation livrée : envoie la facture de solde.", kind: "action",
-        act: { label: "Émettre et envoyer", ico: "fileText", fn: `factureEmettreEnvoyerFlow('${devisId}','${solde.echId}')` } };
-    }
-    if (solde.statut !== "termine") {
-      return { text: `En attente du paiement du solde (${fmt(solde.montant)}).`, kind: "wait",
-        act: { label: "Solde reçu", ico: "check", fn: `suiviLigneTogglePaiement('${solde.entry.id}')` } };
-    }
-  }
-  return { text: "Terminé — prestation soldée.", kind: "done" };
-}
-
 // ▼ migrateLegacyReconstructedFlag — nettoie les flags `legacyReconstructed`
 // stale laissés par l'ancien sync (avant fix `update()` du commit 11d6818).
 // Avant ce commit, `delete dvOrig.legacyReconstructed` n'était pas propagé
@@ -13012,7 +12862,7 @@ window.suiviRestoreRevision = async function(devisId) {
 
 // Toggle d'une ligne entre "attente" et "termine" (cartes de la timeline).
 // Sans effet pour les lignes "envoye" / "refuse".
-// Garde-fous d'ordre (parcours séquentiel, cf nextStepHint) :
+// Garde-fous d'ordre (parcours séquentiel, cf devisParcoursSteps) :
 //  - encaissement : les échéances se pointent dans l'ordre ; le solde exige
 //    livraison + facture de solde émise (modèle légal : facture puis paiement).
 //  - annulation : ordre inverse (dernier paiement d'abord) ; dé-payer un
@@ -13172,21 +13022,6 @@ async function suiviDevisUndo(devisId) {
 }
 window.suiviDevisUndo = suiviDevisUndo;
 
-// Renvoie le label contextuel pour le bouton undo, ou null si aucune action
-// à annuler (devis en envoye sans historique).
-function suiviDevisUndoLabel(g) {
-  const statut = g.statutPrin;
-  if (statut === "envoye") return null;
-  if (statut === "refuse") return "Annuler le refus";
-  if (statut === "annule") return "Annuler l'annulation";
-  const paid = (g.lignes || []).filter(e => entryStatut(e) === "termine");
-  if (paid.length > 0) {
-    paid.sort((a, b) => (num(b.pmtTs) || 0) - (num(a.pmtTs) || 0));
-    return `Annuler le paiement de ${fmt(num(paid[0].montant))}`;
-  }
-  return "Annuler l'acceptation";
-}
-
 // ▼ devisParcoursSteps — séquence ordonnée des étapes du parcours d'un devis
 // avec, pour chacune, son statut (done/active/upcoming/refused). SOURCE UNIQUE
 // consommée par le rail (suiviStepRowsHtml) ET le retour arrière granulaire
@@ -13241,7 +13076,7 @@ function devisParcoursSteps(devisId) {
 // timeline). Une ligne par étape ; l'étape ACTIVE porte ses actions inline
 // (plus de bandeau « Prochaine étape »). Factures = lignes à part entière.
 // Frais/débours hors échéancier en fin. Ordre acompte = paiement→facture
-// (règle fiscale app, cf nextStepHint), volontairement différent du mock.
+// (règle fiscale app, gardes dans suiviLigneTogglePaiement), ≠ du mock.
 function suiviStepRowsHtml(g) {
   const stop = "event.stopPropagation();";
   const devisId = g.devisId;
@@ -13395,7 +13230,7 @@ window.suiviStepBack = suiviStepBack;
 // ▼ suiviExpandedPanelHtml — volet inline d'un devis (Suivi + Accueil).
 // Structure (refonte) : rail du parcours (suiviStepRowsHtml) — l'étape ACTIVE
 // porte ses actions inline, plus de bandeau « Prochaine étape » — puis rangée
-// documents (Devis PDF, Débours) + menu ⋮ (suiviMoreMenu), puis historique des
+// documents (Devis PDF, Débours) + dropdown ⋮ (suiviMoreMenuHtml), puis historique des
 // versions. Le retour arrière vit désormais sur l'étape active (↺ du rail).
 function suiviExpandedPanelHtml(g) {
   const stop = "event.stopPropagation();";
