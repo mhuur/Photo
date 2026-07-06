@@ -11508,7 +11508,15 @@ function findFactureForEch(devisId, ech) {
   if (!dv || !Array.isArray(dv.factures) || !ech) return null;
   const byId = dv.factures.find(f => f.echId && f.echId === ech.echId);
   if (byId) return byId;
+  // Fallback legacy : factures SANS echId, mappées par type dérivé. Pour un
+  // ACOMPTE, on ne matche QUE la 1ère échéance d'acompte — sinon une vieille
+  // facture d'acompte sans echId s'afficherait en double sur chaque acompte
+  // d'un devis multi-échéances (bug transitionnel du passage au modèle echId).
   const wantType = ech.isSolde ? "solde" : "acompte";
+  if (!ech.isSolde) {
+    const first = devisEcheances(devisId).find(e => !e.isSolde);
+    if (!first || first.echId !== ech.echId) return null;
+  }
   return dv.factures.find(f => !f.echId && (f.type === wantType || (wantType === "acompte" && f.type === "globale"))) || null;
 }
 
@@ -12873,19 +12881,26 @@ function suiviExpandedPanelHtml(g) {
         if (isDevisAuNoir(g.devisId)) {
           return `<button class="btn-add-neon ghost" disabled title="Devis au noir (CA déclaré = 0). La facturation est désactivée." style="opacity:.5;cursor:not-allowed">${ICO_SZ('fileText',13)} Facture</button>`;
         }
+        const seenFac = new Set();
         const factureCol = (ech) => {
           const fac = findFactureForEch(g.devisId, ech);
           const applicable = isFactureApplicable(g.devisId, ech);
           if (!fac && !applicable) return "";
-          const roleLbl = ech.isSolde ? "solde" : "acompte";
+          if (fac) {
+            // Anti-doublon : une même facture ne s'affiche qu'une seule fois.
+            const key = fac.id || fac.ref;
+            if (seenFac.has(key)) return "";
+            seenFac.add(key);
+          }
+          const roleTip = ech.isSolde ? "de solde" : "d'acompte";
           if (!fac) {
-            // Émissible mais pas encore émise → bouton de création.
-            return `<button class="btn-add-neon ghost" onclick="${stop}viewFactureOpen('${g.devisId}','${ech.echId}')">${ICO_SZ('fileText',13)} Émettre ${roleLbl}</button>`;
+            // Émissible mais pas encore émise → bouton de création, libellé par échéance.
+            return `<button class="btn-add-neon ghost" title="Émettre la facture ${roleTip} — ${esc(ech.label)}" onclick="${stop}viewFactureOpen('${g.devisId}','${ech.echId}')">${ICO_SZ('fileText',13)} Facturer « ${esc(ech.label)} »</button>`;
           }
           const envoiTs = fac.envoiTs;
           const envoiBadge = envoiTs ? `<div class="suv-envoi-tag suv-envoi-undo" title="Cliquer pour annuler la marque d'envoi" onclick="${stop}factureEnvoiUndo('${g.devisId}','${ech.echId}')">Envoyée le ${esc(dateFR(new Date(envoiTs).toISOString().slice(0,10)))} <span class="suv-envoi-undo-x">${ICO_SZ('x', 10)}</span></div>` : "";
-          const lbl = `${ech.isSolde ? "Solde" : "Acompte"} ${formatRef(fac.ref, "facture")}`;
-          return `<div class="suv-action-col"><button class="btn-add-neon ghost" onclick="${stop}factureActionMenu('${g.devisId}','${ech.echId}')">${ICO_SZ('fileText',13)} ${esc(lbl)}</button>${envoiBadge}</div>`;
+          const lbl = `${esc(ech.label)} · ${esc(formatRef(fac.ref, "facture"))}`;
+          return `<div class="suv-action-col"><button class="btn-add-neon ghost" title="Facture ${roleTip} — ${esc(ech.label)}" onclick="${stop}factureActionMenu('${g.devisId}','${ech.echId}')">${ICO_SZ('fileText',13)} ${lbl}</button>${envoiBadge}</div>`;
         };
         let html = devisEcheances(g.devisId).map(factureCol).join("");
         if (!html) {
