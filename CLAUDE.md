@@ -90,6 +90,10 @@ Voir `SCHEMA.md` pour la structure exhaustive de `S`. Points NON-déductibles du
 
 Champs invisibles sur `e` : `pmtTs` (ts paiement, ciblé par `suiviDevisUndo`), `statutAvantRefus` / `statutAvantAnnul` (revert). Mapping legacy `STATUT_LEGACY` : `paye→termine`, `accepte→attente` (migré silencieusement par `suiviMigrate`).
 
+**Parcours séquentiel verrouillé** (ordre canonique) : envoi (`dv.envoiTs`) → acceptation → par acompte dans l'ordre : paiement puis facture FA → livraison (`dv.livreeTs`) → facture FS → paiement solde. Le bandeau `nextStepHint` est le SEUL point d'émission de facture (les boutons de la rangée documents n'affichent que les factures émises). Gardes d'ordre dans `suiviLigneTogglePaiement` (encaissement dans l'ordre, solde exige livraison+FS, annulations en ordre inverse) et `suiviMarkLivree`. `isFactureApplicable(solde)` dérive la chaîne amont COMPLÈTE (acomptes encaissés ET facturés + livrée), pas juste les paiements.
+
+**Toute transition arrière nettoie l'aval** : dé-payer un acompte retire FA+FS (`facturesToRemoveOnUnpay`) ET le jalon livraison (`rewindLivraisonOnUnpay`) ; annuler l'acceptation retire toutes les factures + `livreeTs` ; dé-payer le solde ne retire rien (FS émise avant paiement = modèle légal). Réparateur d'états incohérents pré-existants : `migrateLivraisonOrpheline` (boot + live sync + saveToCloud). **Si tu ajoutes un nouveau jalon/marqueur aval, câble son rewind dans ces mêmes points** — sinon il survit aux retours en arrière et corrompt le parcours guidé.
+
 ### `S.mission.lignes[]` — 3 types
 
 - **`heures`** : `{ duree, unit:"h"|"j" }`. Multipliée par `totals().tarifHEff`.
