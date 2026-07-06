@@ -4994,7 +4994,8 @@ window.factureActionMenu = async function(devisId, echId) {
     cancelLabel: "Annuler",
     choices: [
       { label: "Imprimer", value: "print", kind: "ghost" },
-      { label: "Imprimer et envoyer", value: "printSend" }
+      { label: "Imprimer et envoyer", value: "printSend" },
+      { label: "Supprimer la facture", value: "delete", kind: "danger" }
     ]
   });
   if (!choice) return;
@@ -5005,6 +5006,15 @@ window.factureActionMenu = async function(devisId, echId) {
     _pendingEnvoiPopup = { kind: "facture", devisId, echId };
     viewFactureOpen(devisId, echId);
     _printThenGmail(() => openGmailComposeForFacture(devisId, echId));
+  } else if (choice === "delete") {
+    const fac = ech ? findFactureForEch(devisId, ech) : null;
+    if (!fac) return;
+    const ok = await uiConfirm(
+      `Supprimer définitivement la facture ${formatRef(fac.ref, "facture")} ?\n\n` +
+      `À ne faire que si elle a été émise par erreur.`,
+      { title: "Supprimer la facture", kind: "danger", confirmLabel: "Supprimer", cancelLabel: "Garder" }
+    );
+    if (ok) { removeFactures(devisId, [fac]); render(); }
   }
 };
 
@@ -11520,6 +11530,50 @@ function findFactureForEch(devisId, ech) {
   return dv.factures.find(f => !f.echId && (f.type === wantType || (wantType === "acompte" && f.type === "globale"))) || null;
 }
 
+// ▼ removeFactures — retire des factures émises d'un devis (erreur d'émission,
+// ou annulation d'un encaissement déjà facturé). Sur cet outil mono-utilisateur
+// une facture reste réversible tant qu'elle n'a pas été transmise ; à l'usager
+// de ne le faire que pour une facture émise par erreur. Renvoie le nb supprimé.
+function removeFactures(devisId, list) {
+  const dv = S.suivi.devis && S.suivi.devis[devisId];
+  if (!dv || !Array.isArray(dv.factures) || !list || !list.length) return 0;
+  const ids = new Set(list.map(f => f.id || f.ref));
+  const before = dv.factures.length;
+  dv.factures = dv.factures.filter(f => !ids.has(f.id || f.ref));
+  const removed = before - dv.factures.length;
+  if (removed) save();
+  return removed;
+}
+
+// ▼ facturesToRemoveOnUnpay — factures émises rendues invalides si on repasse
+// l'échéance `entryId` en non-encaissé. Une facture d'ACOMPTE dé-payée devient
+// invalide ; dé-payer un acompte invalide AUSSI la facture de solde (qui suppose
+// tous les acomptes encaissés). Dé-payer le SOLDE ne retire rien (facture de
+// solde émise avant paiement — modèle légal).
+function facturesToRemoveOnUnpay(devisId, entryId) {
+  const list = devisEcheances(devisId);
+  const ech = list.find(x => x.entry && x.entry.id === entryId);
+  if (!ech || ech.isSolde) return [];
+  const res = [];
+  const own = findFactureForEch(devisId, ech);
+  if (own) res.push(own);
+  const soldeEch = list.find(x => x.isSolde);
+  const fs = soldeEch && findFactureForEch(devisId, soldeEch);
+  if (fs && !res.includes(fs)) res.push(fs);
+  return res;
+}
+
+// ▼ confirmRemoveFactures — confirm partagé avant de retirer des factures liées.
+async function confirmRemoveFactures(list, actionLabel) {
+  if (!list || !list.length) return true;
+  const refs = list.map(f => formatRef(f.ref, "facture")).join(", ");
+  return await uiConfirm(
+    `${actionLabel} supprimera la/les facture(s) déjà émise(s) : ${refs}.\n\n` +
+    `Une facture est un document définitif — ne le fais que si elle a été émise par erreur.`,
+    { title: "Facture(s) liée(s)", kind: "danger", confirmLabel: "Continuer et supprimer", cancelLabel: "Garder" }
+  );
+}
+
 // ▼ migrateLegacyReconstructedFlag — nettoie les flags `legacyReconstructed`
 // stale laissés par l'ancien sync (avant fix `update()` du commit 11d6818).
 // Avant ce commit, `delete dvOrig.legacyReconstructed` n'était pas propagé
@@ -12653,7 +12707,7 @@ window.suiviRestoreRevision = async function(devisId) {
 // du tableau Suivi). Sans effet pour les lignes "envoye" / "refuse".
 // pmtTs = timestamp du dernier paiement, utilisé par l'undo pour revenir
 // sur le paiement le plus récent en cas d'erreur.
-function suiviLigneTogglePaiement(id) {
+async function suiviLigneTogglePaiement(id) {
   const e = S.suivi.entries.find(x => x.id === id);
   if (!e) return;
   const s = entryStatut(e);
@@ -12661,6 +12715,10 @@ function suiviLigneTogglePaiement(id) {
     e.statut = "termine";
     e.pmtTs = Date.now();
   } else if (s === "termine") {
+    // Annuler un encaissement déjà facturé retire la facture correspondante.
+    const bad = facturesToRemoveOnUnpay(e.devisId, e.id);
+    if (bad.length && !(await confirmRemoveFactures(bad, "Annuler cet encaissement"))) return;
+    removeFactures(e.devisId, bad);
     e.statut = "attente";
     delete e.pmtTs;
   } else {
@@ -12758,7 +12816,7 @@ function suiviDevisRevertAnnul(devisId) {
 //   4. Toutes lignes en attente (post-acceptation, rien soldé) → annule
 //      l'acceptation, toutes lignes reviennent à "envoye"
 //   5. envoye → rien à annuler (no-op)
-function suiviDevisUndo(devisId) {
+async function suiviDevisUndo(devisId) {
   const lignes = suiviGroupLigne(devisId);
   if (!lignes.length) return;
   const statut = devisPrincipal(lignes);
@@ -12771,13 +12829,20 @@ function suiviDevisUndo(devisId) {
   if (paid.length > 0) {
     paid.sort((a, b) => (num(b.pmtTs) || 0) - (num(a.pmtTs) || 0));
     const e = paid[0];
+    const bad = facturesToRemoveOnUnpay(e.devisId, e.id);
+    if (bad.length && !(await confirmRemoveFactures(bad, "Annuler ce paiement"))) return;
+    removeFactures(e.devisId, bad);
     e.statut = "attente";
     delete e.pmtTs;
     save();
     render();
     return;
   }
-  // Toutes lignes attente : annule l'acceptation
+  // Toutes lignes attente : annule l'acceptation → toutes les factures du devis
+  // deviennent invalides (un devis non accepté ne peut porter de facture).
+  const allFac = (S.suivi.devis && S.suivi.devis[devisId] && S.suivi.devis[devisId].factures) || [];
+  if (allFac.length && !(await confirmRemoveFactures(allFac.slice(), "Annuler l'acceptation"))) return;
+  removeFactures(devisId, allFac.slice());
   for (const x of lignes) x.statut = "envoye";
   save();
   render();
