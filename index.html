@@ -297,8 +297,10 @@
   table.hist tr.suv-expanded-row td{background:var(--surface-2);padding:0;border-bottom:1px solid var(--border)}
   .suv-expanded-panel{padding:14px 18px 16px;display:flex;flex-direction:column;gap:10px}
   /* Bandeau « Prochaine étape » — guide l'utilisateur sur l'action à faire. */
-  .suv-next-step{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;padding:8px 12px;border-radius:var(--radius-md);border:1px solid transparent}
+  .suv-next-step{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;padding:8px 12px;border-radius:var(--radius-md);border:1px solid transparent;flex-wrap:wrap}
   .suv-next-step .suv-next-ico{flex-shrink:0;display:flex}
+  .suv-next-step .suv-next-txt{flex:1;min-width:160px}
+  .suv-next-step .suv-next-btn{flex-shrink:0;margin-left:auto}
   .suv-next-action{color:#7eb8ff;background:rgba(74,158,255,.08);border-color:rgba(74,158,255,.35);box-shadow:inset 0 0 0 1px rgba(74,158,255,.22),0 0 12px rgba(74,158,255,.14)}
   .suv-next-wait{color:var(--text-muted);background:rgba(148,163,184,.06);border-color:var(--border-soft)}
   .suv-next-done{color:#86efac;background:rgba(34,197,94,.08);border-color:rgba(34,197,94,.3)}
@@ -4968,10 +4970,17 @@ window.devisActionMenu = async function(devisId) {
     _pendingEnvoiPopup = { kind: "devis", devisId };
     viewDevisOpen(devisId);
   } else if (choice === "printSend") {
-    _pendingEnvoiPopup = { kind: "devis", devisId };
-    viewDevisOpen(devisId);
-    _printThenGmail(() => openGmailComposeForDevis(devisId));
+    devisEnvoyerFlow(devisId);
   }
+};
+
+// ▼ devisEnvoyerFlow — action « Envoyer le devis » (bandeau Prochaine étape +
+// menu Devis > Imprimer et envoyer). Aperçu + Gmail pré-rempli + impression,
+// puis popup « envoyé ? » à la fermeture du modal (pose envoiTs).
+window.devisEnvoyerFlow = function(devisId) {
+  _pendingEnvoiPopup = { kind: "devis", devisId };
+  viewDevisOpen(devisId);
+  _printThenGmail(() => openGmailComposeForDevis(devisId));
 };
 
 // ▼ _printThenGmail — ouvre Gmail puis déclenche l'impression auto.
@@ -5011,9 +5020,7 @@ window.factureActionMenu = async function(devisId, echId) {
     _pendingEnvoiPopup = { kind: "facture", devisId, echId };
     viewFactureOpen(devisId, echId);
   } else if (choice === "printSend") {
-    _pendingEnvoiPopup = { kind: "facture", devisId, echId };
-    viewFactureOpen(devisId, echId);
-    _printThenGmail(() => openGmailComposeForFacture(devisId, echId));
+    factureEmettreEnvoyerFlow(devisId, echId);
   } else if (choice === "delete") {
     const fac = ech ? findFactureForEch(devisId, ech) : null;
     if (!fac) return;
@@ -5024,6 +5031,18 @@ window.factureActionMenu = async function(devisId, echId) {
     );
     if (ok) { removeFactures(devisId, [fac]); render(); }
   }
+};
+
+// ▼ factureEmettreEnvoyerFlow — action « Émettre et envoyer » (bandeau
+// Prochaine étape + menu Facture > Imprimer et envoyer). Enchaîne : confirm
+// d'émission si la facture n'existe pas encore (géré dans viewFactureOpen),
+// aperçu + Gmail pré-rempli + impression, puis popup « envoyée ? » à la
+// fermeture (pose fac.envoiTs). Si l'émission est annulée, on n'ouvre rien.
+window.factureEmettreEnvoyerFlow = async function(devisId, echId) {
+  _pendingEnvoiPopup = { kind: "facture", devisId, echId };
+  await viewFactureOpen(devisId, echId);
+  if (!viewFactureModal) { _pendingEnvoiPopup = null; return; }
+  _printThenGmail(() => openGmailComposeForFacture(devisId, echId));
 };
 
 // ▼ relanceMark — stampe lastRelance manuellement après un envoi confirmé.
@@ -9249,6 +9268,25 @@ function rBinModal() {
 // Format des items : { h: titre court, b: explication 1-3 phrases }.
 const APP_CHANGELOG = [
   {
+    id: "2026-07-prochaine-etape-actionnable",
+    date: "2026-07-06",
+    title: "Suivi : le bandeau « Prochaine étape » devient actionnable",
+    items: [
+      {
+        h: "Un bouton d'action directement dans le bandeau",
+        b: "À chaque étape du parcours d'un devis (envoi, acompte reçu, facture d'acompte, livraison, facture de solde, paiement du solde), le bandeau bleu porte maintenant LE bouton de l'action en cours. Plus besoin de chercher quoi cliquer : tout se fait depuis la même ligne, dans l'ordre du parcours réel."
+      },
+      {
+        h: "« Émettre et envoyer » les factures en un clic",
+        b: "Le bouton du bandeau enchaîne l'émission de la facture (numéro + date définitifs), l'aperçu, Gmail pré-rempli et l'impression, puis demande de confirmer l'envoi au retour — comme pour l'envoi du devis."
+      },
+      {
+        h: "Montants visibles dans les étapes d'attente",
+        b: "« En attente du versement de l'acompte » et « En attente du paiement du solde » affichent désormais le montant attendu. Le bouton « Prestation livrée » a déménagé dans le bandeau, à son étape exacte."
+      }
+    ]
+  },
+  {
     id: "2026-05-tarif-au-black",
     date: "2026-05-06",
     title: "Catalogue : tarif au black + remise non déclarée",
@@ -11608,8 +11646,10 @@ window.suiviUnmarkLivree = async function(devisId) {
   render();
 };
 
-// ▼ nextStepHint — guide « Prochaine étape » d'un devis. Retourne { text, kind }
+// ▼ nextStepHint — guide « Prochaine étape » d'un devis. Retourne { text, kind, act? }
 // (kind : "action" | "wait" | "done" | "stop"), ou null si pas d'entries.
+// `act` = bouton d'action porté par le bandeau : { label, ico, fn } où fn est
+// le code inline de l'onclick. Une étape = une phrase = un bouton.
 // Parcours séquentiel : devis → accord → acomptes (encaisser puis facturer) →
 // livraison → facture de solde → paiement solde → terminé.
 function nextStepHint(devisId) {
@@ -11622,7 +11662,8 @@ function nextStepHint(devisId) {
   if (statut === "envoye") {
     return dv.envoiTs
       ? { text: "En attente de l'accord du client — tu peux le relancer.", kind: "wait" }
-      : { text: "Prochaine étape : envoie le devis au client.", kind: "action" };
+      : { text: "Prochaine étape : envoie le devis au client.", kind: "action",
+          act: { label: "Envoyer le devis", ico: "send", fn: `devisEnvoyerFlow('${devisId}')` } };
   }
   // Devis accepté : on avance échéance par échéance.
   const list = devisEcheances(devisId);
@@ -11630,21 +11671,26 @@ function nextStepHint(devisId) {
   const solde = list.find(e => e.isSolde);
   for (const ech of acomptes) {
     if (ech.statut !== "termine") {
-      return { text: `En attente du versement de l'acompte « ${ech.label} ».`, kind: "wait" };
+      return { text: `En attente du versement de l'acompte « ${ech.label} » (${fmt(ech.montant)}).`, kind: "wait",
+        act: { label: "Acompte reçu", ico: "check", fn: `suiviLigneTogglePaiement('${ech.entry.id}')` } };
     }
     if (!findFactureForEch(devisId, ech)) {
-      return { text: `Acompte encaissé : envoie la facture d'acompte « ${ech.label} ».`, kind: "action" };
+      return { text: `Acompte encaissé : envoie la facture d'acompte « ${ech.label} ».`, kind: "action",
+        act: { label: "Émettre et envoyer", ico: "fileText", fn: `factureEmettreEnvoyerFlow('${devisId}','${ech.echId}')` } };
     }
   }
   if (!dv.livreeTs) {
-    return { text: "Réalise la prestation et livre-la, puis clique « Prestation livrée ».", kind: "action" };
+    return { text: "Réalise la prestation et livre-la au client.", kind: "action",
+      act: { label: "Prestation livrée", ico: "check", fn: `suiviMarkLivree('${devisId}')` } };
   }
   if (solde) {
     if (!findFactureForEch(devisId, solde)) {
-      return { text: "Prestation livrée : envoie la facture de solde.", kind: "action" };
+      return { text: "Prestation livrée : envoie la facture de solde.", kind: "action",
+        act: { label: "Émettre et envoyer", ico: "fileText", fn: `factureEmettreEnvoyerFlow('${devisId}','${solde.echId}')` } };
     }
     if (solde.statut !== "termine") {
-      return { text: "En attente du paiement du solde.", kind: "wait" };
+      return { text: `En attente du paiement du solde (${fmt(solde.montant)}).`, kind: "wait",
+        act: { label: "Solde reçu", ico: "check", fn: `suiviLigneTogglePaiement('${solde.entry.id}')` } };
     }
   }
   return { text: "Terminé — prestation soldée.", kind: "done" };
@@ -12991,7 +13037,10 @@ function suiviExpandedPanelHtml(g) {
       const h = nextStepHint(g.devisId);
       if (!h) return "";
       const ico = h.kind === "action" ? "send" : h.kind === "done" ? "check" : h.kind === "wait" ? "circle" : "info";
-      return `<div class="suv-next-step suv-next-${h.kind}"><span class="suv-next-ico">${ICO_SZ(ico, 14)}</span><span>${esc(h.text)}</span></div>`;
+      const btn = h.act
+        ? `<button class="btn-add-neon suv-next-btn" onclick="${stop}${h.act.fn}">${ICO_SZ(h.act.ico || 'check', 13)} ${esc(h.act.label)}</button>`
+        : "";
+      return `<div class="suv-next-step suv-next-${h.kind}"><span class="suv-next-ico">${ICO_SZ(ico, 14)}</span><span class="suv-next-txt">${esc(h.text)}</span>${btn}</div>`;
     })()}
     ${devisLevelAction ? `<div class="suv-expanded-actions">${devisLevelAction}</div>` : ''}
     <div class="suv-tl">${lignes.map(suiviTimelineStepHtml).join("")}</div>
@@ -13018,19 +13067,13 @@ function suiviExpandedPanelHtml(g) {
         return `<div class="suv-action-col"><button class="btn-add-neon ghost" onclick="${stop}devisActionMenu('${g.devisId}')">${ICO_SZ('fileText',13)} Devis</button>${envoiBadge}</div>`;
       })()}
       ${(() => {
-        // Jalon « Prestation livrée » — n'apparaît qu'À SON ÉTAPE : devis accepté
-        // ET tous les acomptes encaissés + facturés (= le bandeau dit « livre »).
-        // Sinon rien : le bandeau « Prochaine étape » guide vers l'action en cours.
+        // Jalon « Prestation livrée » — badge d'état une fois livrée (clic = undo).
+        // Le bouton de marquage vit dans le bandeau « Prochaine étape » (nextStepHint).
         if (!(statutPrin === "attente" || statutPrin === "en_cours" || statutPrin === "termine")) return "";
         const dv = S.suivi.devis && S.suivi.devis[g.devisId];
         const livreeTs = dv && dv.livreeTs;
-        if (livreeTs) {
-          return `<div class="suv-action-col"><span class="suv-envoi-tag suv-livree-tag" title="Prestation livrée — cliquer pour annuler" onclick="${stop}suiviUnmarkLivree('${g.devisId}')">${ICO_SZ('check',12)} Livrée le ${esc(dateFR(new Date(livreeTs).toISOString().slice(0,10)))} <span class="suv-envoi-undo-x">${ICO_SZ('x', 10)}</span></span></div>`;
-        }
-        const acomptes = devisEcheances(g.devisId).filter(e => !e.isSolde);
-        const ready = acomptes.every(e => e.statut === "termine" && findFactureForEch(g.devisId, e));
-        if (!ready) return "";
-        return `<button class="btn-add-neon ghost suv-livree-btn" title="Marque la prestation comme réalisée et livrée. Débloque la facture de solde." onclick="${stop}suiviMarkLivree('${g.devisId}')">${ICO_SZ('check',13)} Prestation livrée</button>`;
+        if (!livreeTs) return "";
+        return `<div class="suv-action-col"><span class="suv-envoi-tag suv-livree-tag" title="Prestation livrée — cliquer pour annuler" onclick="${stop}suiviUnmarkLivree('${g.devisId}')">${ICO_SZ('check',12)} Livrée le ${esc(dateFR(new Date(livreeTs).toISOString().slice(0,10)))} <span class="suv-envoi-undo-x">${ICO_SZ('x', 10)}</span></span></div>`;
       })()}
       ${(() => {
         // Bouton Débours masqué si aucun frais débours sur les entries.
