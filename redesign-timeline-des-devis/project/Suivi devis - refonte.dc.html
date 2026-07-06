@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{font-family:'Inter',system-ui,sans-serif;background:#0a1628;background:linear-gradient(180deg,#0a1628,#06101d);background-attachment:fixed;color:#e8f0fb;font-variant-numeric:tabular-nums;-webkit-font-smoothing:antialiased;min-height:100vh}
+  @keyframes bluepulse{0%,100%{box-shadow:0 0 0 0 rgba(74,158,255,.28)}50%{box-shadow:0 0 0 5px rgba(74,158,255,0)}}
+  .rrow{transition:background .15s}
+  .rrow.clk:hover{background:rgba(74,158,255,.1)!important}
+  .rbtn{transition:filter .15s,transform .05s}
+  .rbtn:hover{filter:brightness(1.09)}
+  .rbtn:active{transform:translateY(1px)}
+  .menuitem:hover{background:rgba(74,158,255,.1)!important}
+</style>
+</helmet>
+
+<div style="max-width:760px;margin:0 auto;padding:44px 24px 72px;display:flex;flex-direction:column;gap:20px">
+
+  <div style="display:flex;flex-direction:column;gap:5px">
+    <div style="font-size:12px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:#5e7a9c">Historique · suivi d'un devis</div>
+    <h1 style="margin:0;font-size:26px;font-weight:700;letter-spacing:-.01em;color:#e8f0fb">Anne Fouillet</h1>
+  </div>
+
+  <div style="background:#0f2240;border:1px solid #1e3f6b;border-radius:18px;overflow:hidden;box-shadow:0 12px 44px rgba(0,0,0,.4)">
+    <div style="display:flex;align-items:center;gap:14px;padding:18px 22px;background:#132a4d;border-bottom:1px solid #1e3f6b">
+      <span style="font-size:12px;color:#8fa8c9;font-weight:500">06/07/2026</span>
+      <span style="flex:1"></span>
+      <span style="font-size:12px;color:#8fa8c9">DEV-202607-001</span>
+      <span style="font-size:10px;font-weight:600;color:#5eead4;background:rgba(94,234,212,.1);border:1px solid rgba(94,234,212,.3);border-radius:5px;padding:2px 6px">rev0</span>
+      <span style="font-size:18px;font-weight:700;color:#e8f0fb;margin-left:6px">120,00 €</span>
+    </div>
+
+    <div style="padding:16px 22px 8px;position:relative" data-comment-anchor="eea9180383-div">
+      <div style="position:absolute;left:34px;top:38px;bottom:64px;width:2px;background:#1e3f6b;border-radius:2px"></div>
+      <sc-for list="{{ rows }}" as="row" hint-placeholder-count="5">
+        <div class="rrow {{ row.clk }}" style="{{ row.railWrap }}" onClick="{{ row.onRowClick }}">
+          <div style="{{ row.dotStyle }}">{{ row.dotInner }}</div>
+          <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px">
+            <div style="display:flex;align-items:center;gap:8px;min-width:0">
+              <span style="{{ row.labelStyle }}">{{ row.label }}</span>
+              <sc-if value="{{ row.facture }}" hint-placeholder-val=""><span style="display:inline-flex;align-items:center;gap:4px;font-size:10.5px;font-weight:600;color:#7c96b8;background:#122a4d;border:1px solid #1e3f6b;border-radius:5px;padding:2px 7px;white-space:nowrap;flex:0 0 auto">{{ row.facIco }}{{ row.facRef }}{{ row.facSent }}</span></sc-if>
+            </div>
+            <sc-if value="{{ row.sub }}" hint-placeholder-val=""><span style="font-size:11.5px;color:#7c96b8">{{ row.sub }}</span></sc-if>
+          </div>
+          <sc-if value="{{ row.amount }}" hint-placeholder-val=""><span style="{{ row.amountStyle }}">{{ row.amount }}</span></sc-if>
+          <sc-if value="{{ row.stateLabel }}" hint-placeholder-val=""><span style="{{ row.stateStyle }}">{{ row.stateLabel }}</span></sc-if>
+          <div style="display:flex;align-items:center;gap:7px;flex:0 0 auto" onClick="{{ row.stopClick }}">
+            <sc-for list="{{ row.actions }}" as="act" hint-placeholder-count="0">
+              <button type="button" class="rbtn" style="{{ act.style }}" onClick="{{ act.onClick }}">{{ act.icoEl }}{{ act.label }}</button>
+            </sc-for>
+            <sc-if value="{{ row.showBack }}" hint-placeholder-val=""><button type="button" class="rbtn" title="Revenir à l'étape précédente" style="{{ backBtnStyle }}" onClick="{{ row.onBack }}">{{ backIco }}</button></sc-if>
+          </div>
+        </div>
+      </sc-for>
+    </div>
+
+    <div style="display:flex;align-items:center;gap:10px;padding:14px 22px 18px;border-top:1px solid #16304f">
+      <button type="button" class="rbtn" style="{{ docBtnStyle }}">{{ docIco }}Devis PDF</button>
+      <button type="button" class="rbtn" style="{{ docBtnStyle }}">{{ euroIco }}Débours</button>
+      <span style="flex:1"></span>
+      <div style="position:relative">
+        <button type="button" class="rbtn" title="Plus d'actions" style="{{ moreBtnStyle }}" onClick="{{ toggleMenu }}">{{ moreIco }}</button>
+        <sc-if value="{{ menuOpen }}" hint-placeholder-val="">
+          <div style="position:absolute;bottom:44px;right:0;min-width:236px;background:#122a4d;border:1px solid #26507f;border-radius:12px;padding:6px;display:flex;flex-direction:column;gap:1px;box-shadow:0 14px 40px rgba(0,0,0,.5);z-index:30">
+            <sc-for list="{{ menuItems }}" as="mi" hint-placeholder-count="6">
+              <sc-if value="{{ mi.divider }}" hint-placeholder-val=""><div style="height:1px;background:#23446e;margin:5px 4px"></div></sc-if>
+              <button type="button" class="menuitem" style="{{ mi.style }}" onClick="{{ mi.onClick }}"><span style="display:inline-flex;flex:0 0 auto">{{ mi.icoEl }}</span>{{ mi.label }}</button>
+            </sc-for>
+          </div>
+        </sc-if>
+      </div>
+    </div>
+  </div>
+
+  <div style="display:flex;align-items:center;gap:8px;font-size:12px;color:#5e7a9c">
+    <span>Aperçu de démo :</span>
+    <button type="button" class="rbtn" style="{{ resetStyle }}" onClick="{{ reset }}">{{ undoIco }}Rejouer depuis le début</button>
+  </div>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  // p = nombre d'étapes franchies. p===1 : devis envoyé, en attente de réponse client.
+  // p===STEPS.length : dossier soldé. refused : devis refusé (bloque à l'acceptation).
+  state = { p: 0, refused: false, menuOpen: false };
+
+  componentDidMount(){ this._onDoc=(e)=>{ if(this.state.menuOpen && !e.target.closest('.menuitem') && !e.target.closest('[title="Plus d\'actions"]')) this.setState({menuOpen:false}); }; document.addEventListener('click',this._onDoc); }
+  componentWillUnmount(){ document.removeEventListener('click',this._onDoc); }
+  toggleMenu(){ this.setState(s=>({menuOpen:!s.menuOpen})); }
+  pick(fn){ this.setState({menuOpen:false}); if(fn) fn(); }
+  menuItems(){
+    const base='display:flex;align-items:center;gap:10px;width:100%;text-align:left;background:transparent;border:none;border-radius:8px;padding:9px 10px;font-size:13px;font-weight:500;font-family:inherit;color:#cfe3ff;cursor:pointer;transition:background .12s;';
+    const danger=base.replace('color:#cfe3ff','color:#f0789a');
+    return [
+      { icoEl:this.ico('layers',15,'#8fbfe0'),  label:'Créer une révision (rev1)',       style:base,   onClick:()=>this.pick() },
+      { icoEl:this.ico('copy',15,'#8fbfe0'),    label:'Dupliquer le devis',              style:base,   onClick:()=>this.pick() },
+      { icoEl:this.ico('resend',15,'#8fbfe0'),  label:'Renvoyer le dernier document',    style:base,   onClick:()=>this.pick() },
+      { icoEl:this.ico('history',15,'#8fbfe0'), label:'Historique des versions',         style:base,   onClick:()=>this.pick() },
+      { divider:true, icoEl:this.ico('archive',15,'#8fa8c9'), label:'Archiver le devis',  style:base,   onClick:()=>this.pick() },
+      { icoEl:this.ico('trash',15,'#f0789a'),   label:'Supprimer',                       style:danger, onClick:()=>this.pick() },
+    ];
+  }
+
+  get STEPS() {
+    return [
+      { key:'sent',        kind:'milestone', label:'Devis envoyé',        sub:'Envoyé le 06/07/2026' },
+      { key:'accepted',    kind:'decision',  label:'Accepté par le client' },
+      { key:'fac_acompte', kind:'invoice',   label:"Facture d'acompte",   facRef:'FA-202607-001' },
+      { key:'acompte',     kind:'payment',   label:'Acompte (30 %)',      amount:36 },
+      { key:'livraison',   kind:'milestone', label:'Prestation livrée' },
+      { key:'fac_solde',   kind:'invoice',   label:'Facture de solde',    facRef:'FS-202607-001' },
+      { key:'solde',       kind:'payment',   label:'Solde',               amount:84 },
+    ];
+  }
+
+  money(n){ return n.toLocaleString('fr-FR',{minimumFractionDigits:2,maximumFractionDigits:2}) + '\u00A0€'; }
+
+  _svg(children,o){ o=o||{}; return React.createElement('svg',{width:o.size||14,height:o.size||14,viewBox:'0 0 24 24',fill:o.fill||'none',stroke:o.color||'currentColor',strokeWidth:o.sw==null?2:o.sw,strokeLinecap:'round',strokeLinejoin:'round',style:{flex:'0 0 auto',display:'block'}}, children); }
+  _p(d,k){ return React.createElement('path',{d:d,key:k||d}); }
+  _c(x,y,r,k){ return React.createElement('circle',{cx:x,cy:y,r:r,key:k||(x+'-'+y)}); }
+  ico(name,size,color){
+    const s=size, cc=color;
+    switch(name){
+      case 'check': return this._svg([this._p('M20 6 9 17l-5-5')],{size:s,color:cc});
+      case 'send':  return this._svg([this._p('m22 2-7 20-4-9-9-4Z','a'),this._p('M22 2 11 13','b')],{size:s,color:cc});
+      case 'x':     return this._svg([this._p('M18 6 6 18','a'),this._p('M6 6l12 12','b')],{size:s,color:cc});
+      case 'euro':  return this._svg([this._p('M15 6a5 5 0 1 0 0 12','a'),this._p('M6 10h6','b'),this._p('M6 14h5','c')],{size:s,color:cc});
+      case 'truck': return this._svg([this._p('M3 6h11v9H3z','a'),this._p('M14 9h4l3 3v3h-7','b'),this._c(7.5,18,1.6,'c'),this._c(17,18,1.6,'d')],{size:s,color:cc});
+      case 'file':  return this._svg([this._p('M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z','a'),this._p('M14 2v6h6','b')],{size:s,color:cc});
+      case 'undo':  return this._svg([this._p('M3 8v5h5','a'),this._p('M3.5 13a8 8 0 1 0 1.9-8.3L3 8','b')],{size:s,color:cc});
+      case 'clock': return this._svg([this._c(12,12,9,'a'),this._p('M12 7v5l3 2','b')],{size:s,color:cc});
+      case 'more':  return this._svg([this._c(5,12,1.6,'a'),this._c(12,12,1.6,'b'),this._c(19,12,1.6,'c')],{size:s||16,color:cc,fill:cc,sw:0});
+      case 'mail':  return this._svg([this._p('M3 5.5h18v13H3z','a'),this._p('m3 6.5 9 6.5 9-6.5','b')],{size:s,color:cc});
+      case 'edit':  return this._svg([this._p('M12 20h9','a'),this._p('M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z','b')],{size:s,color:cc});
+      case 'copy':  return this._svg([this._p('M9 9h11v11H9z','a'),this._p('M5 15H4V4h11v1','b')],{size:s,color:cc});
+      case 'layers':return this._svg([this._p('m12 3 9 5-9 5-9-5 9-5Z','a'),this._p('m3 13 9 5 9-5','b')],{size:s,color:cc});
+      case 'resend':return this._svg([this._p('M21 12a9 9 0 1 1-3-6.7','a'),this._p('M21 4v4h-4','b')],{size:s,color:cc});
+      case 'history':return this._svg([this._p('M3 3v6h6','a'),this._p('M3.5 9a8 8 0 1 1-.5 4','b'),this._p('M12 8v4l3 2','c')],{size:s,color:cc});
+      case 'archive':return this._svg([this._p('M3 4h18v4H3z','a'),this._p('M5 8v12h14V8','b'),this._p('M10 12h4','c')],{size:s,color:cc});
+      case 'trash': return this._svg([this._p('M4 7h16','a'),this._p('M6 7v13h12V7','b'),this._p('M9 7V4h6v3','c'),this._p('M10 11v6M14 11v6','d')],{size:s,color:cc});
+    }
+  }
+
+  get BTN(){ return {
+    green:'background:#16a34a;color:#fff;border:none;border-radius:9px;padding:8px 14px;font-size:12.5px;font-weight:600;display:inline-flex;align-items:center;gap:6px;cursor:pointer;white-space:nowrap',
+    blue:'background:#2f6fd6;color:#fff;border:none;border-radius:9px;padding:8px 14px;font-size:12.5px;font-weight:600;display:inline-flex;align-items:center;gap:6px;cursor:pointer;white-space:nowrap',
+    ghost:'background:transparent;color:#f0789a;border:1px solid rgba(240,120,154,.4);border-radius:9px;padding:7px 13px;font-size:12.5px;font-weight:600;display:inline-flex;align-items:center;gap:6px;cursor:pointer;white-space:nowrap',
+    subtle:'background:#122a4d;color:#cfe3ff;border:1px solid #23446e;border-radius:9px;padding:7px 13px;font-size:12.5px;font-weight:600;display:inline-flex;align-items:center;gap:6px;cursor:pointer;white-space:nowrap',
+  };}
+  get backBtnStyle(){ return 'width:32px;height:32px;display:inline-flex;align-items:center;justify-content:center;background:transparent;color:#7c96b8;border:1px solid #23446e;border-radius:8px;cursor:pointer;flex:0 0 auto'; }
+  get docBtnStyle(){ return this.BTN.subtle; }
+  get moreBtnStyle(){ return 'width:36px;height:36px;display:inline-flex;align-items:center;justify-content:center;background:transparent;color:#8fa8c9;border:1px solid #23446e;border-radius:9px;cursor:pointer'; }
+  get resetStyle(){ return 'background:transparent;color:#7c96b8;border:1px solid #23446e;border-radius:8px;padding:5px 10px;font-size:12px;font-weight:600;display:inline-flex;align-items:center;gap:5px;cursor:pointer'; }
+
+  advance(){ this.setState(s=>({ p: Math.min(s.p+1, this.STEPS.length) })); }
+  back(){ this.setState(s=> s.refused ? ({ refused:false }) : ({ p: Math.max(s.p-1, 0) })); }
+  accept(){ this.setState({ p:2, refused:false }); }
+  refuse(){ this.setState({ refused:true }); }
+  reset(){ this.setState({ p:0, refused:false }); }
+  get CLIENT(){ return { name:'Anne Fouillet', email:'anne.fouillet@gmail.com' }; }
+  gmail(to,su,body){ window.open('https://mail.google.com/mail/?view=cm&fs=1&to='+encodeURIComponent(to)+'&su='+encodeURIComponent(su)+'&body='+encodeURIComponent(body),'_blank'); }
+  sendDevis(){
+    const c=this.CLIENT;
+    const body='Bonjour '+c.name.split(' ')[0]+',\n\nVeuillez trouver ci-joint votre devis DEV-202607-001 d\u2019un montant de 120,00\u00A0\u20AC.\nJe reste \u00E0 votre disposition pour toute question.\n\nBien cordialement,\nRomain Saintilan';
+    this.gmail(c.email, 'Votre devis DEV-202607-001 \u2014 '+c.name, body);
+  }
+  openInvoice(step){
+    const c=this.CLIENT;
+    const kind = step.key==='fac_solde' ? 'de solde' : "d'acompte";
+    const amount = step.key==='fac_solde' ? '84,00\u00A0\u20AC' : '36,00\u00A0\u20AC';
+    const body='Bonjour '+c.name.split(' ')[0]+',\n\nVeuillez trouver ci-joint votre facture '+kind+' '+step.facRef+' d\u2019un montant de '+amount+'.\nMerci de votre confiance.\n\nBien cordialement,\nRomain Saintilan';
+    this.gmail(c.email, step.label+' '+step.facRef+' \u2014 '+c.name, body);
+  }
+
+  stat(i){
+    const p=this.state.p, refused=this.state.refused;
+    if(refused && i===1) return 'refused';
+    if(refused && i>1) return 'blocked';
+    if(i<p) return 'done';
+    if(i===p) return 'active';
+    return 'upcoming';
+  }
+
+  dot(status,size){
+    size=size||26;
+    const base='width:'+size+'px;height:'+size+'px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex:0 0 auto;position:relative;z-index:1;';
+    if(status==='done')    return [base+'background:#16a34a;border:none', this.ico('check',size*0.55,'#fff')];
+    if(status==='active')  return [base+'background:#0f2240;border:2px solid #4a9eff;animation:bluepulse 2.2s ease-in-out infinite', React.createElement('span',{key:'d',style:{width:size*0.34+'px',height:size*0.34+'px',borderRadius:'50%',background:'#4a9eff'}})];
+    if(status==='refused') return [base+'background:#dc2626;border:none', this.ico('x',size*0.55,'#fff')];
+    return [base+'background:#0f2240;border:2px solid #24406a', ''];
+  }
+
+  labelStyleFor(status){
+    const b='font-size:14.5px;white-space:nowrap;';
+    if(status==='active')  return b+'font-weight:700;color:#e8f0fb';
+    if(status==='done')    return b+'font-weight:600;color:#cfe3ff';
+    if(status==='refused') return b+'font-weight:700;color:#f0789a';
+    return b+'font-weight:500;color:#5e7a9c';
+  }
+  amountStyleFor(status){
+    const b='font-size:14px;font-weight:700;text-align:right;flex:0 0 auto;';
+    if(status==='done')   return b+'color:#4ade80';
+    if(status==='active') return b+'color:#e8f0fb';
+    return b+'color:#5e7a9c';
+  }
+  chipFor(step,status){
+    const b='font-size:11px;font-weight:600;padding:3px 9px;border-radius:6px;flex:0 0 auto;';
+    if(status==='active') return null; // le bouton d'action suffit — pas de pastille redondante
+    if(step.kind==='payment'){
+      if(status==='done') return { label:'Payé', style:b+'color:#4ade80;background:rgba(34,197,94,.12)' };
+      return { label:'En attente', style:b+'color:#5e7a9c;background:transparent' };
+    }
+    if(step.kind==='invoice'){
+      if(status==='done') return { label:'Envoyée', style:b+'color:#5eead4;background:rgba(94,234,212,.1)' };
+      return { label:'À émettre', style:b+'color:#5e7a9c;background:transparent' };
+    }
+    return null;
+  }
+
+  activeActions(step,i){
+    const B=this.BTN;
+    if(step.key==='sent') return [
+      { style:B.subtle, icoEl:this.ico('mail',13), label:'Envoyer', onClick:()=>this.sendDevis() },
+      { style:B.green,  icoEl:this.ico('check',14), label:"Valider l'envoi", onClick:()=>this.advance() },
+    ];
+    if(i===1) return [
+      { style:B.subtle, icoEl:this.ico('send',13), label:'Relancer', onClick:()=>{} },
+      { style:B.green,  icoEl:this.ico('check',14), label:'Accepté', onClick:()=>this.accept() },
+      { style:B.ghost,  icoEl:this.ico('x',13),     label:'Refusé',  onClick:()=>this.refuse() },
+    ];
+    if(step.kind==='invoice') return [
+      { style:B.subtle, icoEl:this.ico('edit',13), label:'Éditer', onClick:()=>{} },
+      { style:B.subtle, icoEl:this.ico('mail',13), label:'Envoyer', onClick:()=>this.openInvoice(step) },
+      { style:B.green,  icoEl:this.ico('check',14), label:"Valider l'envoi", onClick:()=>this.advance() },
+    ];
+    if(step.kind==='payment') return [
+      { style:B.subtle, icoEl:this.ico('send',13), label:'Relancer', onClick:()=>{} },
+      { style:B.green,  icoEl:this.ico('euro',14), label:'Paiement reçu', onClick:()=>this.advance() },
+    ];
+    if(step.key==='livraison') return [ { style:B.blue, icoEl:this.ico('truck',14), label:'Marquer livré', onClick:()=>this.advance() } ];
+    return [];
+  }
+
+  renderVals(){
+    const p=this.state.p, refused=this.state.refused;
+    const stop=(e)=>{ if(e&&e.stopPropagation) e.stopPropagation(); };
+    const rows=this.STEPS.map((step,i)=>{
+      const status=this.stat(i);
+      const [dotStyle,dotInner]=this.dot(status,26);
+      const isPay=step.kind==='payment';
+      const isInvoice=step.kind==='invoice';
+      const isActive = status==='active' && !refused;
+      let showBack;
+      if(refused) showBack = (i===1);                       // annuler le refus
+      else if(p>=this.STEPS.length) showBack = (i===p-1);   // dossier soldé : ↺ sur la dernière étape
+      else showBack = isActive && p>=1;                     // reculer d'un cran depuis l'étape en cours
+      const chip = this.chipFor(step,status);
+      let sub='';
+      if(step.key==='sent') sub = status==='active' ? 'Prêt à être envoyé au client' : step.sub;
+      else if(status==='active' && i===1) sub='La balle est dans le camp du client';
+      return {
+        clk: '',
+        railWrap:'display:flex;align-items:center;gap:14px;padding:12px 8px;border-radius:11px;position:relative;'+(isActive?'background:rgba(74,158,255,.06);':''),
+        onRowClick: null, stopClick: stop,
+        dotStyle, dotInner,
+        label: step.label, labelStyle: this.labelStyleFor(status), sub,
+        facture: isInvoice && (status==='done'||status==='active'),
+        facIco: this.ico('file',12,'#7c96b8'), facRef: step.facRef||'', facSent: status==='done'?' · envoyée':'',
+        amount: isPay ? this.money(step.amount) : '', amountStyle: this.amountStyleFor(status),
+        stateLabel: chip?chip.label:'', stateStyle: chip?chip.style:'',
+        actions: isActive ? this.activeActions(step,i) : [],
+        showBack, onBack: ()=>this.back(),
+      };
+    });
+    return {
+      rows,
+      backBtnStyle:this.backBtnStyle, backIco:this.ico('undo',15,'#7c96b8'),
+      docBtnStyle:this.docBtnStyle, docIco:this.ico('file',13,'#cfe3ff'), euroIco:this.ico('euro',13,'#cfe3ff'),
+      moreBtnStyle:this.moreBtnStyle, moreIco:this.ico('more',18,'#8fa8c9'),
+      menuOpen: this.state.menuOpen, toggleMenu: ()=>this.toggleMenu(),
+      menuItems: this.menuItems(),
+      resetStyle:this.resetStyle, undoIco:this.ico('undo',13,'#7c96b8'), reset:()=>this.reset(),
+    };
+  }
+}
+</script>
+</body>
+</html>

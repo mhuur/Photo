@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<meta name="design_doc_mode" content="canvas">
+<style>
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{font-family:'Inter',system-ui,sans-serif;background:#0a1628;background:linear-gradient(180deg,#0a1628,#06101d);background-attachment:fixed;color:#e8f0fb;font-variant-numeric:tabular-nums;-webkit-font-smoothing:antialiased}
+  @keyframes bluepulse{0%,100%{box-shadow:0 0 0 0 rgba(74,158,255,.28)}50%{box-shadow:0 0 0 5px rgba(74,158,255,0)}}
+  .rrow:hover{background:rgba(74,158,255,.07)!important}
+  .rbtn:hover{filter:brightness(1.08)}
+  .rbtn:active{transform:translateY(1px)}
+</style>
+</helmet>
+
+<div style="padding:52px 56px 90px;min-width:2180px">
+  <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:34px">
+    <div style="font-size:12px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:#5e7a9c">Historique · panneau de suivi d'un devis</div>
+    <h1 style="margin:0;font-size:30px;font-weight:700;letter-spacing:-.01em;color:#e8f0fb">Refonte de la timeline des devis</h1>
+    <p style="margin:4px 0 0;font-size:14px;line-height:1.55;color:#8fa8c9;max-width:820px">Trois directions, plus douces et plus fonctionnelles. Le parcours suit strictement les étapes réelles d'un devis. <strong style="color:#cfe3ff;font-weight:600">Clique une étape active pour la valider</strong> · <strong style="color:#cfe3ff;font-weight:600">↺ pour revenir en arrière</strong> en cas de fausse manœuvre. Les actions n'apparaissent que quand la balle est dans le bon camp.</p>
+  </div>
+
+  <div style="display:flex;gap:36px;flex-wrap:wrap;align-items:flex-start">
+
+    <!-- ============ 1a — Parcours guidé (rail vertical) ============ -->
+    <section id="1a" style="display:flex;flex-direction:column;gap:14px;width:660px">
+      <div style="display:flex;align-items:center;gap:10px">
+        <span style="font-size:12px;font-weight:700;color:#0a1628;background:#8fa8c9;border-radius:6px;padding:3px 9px">1a</span>
+        <span style="font-size:14px;font-weight:600;color:#cfe3ff">Parcours guidé — rail vertical</span>
+      </div>
+      <p style="margin:0;font-size:12.5px;line-height:1.5;color:#7c96b8">Une colonne reliée. L'étape en cours porte sa seule action, le reste reste calme.</p>
+
+      <div style="background:#0f2240;border:1px solid #1e3f6b;border-radius:16px;overflow:hidden;box-shadow:0 10px 40px rgba(0,0,0,.35)">
+        <div style="display:flex;align-items:center;gap:14px;padding:16px 20px;background:#132a4d;border-bottom:1px solid #1e3f6b">
+          <span style="font-size:12px;color:#8fa8c9;font-weight:500">06/07/2026</span>
+          <span style="font-size:15px;font-weight:700;color:#e8f0fb">Anne Fouillet</span>
+          <span style="flex:1"></span>
+          <span style="font-size:12px;color:#8fa8c9">DEV-202607-001</span>
+          <span style="font-size:10px;font-weight:600;color:#5eead4;background:rgba(94,234,212,.1);border:1px solid rgba(94,234,212,.3);border-radius:5px;padding:2px 6px">rev0</span>
+          <span style="font-size:16px;font-weight:700;color:#e8f0fb;margin-left:4px">120,00 €</span>
+        </div>
+
+        <div style="padding:14px 20px 6px;position:relative">
+          <div style="position:absolute;left:31px;top:34px;bottom:60px;width:2px;background:#1e3f6b;border-radius:2px"></div>
+          <sc-for list="{{ rowsA }}" as="row" hint-placeholder-count="5">
+            <div class="rrow" style="{{ row.railWrap }}" onClick="{{ row.onRowClick }}">
+              <div style="{{ row.dotStyle }}">{{ row.dotInner }}</div>
+              <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px">
+                <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+                  <span style="{{ row.labelStyle }}">{{ row.label }}</span>
+                  <sc-if value="{{ row.facture }}" hint-placeholder-val=""><span style="display:inline-flex;align-items:center;gap:4px;font-size:10.5px;font-weight:600;color:#7c96b8;background:#122a4d;border:1px solid #1e3f6b;border-radius:5px;padding:2px 7px">{{ row.facIco }}{{ row.facRef }}{{ row.facSent }}</span></sc-if>
+                </div>
+                <sc-if value="{{ row.sub }}" hint-placeholder-val=""><span style="font-size:11.5px;color:#7c96b8">{{ row.sub }}</span></sc-if>
+              </div>
+              <sc-if value="{{ row.amount }}" hint-placeholder-val=""><span style="{{ row.amountStyle }}">{{ row.amount }}</span></sc-if>
+              <sc-if value="{{ row.stateLabel }}" hint-placeholder-val=""><span style="{{ row.stateStyle }}">{{ row.stateLabel }}</span></sc-if>
+              <div style="display:flex;align-items:center;gap:7px" onClick="{{ row.stopClick }}">
+                <sc-for list="{{ row.actions }}" as="act" hint-placeholder-count="0">
+                  <button type="button" class="rbtn" style="{{ act.style }}" onClick="{{ act.onClick }}">{{ act.icoEl }}{{ act.label }}</button>
+                </sc-for>
+                <sc-if value="{{ row.showBack }}" hint-placeholder-val=""><button type="button" class="rbtn" title="Revenir à l'étape précédente" style="{{ backBtnStyle }}" onClick="{{ row.onBack }}">{{ backIco }}</button></sc-if>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+
+        <div style="display:flex;align-items:center;gap:10px;padding:12px 20px 18px;border-top:1px solid #16304f">
+          <button type="button" class="rbtn" style="{{ docBtnStyle }}">{{ docIco }}Devis PDF</button>
+          <span style="flex:1"></span>
+          <button type="button" class="rbtn" title="Plus d'actions" style="{{ moreBtnStyle }}">{{ moreIco }}</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 1b — Progression + échéancier ============ -->
+    <section id="1b" style="display:flex;flex-direction:column;gap:14px;width:660px">
+      <div style="display:flex;align-items:center;gap:10px">
+        <span style="font-size:12px;font-weight:700;color:#0a1628;background:#8fa8c9;border-radius:6px;padding:3px 9px">1b</span>
+        <span style="font-size:14px;font-weight:600;color:#cfe3ff">Progression + échéancier</span>
+      </div>
+      <p style="margin:0;font-size:12.5px;line-height:1.5;color:#7c96b8">Une frise de progression, une seule prochaine action mise en avant, puis l'échéancier détaillé.</p>
+
+      <div style="background:#0f2240;border:1px solid #1e3f6b;border-radius:16px;overflow:hidden;box-shadow:0 10px 40px rgba(0,0,0,.35)">
+        <div style="display:flex;align-items:center;gap:14px;padding:16px 20px;background:#132a4d;border-bottom:1px solid #1e3f6b">
+          <span style="font-size:12px;color:#8fa8c9;font-weight:500">06/07/2026</span>
+          <span style="font-size:15px;font-weight:700;color:#e8f0fb">Anne Fouillet</span>
+          <span style="flex:1"></span>
+          <span style="font-size:12px;color:#8fa8c9">DEV-202607-001</span>
+          <span style="font-size:10px;font-weight:600;color:#5eead4;background:rgba(94,234,212,.1);border:1px solid rgba(94,234,212,.3);border-radius:5px;padding:2px 6px">rev0</span>
+          <span style="font-size:16px;font-weight:700;color:#e8f0fb;margin-left:4px">120,00 €</span>
+        </div>
+
+        <div style="padding:24px 24px 8px;position:relative">
+          <div style="position:absolute;left:44px;right:44px;top:34px;height:2px;background:#1e3f6b;border-radius:2px"></div>
+          <div style="position:absolute;left:44px;top:34px;height:2px;background:#22c55e;border-radius:2px;transition:width .3s;width:{{ stepperPct }}"></div>
+          <div style="display:flex;justify-content:space-between;position:relative">
+            <sc-for list="{{ stepperB }}" as="node" hint-placeholder-count="5">
+              <div style="display:flex;flex-direction:column;align-items:center;gap:8px;flex:1;min-width:0">
+                <div style="{{ node.dotStyle }}">{{ node.dotInner }}</div>
+                <span style="{{ node.labelStyle }}">{{ node.label }}</span>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+
+        <div style="margin:14px 20px 4px;padding:14px 16px;border-radius:12px;display:flex;align-items:center;gap:12px;{{ statusBstyle }}">
+          <span style="display:inline-flex;flex:0 0 auto">{{ statusBico }}</span>
+          <span style="flex:1;font-size:13.5px;font-weight:600;line-height:1.4">{{ statusBtext }}</span>
+          <div style="display:flex;align-items:center;gap:8px;flex:0 0 auto">
+            <sc-for list="{{ statusBactions }}" as="act" hint-placeholder-count="1">
+              <button type="button" class="rbtn" style="{{ act.style }}" onClick="{{ act.onClick }}">{{ act.icoEl }}{{ act.label }}</button>
+            </sc-for>
+          </div>
+        </div>
+
+        <div style="padding:8px 20px 6px;display:flex;flex-direction:column;gap:7px">
+          <div style="font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:#5e7a9c;padding:0 2px 2px">Échéancier</div>
+          <sc-for list="{{ rowsB }}" as="row" hint-placeholder-count="2">
+            <div class="rrow" style="{{ row.cardStyle }}" onClick="{{ row.onRowClick }}">
+              <div style="{{ row.dotStyle }}">{{ row.dotInner }}</div>
+              <div style="flex:1;min-width:0;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+                <span style="{{ row.labelStyle }}">{{ row.label }}</span>
+                <sc-if value="{{ row.facture }}" hint-placeholder-val=""><span style="display:inline-flex;align-items:center;gap:4px;font-size:10.5px;font-weight:600;color:#7c96b8;background:#122a4d;border:1px solid #1e3f6b;border-radius:5px;padding:2px 7px">{{ row.facIco }}{{ row.facRef }}{{ row.facSent }}</span></sc-if>
+              </div>
+              <span style="{{ row.amountStyle }}">{{ row.amount }}</span>
+              <span style="{{ row.stateStyle }}">{{ row.stateLabel }}</span>
+              <sc-if value="{{ row.showBack }}" hint-placeholder-val=""><button type="button" class="rbtn" title="Revenir en arrière" style="{{ backBtnStyle }}" onClick="{{ row.onBack }}">{{ backIco }}</button></sc-if>
+            </div>
+          </sc-for>
+        </div>
+
+        <div style="display:flex;align-items:center;gap:10px;padding:14px 20px 18px;border-top:1px solid #16304f;margin-top:8px">
+          <button type="button" class="rbtn" style="{{ docBtnStyle }}">{{ docIco }}Devis PDF</button>
+          <span style="flex:1"></span>
+          <button type="button" class="rbtn" title="Plus d'actions" style="{{ moreBtnStyle }}">{{ moreIco }}</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 1c — Liste épurée ============ -->
+    <section id="1c" style="display:flex;flex-direction:column;gap:14px;width:660px">
+      <div style="display:flex;align-items:center;gap:10px">
+        <span style="font-size:12px;font-weight:700;color:#0a1628;background:#8fa8c9;border-radius:6px;padding:3px 9px">1c</span>
+        <span style="font-size:14px;font-weight:600;color:#cfe3ff">Liste épurée</span>
+      </div>
+      <p style="margin:0;font-size:12.5px;line-height:1.5;color:#7c96b8">Le plus sobre. Barre d'encaissement dans l'entête, lignes plates avec pastille d'état.</p>
+
+      <div style="background:#0f2240;border:1px solid #1e3f6b;border-radius:16px;overflow:hidden;box-shadow:0 10px 40px rgba(0,0,0,.35)">
+        <div style="padding:16px 20px 14px;background:#132a4d;border-bottom:1px solid #1e3f6b;display:flex;flex-direction:column;gap:12px">
+          <div style="display:flex;align-items:center;gap:14px">
+            <span style="font-size:12px;color:#8fa8c9;font-weight:500">06/07/2026</span>
+            <span style="font-size:15px;font-weight:700;color:#e8f0fb">Anne Fouillet</span>
+            <span style="flex:1"></span>
+            <span style="font-size:12px;color:#8fa8c9">DEV-202607-001</span>
+            <span style="font-size:10px;font-weight:600;color:#5eead4;background:rgba(94,234,212,.1);border:1px solid rgba(94,234,212,.3);border-radius:5px;padding:2px 6px">rev0</span>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:6px">
+            <div style="display:flex;align-items:baseline;justify-content:space-between">
+              <span style="font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:#8fa8c9">Encaissé</span>
+              <span style="font-size:13px;font-weight:600;color:#cfe3ff"><strong style="color:#4ade80">{{ paidLabel }}</strong> / 120,00 €</span>
+            </div>
+            <div style="height:7px;background:#122a4d;border-radius:5px;overflow:hidden;border:1px solid #1e3f6b">
+              <div style="height:100%;background:#22c55e;border-radius:5px;transition:width .35s;width:{{ paidPct }}"></div>
+            </div>
+          </div>
+        </div>
+
+        <div style="padding:10px 14px 6px;display:flex;flex-direction:column;gap:4px">
+          <sc-for list="{{ rowsC }}" as="row" hint-placeholder-count="5">
+            <div class="rrow" style="{{ row.cardStyle }}" onClick="{{ row.onRowClick }}">
+              <div style="{{ row.pillStyle }}"></div>
+              <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px">
+                <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+                  <span style="{{ row.labelStyle }}">{{ row.label }}</span>
+                  <sc-if value="{{ row.facture }}" hint-placeholder-val=""><span style="display:inline-flex;align-items:center;gap:4px;font-size:10.5px;font-weight:600;color:#7c96b8;background:#122a4d;border:1px solid #1e3f6b;border-radius:5px;padding:2px 7px">{{ row.facIco }}{{ row.facRef }}{{ row.facSent }}</span></sc-if>
+                </div>
+                <sc-if value="{{ row.sub }}" hint-placeholder-val=""><span style="font-size:11.5px;color:#7c96b8">{{ row.sub }}</span></sc-if>
+              </div>
+              <sc-if value="{{ row.amount }}" hint-placeholder-val=""><span style="{{ row.amountStyle }}">{{ row.amount }}</span></sc-if>
+              <sc-if value="{{ row.stateLabel }}" hint-placeholder-val=""><span style="{{ row.stateStyle }}">{{ row.stateLabel }}</span></sc-if>
+              <div style="display:flex;align-items:center;gap:7px" onClick="{{ row.stopClick }}">
+                <sc-for list="{{ row.actions }}" as="act" hint-placeholder-count="0">
+                  <button type="button" class="rbtn" style="{{ act.style }}" onClick="{{ act.onClick }}">{{ act.icoEl }}{{ act.label }}</button>
+                </sc-for>
+                <sc-if value="{{ row.showBack }}" hint-placeholder-val=""><button type="button" class="rbtn" title="Revenir à l'étape précédente" style="{{ backBtnStyle }}" onClick="{{ row.onBack }}">{{ backIco }}</button></sc-if>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+
+        <div style="display:flex;align-items:center;gap:10px;padding:12px 20px 18px;border-top:1px solid #16304f">
+          <button type="button" class="rbtn" style="{{ docBtnStyle }}">{{ docIco }}Devis PDF</button>
+          <span style="flex:1"></span>
+          <button type="button" class="rbtn" title="Plus d'actions" style="{{ moreBtnStyle }}">{{ moreIco }}</button>
+        </div>
+      </div>
+    </section>
+
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  // p = nombre d'étapes franchies. p===1 : devis envoyé, en attente de réponse client.
+  // p===STEPS.length : dossier soldé. r* : devis refusé (bloque à l'acceptation).
+  state = { pA: 1, pB: 1, pC: 1, rA: false, rB: false, rC: false };
+
+  get STEPS() {
+    return [
+      { key:'sent',      kind:'milestone', label:'Devis envoyé',        sub:'Envoyé le 06/07/2026' },
+      { key:'accepted',  kind:'decision',  label:'Accepté par le client' },
+      { key:'acompte',   kind:'payment',   label:'Acompte (30%)',       amount:36, facRef:'FA-202607-001' },
+      { key:'livraison', kind:'milestone', label:'Prestation livrée' },
+      { key:'solde',     kind:'payment',   label:'Solde',               amount:84, facRef:'FS-202607-001' },
+    ];
+  }
+
+  money(n){ return n.toLocaleString('fr-FR',{minimumFractionDigits:2,maximumFractionDigits:2}) + '\u00A0€'; }
+
+  // ---- icônes SVG (React) ----
+  _svg(children, o){ o=o||{}; return React.createElement('svg',{width:o.size||14,height:o.size||14,viewBox:'0 0 24 24',fill:o.fill||'none',stroke:o.color||'currentColor',strokeWidth:o.sw==null?2:o.sw,strokeLinecap:'round',strokeLinejoin:'round',style:{flex:'0 0 auto',display:'block'}}, children); }
+  _p(d,k){ return React.createElement('path',{d:d,key:k||d}); }
+  _c(x,y,r,k){ return React.createElement('circle',{cx:x,cy:y,r:r,key:k||(x+'-'+y)}); }
+  ico(name,size,color){
+    const s=size, cc=color;
+    switch(name){
+      case 'check': return this._svg([this._p('M20 6 9 17l-5-5')],{size:s,color:cc});
+      case 'send':  return this._svg([this._p('m22 2-7 20-4-9-9-4Z','a'),this._p('M22 2 11 13','b')],{size:s,color:cc});
+      case 'x':     return this._svg([this._p('M18 6 6 18','a'),this._p('M6 6l12 12','b')],{size:s,color:cc});
+      case 'euro':  return this._svg([this._p('M15 6a5 5 0 1 0 0 12','a'),this._p('M6 10h6','b'),this._p('M6 14h5','c')],{size:s,color:cc});
+      case 'truck': return this._svg([this._p('M3 6h11v9H3z','a'),this._p('M14 9h4l3 3v3h-7','b'),this._c(7.5,18,1.6,'c'),this._c(17,18,1.6,'d')],{size:s,color:cc});
+      case 'file':  return this._svg([this._p('M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z','a'),this._p('M14 2v6h6','b')],{size:s,color:cc});
+      case 'undo':  return this._svg([this._p('M3 8v5h5','a'),this._p('M3.5 13a8 8 0 1 0 1.9-8.3L3 8','b')],{size:s,color:cc});
+      case 'clock': return this._svg([this._c(12,12,9,'a'),this._p('M12 7v5l3 2','b')],{size:s,color:cc});
+      case 'more':  return this._svg([this._c(5,12,1.6,'a'),this._c(12,12,1.6,'b'),this._c(19,12,1.6,'c')],{size:s||16,color:cc,fill:cc,sw:0});
+      case 'party': return this._svg([this._p('M20 12l-8 8-8-8a5 5 0 0 1 7-7l1 1 1-1a5 5 0 0 1 7 7Z')],{size:s,color:cc});
+    }
+  }
+
+  // ---- styles boutons ----
+  get BTN(){ return {
+    green:'background:#16a34a;color:#fff;border:none;border-radius:9px;padding:7px 13px;font-size:12.5px;font-weight:600;display:inline-flex;align-items:center;gap:6px;cursor:pointer;transition:filter .15s,transform .05s',
+    blue:'background:#2f6fd6;color:#fff;border:none;border-radius:9px;padding:7px 13px;font-size:12.5px;font-weight:600;display:inline-flex;align-items:center;gap:6px;cursor:pointer;transition:filter .15s,transform .05s',
+    ghost:'background:transparent;color:#f0789a;border:1px solid rgba(240,120,154,.4);border-radius:9px;padding:6px 12px;font-size:12.5px;font-weight:600;display:inline-flex;align-items:center;gap:6px;cursor:pointer;transition:filter .15s,transform .05s',
+    subtle:'background:#122a4d;color:#cfe3ff;border:1px solid #23446e;border-radius:9px;padding:6px 12px;font-size:12.5px;font-weight:600;display:inline-flex;align-items:center;gap:6px;cursor:pointer;transition:filter .15s,transform .05s',
+  };}
+  get backBtnStyle(){ return 'width:30px;height:30px;display:inline-flex;align-items:center;justify-content:center;background:transparent;color:#7c96b8;border:1px solid #23446e;border-radius:8px;cursor:pointer;flex:0 0 auto;transition:filter .15s,transform .05s'; }
+  get docBtnStyle(){ return this.BTN.subtle; }
+  get moreBtnStyle(){ return 'width:34px;height:34px;display:inline-flex;align-items:center;justify-content:center;background:transparent;color:#8fa8c9;border:1px solid #23446e;border-radius:9px;cursor:pointer;transition:filter .15s,transform .05s'; }
+
+  // ---- transitions d'état ----
+  advance(dir){ const k='p'+dir; this.setState(s=>({ [k]: Math.min(s[k]+1, this.STEPS.length) })); }
+  back(dir){ const k='p'+dir, r='r'+dir; this.setState(s=> s[r] ? ({ [r]:false }) : ({ [k]: Math.max(s[k]-1, 1) })); }
+  accept(dir){ this.setState({ ['p'+dir]:2, ['r'+dir]:false }); }
+  refuse(dir){ this.setState({ ['r'+dir]:true }); }
+
+  stat(i,p,refused){
+    if(refused && i===1) return 'refused';
+    if(refused && i>1) return 'blocked';
+    if(i<p) return 'done';
+    if(i===p) return 'active';
+    return 'upcoming';
+  }
+
+  // pastille ronde (rail / échéancier)
+  dot(status,size){
+    size=size||24; const half=size/2;
+    const base='width:'+size+'px;height:'+size+'px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex:0 0 auto;position:relative;z-index:1;';
+    if(status==='done')    return [base+'background:#16a34a;border:none', this.ico('check',size*0.55,'#fff')];
+    if(status==='active')  return [base+'background:#0f2240;border:2px solid #4a9eff;animation:bluepulse 2.2s ease-in-out infinite', React.createElement('span',{key:'d',style:{width:size*0.34+'px',height:size*0.34+'px',borderRadius:'50%',background:'#4a9eff'}})];
+    if(status==='refused') return [base+'background:#dc2626;border:none', this.ico('x',size*0.55,'#fff')];
+    return [base+'background:#0f2240;border:2px solid #24406a', ''];
+  }
+
+  labelStyleFor(status){
+    if(status==='active')  return 'font-size:14px;font-weight:700;color:#e8f0fb';
+    if(status==='done')    return 'font-size:14px;font-weight:600;color:#cfe3ff';
+    if(status==='refused') return 'font-size:14px;font-weight:700;color:#f0789a';
+    return 'font-size:14px;font-weight:500;color:#5e7a9c';
+  }
+  amountStyleFor(status){
+    const b='font-size:13.5px;font-weight:700;text-align:right;flex:0 0 auto;';
+    if(status==='done')   return b+'color:#4ade80';
+    if(status==='active') return b+'color:#e8f0fb';
+    return b+'color:#5e7a9c';
+  }
+  stateChip(status){
+    const b='font-size:11px;font-weight:600;padding:3px 9px;border-radius:6px;flex:0 0 auto;';
+    if(status==='done')   return { label:'Payé', style:b+'color:#4ade80;background:rgba(34,197,94,.12)' };
+    if(status==='active') return { label:'À encaisser', style:b+'color:#fbbf24;background:rgba(245,158,11,.14)' };
+    return { label:'En attente', style:b+'color:#5e7a9c;background:transparent' };
+  }
+
+  // construit les actions contextuelles d'une étape active
+  activeActions(step,i,dir){
+    const B=this.BTN;
+    if(i===1) return [ // décision : la balle est dans le camp du client
+      { style:B.subtle, icoEl:this.ico('send',13), label:'Relancer', onClick:()=>{} },
+      { style:B.green,  icoEl:this.ico('check',14), label:'Accepté', onClick:()=>this.accept(dir) },
+      { style:B.ghost,  icoEl:this.ico('x',13),     label:'Refusé',  onClick:()=>this.refuse(dir) },
+    ];
+    if(step.kind==='payment') return [ { style:B.blue, icoEl:this.ico('euro',14), label:'Encaisser', onClick:()=>this.advance(dir) } ];
+    if(step.key==='livraison') return [ { style:B.blue, icoEl:this.ico('truck',14), label:'Marquer livré', onClick:()=>this.advance(dir) } ];
+    return [];
+  }
+
+  buildRows(dir, variant){
+    const p=this.state['p'+dir], refused=this.state['r'+dir];
+    const stop=(e)=>{ if(e&&e.stopPropagation) e.stopPropagation(); };
+    return this.STEPS.map((step,i)=>{
+      const status=this.stat(i,p,refused);
+      const [dotStyle,dotInner]=this.dot(status, variant==='rail'?24:22);
+      const isPay=step.kind==='payment';
+      const showBack = (refused && i===1) || (!refused && i===p-1 && p>=2);
+      const canClick = status==='active' && !refused;
+      const rowClick = !canClick ? null : (i===1 ? ()=>this.accept(dir) : ()=>this.advance(dir));
+      const chip = isPay ? this.stateChip(status) : null;
+      let sub = '';
+      if(step.key==='sent') sub = step.sub;
+      else if(status==='active' && i===1) sub = 'La balle est dans le camp du client';
+      const railWrap='display:flex;align-items:center;gap:14px;padding:11px 8px;border-radius:11px;position:relative;'+(canClick?'cursor:pointer;background:rgba(74,158,255,.06);':'')+'transition:background .15s';
+      const cardStyle='display:flex;align-items:center;gap:12px;padding:11px 12px;border-radius:11px;border:1px solid '+(status==='active'?'rgba(74,158,255,.28)':'transparent')+';'+(status==='active'?'background:rgba(74,158,255,.06);':'')+(canClick?'cursor:pointer;':'')+'transition:background .15s';
+      return {
+        railWrap, cardStyle, onRowClick: rowClick, stopClick: stop,
+        dotStyle, dotInner,
+        label: step.label, labelStyle: this.labelStyleFor(status),
+        sub,
+        facture: isPay && (status==='done'||status==='active'),
+        facIco: this.ico('file',12,'#7c96b8'), facRef: step.facRef||'', facSent: status==='done'?' · envoyée':'',
+        amount: isPay ? this.money(step.amount) : '', amountStyle: this.amountStyleFor(status),
+        stateLabel: chip?chip.label:'', stateStyle: chip?chip.style:'',
+        pillStyle: 'width:4px;height:36px;border-radius:3px;flex:0 0 auto;background:'+(status==='done'?'#22c55e':status==='active'?'#4a9eff':status==='refused'?'#dc2626':'#24406a'),
+        actions: canClick ? this.activeActions(step,i,dir) : [],
+        showBack, onBack: ()=>this.back(dir),
+      };
+    });
+  }
+
+  // ---- Direction B : stepper + bannière + échéancier ----
+  stepperB(){
+    const p=this.state.pB, refused=this.state.rB;
+    const nodes=['Envoyé','Accepté','Acompte','Livré','Soldé'];
+    return nodes.map((label,k)=>{
+      const status=this.stat(k,p,refused);
+      const [dotStyle,dotInner]=this.dot(status,26);
+      const labelStyle='font-size:11px;font-weight:'+(status==='active'?'700':'500')+';text-align:center;color:'+(status==='active'?'#e8f0fb':status==='done'?'#8fbfa0':status==='refused'?'#f0789a':'#5e7a9c');
+      return { dotStyle, dotInner, label, labelStyle };
+    });
+  }
+  statusB(){
+    const p=this.state.pB, refused=this.state.rB, B=this.BTN;
+    if(refused) return {
+      style:'background:rgba(220,38,38,.09);border:1px solid rgba(240,120,154,.3);color:#f0b4c4',
+      ico:this.ico('x',18,'#f0789a'), text:'Devis refusé par le client.',
+      actions:[ { style:this.backBtnStyle+';width:auto;padding:6px 12px;gap:6px;font-size:12.5px;font-weight:600', icoEl:this.ico('undo',13), label:'Annuler', onClick:()=>this.back('B') } ],
+    };
+    if(p>=this.STEPS.length) return {
+      style:'background:rgba(34,197,94,.09);border:1px solid rgba(34,197,94,.3);color:#a7e8c0',
+      ico:this.ico('party',18,'#4ade80'), text:'Devis soldé — dossier clôturé.', actions:[],
+    };
+    if(p===1) return {
+      style:'background:rgba(74,158,255,.08);border:1px solid rgba(74,158,255,.28);color:#cfe3ff',
+      ico:this.ico('clock',18,'#4a9eff'), text:'En attente de réponse du client.',
+      actions:[
+        { style:B.subtle, icoEl:this.ico('send',13), label:'Relancer', onClick:()=>{} },
+        { style:B.green,  icoEl:this.ico('check',14), label:'Accepté', onClick:()=>this.accept('B') },
+        { style:B.ghost,  icoEl:this.ico('x',13),     label:'Refusé',  onClick:()=>this.refuse('B') },
+      ],
+    };
+    const step=this.STEPS[p];
+    let text, act;
+    if(step.kind==='payment'){ text='À faire : encaisser '+(step.key==='solde'?'le solde':"l'acompte")+' ('+this.money(step.amount)+').'; act={ style:B.blue, icoEl:this.ico('euro',14), label:'Encaisser', onClick:()=>this.advance('B') }; }
+    else { text='À faire : marquer la prestation livrée.'; act={ style:B.blue, icoEl:this.ico('truck',14), label:'Marquer livré', onClick:()=>this.advance('B') }; }
+    return { style:'background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.28);color:#f5d9a8', ico:this.ico('clock',18,'#fbbf24'), text, actions:[act] };
+  }
+  rowsB(){
+    // échéancier = seulement les étapes de paiement
+    const p=this.state.pB, refused=this.state.rB, stop=(e)=>{ if(e&&e.stopPropagation) e.stopPropagation(); };
+    return this.STEPS.map((step,i)=>({step,i})).filter(x=>x.step.kind==='payment').map(({step,i})=>{
+      const status=this.stat(i,p,refused);
+      const [dotStyle,dotInner]=this.dot(status,22);
+      const chip=this.stateChip(status);
+      const canClick=status==='active'&&!refused;
+      const showBack=!refused && i===p-1 && p>=2;
+      return {
+        cardStyle:'display:flex;align-items:center;gap:12px;padding:11px 12px;border-radius:11px;border:1px solid '+(status==='active'?'rgba(74,158,255,.28)':'#16304f')+';background:'+(status==='active'?'rgba(74,158,255,.06)':'#0c1e3a')+';'+(canClick?'cursor:pointer;':'')+'transition:background .15s',
+        onRowClick: canClick?()=>this.advance('B'):null, stopClick:stop,
+        dotStyle, dotInner,
+        label:step.label, labelStyle:this.labelStyleFor(status),
+        facture:(status==='done'||status==='active'), facIco:this.ico('file',12,'#7c96b8'), facRef:step.facRef, facSent:status==='done'?' · envoyée':'',
+        amount:this.money(step.amount), amountStyle:this.amountStyleFor(status),
+        stateLabel:chip.label, stateStyle:chip.style,
+        showBack, onBack:()=>this.back('B'),
+      };
+    });
+  }
+
+  renderVals(){
+    const p=this.state.pB;
+    const nSteps=this.STEPS.length;
+    const paid=this.STEPS.filter((s,i)=>s.kind==='payment' && i<this.state.pC).reduce((a,s)=>a+s.amount,0);
+    return {
+      rowsA: this.buildRows('A','rail'),
+      rowsC: this.buildRows('C','list'),
+      rowsB: this.rowsB(),
+      stepperB: this.stepperB(),
+      stepperPct: 'calc((100% - 88px) * '+(Math.min(p,nSteps-1)/(nSteps-1))+')',
+      statusBstyle: this.statusB().style,
+      statusBico: this.statusB().ico,
+      statusBtext: this.statusB().text,
+      statusBactions: this.statusB().actions,
+      paidLabel: this.money(paid),
+      paidPct: Math.round(paid/120*100)+'%',
+      backBtnStyle: this.backBtnStyle, backIco: this.ico('undo',15,'#7c96b8'),
+      docBtnStyle: this.docBtnStyle, docIco: this.ico('file',13,'#cfe3ff'),
+      moreBtnStyle: this.moreBtnStyle, moreIco: this.ico('more',18,'#8fa8c9'),
+    };
+  }
+}
+</script>
+</body>
+</html>
