@@ -3794,6 +3794,7 @@ async function loadFromCloud(ownerUid) {
       const chainsMigrated = suiviMigrate();
       migrateClientNums();
       const phonesFixed = migratePhoneLeadingZero();
+      const livraisonFixed = migrateLivraisonOrpheline();
       // migrateLegacyReconstructedFlag() DÉSACTIVÉ : faux positifs sur les
       // devis legacy édités via « 💾 Enregistrer les modifications »
       // (suiviUpdateSnapshot), qui remplace snapshotHtml par le live (sans
@@ -3807,7 +3808,7 @@ async function loadFromCloud(ownerUid) {
       // migration re-tourne à chaque ouverture, et plus problématique : le
       // live sync subscribeWorkspaceData écraserait nos changements à la
       // première update Firestore — voir ce site pour le miroir).
-      if (chainsMigrated || phonesFixed || cleanedUp) saveToCloud();
+      if (chainsMigrated || phonesFixed || cleanedUp || livraisonFixed) saveToCloud();
       // Adopte le timestamp cloud comme nouveau référentiel local (sinon
       // notre prochain save aurait un localCts plus ancien que le cloud
       // alors qu'on vient de tout merger).
@@ -4055,11 +4056,14 @@ function subscribeWorkspaceData(ownerUid) {
     // où le boot loadFromCloud n'a pas suffi (ex : data injectée depuis un
     // autre device ou ancienne corruption).
     const phonesFixedLive = migratePhoneLeadingZero();
+    // Migration livraison orpheline (idempotente) — même raison : rattraper
+    // un snapshot cloud non migré pour ne pas ré-injecter le jalon retiré.
+    const livraisonFixedLive = migrateLivraisonOrpheline();
     // Adopte le timestamp cloud comme nouveau référentiel local (sinon
     // notre prochain save aurait un localCts plus ancien que le cloud).
     if (cloudCts > 0) S._localChangeTs = cloudCts;
     localStorage.setItem(SK, JSON.stringify(S));
-    if (chainsMigratedLive || phonesFixedLive) saveToCloud();
+    if (chainsMigratedLive || phonesFixedLive || livraisonFixedLive) saveToCloud();
     // Préserve le focus de l'input courant pendant le re-render
     const active = document.activeElement;
     const id = active && active.id;
@@ -7693,9 +7697,10 @@ function isDevisAuNoir(devisId) {
 // - Échéance d'ACOMPTE (non-solde) : émissible quand SON échéance est encaissée
 //   (statut "termine") — l'acompte est versé, la facture le constate.
 // - Échéance de SOLDE (dernière) : émissible dès que TOUS les acomptes sont
-//   encaissés, le devis accepté ET la prestation marquée LIVRÉE (dv.livreeTs) —
-//   la facture de solde s'émet à la livraison, le client paie ensuite. Sans le
-//   jalon livraison, le bouton solde n'apparaît pas (parcours guidé séquentiel).
+//   encaissés ET FACTURÉS, le devis accepté ET la prestation marquée LIVRÉE
+//   (dv.livreeTs) — la facture de solde s'émet à la livraison, le client paie
+//   ensuite. La facture de solde récapitule les factures d'acompte : elle ne
+//   peut pas exister avant elles (chaîne amont complète, pas juste les paiements).
 // Bloque l'émission si le devis est au noir (cf isDevisAuNoir).
 function isFactureApplicable(devisId, ech) {
   if (isDevisAuNoir(devisId)) return false;
@@ -7703,7 +7708,7 @@ function isFactureApplicable(devisId, ech) {
   if (!list.length || !ech) return false;
   if (ech.isSolde) {
     const accepted = ech.statut === "attente" || ech.statut === "termine";
-    const acomptesOk = list.filter(e => !e.isSolde).every(e => e.statut === "termine");
+    const acomptesOk = list.filter(e => !e.isSolde).every(e => e.statut === "termine" && findFactureForEch(devisId, e));
     const dv = S.suivi.devis && S.suivi.devis[devisId];
     const livree = !!(dv && dv.livreeTs);
     return accepted && acomptesOk && livree;
@@ -9283,6 +9288,10 @@ const APP_CHANGELOG = [
       {
         h: "Montants visibles dans les étapes d'attente",
         b: "« En attente du versement de l'acompte » et « En attente du paiement du solde » affichent désormais le montant attendu. Le bouton « Prestation livrée » a déménagé dans le bandeau, à son étape exacte."
+      },
+      {
+        h: "L'ordre du parcours est maintenant verrouillé",
+        b: "Les échéances s'encaissent dans l'ordre, le solde ne peut plus être pointé « reçu » avant la livraison et l'émission de la facture de solde, et les retours en arrière se font dans l'ordre inverse. Annuler le paiement d'un acompte fait proprement reculer tout le parcours (factures liées ET jalon livraison). Fini les états incohérents avec plusieurs boutons « Facturer » en même temps."
       }
     ]
   },
@@ -10202,7 +10211,7 @@ function rViewFactureModal() {
     // Pas applicable et pas encore créée
     const reason = type === "acompte"
       ? "Cette facture d'acompte ne peut pas encore être émise : l'échéance correspondante n'est pas encore encaissée (« Soldée ») dans le Suivi."
-      : "Cette facture de solde ne peut pas encore être émise : le devis doit être accepté et tous les acomptes encaissés (« Soldés ») dans le Suivi. Le solde lui-même n'a pas besoin d'être payé.";
+      : "Cette facture de solde ne peut pas encore être émise : le devis doit être accepté, tous les acomptes encaissés ET facturés, et la prestation marquée « Livrée ». Le solde lui-même n'a pas besoin d'être payé — il se facture avant l'encaissement.";
     return `<div class="modal-overlay" onclick="if(event.target===this)viewFactureClose()">
       <div class="modal-card">
         <div class="modal-title">${type === "acompte" ? "Facture d'acompte" : "Facture de solde"} — pas encore émissible</div>
@@ -11611,6 +11620,19 @@ function facturesToRemoveOnUnpay(devisId, entryId) {
   return res;
 }
 
+// ▼ rewindLivraisonOnUnpay — dé-payer un ACOMPTE fait reculer le parcours en
+// amont du jalon livraison : on retire dv.livreeTs (la facture de solde liée
+// est déjà retirée via facturesToRemoveOnUnpay). Sans ce rewind, le jalon
+// survivait au retour en arrière et laissait la facture de solde émissible
+// avant même la facture d'acompte (état incohérent). Sans effet sur le solde :
+// dé-payer le solde ne remet pas en cause la livraison.
+function rewindLivraisonOnUnpay(devisId, entryId) {
+  const ech = devisEcheances(devisId).find(x => x.entry && x.entry.id === entryId);
+  if (!ech || ech.isSolde) return;
+  const dv = S.suivi.devis && S.suivi.devis[devisId];
+  if (dv && dv.livreeTs) delete dv.livreeTs;
+}
+
 // ▼ confirmRemoveFactures — confirm partagé avant de retirer des factures liées.
 async function confirmRemoveFactures(list, actionLabel) {
   if (!list || !list.length) return true;
@@ -11626,6 +11648,17 @@ async function confirmRemoveFactures(list, actionLabel) {
 // Débloque la facture de solde (facture à la livraison). Champ additif sur le
 // devis (absent = non livrée), pas de migration.
 window.suiviMarkLivree = function(devisId) {
+  // Garde-fou d'ordre : la livraison vient après l'encaissement (et la
+  // facturation, sauf devis au noir) de tous les acomptes. La fonction est
+  // exposée window → elle valide elle-même, pas seulement l'UI qui l'appelle.
+  const noir = isDevisAuNoir(devisId);
+  const acomptes = devisEcheances(devisId).filter(e => !e.isSolde);
+  const ready = acomptes.every(e => e.statut === "termine" && (noir || findFactureForEch(devisId, e)));
+  if (!ready) {
+    uiAlert("Encaisse et facture d'abord tous les acomptes — le jalon livraison vient ensuite dans le parcours (suis le bandeau « Prochaine étape »).",
+      { title: "Pas encore l'étape livraison", kind: "warn" });
+    return;
+  }
   if (!S.suivi.devis) S.suivi.devis = {};
   if (!S.suivi.devis[devisId]) S.suivi.devis[devisId] = { ref: "" };
   S.suivi.devis[devisId].livreeTs = Date.now();
@@ -11645,6 +11678,30 @@ window.suiviUnmarkLivree = async function(devisId) {
   save();
   render();
 };
+
+// ▼ migrateLivraisonOrpheline — répare les jalons livraison incohérents :
+// retire dv.livreeTs si la chaîne amont n'est plus valide (devis non accepté,
+// ou acomptes pas tous encaissés + facturés) — états créés par les undo
+// d'avant le rewind livraison. Ne touche pas aux devis refusés/annulés
+// (états gelés, restaurables via statutAvant*). Idempotente, tourne au boot
+// + live sync ; retourne true si changement (→ saveToCloud requis, cf piège
+// migrations dans CLAUDE.md).
+function migrateLivraisonOrpheline() {
+  let changed = false;
+  const map = (S.suivi && S.suivi.devis) || {};
+  for (const id in map) {
+    const dv = map[id];
+    if (!dv || !dv.livreeTs) continue;
+    const ents = (S.suivi.entries || []).filter(e => e.devisId === id);
+    if (ents.some(e => { const s = entryStatut(e); return s === "refuse" || s === "annule"; })) continue;
+    const accepted = ents.some(e => { const s = entryStatut(e); return s === "attente" || s === "termine"; });
+    const noir = isDevisAuNoir(id);
+    const acomptes = devisEcheances(id).filter(e => !e.isSolde);
+    const ok = accepted && acomptes.every(e => e.statut === "termine" && (noir || findFactureForEch(id, e)));
+    if (!ok) { delete dv.livreeTs; changed = true; }
+  }
+  return changed;
+}
 
 // ▼ nextStepHint — guide « Prochaine étape » d'un devis. Retourne { text, kind, act? }
 // (kind : "action" | "wait" | "done" | "stop"), ou null si pas d'entries.
@@ -11666,7 +11723,9 @@ function nextStepHint(devisId) {
           act: { label: "Envoyer le devis", ico: "send", fn: `devisEnvoyerFlow('${devisId}')` } };
   }
   // Devis accepté : on avance échéance par échéance.
+  // Devis au noir : pas de factures (isDevisAuNoir) → les étapes facture sont sautées.
   const list = devisEcheances(devisId);
+  const noir = isDevisAuNoir(devisId);
   const acomptes = list.filter(e => !e.isSolde);
   const solde = list.find(e => e.isSolde);
   for (const ech of acomptes) {
@@ -11674,7 +11733,7 @@ function nextStepHint(devisId) {
       return { text: `En attente du versement de l'acompte « ${ech.label} » (${fmt(ech.montant)}).`, kind: "wait",
         act: { label: "Acompte reçu", ico: "check", fn: `suiviLigneTogglePaiement('${ech.entry.id}')` } };
     }
-    if (!findFactureForEch(devisId, ech)) {
+    if (!noir && !findFactureForEch(devisId, ech)) {
       return { text: `Acompte encaissé : envoie la facture d'acompte « ${ech.label} ».`, kind: "action",
         act: { label: "Émettre et envoyer", ico: "fileText", fn: `factureEmettreEnvoyerFlow('${devisId}','${ech.echId}')` } };
     }
@@ -11684,7 +11743,7 @@ function nextStepHint(devisId) {
       act: { label: "Prestation livrée", ico: "check", fn: `suiviMarkLivree('${devisId}')` } };
   }
   if (solde) {
-    if (!findFactureForEch(devisId, solde)) {
+    if (!noir && !findFactureForEch(devisId, solde)) {
       return { text: "Prestation livrée : envoie la facture de solde.", kind: "action",
         act: { label: "Émettre et envoyer", ico: "fileText", fn: `factureEmettreEnvoyerFlow('${devisId}','${solde.echId}')` } };
     }
@@ -12769,16 +12828,6 @@ function suiviDevisRefuser(devisId) {
 }
 window.suiviDevisRefuser = suiviDevisRefuser;
 
-function suiviLignePaye(id) {
-  const e = S.suivi.entries.find(x => x.id === id);
-  if (!e) return;
-  e.statut = "termine";
-  e.pmtTs = Date.now();
-  save();
-  render();
-}
-window.suiviLignePaye = suiviLignePaye;
-
 // ▼ suiviRestoreRevision — bascule la rev active de la chaîne vers devisId.
 // Non destructif : les versions plus récentes restent dans l'historique. Une
 // future révision (depuis cette rev restaurée) sautera au-dessus de leurs
@@ -12825,22 +12874,58 @@ window.suiviRestoreRevision = async function(devisId) {
   render();
 };
 
-// Toggle d'une ligne entre "attente" et "termine" (utilisé par le popover paiement
-// du tableau Suivi). Sans effet pour les lignes "envoye" / "refuse".
+// Toggle d'une ligne entre "attente" et "termine" (cartes de la timeline).
+// Sans effet pour les lignes "envoye" / "refuse".
+// Garde-fous d'ordre (parcours séquentiel, cf nextStepHint) :
+//  - encaissement : les échéances se pointent dans l'ordre ; le solde exige
+//    livraison + facture de solde émise (modèle légal : facture puis paiement).
+//  - annulation : ordre inverse (dernier paiement d'abord) ; dé-payer un
+//    acompte retire ses factures aval (FA + FS) ET le jalon livraison.
+// Les entries hors échéancier (frais/débours, ech=null) ne sont pas concernées.
 // pmtTs = timestamp du dernier paiement, utilisé par l'undo pour revenir
 // sur le paiement le plus récent en cas d'erreur.
 async function suiviLigneTogglePaiement(id) {
   const e = S.suivi.entries.find(x => x.id === id);
   if (!e) return;
   const s = entryStatut(e);
+  const list = devisEcheances(e.devisId);
+  const ech = list.find(x => x.entry && x.entry.id === e.id) || null;
   if (s === "attente") {
+    if (ech) {
+      const prevDue = list.find(x => !x.isSolde && x.index < ech.index && x.statut !== "termine");
+      if (prevDue) {
+        uiAlert(`Les échéances s'encaissent dans l'ordre : pointe d'abord « ${esc(prevDue.label)} » (${fmt(prevDue.montant)}).`,
+          { title: "Ordre des encaissements", kind: "warn" });
+        return;
+      }
+      if (ech.isSolde && !isDevisAuNoir(e.devisId)) {
+        const dv = S.suivi.devis && S.suivi.devis[e.devisId];
+        const livree = !!(dv && dv.livreeTs);
+        const fsEmise = !!findFactureForEch(e.devisId, ech);
+        if (!livree || !fsEmise) {
+          uiAlert("La facture de solde s'émet à la livraison, avant l'encaissement du solde.\n\nSuis le bandeau « Prochaine étape » : marque la prestation livrée, émets la facture de solde, puis pointe le solde comme reçu.",
+            { title: "Le solde se facture d'abord", kind: "warn" });
+          return;
+        }
+      }
+    }
     e.statut = "termine";
     e.pmtTs = Date.now();
   } else if (s === "termine") {
-    // Annuler un encaissement déjà facturé retire la facture correspondante.
+    if (ech) {
+      const laterPaid = [...list].reverse().find(x => x.index > ech.index && x.statut === "termine");
+      if (laterPaid) {
+        uiAlert(`Les retours en arrière se font dans l'ordre inverse : annule d'abord le paiement de « ${esc(laterPaid.label)} ».`,
+          { title: "Ordre des annulations", kind: "warn" });
+        return;
+      }
+    }
+    // Annuler un encaissement déjà facturé retire la facture correspondante,
+    // et le rewind d'un acompte retire aussi le jalon livraison (aval).
     const bad = facturesToRemoveOnUnpay(e.devisId, e.id);
     if (bad.length && !(await confirmRemoveFactures(bad, "Annuler cet encaissement"))) return;
     removeFactures(e.devisId, bad);
+    rewindLivraisonOnUnpay(e.devisId, e.id);
     e.statut = "attente";
     delete e.pmtTs;
   } else {
@@ -12858,31 +12943,6 @@ function suiviExpandedToggle(devisId) {
   render();
 }
 window.suiviExpandedToggle = suiviExpandedToggle;
-
-function suiviRevert(id) {
-  const e = S.suivi.entries.find(x => x.id === id);
-  if (!e) return;
-  const s = entryStatut(e);
-  if (s === "termine") {
-    e.statut = "attente";
-    delete e.pmtTs;
-  } else if (s === "attente") {
-    // Revenir en arrière depuis "attente" annule l'acceptation au niveau devis.
-    for (const x of suiviGroupLigne(e.devisId)) x.statut = "envoye";
-  } else if (s === "refuse") {
-    for (const x of suiviGroupLigne(e.devisId)) {
-      x.statut = x.statutAvantRefus || "envoye";
-      delete x.statutAvantRefus;
-    }
-    // Plus refusé → on retire le timestamp pour la section Accueil.
-    if (S.suivi.devis && S.suivi.devis[e.devisId]) {
-      delete S.suivi.devis[e.devisId].statutTs;
-    }
-  }
-  save();
-  render();
-}
-window.suiviRevert = suiviRevert;
 
 function suiviDevisRevertRefus(devisId) {
   for (const x of suiviGroupLigne(devisId)) {
@@ -12954,6 +13014,7 @@ async function suiviDevisUndo(devisId) {
     const bad = facturesToRemoveOnUnpay(e.devisId, e.id);
     if (bad.length && !(await confirmRemoveFactures(bad, "Annuler ce paiement"))) return;
     removeFactures(e.devisId, bad);
+    rewindLivraisonOnUnpay(e.devisId, e.id);
     e.statut = "attente";
     delete e.pmtTs;
     save();
@@ -12961,10 +13022,13 @@ async function suiviDevisUndo(devisId) {
     return;
   }
   // Toutes lignes attente : annule l'acceptation → toutes les factures du devis
-  // deviennent invalides (un devis non accepté ne peut porter de facture).
+  // deviennent invalides (un devis non accepté ne peut porter de facture),
+  // et le jalon livraison saute aussi (un devis non accepté n'est pas livré).
   const allFac = (S.suivi.devis && S.suivi.devis[devisId] && S.suivi.devis[devisId].factures) || [];
   if (allFac.length && !(await confirmRemoveFactures(allFac.slice(), "Annuler l'acceptation"))) return;
   removeFactures(devisId, allFac.slice());
+  const dvA = S.suivi.devis && S.suivi.devis[devisId];
+  if (dvA && dvA.livreeTs) delete dvA.livreeTs;
   for (const x of lignes) x.statut = "envoye";
   save();
   render();
@@ -13088,20 +13152,16 @@ function suiviExpandedPanelHtml(g) {
         }
         const seenFac = new Set();
         const factureCol = (ech) => {
+          // Seules les factures ÉMISES apparaissent ici (accès au document).
+          // L'émission passe par le bandeau « Prochaine étape » — un seul
+          // point de création, à la bonne étape du parcours.
           const fac = findFactureForEch(g.devisId, ech);
-          const applicable = isFactureApplicable(g.devisId, ech);
-          if (!fac && !applicable) return "";
-          if (fac) {
-            // Anti-doublon : une même facture ne s'affiche qu'une seule fois.
-            const key = fac.id || fac.ref;
-            if (seenFac.has(key)) return "";
-            seenFac.add(key);
-          }
+          if (!fac) return "";
+          // Anti-doublon : une même facture ne s'affiche qu'une seule fois.
+          const key = fac.id || fac.ref;
+          if (seenFac.has(key)) return "";
+          seenFac.add(key);
           const roleTip = ech.isSolde ? "de solde" : "d'acompte";
-          if (!fac) {
-            // Émissible mais pas encore émise → bouton de création, libellé par échéance.
-            return `<button class="btn-add-neon ghost" title="Émettre la facture ${roleTip} — ${esc(ech.label)}" onclick="${stop}viewFactureOpen('${g.devisId}','${ech.echId}')">${ICO_SZ('fileText',13)} Facturer « ${esc(ech.label)} »</button>`;
-          }
           const envoiTs = fac.envoiTs;
           const envoiBadge = envoiTs ? `<div class="suv-envoi-tag suv-envoi-undo" title="Cliquer pour annuler la marque d'envoi" onclick="${stop}factureEnvoiUndo('${g.devisId}','${ech.echId}')">Envoyée le ${esc(dateFR(new Date(envoiTs).toISOString().slice(0,10)))} <span class="suv-envoi-undo-x">${ICO_SZ('x', 10)}</span></div>` : "";
           const lbl = `${esc(ech.label)} · ${esc(formatRef(fac.ref, "facture"))}`;
