@@ -409,6 +409,8 @@
   .dv-step.active .dv-step-amt{color:var(--text)}
   .dv-step.upcoming .dv-step-amt,.dv-step.refused .dv-step-amt{color:var(--text-dim)}
   .dv-step-state{justify-self:end;display:inline-flex;align-items:center;gap:6px;text-align:right;white-space:nowrap}
+  /* zone d'actions inline de l'étape active (boutons + ↺) */
+  .dv-step-actions{justify-self:end;display:flex;align-items:center;gap:7px;flex-wrap:wrap;justify-content:flex-end}
   /* pastille d'état (droite) */
   .dv-state{font-size:11px;font-weight:600;padding:3px 9px;border-radius:6px;white-space:nowrap;text-align:right}
   .dv-state.done{color:#4ade80;background:rgba(34,197,94,.12)}
@@ -420,6 +422,17 @@
   .dv-step-x{background:none;border:none;padding:2px;cursor:pointer;color:var(--text-dim);opacity:0;transition:opacity .12s,color .12s;display:inline-flex}
   .dv-step:hover .dv-step-x{opacity:.7}
   .dv-step-x:hover{opacity:1;color:var(--danger)}
+
+  /* Dropdown ⋮ inline (actions de cycle de vie) — pied de panneau devis */
+  .dv-more{position:relative;display:inline-flex}
+  .dv-menu-backdrop{position:fixed;inset:0;z-index:29}
+  .dv-menu{position:absolute;bottom:calc(100% + 8px);right:0;min-width:236px;background:var(--surface);border:1px solid var(--border-light);border-radius:var(--radius-lg);padding:6px;display:flex;flex-direction:column;gap:1px;box-shadow:0 14px 40px rgba(0,0,0,.5);z-index:30}
+  .dv-menu-item{display:flex;align-items:center;gap:10px;width:100%;text-align:left;background:transparent;border:none;border-radius:8px;padding:9px 10px;font-size:13px;font-weight:500;font-family:inherit;color:#cfe3ff;cursor:pointer;transition:background .12s}
+  .dv-menu-item:hover{background:rgba(74,158,255,.1)}
+  .dv-menu-item .dv-menu-ico{display:inline-flex;flex:0 0 auto;color:var(--text-muted)}
+  .dv-menu-item.danger{color:#f0789a}
+  .dv-menu-item.danger .dv-menu-ico{color:#f0789a}
+  .dv-menu-divider{height:1px;background:var(--border);margin:5px 4px}
 
   /* Timeline (étapes) — cartes compactes cliquables, accent border-left par état */
   /* Timeline étapes paiement — style néon cohérent avec Accepté/Refusé */
@@ -5057,6 +5070,24 @@ window.devisEnvoyerFlow = function(devisId) {
   _pendingEnvoiPopup = { kind: "devis", devisId };
   viewDevisOpen(devisId);
   _printThenGmail(() => openGmailComposeForDevis(devisId));
+};
+
+// ▼ devisEnvoyerCompose / devisMarkEnvoi — les 2 boutons de l'étape « Devis
+// envoyé » du rail (refonte timeline). « Envoyer » ouvre l'aperçu + Gmail +
+// impression SANS marquer (compose seul). « Valider l'envoi » pose envoiTs
+// directement (confirme l'envoi, fait avancer le parcours). Annulable via ↺
+// (devisEnvoiUndo).
+window.devisEnvoyerCompose = function(devisId) {
+  viewDevisOpen(devisId);
+  _printThenGmail(() => openGmailComposeForDevis(devisId));
+};
+window.devisMarkEnvoi = function(devisId) {
+  if (!S.suivi.devis) S.suivi.devis = {};
+  if (!S.suivi.devis[devisId]) S.suivi.devis[devisId] = { ref: "" };
+  if (S.suivi.devis[devisId].envoiTs) return;
+  S.suivi.devis[devisId].envoiTs = new Date().toISOString();
+  save();
+  render();
 };
 
 // ▼ _printThenGmail — ouvre Gmail puis déclenche l'impression auto.
@@ -13044,6 +13075,7 @@ window.suiviLigneTogglePaiement = suiviLigneTogglePaiement;
 // Déplie / replie le volet inline d'un devis sous sa ligne (un seul ouvert
 // à la fois). Remplace l'ancienne modale timeline + l'ancienne popover paiement.
 function suiviExpandedToggle(devisId) {
+  suiviMoreMenuOpen = null; // referme le dropdown ⋮ au changement de volet
   suiviExpandedDevis = (suiviExpandedDevis === devisId) ? null : devisId;
   render();
 }
@@ -13155,19 +13187,16 @@ function suiviDevisUndoLabel(g) {
   return "Annuler l'acceptation";
 }
 
-// ▼ suiviStepRowsHtml — rail vertical du parcours réel d'un devis (refonte
-// timeline). Une ligne par étape : envoi → accord → pour chaque échéance
-// (paiement PUIS facture d'acompte) → livraison → facture de solde → paiement
-// du solde. Factures = lignes à part entière (plus de chips accrochées).
-// Frais/débours hors échéancier en fin. L'étape « active » = la 1re non
-// franchie (pastille pulse). Les actions restent portées par le bandeau —
-// déplacées sur l'étape active en phase 3. Ordre acompte = paiement→facture
-// (règle fiscale app, cf nextStepHint), volontairement différent du mock.
-function suiviStepRowsHtml(g) {
-  const stop = "event.stopPropagation();";
-  const devisId = g.devisId;
+// ▼ devisParcoursSteps — séquence ordonnée des étapes du parcours d'un devis
+// avec, pour chacune, son statut (done/active/upcoming/refused). SOURCE UNIQUE
+// consommée par le rail (suiviStepRowsHtml) ET le retour arrière granulaire
+// (suiviStepBack) — pour qu'ils ne divergent jamais. Ordre : envoi → accord
+// → (paiement PUIS facture d'acompte)* → livraison → facture de solde →
+// paiement solde. Au noir : les étapes facture sont sautées. `backIdx` = index
+// de l'étape qui porte le ↺ (-2 = ligne terminale « annulée », -1 = aucun).
+function devisParcoursSteps(devisId) {
   const dv = (S.suivi.devis && S.suivi.devis[devisId]) || {};
-  const statutPrin = g.statutPrin;
+  const statutPrin = devisPrincipal(suiviGroupLigne(devisId));
   const noir = isDevisAuNoir(devisId);
   const isRefused = statutPrin === "refuse";
   const isAnnule = statutPrin === "annule";
@@ -13175,32 +13204,19 @@ function suiviStepRowsHtml(g) {
   const echList = devisEcheances(devisId);
   const acomptes = echList.filter(e => !e.isSolde);
   const solde = echList.find(e => e.isSolde);
-  const dateOf = (ts) => dateFR(new Date(ts).toISOString().slice(0, 10));
 
-  // — Liste ordonnée des étapes, chacune avec son flag `done`. —
   const steps = [];
-  steps.push({ key: "sent", kind: "milestone", label: "Devis envoyé",
-    sub: dv.envoiTs ? `Envoyé le ${dateOf(dv.envoiTs)}` : "Prêt à être envoyé au client",
-    done: !!dv.envoiTs || accepted || isRefused });
-  steps.push({ key: "accepted", kind: "decision",
-    label: isRefused ? "Refusé par le client" : "Accepté par le client",
-    done: accepted, forceRefused: isRefused });
+  steps.push({ key: "sent", kind: "milestone", done: !!dv.envoiTs || accepted || isRefused });
+  steps.push({ key: "accepted", kind: "decision", done: accepted, forceRefused: isRefused });
   if (accepted) {
     for (const ech of acomptes) {
-      steps.push({ key: "pay:" + ech.echId, kind: "payment", label: ech.label, ech,
-        amount: fmt(ech.entry.montant), done: entryStatut(ech.entry) === "termine" });
-      if (!noir) steps.push({ key: "fa:" + ech.echId, kind: "invoice", label: "Facture d'acompte", ech,
-        done: !!findFactureForEch(devisId, ech) });
+      steps.push({ key: "pay:" + ech.echId, kind: "payment", ech, done: entryStatut(ech.entry) === "termine" });
+      if (!noir) steps.push({ key: "fa:" + ech.echId, kind: "invoice", ech, done: !!findFactureForEch(devisId, ech) });
     }
-    steps.push({ key: "livraison", kind: "milestone", isLivraison: true,
-      label: dv.livreeTs ? "Prestation livrée" : "Prestation à livrer",
-      sub: dv.livreeTs ? `Livrée le ${dateOf(dv.livreeTs)}` : null,
-      done: !!dv.livreeTs });
+    steps.push({ key: "livraison", kind: "milestone", isLivraison: true, done: !!dv.livreeTs });
     if (solde) {
-      if (!noir) steps.push({ key: "fs", kind: "invoice", label: "Facture de solde", ech: solde,
-        done: !!findFactureForEch(devisId, solde) });
-      steps.push({ key: "pay:solde", kind: "payment", label: solde.label, ech: solde, isSolde: true,
-        amount: fmt(solde.entry.montant), done: entryStatut(solde.entry) === "termine" });
+      if (!noir) steps.push({ key: "fs", kind: "invoice", ech: solde, done: !!findFactureForEch(devisId, solde) });
+      steps.push({ key: "pay:solde", kind: "payment", ech: solde, isSolde: true, done: entryStatut(solde.entry) === "termine" });
     }
   }
 
@@ -13209,6 +13225,30 @@ function suiviStepRowsHtml(g) {
   steps.forEach((s, i) => {
     s.status = s.forceRefused ? "refused" : s.done ? "done" : (i === activeIdx ? "active" : "upcoming");
   });
+
+  // Étape portant le ↺ « reculer d'un cran ».
+  let backIdx;
+  if (isRefused) backIdx = steps.findIndex(s => s.key === "accepted");
+  else if (isAnnule) backIdx = -2;                              // ligne terminale « Mission annulée »
+  else if (activeIdx >= 1) backIdx = activeIdx;                 // ↺ sur l'étape active
+  else if (activeIdx === -1 && steps.length) backIdx = steps.length - 1; // soldé : ↺ sur la dernière
+  else backIdx = -1;                                            // rien à défaire (envoi à faire)
+
+  return { steps, activeIdx, backIdx, statutPrin, isRefused, isAnnule, dv, noir, echList, acomptes, solde };
+}
+
+// ▼ suiviStepRowsHtml — rail vertical du parcours réel d'un devis (refonte
+// timeline). Une ligne par étape ; l'étape ACTIVE porte ses actions inline
+// (plus de bandeau « Prochaine étape »). Factures = lignes à part entière.
+// Frais/débours hors échéancier en fin. Ordre acompte = paiement→facture
+// (règle fiscale app, cf nextStepHint), volontairement différent du mock.
+function suiviStepRowsHtml(g) {
+  const stop = "event.stopPropagation();";
+  const devisId = g.devisId;
+  const P = devisParcoursSteps(devisId);
+  const { steps, backIdx, dv } = P;
+  const dateOf = (ts) => dateFR(new Date(ts).toISOString().slice(0, 10));
+  const backBtn = `<button type="button" class="mk-iconbtn sm dv-back" title="Revenir à l'étape précédente" onclick="${stop}suiviStepBack('${devisId}')">${ICO_SZ('rotateCcw', 14)}</button>`;
 
   // — Helpers de rendu —
   const dotHtml = (status) => {
@@ -13242,44 +13282,73 @@ function suiviStepRowsHtml(g) {
         ${o.sub ? `<span class="dv-step-sub">${esc(o.sub)}</span>` : ""}
       </div>
       <span class="dv-step-amt">${o.amount || ""}</span>
-      <span class="dv-step-state">${o.state || ""}${o.extra || ""}</span>
+      ${o.right || `<span class="dv-step-state"></span>`}
     </div>`;
   };
 
-  // — Rendu des étapes du parcours —
-  const html = steps.map((s) => {
-    let sub = s.sub || null;
-    if (s.key === "accepted" && s.status === "active") sub = "La balle est dans le camp du client";
+  // — Actions inline de l'étape active —
+  const relanceBtn = (kind) => {
+    const lastRel = dv.lastRelance;
+    return lastRel
+      ? `<span class="suv-last-relance" title="Cliquer pour annuler la relance et faire réapparaître le devis dans « À relancer »" onclick="${stop}relanceUndo('${devisId}')">Relancé le ${esc(dateFR(lastRel.slice(0, 10)))} <span class="suv-last-relance-undo">${ICO_SZ('x', 10)}</span></span>`
+      : `<button type="button" class="mk-btn subtle" title="Ouvrir Gmail avec un template de relance pré-rempli." onclick="${stop}gmailRelanceForDevis('${devisId}','${kind}')">${ICO_SZ('send', 13)} Relancer</button>`;
+  };
+  const activeActions = (s) => {
+    if (s.key === "sent") return [
+      `<button type="button" class="mk-btn subtle" title="Ouvrir l'aperçu + Gmail pré-rempli (glisse le PDF dans le mail)." onclick="${stop}devisEnvoyerCompose('${devisId}')">${ICO_SZ('mail', 13)} Envoyer</button>`,
+      `<button type="button" class="mk-btn green" title="Marquer le devis comme envoyé au client." onclick="${stop}devisMarkEnvoi('${devisId}')">${ICO_SZ('check', 13)} Valider l'envoi</button>`,
+    ];
+    if (s.key === "accepted") return [
+      relanceBtn("devis"),
+      `<button type="button" class="mk-btn green" title="Le client a accepté — toutes les échéances passent en attente de paiement." onclick="${stop}suiviDevisAccepter('${devisId}')">${ICO_SZ('check', 13)} Accepté</button>`,
+      `<button type="button" class="mk-btn ghost" title="Le client a refusé le devis (avant acceptation)." onclick="${stop}suiviDevisRefuser('${devisId}')">${ICO_SZ('x', 13)} Refusé</button>`,
+    ];
+    if (s.kind === "payment") return [
+      relanceBtn("paiement"),
+      `<button type="button" class="mk-btn green" title="Marquer cette échéance comme encaissée." onclick="${stop}suiviLigneTogglePaiement('${s.ech.entry.id}')">${ICO_SZ('euro', 13)} ${s.ech.isSolde ? "Solde reçu" : "Paiement reçu"}</button>`,
+    ];
+    if (s.kind === "invoice") return [
+      `<button type="button" class="mk-btn green" title="Émettre la facture et l'envoyer au client (aperçu + Gmail)." onclick="${stop}factureEmettreEnvoyerFlow('${devisId}','${s.ech.echId}')">${ICO_SZ('fileText', 13)} Émettre et envoyer</button>`,
+    ];
+    if (s.isLivraison) return [
+      `<button type="button" class="mk-btn blue" title="Marquer la prestation réalisée et livrée. Débloque la facture de solde." onclick="${stop}suiviMarkLivree('${devisId}')">${ICO_SZ('check', 13)} Marquer livré</button>`,
+    ];
+    return [];
+  };
 
-    if (s.kind === "payment") {
-      const st = entryStatut(s.ech.entry);
-      const clickable = st === "attente" || st === "termine";
-      return rowHtml({ status: s.status, label: s.label, amount: s.amount,
-        state: stateChip("payment", s.status),
-        onclick: clickable ? `${stop}suiviLigneTogglePaiement('${s.ech.entry.id}')` : null,
-        title: clickable ? "Cliquer pour basculer payé / en attente" : null });
+  // — Rendu des étapes du parcours —
+  const html = steps.map((s, i) => {
+    const isActive = s.status === "active";
+    const showBack = i === backIdx;
+    // libellé / sous-texte / montant / badge selon le type d'étape
+    let label = "", sub = null, amount = "", badge = "";
+    if (s.key === "sent") { label = "Devis envoyé"; sub = dv.envoiTs ? `Envoyé le ${dateOf(dv.envoiTs)}` : (isActive ? "Prêt à être envoyé au client" : null); }
+    else if (s.key === "accepted") { label = s.forceRefused ? "Refusé par le client" : "Accepté par le client"; if (isActive) sub = "La balle est dans le camp du client"; }
+    else if (s.isLivraison) { label = dv.livreeTs ? "Prestation livrée" : "Prestation à livrer"; if (dv.livreeTs) sub = `Livrée le ${dateOf(dv.livreeTs)}`; }
+    else if (s.kind === "invoice") { label = s.ech.isSolde ? "Facture de solde" : "Facture d'acompte"; badge = facBadge(s.ech); }
+    else if (s.kind === "payment") { label = s.ech.label; amount = fmt(s.ech.entry.montant); }
+    // cellule droite : actions (actif) sinon pastille d'état, + ↺ si backIdx
+    let right;
+    if (isActive) {
+      right = `<div class="dv-step-actions">${activeActions(s).join("")}${showBack ? backBtn : ""}</div>`;
+    } else {
+      const chip = s.kind === "payment" ? stateChip("payment", s.status)
+                 : s.kind === "invoice" ? stateChip("invoice", s.status) : "";
+      right = showBack
+        ? `<div class="dv-step-actions">${chip}${backBtn}</div>`
+        : `<span class="dv-step-state">${chip}</span>`;
     }
-    if (s.kind === "invoice") {
-      return rowHtml({ status: s.status, label: s.label,
-        badge: facBadge(s.ech), state: stateChip("invoice", s.status) });
-    }
-    if (s.isLivraison) {
-      const clickable = s.status === "active";
-      const extra = s.status === "done"
-        ? `<button type="button" class="dv-step-x" title="Annuler la livraison" onclick="${stop}suiviUnmarkLivree('${devisId}')">${ICO_SZ('x', 12)}</button>`
-        : "";
-      return rowHtml({ status: s.status, label: s.label, sub, extra,
-        onclick: clickable ? `${stop}suiviMarkLivree('${devisId}')` : null,
-        title: clickable ? "Marquer la prestation comme réalisée et livrée. Débloque la facture de solde." : null });
-    }
-    // milestone envoi + décision accord
-    return rowHtml({ status: s.status, label: s.label, sub });
+    return rowHtml({ status: s.status, label, sub, amount, badge, right });
   });
 
   // Terminal « Mission annulée » (annulation post-acceptation).
-  if (isAnnule) html.push(rowHtml({ status: "refused", label: "Mission annulée" }));
+  if (P.isAnnule) {
+    const right = backIdx === -2 ? `<div class="dv-step-actions">${backBtn}</div>` : `<span class="dv-step-state"></span>`;
+    html.push(rowHtml({ status: "refused", label: "Mission annulée", right }));
+  }
 
-  // Entries hors échéancier (frais/débours) — en fin de parcours.
+  // Entries hors échéancier (frais/débours) — en fin de parcours. Cliquables
+  // pour basculer réglé/en attente (guardées par suiviLigneTogglePaiement).
   const fraisEntries = [...(g.lignes || [])]
     .filter(e => num(e.frais) !== 0)
     .sort((a, b) => (a.date || "").localeCompare(b.date || ""));
@@ -13287,8 +13356,9 @@ function suiviStepRowsHtml(g) {
     const st = entryStatut(e);
     const status = st === "termine" ? "done" : (st === "refuse" || st === "annule") ? "refused" : "upcoming";
     const clickable = st === "attente" || st === "termine";
+    const chip = st === "termine" ? `<span class="dv-state done">Réglé</span>` : status === "upcoming" ? `<span class="dv-state upcoming">En attente</span>` : "";
     html.push(rowHtml({ status, label: e.echeance || "Frais / débours", amount: fmt(e.montant),
-      state: st === "termine" ? `<span class="dv-state done">Réglé</span>` : status === "upcoming" ? `<span class="dv-state upcoming">En attente</span>` : "",
+      right: `<span class="dv-step-state">${chip}</span>`,
       onclick: clickable ? `${stop}suiviLigneTogglePaiement('${e.id}')` : null,
       title: clickable ? "Cliquer pour basculer réglé / en attente" : null }));
   }
@@ -13296,62 +13366,107 @@ function suiviStepRowsHtml(g) {
   return `<div class="dv-rail">${html.join("")}</div>`;
 }
 
+// ▼ suiviStepBack — retour arrière granulaire (↺ « reculer d'un cran »).
+// Défait la DERNIÈRE étape franchie via la bonne fonction de reversal (avec
+// leurs gardes/cascade). Remplace l'ancien ↺ global du pied de panneau.
+async function suiviStepBack(devisId) {
+  const P = devisParcoursSteps(devisId);
+  if (P.isRefused) return suiviDevisRevertRefus(devisId);
+  if (P.isAnnule)  return suiviDevisRevertAnnul(devisId);
+  const { steps, activeIdx } = P;
+  const idx = activeIdx >= 1 ? activeIdx - 1
+            : (activeIdx === -1 && steps.length) ? steps.length - 1 : -1;
+  const step = idx >= 0 ? steps[idx] : null;
+  if (!step) return;
+  if (step.key === "sent")      return devisEnvoiUndo(devisId);     // retire envoiTs (confirm)
+  if (step.key === "accepted")  return suiviDevisUndo(devisId);     // dé-accepte (branche « tout attente »)
+  if (step.kind === "payment")  return suiviLigneTogglePaiement(step.ech.entry.id); // dé-paye + cascade
+  if (step.isLivraison)         return suiviUnmarkLivree(devisId);  // retire livreeTs (+ FS si émise)
+  if (step.kind === "invoice") {
+    const fac = findFactureForEch(devisId, step.ech);
+    if (!fac) return;
+    if (fac.envoiTs && !(await confirmRemoveFactures([fac], "Revenir en arrière"))) return;
+    removeFactures(devisId, [fac]);
+    render();
+  }
+}
+window.suiviStepBack = suiviStepBack;
+
 // ▼ suiviExpandedPanelHtml — volet inline d'un devis (Suivi + Accueil).
-// Structure : bandeau « Prochaine étape » (action primaire + contextuel) →
-// timeline du parcours (suiviStepRowsHtml) → rangée documents (Devis, Débours)
-// avec undo contextuel et menu ⋮ (suiviMoreMenu) → historique des versions.
-// Renvoie le HTML du panneau étendu (sans wrapping table-row).
+// Structure (refonte) : rail du parcours (suiviStepRowsHtml) — l'étape ACTIVE
+// porte ses actions inline, plus de bandeau « Prochaine étape » — puis rangée
+// documents (Devis PDF, Débours) + menu ⋮ (suiviMoreMenu), puis historique des
+// versions. Le retour arrière vit désormais sur l'étape active (↺ du rail).
 function suiviExpandedPanelHtml(g) {
   const stop = "event.stopPropagation();";
   const lignes = g.lignes || [];
   if (!lignes.length) return "";
-  const statutPrin = g.statutPrin;
-  const dv = S.suivi.devis && S.suivi.devis[g.devisId];
 
-  // — Bandeau : phrase + action primaire + actions contextuelles (accord,
-  //   relance). Accepté/Refusé tant que le devis n'est pas accepté ; Relancer
-  //   (ou tag « Relancé le … ») uniquement aux étapes d'attente du client.
-  let banner = "";
-  const h = nextStepHint(g.devisId);
-  if (h) {
-    const ico = h.kind === "action" ? "send" : h.kind === "done" ? "check" : h.kind === "wait" ? "circle" : "info";
-    const btns = [];
-    if (h.act) {
-      const primCls = (h.act.fn && h.act.fn.indexOf('suiviMarkLivree') !== -1) ? 'blue' : 'green';
-      btns.push(`<button class="mk-btn ${primCls} suv-next-btn" onclick="${stop}${h.act.fn}">${ICO_SZ(h.act.ico || 'check', 13)} ${esc(h.act.label)}</button>`);
-    }
-    if (statutPrin === "envoye") {
-      btns.push(`<button class="mk-btn green" title="Le client a accepté le devis — toutes les échéances passent en « paiement en attente »." onclick="${stop}suiviDevisAccepter('${g.devisId}')">${ICO_SZ('check',13)} Accepté</button>`);
-      btns.push(`<button class="mk-btn ghost" title="Le client a refusé le devis (avant acceptation)." onclick="${stop}suiviDevisRefuser('${g.devisId}')">${ICO_SZ('x',13)} Refusé</button>`);
-    }
-    if (h.kind === "wait") {
-      const kind = statutPrin === "envoye" ? "devis" : "paiement";
-      const lastRel = dv && dv.lastRelance;
-      btns.push(lastRel
-        ? `<span class="suv-last-relance" title="Cliquer pour annuler la relance et faire réapparaître le devis dans « À relancer »" onclick="${stop}relanceUndo('${g.devisId}')">Relancé le ${esc(dateFR(lastRel.slice(0,10)))} <span class="suv-last-relance-undo">${ICO_SZ('x',10)}</span></span>`
-        : `<button class="mk-btn subtle" title="Ouvrir Gmail avec un template de relance pré-rempli. Au retour, popup pour confirmer si le mail a été envoyé." onclick="${stop}gmailRelanceForDevis('${g.devisId}','${kind}')">${ICO_SZ('send',13)} Relancer</button>`);
-    }
-    banner = `<div class="suv-next-step suv-next-${h.kind}"><span class="suv-next-ico">${ICO_SZ(ico, 14)}</span><span class="suv-next-txt">${esc(h.text)}</span>${btns.length ? `<span class="suv-next-acts">${btns.join("")}</span>` : ""}</div>`;
-  }
-
-  // — Rangée documents + actions secondaires (undo contextuel, menu ⋮).
+  // — Rangée documents + menu ⋮ (dropdown inline). —
   const totalDebours = lignes.reduce((s, e) => s + num(e.frais), 0);
-  const undoLabel = suiviDevisUndoLabel(g);
+  const menuOpen = suiviMoreMenuOpen === g.devisId;
   const footer = `<div class="suv-expanded-print">
     <button class="mk-btn subtle" title="Devis — aperçu, impression, envoi" onclick="${stop}devisActionMenu('${g.devisId}')">${ICO_SZ('fileText',13)} Devis PDF</button>
     ${totalDebours > 0 ? `<button class="mk-btn subtle" title="Feuille de débours" onclick="${stop}viewDeboursOpen('${g.devisId}')">${ICO_SZ('euro',13)} Débours</button>` : ""}
     <span style="flex:1"></span>
-    ${undoLabel ? `<button class="mk-iconbtn sm" title="${esc(undoLabel)}" onclick="${stop}suiviDevisUndo('${g.devisId}')">${ICO_SZ('rotateCcw',14)}</button>` : ""}
-    <button class="mk-iconbtn md" title="Plus d'actions — éditer, réviser, annuler la mission, supprimer" onclick="${stop}suiviMoreMenu('${g.devisId}')">${ICO_SZ('moreVertical',15)}</button>
+    <div class="dv-more">
+      <button class="mk-iconbtn md" title="Plus d'actions — éditer, réviser, annuler la mission, supprimer" onclick="${stop}suiviMoreMenuToggle('${g.devisId}')">${ICO_SZ('moreVertical',15)}</button>
+      ${menuOpen ? `<div class="dv-menu-backdrop" onclick="${stop}suiviMoreMenuClose()"></div>${suiviMoreMenuHtml(g.devisId)}` : ""}
+    </div>
   </div>`;
 
   return `<div class="suv-expanded-panel">
-    ${banner}
     ${suiviStepRowsHtml(g)}
     ${footer}
     ${suiviHistoryHtml(g.devisId)}
   </div>`;
 }
+
+// ▼ suiviMoreMenuHtml / Toggle / Close / Pick — dropdown inline ⋮ du pied de
+// panneau (refonte : remplace la modale uiChoice). Actions de cycle de vie :
+// éditer / réviser / maj trame (legacy) / annuler la mission / supprimer.
+// Items filtrés aux mêmes conditions que l'ancien suiviMoreMenu. Fermeture par
+// backdrop plein écran (le panneau stoppe la propagation, un listener document
+// ne verrait pas les clics internes).
+function suiviMoreMenuHtml(devisId) {
+  const stop = "event.stopPropagation();";
+  const statutPrin = devisPrincipal(suiviGroupLigne(devisId));
+  const check = canReviseDevis(devisId);
+  const dv = S.suivi.devis && S.suivi.devis[devisId];
+  const isLegacy = !dv || !dv.snapshotMission || dv.legacyReconstructed === true;
+  const nextRev = Math.max(0, chainNextRevNum(devisId) - 1);
+  const item = (action, ico, label, danger) =>
+    `<button type="button" class="dv-menu-item${danger ? ' danger' : ''}" onclick="${stop}suiviMoreMenuPick('${devisId}','${action}')"><span class="dv-menu-ico">${ICO_SZ(ico, 15)}</span>${esc(label)}</button>`;
+  const items = [];
+  if (check.ok) {
+    items.push(item("edit", "edit", "Éditer"));
+    items.push(item("revise", "rotateCw", `Réviser → rev${nextRev}`));
+    if (isLegacy) items.push(item("majTrame", "clipboard", "Maj Trame"));
+  }
+  const destructive = [];
+  if (statutPrin === "en_cours" || statutPrin === "termine") destructive.push(item("annuler", "x", "Annuler la mission", true));
+  destructive.push(item("delete", "trash", "Supprimer le devis", true));
+  const divider = items.length ? `<div class="dv-menu-divider"></div>` : "";
+  return `<div class="dv-menu">${items.join("")}${divider}${destructive.join("")}</div>`;
+}
+window.suiviMoreMenuToggle = function(devisId) {
+  suiviMoreMenuOpen = (suiviMoreMenuOpen === devisId) ? null : devisId;
+  render();
+};
+window.suiviMoreMenuClose = function() {
+  if (suiviMoreMenuOpen == null) return;
+  suiviMoreMenuOpen = null;
+  render();
+};
+window.suiviMoreMenuPick = function(devisId, action) {
+  suiviMoreMenuOpen = null;
+  if (action === "edit") editDevisStart(devisId);
+  else if (action === "revise") reviseDevisStart(devisId);
+  else if (action === "majTrame") majTrameStart(devisId);
+  else if (action === "annuler") suiviDevisAnnuler(devisId);
+  else if (action === "delete") suiviDelDevisConfirm(devisId);
+  else render();
+};
 
 // ▼ suiviHistoryHtml — section « Historique des versions » du panneau étendu.
 // Affichée uniquement si la chaîne contient ≥ 2 revs. Liste les versions de
@@ -13405,6 +13520,9 @@ let suiviSort = { field: "date", dir: "desc" };
 
 // devisId du devis dont le volet inline est déplié, ou null. Un seul à la fois.
 let suiviExpandedDevis = null;
+
+// devisId dont le dropdown ⋮ (actions de cycle de vie) est ouvert, ou null.
+let suiviMoreMenuOpen = null;
 
 // Identifiant de la colonne dont le menu d'en-tête est ouvert, ou null.
 // Permet à un click sur l'en-tête « Date » de trier ET d'afficher le filtre année.
@@ -15810,6 +15928,7 @@ function rAC() {
 let accueilExpandedDevis = null;
 
 window.accueilOpenDevis = function(devisId) {
+  suiviMoreMenuOpen = null; // referme le dropdown ⋮ au changement de volet
   accueilExpandedDevis = (accueilExpandedDevis === devisId) ? null : devisId;
   render();
 };
