@@ -13018,14 +13018,18 @@ function suiviExpandedPanelHtml(g) {
         return `<div class="suv-action-col"><button class="btn-add-neon ghost" onclick="${stop}devisActionMenu('${g.devisId}')">${ICO_SZ('fileText',13)} Devis</button>${envoiBadge}</div>`;
       })()}
       ${(() => {
-        // Jalon « Prestation livrée » — visible une fois le devis accepté.
-        // Débloque la facture de solde (facture à la livraison).
+        // Jalon « Prestation livrée » — n'apparaît qu'À SON ÉTAPE : devis accepté
+        // ET tous les acomptes encaissés + facturés (= le bandeau dit « livre »).
+        // Sinon rien : le bandeau « Prochaine étape » guide vers l'action en cours.
         if (!(statutPrin === "attente" || statutPrin === "en_cours" || statutPrin === "termine")) return "";
         const dv = S.suivi.devis && S.suivi.devis[g.devisId];
         const livreeTs = dv && dv.livreeTs;
         if (livreeTs) {
           return `<div class="suv-action-col"><span class="suv-envoi-tag suv-livree-tag" title="Prestation livrée — cliquer pour annuler" onclick="${stop}suiviUnmarkLivree('${g.devisId}')">${ICO_SZ('check',12)} Livrée le ${esc(dateFR(new Date(livreeTs).toISOString().slice(0,10)))} <span class="suv-envoi-undo-x">${ICO_SZ('x', 10)}</span></span></div>`;
         }
+        const acomptes = devisEcheances(g.devisId).filter(e => !e.isSolde);
+        const ready = acomptes.every(e => e.statut === "termine" && findFactureForEch(g.devisId, e));
+        if (!ready) return "";
         return `<button class="btn-add-neon ghost suv-livree-btn" title="Marque la prestation comme réalisée et livrée. Débloque la facture de solde." onclick="${stop}suiviMarkLivree('${g.devisId}')">${ICO_SZ('check',13)} Prestation livrée</button>`;
       })()}
       ${(() => {
@@ -13060,11 +13064,9 @@ function suiviExpandedPanelHtml(g) {
           const lbl = `${esc(ech.label)} · ${esc(formatRef(fac.ref, "facture"))}`;
           return `<div class="suv-action-col"><button class="btn-add-neon ghost" title="Facture ${roleTip} — ${esc(ech.label)}" onclick="${stop}factureActionMenu('${g.devisId}','${ech.echId}')">${ICO_SZ('fileText',13)} ${lbl}</button>${envoiBadge}</div>`;
         };
-        let html = devisEcheances(g.devisId).map(factureCol).join("");
-        if (!html) {
-          html = `<button class="btn-add-neon ghost" disabled title="Au moins un acompte encaissé (ou le devis accepté pour un paiement unique) nécessaire pour émettre une facture" style="opacity:.5;cursor:not-allowed">${ICO_SZ('fileText',13)} Facture</button>`;
-        }
-        return html;
+        // Pas de placeholder « Facture » désactivé : si rien n'est émissible,
+        // on n'affiche rien (le bandeau « Prochaine étape » explique l'état).
+        return devisEcheances(g.devisId).map(factureCol).join("");
       })()}
       ${(() => {
         // Bouton Maj Trame conservé (uniquement legacy) — flow distinct de Réviser.
