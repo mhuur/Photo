@@ -4907,10 +4907,11 @@ function openGmailComposeForDevis(devisId) {
 }
 
 // Idem pour une facture (acompte ou solde).
-function openGmailComposeForFacture(devisId, type) {
+function openGmailComposeForFacture(devisId, echId) {
   const dv = S.suivi.devis && S.suivi.devis[devisId];
   if (!dv) return;
-  const fac = (dv.factures || []).find(f => f.type === type);
+  const ech = devisEcheanceByEchId(devisId, echId);
+  const fac = ech ? findFactureForEch(devisId, ech) : null;
   if (!fac) return;
   const ref = fac.ref || "";
   const client = findClientForDevis(devisId);
@@ -4985,9 +4986,11 @@ function _printThenGmail(openGmailFn) {
 }
 
 // ▼ factureActionMenu — popup 2 options pour le bouton Facture (par type).
-window.factureActionMenu = async function(devisId, type) {
+window.factureActionMenu = async function(devisId, echId) {
+  const ech = devisEcheanceByEchId(devisId, echId);
+  const isSolde = ech ? ech.isSolde : true;
   const choice = await uiChoice("Que veux-tu faire avec cette facture ?", {
-    title: type === "acompte" ? "Facture d'acompte" : "Facture de solde",
+    title: isSolde ? "Facture de solde" : "Facture d'acompte",
     cancelLabel: "Annuler",
     choices: [
       { label: "Imprimer", value: "print", kind: "ghost" },
@@ -4996,12 +4999,12 @@ window.factureActionMenu = async function(devisId, type) {
   });
   if (!choice) return;
   if (choice === "print") {
-    _pendingEnvoiPopup = { kind: "facture", devisId, factureType: type };
-    viewFactureOpen(devisId, type);
+    _pendingEnvoiPopup = { kind: "facture", devisId, echId };
+    viewFactureOpen(devisId, echId);
   } else if (choice === "printSend") {
-    _pendingEnvoiPopup = { kind: "facture", devisId, factureType: type };
-    viewFactureOpen(devisId, type);
-    _printThenGmail(() => openGmailComposeForFacture(devisId, type));
+    _pendingEnvoiPopup = { kind: "facture", devisId, echId };
+    viewFactureOpen(devisId, echId);
+    _printThenGmail(() => openGmailComposeForFacture(devisId, echId));
   }
 };
 
@@ -5039,12 +5042,13 @@ window.devisEnvoiUndo = async function(devisId) {
   save();
   render();
 };
-window.factureEnvoiUndo = async function(devisId, type) {
+window.factureEnvoiUndo = async function(devisId, echId) {
   const dv = S.suivi && S.suivi.devis && S.suivi.devis[devisId];
   if (!dv || !Array.isArray(dv.factures)) return;
-  const fac = dv.factures.find(f => f.type === type);
+  const ech = devisEcheanceByEchId(devisId, echId);
+  const fac = ech ? findFactureForEch(devisId, ech) : null;
   if (!fac || !fac.envoiTs) return;
-  const lbl = type === "acompte" ? "d'acompte" : "de solde";
+  const lbl = (ech && ech.isSolde) ? "de solde" : "d'acompte";
   const ok = await uiConfirm(`Annuler la marque d'envoi de la facture ${lbl} ?`, { title: "Marque d'envoi", kind: "warn", confirmLabel: "Annuler l'envoi", cancelLabel: "Garder" });
   if (!ok) return;
   delete fac.envoiTs;
@@ -7636,15 +7640,6 @@ function computeDateEcheance(dateEmission, delaiKey) {
   return target.toISOString().slice(0, 10);
 }
 
-// ▼ findFactureFor — retourne la facture du type demandé pour un devis, ou null.
-// Type : "acompte" | "solde". Pour la rétrocompat, type "acompte" matche aussi
-// les anciennes factures de type "globale" qui auraient été migrées en acompte.
-function findFactureFor(devisId, type) {
-  const dv = S.suivi.devis && S.suivi.devis[devisId];
-  if (!dv || !Array.isArray(dv.factures)) return null;
-  return dv.factures.find(f => f.type === type) || null;
-}
-
 // ▼ isDevisAuNoir — heuristique : devis dont les entries ont toutes ca=0 et
 // montant>0. Un devis au noir n'a pas à émettre de facture (incohérence
 // fiscale : la facture est un document fiscal qui constate du CA déclaré).
@@ -7656,38 +7651,43 @@ function isDevisAuNoir(devisId) {
   return totalMontant > 0 && totalCa === 0;
 }
 
-// ▼ isFactureApplicable — peut-on émettre une facture de ce type sur ce devis ?
-// - "acompte" : ≥ 1 entry (hors débours) en statut "termine" (au moins un acompte
-//   versé), ET au moins une entry n'est pas encore "termine" (sinon c'est une
-//   facture de solde, pas d'acompte). Si TOUT est déjà payé, plus d'acompte
-//   éligible — on émet directement la facture de solde.
-// - "solde" : toutes les entries (hors débours) en statut "termine".
+// ▼ isFactureApplicable — peut-on émettre la facture d'une échéance ? (modèle
+// légal, 1 facture par échéance)
+// - Échéance d'ACOMPTE (non-solde) : émissible quand SON échéance est encaissée
+//   (statut "termine") — l'acompte est versé, la facture le constate.
+// - Échéance de SOLDE (dernière) : émissible dès que TOUS les acomptes sont
+//   encaissés ET le devis est accepté, SANS attendre le paiement du solde — la
+//   facture de solde s'émet à la livraison, le client paie ensuite dans le délai.
+//   Cas « 100 % à la livraison » (aucun acompte) : émissible dès l'acceptation.
 // Bloque l'émission si le devis est au noir (cf isDevisAuNoir).
-function isFactureApplicable(devisId, type) {
+function isFactureApplicable(devisId, ech) {
   if (isDevisAuNoir(devisId)) return false;
-  const ents = (S.suivi.entries || []).filter(e => e.devisId === devisId && num(e.frais) === 0);
-  if (ents.length === 0) return false;
-  const allPaid = ents.every(e => entryStatut(e) === "termine");
-  const anyPaid = ents.some(e => entryStatut(e) === "termine");
-  if (type === "solde")   return allPaid;
-  if (type === "acompte") return anyPaid && !allPaid;
-  return false;
+  const list = devisEcheances(devisId);
+  if (!list.length || !ech) return false;
+  if (ech.isSolde) {
+    const accepted = ech.statut === "attente" || ech.statut === "termine";
+    const acomptesOk = list.filter(e => !e.isSolde).every(e => e.statut === "termine");
+    return accepted && acomptesOk;
+  }
+  return ech.statut === "termine";
 }
 
-// ▼ ensureFactureForDevis — création paresseuse d'une facture (acompte ou solde)
-// pour un devis donné. Tier 2 : 2 factures max par devis (FA + FS).
-// Retourne l'objet facture (existant ou nouvellement créé), ou null si non
-// applicable (le caller doit avoir vérifié isFactureApplicable au préalable).
-function ensureFactureForDevis(devisId, type) {
+// ▼ ensureFactureForDevis — création paresseuse de la facture d'une échéance
+// (1 facture par échéance : acomptes FA-… + solde FS-…). `ech` = descripteur
+// issu de devisEcheances. Fige `snapshotMontant` (le montant de l'échéance —
+// pour le solde c'est le net à payer, les échéances sommant au total).
+// Retourne l'objet facture (existant ou nouvellement créé).
+function ensureFactureForDevis(devisId, ech) {
   if (!S.suivi.devis) S.suivi.devis = {};
   if (!S.suivi.devis[devisId]) S.suivi.devis[devisId] = { ref: "" };
   const dv = S.suivi.devis[devisId];
   if (!Array.isArray(dv.factures)) dv.factures = [];
-  const existing = dv.factures.find(f => f.type === type);
+  const existing = findFactureForEch(devisId, ech);
   if (existing) return existing;
+  const type = ech.isSolde ? "solde" : "acompte";
   const today = new Date().toISOString().slice(0, 10);
   const ym = today.slice(0, 7);
-  const prefix = type === "acompte" ? "FA" : type === "solde" ? "FS" : "FACT";
+  const prefix = ech.isSolde ? "FS" : "FA";
   const seq = nextFactureSequence(ym, prefix);
   const ref = `${prefix}-${ym}-${String(seq).padStart(3, "0")}`;
   const delaiKey = dv.snapshotPaiementDelai || "30j_fdm";
@@ -7695,6 +7695,8 @@ function ensureFactureForDevis(devisId, type) {
     id: uid(),
     ref,
     type,
+    echId: ech.echId,
+    snapshotMontant: r2(num(ech.montant)),
     dateEmission: today,
     dateEcheance: computeDateEcheance(today, delaiKey)
   };
@@ -9975,16 +9977,15 @@ function rFactureMetaHtml(facture, dv, devisId, datePrestation) {
 // visuelle de rDevisPreview / rDeboursPreview (top-row + header-grid +
 // dp-objet + dp-section + dp-totals) pour cohérence inter-documents.
 function rFactureAcompteBody(facture, dv, devisId) {
-  const acompteEntries = (S.suivi.entries || []).filter(e =>
-    e.devisId === devisId && num(e.frais) === 0 && entryStatut(e) === "termine"
-  );
-  const totalAcompte = acompteEntries.reduce((s, e) => s + num(e.montant), 0);
+  const ech = devisEcheanceByEchId(devisId, facture.echId);
+  const montant = num(facture.snapshotMontant != null ? facture.snapshotMontant : (ech && ech.montant));
+  const echLabel = (ech && ech.label) || "Acompte";
   const totalDevis = (dv && num(dv.snapshotTotal)) || 0;
-  const pct = totalDevis > 0 ? Math.round(totalAcompte / totalDevis * 100) : 0;
+  const pct = totalDevis > 0 ? Math.round(montant / totalDevis * 100) : 0;
   const datePrestation = (dv && dv.snapshotDatePrestation) || "";
   const factureRefLabel = formatRef(facture.ref, "facture");
   const devisRef = (dv && dv.ref) || devisId;
-  const clientName = (dv && dv.snapshotClient) || (acompteEntries[0] && acompteEntries[0].client) || "";
+  const clientName = (dv && dv.snapshotClient) || (ech && ech.entry && ech.entry.client) || "";
   const logoUrl = (S.mission && S.mission.logoUrl) || (S.identite && S.identite.logoUrl) || "";
 
   // Tente de retrouver le client en référentiel pour ses coords/SIRET/TVA.
@@ -9995,12 +9996,12 @@ function rFactureAcompteBody(facture, dv, devisId) {
   const cli = cliFromRef || { name: clientName };
   const headerEmetteur = genHeaderEmetteur(S.identite, "");
 
-  const ligneHtml = acompteEntries.map((e, i) => `<div class="dp-line">
-    <div class="num">${i + 1}.</div>
-    <div class="lbl">${esc(e.echeance || "Acompte")}<div class="desc">Sur devis ${esc(devisRef)}</div></div>
+  const ligneHtml = `<div class="dp-line">
+    <div class="num">1.</div>
+    <div class="lbl">${esc(echLabel)}<div class="desc">Sur devis ${esc(devisRef)}</div></div>
     <div class="qty"></div>
-    <div class="amt">${fmt(num(e.montant))}</div>
-  </div>`).join("");
+    <div class="amt">${fmt(montant)}</div>
+  </div>`;
 
   return `
     <div class="dp-top-row">
@@ -10033,11 +10034,11 @@ function rFactureAcompteBody(facture, dv, devisId) {
     <div class="dp-objet">Acompte sur devis : <strong>${esc(devisRef)}</strong>${pct > 0 ? ` — ${pct}% du total HT (${fmt(totalDevis)})` : ""}</div>
 
     <div class="dp-section">
-      ${ligneHtml || `<div class="dp-empty" style="padding:14px">Aucun acompte versé.</div>`}
+      ${ligneHtml}
     </div>
 
     <div class="dp-totals">
-      <div class="dp-line grand"><span class="lbl">Total HT</span><span class="amt">${fmt(totalAcompte)}</span></div>
+      <div class="dp-line grand"><span class="lbl">Total HT</span><span class="amt">${fmt(montant)}</span></div>
       <div class="dp-totals-tva">${esc(tvaMention(S.identite))}</div>
     </div>
 
@@ -10067,29 +10068,28 @@ function rFactureSoldeBody(facture, dv, devisId) {
   const datePrestation = (dv && dv.snapshotDatePrestation) || "";
   const metaHtml = rFactureMetaHtml(facture, dv, devisId, datePrestation);
 
-  // Section "Acomptes déjà facturés" (déduction)
-  const facAcompte = findFactureFor(devisId, "acompte");
+  // Section "Acomptes déjà facturés" (déduction) — 1 ligne par échéance d'acompte
+  // (hors solde). Net à payer = total − Σ acomptes = montant de l'échéance solde
+  // (les échéances somment au total). Cite la facture d'acompte si elle existe.
   const totalDevis = (dv && num(dv.snapshotTotal)) || 0;
+  const acomptesEch = devisEcheances(devisId).filter(e => !e.isSolde);
   let acomptesHtml = "";
   let netAPayer = totalDevis;
-  if (facAcompte) {
-    // Recompute the acompte amount snapshotted at FA emission (paid entries at that time)
-    // Approche simple : utilise la somme des entries acompte payées MAINTENANT
-    const acompteEntries = (S.suivi.entries || []).filter(e =>
-      e.devisId === devisId && num(e.frais) === 0 && entryStatut(e) === "termine"
-    );
-    // Si toutes payées, l'acompte = entries[0..n-2], le solde = entries[n-1]
-    // Pour simplifier : on considère l'acompte = toutes les entries hors la dernière
-    const sortedByDate = [...acompteEntries].sort((a,b) => (a.date||"").localeCompare(b.date||""));
-    const acomptePart = sortedByDate.slice(0, -1).reduce((s, e) => s + num(e.montant), 0);
-    netAPayer = r2(totalDevis - acomptePart);
+  if (acomptesEch.length) {
+    const acompteTotal = acomptesEch.reduce((s, e) => s + num(e.montant), 0);
+    netAPayer = r2(totalDevis - acompteTotal);
+    const lignesDeduites = acomptesEch.map(e => {
+      const f = findFactureForEch(devisId, e);
+      const ref = f ? ` — facture ${esc(formatRef(f.ref, "facture"))}${f.dateEmission ? ` du ${esc(dateFR(f.dateEmission))}` : ""}` : "";
+      return `<div class="dp-line">
+        <div class="lbl">${esc(e.label)}${ref}</div>
+        <div class="qty"></div>
+        <div class="amt">−${fmt(num(e.montant))}</div>
+      </div>`;
+    }).join("");
     acomptesHtml = `<div class="dp-section dp-acomptes-deduits">
       <h4>Acomptes déjà facturés (déduits)</h4>
-      <div class="dp-line">
-        <div class="lbl">Facture d'acompte ${esc(formatRef(facAcompte.ref, "facture"))} du ${esc(dateFR(facAcompte.dateEmission))}</div>
-        <div class="qty"></div>
-        <div class="amt">−${fmt(acomptePart)}</div>
-      </div>
+      ${lignesDeduites}
       <div class="dp-line grand"><span class="lbl">Net à payer (solde)</span><span class="amt">${fmt(netAPayer)}</span></div>
     </div>`;
   }
@@ -10118,8 +10118,10 @@ function rFactureSoldeBody(facture, dv, devisId) {
 // inclusion des débours refacturés sur la facture solde.
 function rViewFactureModal() {
   if (!viewFactureModal) return "";
-  const { devisId, type } = viewFactureModal;
+  const { devisId, echId } = viewFactureModal;
   const dv = S.suivi.devis && S.suivi.devis[devisId];
+  const ech = devisEcheanceByEchId(devisId, echId);
+  const type = ech && ech.isSolde ? "solde" : "acompte";
   const lignes = (S.suivi.entries || []).filter(e => e.devisId === devisId);
   if (!dv || !dv.snapshotHtml) {
     return `<div class="modal-overlay" onclick="if(event.target===this)viewFactureClose()">
@@ -10132,17 +10134,17 @@ function rViewFactureModal() {
   }
 
   // Facture existante OU créable (selon applicabilité)
-  let facture = findFactureFor(devisId, type);
-  const applicable = isFactureApplicable(devisId, type);
+  let facture = findFactureForEch(devisId, ech);
+  const applicable = isFactureApplicable(devisId, ech);
   if (!facture && applicable) {
-    facture = ensureFactureForDevis(devisId, type);
+    facture = ensureFactureForDevis(devisId, ech);
   }
 
   if (!facture) {
     // Pas applicable et pas encore créée
     const reason = type === "acompte"
-      ? "Cette facture d'acompte ne peut pas encore être émise : aucun acompte n'a été versé, ou toutes les échéances sont déjà payées (auquel cas il faut émettre la facture de solde directement)."
-      : "Cette facture de solde ne peut pas encore être émise : toutes les échéances doivent être en statut « Payé » dans le Suivi.";
+      ? "Cette facture d'acompte ne peut pas encore être émise : l'échéance correspondante n'est pas encore encaissée (« Soldée ») dans le Suivi."
+      : "Cette facture de solde ne peut pas encore être émise : le devis doit être accepté et tous les acomptes encaissés (« Soldés ») dans le Suivi. Le solde lui-même n'a pas besoin d'être payé.";
     return `<div class="modal-overlay" onclick="if(event.target===this)viewFactureClose()">
       <div class="modal-card">
         <div class="modal-title">${type === "acompte" ? "Facture d'acompte" : "Facture de solde"} — pas encore émissible</div>
@@ -10155,9 +10157,9 @@ function rViewFactureModal() {
   // Snapshot figé : à la 1ère ouverture après émission, on capture le body HTML
   // pour qu'il soit immuable même si le devis sous-jacent est modifié plus tard.
   if (!facture.snapshotHtml) {
-    facture.snapshotHtml = type === "acompte"
-      ? rFactureAcompteBody(facture, dv, devisId)
-      : rFactureSoldeBody(facture, dv, devisId);
+    facture.snapshotHtml = facture.type === "solde"
+      ? rFactureSoldeBody(facture, dv, devisId)
+      : rFactureAcompteBody(facture, dv, devisId);
     save();
   }
 
@@ -10169,12 +10171,14 @@ function rViewFactureModal() {
   const restant = r2(totalDevis - totalPaid);
   const fullyPaid = restant <= 0.01 && totalPaid > 0;
 
-  // Pour la facture d'acompte, statut = "payée" si l'acompte est versé (== applicable)
-  // Pour la facture de solde, statut = "payée" si tout est payé (fullyPaid)
-  const statusPaid = type === "acompte" ? true : fullyPaid;
-  const statusLabel = type === "acompte"
-    ? (statusPaid ? "✓ ACOMPTE ENCAISSÉ" : "EN ATTENTE")
-    : (statusPaid ? "✓ FACTURE SOLDÉE" : "EN ATTENTE DE PAIEMENT");
+  // Statut de LA facture = statut de SON échéance. L'acompte est émis après
+  // encaissement (donc toujours payé). Le solde peut être émis AVANT paiement
+  // (modèle légal : facture à la livraison), d'où « EN ATTENTE DE PAIEMENT »
+  // possible sur une facture de solde.
+  const statusPaid = ech ? ech.statut === "termine" : fullyPaid;
+  const statusLabel = type === "solde"
+    ? (statusPaid ? "✓ FACTURE SOLDÉE" : "EN ATTENTE DE PAIEMENT")
+    : (statusPaid ? "✓ ACOMPTE ENCAISSÉ" : "EN ATTENTE");
   const statusBannerHtml = `<div class="dp-facture-status ${statusPaid ? 'paid' : 'pending'}">${esc(statusLabel)}</div>`;
 
   // Récap paiement (live, non figé)
@@ -11454,6 +11458,58 @@ function buildEcheanceLines(echeances, total, hoursTotal) {
     const label = (e.label && e.label.trim()) || (isSolde ? "Solde" : `Échéance ${i + 1}`);
     return { echId: e.id, label, montant, heures, isSolde };
   });
+}
+
+// ▼ devisEcheances — descripteurs ordonnés des échéances d'un devis (entries
+// frais=0). [{ echId, entry, index, isSolde, label, montant, statut }].
+// Tri par ordre de config (snapshotMission.echeances via echId), fallback
+// classify (acompte avant, reste après). La DERNIÈRE = solde (isSolde). Résout
+// un echId même pour le legacy 2-lignes (echId entry → config par position →
+// "solde"/"acompte-N"), donc aucune migration des données historiques.
+function devisEcheances(devisId) {
+  const ents = (S.suivi.entries || []).filter(e => e.devisId === devisId && num(e.frais) === 0);
+  if (!ents.length) return [];
+  const dv = (S.suivi.devis && S.suivi.devis[devisId]) || {};
+  const cfg = (dv.snapshotMission && Array.isArray(dv.snapshotMission.echeances))
+    ? dv.snapshotMission.echeances : [];
+  const order = cfg.map(e => e.id);
+  const rank = e => {
+    if (e.echId && order.length) { const i = order.indexOf(e.echId); if (i >= 0) return i; }
+    const c = suiviClassifyEcheance(e.echeance);
+    return c === "acompte" ? -1 : c === "reste" ? 1e6 : 5e5;
+  };
+  const sorted = ents.map((e, i) => ({ e, i }))
+    .sort((a, b) => (rank(a.e) - rank(b.e)) || (a.i - b.i))
+    .map(x => x.e);
+  const n = sorted.length;
+  return sorted.map((entry, index) => {
+    const isSolde = index === n - 1;
+    let echId = entry.echId;
+    if (!echId) echId = (cfg[index] && cfg[index].id) || (isSolde ? "solde" : `acompte-${index + 1}`);
+    return {
+      echId, entry, index, isSolde,
+      label: entry.echeance || (isSolde ? "Solde" : `Échéance ${index + 1}`),
+      montant: num(entry.montant),
+      statut: entryStatut(entry)
+    };
+  });
+}
+
+// ▼ devisEcheanceByEchId — retrouve un descripteur d'échéance par son echId.
+function devisEcheanceByEchId(devisId, echId) {
+  const list = devisEcheances(devisId);
+  return list.find(e => e.echId === echId) || null;
+}
+
+// ▼ findFactureForEch — facture liée à une échéance (par echId), avec fallback
+// par type dérivé (solde/acompte) pour les factures legacy sans echId.
+function findFactureForEch(devisId, ech) {
+  const dv = S.suivi.devis && S.suivi.devis[devisId];
+  if (!dv || !Array.isArray(dv.factures) || !ech) return null;
+  const byId = dv.factures.find(f => f.echId && f.echId === ech.echId);
+  if (byId) return byId;
+  const wantType = ech.isSolde ? "solde" : "acompte";
+  return dv.factures.find(f => !f.echId && (f.type === wantType || (wantType === "acompte" && f.type === "globale"))) || null;
 }
 
 // ▼ migrateLegacyReconstructedFlag — nettoie les flags `legacyReconstructed`
@@ -12813,29 +12869,27 @@ function suiviExpandedPanelHtml(g) {
         return `<button class="btn-add-neon ghost" onclick="${stop}viewDeboursOpen('${g.devisId}')">${ICO_SZ('fileText',13)} Débours</button>`;
       })()}
       ${(() => {
-        // Boutons Facture ▾ par type (acompte / solde) avec popup 2 options.
+        // Boutons Facture — un par échéance (acomptes FA-… + solde FS-…).
         if (isDevisAuNoir(g.devisId)) {
           return `<button class="btn-add-neon ghost" disabled title="Devis au noir (CA déclaré = 0). La facturation est désactivée." style="opacity:.5;cursor:not-allowed">${ICO_SZ('fileText',13)} Facture</button>`;
         }
-        const facA = findFactureFor(g.devisId, "acompte");
-        const facS = findFactureFor(g.devisId, "solde");
-        const appA = isFactureApplicable(g.devisId, "acompte");
-        const appS = isFactureApplicable(g.devisId, "solde");
-        const factureCol = (type, fac, applicable) => {
+        const factureCol = (ech) => {
+          const fac = findFactureForEch(g.devisId, ech);
+          const applicable = isFactureApplicable(g.devisId, ech);
           if (!fac && !applicable) return "";
+          const roleLbl = ech.isSolde ? "solde" : "acompte";
           if (!fac) {
-            // Facture pas encore émise → bouton classique pour la créer
-            const lbl = type === "acompte" ? "Émettre acompte" : "Émettre solde";
-            return `<button class="btn-add-neon ghost" onclick="${stop}viewFactureOpen('${g.devisId}','${type}')">${ICO_SZ('fileText',13)} ${lbl}</button>`;
+            // Émissible mais pas encore émise → bouton de création.
+            return `<button class="btn-add-neon ghost" onclick="${stop}viewFactureOpen('${g.devisId}','${ech.echId}')">${ICO_SZ('fileText',13)} Émettre ${roleLbl}</button>`;
           }
           const envoiTs = fac.envoiTs;
-          const envoiBadge = envoiTs ? `<div class="suv-envoi-tag suv-envoi-undo" title="Cliquer pour annuler la marque d'envoi" onclick="${stop}factureEnvoiUndo('${g.devisId}','${type}')">Envoyée le ${esc(dateFR(new Date(envoiTs).toISOString().slice(0,10)))} <span class="suv-envoi-undo-x">${ICO_SZ('x', 10)}</span></div>` : "";
-          const lbl = type === "acompte" ? `Acompte ${formatRef(fac.ref, "facture")}` : `Solde ${formatRef(fac.ref, "facture")}`;
-          return `<div class="suv-action-col"><button class="btn-add-neon ghost" onclick="${stop}factureActionMenu('${g.devisId}','${type}')">${ICO_SZ('fileText',13)} ${esc(lbl)}</button>${envoiBadge}</div>`;
+          const envoiBadge = envoiTs ? `<div class="suv-envoi-tag suv-envoi-undo" title="Cliquer pour annuler la marque d'envoi" onclick="${stop}factureEnvoiUndo('${g.devisId}','${ech.echId}')">Envoyée le ${esc(dateFR(new Date(envoiTs).toISOString().slice(0,10)))} <span class="suv-envoi-undo-x">${ICO_SZ('x', 10)}</span></div>` : "";
+          const lbl = `${ech.isSolde ? "Solde" : "Acompte"} ${formatRef(fac.ref, "facture")}`;
+          return `<div class="suv-action-col"><button class="btn-add-neon ghost" onclick="${stop}factureActionMenu('${g.devisId}','${ech.echId}')">${ICO_SZ('fileText',13)} ${esc(lbl)}</button>${envoiBadge}</div>`;
         };
-        let html = factureCol("acompte", facA, appA) + factureCol("solde", facS, appS);
+        let html = devisEcheances(g.devisId).map(factureCol).join("");
         if (!html) {
-          html = `<button class="btn-add-neon ghost" disabled title="Au moins un paiement reçu nécessaire pour émettre une facture" style="opacity:.5;cursor:not-allowed">${ICO_SZ('fileText',13)} Facture</button>`;
+          html = `<button class="btn-add-neon ghost" disabled title="Au moins un acompte encaissé (ou le devis accepté pour un paiement unique) nécessaire pour émettre une facture" style="opacity:.5;cursor:not-allowed">${ICO_SZ('fileText',13)} Facture</button>`;
         }
         return html;
       })()}
@@ -13020,9 +13074,8 @@ function suiviSelInfoHtml() {
 const SUIVI_NUMERIC = new Set(["montant","heures","paiement","ca","salaire","ursaf","tresorerie","frais"]);
 
 // Facture viewer modal state — type ∈ "acompte" | "solde"
-let viewFactureModal = null; // { devisId, type }
-window.viewFactureOpen = async function(devisId, type) {
-  type = type || "solde";
+let viewFactureModal = null; // { devisId, echId }
+window.viewFactureOpen = async function(devisId, echId) {
   // Blocage devis au noir : pas de facture pour de l'au noir (incohérence fiscale).
   if (isDevisAuNoir(devisId)) {
     uiAlert("Cette prestation n'a pas été déclarée (CA = 0).\n\n" +
@@ -13033,17 +13086,21 @@ window.viewFactureOpen = async function(devisId, type) {
   }
   // Reconstitution paresseuse pour les devis legacy (snapshot manquant).
   ensureLegacySnapshot(devisId);
+  // Résout l'échéance ciblée (fallback : la dernière = solde).
+  const ech = (echId && devisEcheanceByEchId(devisId, echId)) || devisEcheances(devisId).find(e => e.isSolde) || null;
+  if (!ech) return;
   // Confirmation explicite avant 1ère émission (pose date + numéro de
   // facture définitifs). Sans cela, l'émission se faisait silencieusement à
   // la 1ère ouverture du modal — flou côté user (« est-ce un brouillon ? »).
-  if (!findFactureFor(devisId, type) && isFactureApplicable(devisId, type)) {
+  if (!findFactureForEch(devisId, ech) && isFactureApplicable(devisId, ech)) {
     const today = new Date().toISOString().slice(0, 10);
     const ym = today.slice(0, 7);
-    const prefix = type === "acompte" ? "FA" : "FS";
+    const prefix = ech.isSolde ? "FS" : "FA";
     const seq = nextFactureSequence(ym, prefix);
     const nextRef = `${prefix}-${ym}-${String(seq).padStart(3, "0")}`;
-    const label = type === "acompte" ? "Facture d'acompte" : "Facture de solde";
+    const label = ech.isSolde ? "Facture de solde" : "Facture d'acompte";
     const ok = await uiConfirm(
+      `Échéance : ${ech.label}\n` +
       `Numéro : ${nextRef}\n` +
       `Date d'émission : ${today.split("-").reverse().join("/")}\n\n` +
       `Une fois émise, la facture est figée (date + numéro définitifs).`,
@@ -13051,7 +13108,7 @@ window.viewFactureOpen = async function(devisId, type) {
     );
     if (!ok) return;
   }
-  viewFactureModal = { devisId, type };
+  viewFactureModal = { devisId, echId: ech.echId };
   render();
 };
 window.viewFactureClose = async function() {
@@ -13060,19 +13117,18 @@ window.viewFactureClose = async function() {
   viewFactureModal = null;
   render();
   if (pending && pending.kind === "facture") {
+    const ech = devisEcheanceByEchId(pending.devisId, pending.echId);
+    const isSolde = ech ? ech.isSolde : true;
     const sent = await uiConfirm(
-      `La facture ${pending.factureType === "acompte" ? "d'acompte" : "de solde"} a été envoyée au client ?`,
+      `La facture ${isSolde ? "de solde" : "d'acompte"} a été envoyée au client ?`,
       { title: "Confirmation envoi", confirmLabel: "Envoyée", cancelLabel: "Pas encore", kind: "info" }
     );
     if (sent) {
-      const dv = S.suivi.devis && S.suivi.devis[pending.devisId];
-      if (dv && Array.isArray(dv.factures)) {
-        const fac = dv.factures.find(f => f.type === pending.factureType);
-        if (fac) {
-          fac.envoiTs = Date.now();
-          save();
-          render();
-        }
+      const fac = ech ? findFactureForEch(pending.devisId, ech) : null;
+      if (fac) {
+        fac.envoiTs = Date.now();
+        save();
+        render();
       }
     }
   }
