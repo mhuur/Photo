@@ -374,6 +374,53 @@
   .mk-iconbtn.sm{width:32px;height:32px}
   .mk-iconbtn.md{width:36px;height:36px}
 
+  /* ===== Rail vertical du parcours devis (refonte timeline) — colonne reliée,
+     une ligne par étape réelle (envoi → accord → paiement/facture par échéance
+     → livraison → facture solde → solde). Pastille par état. ===== */
+  .dv-rail{position:relative;display:flex;flex-direction:column;padding:2px 0}
+  .dv-step{position:relative;display:grid;grid-template-columns:26px minmax(0,1fr) max-content max-content;gap:12px;align-items:center;padding:10px 6px;border-radius:11px;transition:background .15s}
+  /* ligne verticale reliant les pastilles (derrière les dots) */
+  .dv-step::before{content:"";position:absolute;left:18px;top:0;bottom:0;width:2px;background:var(--border);z-index:0}
+  .dv-step:first-child::before{top:50%}
+  .dv-step:last-child::before{bottom:50%}
+  .dv-step.clickable{cursor:pointer}
+  .dv-step.active{background:rgba(74,158,255,.06)}
+  .dv-step.clickable:hover{background:rgba(74,158,255,.08)}
+  /* pastilles d'état */
+  .dv-dot{position:relative;z-index:1;width:26px;height:26px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;flex:0 0 auto;box-sizing:border-box}
+  .dv-dot.done{background:var(--success-dark);color:#fff}
+  .dv-dot.refused{background:var(--danger-dark);color:#fff}
+  .dv-dot.upcoming{background:var(--bg-2);border:2px solid var(--border-light)}
+  .dv-dot.active{background:var(--bg-2);border:2px solid var(--primary);animation:dvpulse 2.2s ease-in-out infinite}
+  .dv-dot.active i{width:9px;height:9px;border-radius:50%;background:var(--primary)}
+  .dv-dot svg{display:block}
+  @keyframes dvpulse{0%,100%{box-shadow:0 0 0 0 rgba(74,158,255,.28)}50%{box-shadow:0 0 0 5px rgba(74,158,255,0)}}
+  /* contenu */
+  .dv-step-main{min-width:0;display:flex;flex-direction:column;gap:2px}
+  .dv-step-top{display:flex;align-items:center;gap:8px;min-width:0}
+  .dv-step-label{font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .dv-step.done .dv-step-label{font-weight:600;color:#cfe3ff}
+  .dv-step.active .dv-step-label{font-weight:700;color:var(--text)}
+  .dv-step.upcoming .dv-step-label{font-weight:500;color:var(--text-dim)}
+  .dv-step.refused .dv-step-label{font-weight:700;color:#f0789a}
+  .dv-step-sub{font-size:11.5px;color:var(--text-dim)}
+  .dv-step-amt{font-size:14px;font-weight:700;text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+  .dv-step.done .dv-step-amt{color:#4ade80}
+  .dv-step.active .dv-step-amt{color:var(--text)}
+  .dv-step.upcoming .dv-step-amt,.dv-step.refused .dv-step-amt{color:var(--text-dim)}
+  .dv-step-state{justify-self:end;display:inline-flex;align-items:center;gap:6px;text-align:right;white-space:nowrap}
+  /* pastille d'état (droite) */
+  .dv-state{font-size:11px;font-weight:600;padding:3px 9px;border-radius:6px;white-space:nowrap;text-align:right}
+  .dv-state.done{color:#4ade80;background:rgba(34,197,94,.12)}
+  .dv-state.done.dv-state-invoice{color:#5eead4;background:rgba(94,234,212,.1)}
+  .dv-state.active{color:#fbbf24;background:rgba(245,158,11,.14)}
+  .dv-state.upcoming{color:var(--text-dim);background:transparent}
+  .dv-state.refused{color:#f0789a;background:transparent}
+  /* bouton d'annulation discret (x) sur une étape jalon franchie (livraison) */
+  .dv-step-x{background:none;border:none;padding:2px;cursor:pointer;color:var(--text-dim);opacity:0;transition:opacity .12s,color .12s;display:inline-flex}
+  .dv-step:hover .dv-step-x{opacity:.7}
+  .dv-step-x:hover{opacity:1;color:var(--danger)}
+
   /* Timeline (étapes) — cartes compactes cliquables, accent border-left par état */
   /* Timeline étapes paiement — style néon cohérent avec Accepté/Refusé */
   .suv-tl{display:flex;flex-direction:column;gap:6px;padding:2px 0}
@@ -496,11 +543,14 @@
   .ac-year-sep{margin:14px 0 4px;padding:0 4px 4px;font-size:11px;font-weight:600;color:var(--text-dim);text-transform:uppercase;letter-spacing:.12em;border-bottom:1px solid var(--border-soft)}
   .ac-year-sep:first-child{margin-top:0}
   .ac-row-wrap{display:flex;flex-direction:column;gap:0}
-  .ac-row-wrap.expanded{gap:0}
-  .ac-row-wrap.expanded .ac-row{border-radius:8px 8px 0 0;border-bottom:0}
+  .ac-row-wrap.expanded{gap:0;border-radius:var(--radius-xl);box-shadow:0 12px 40px rgba(0,0,0,.38)}
+  /* Carte façon mock : entête (ac-row) + corps (panel) forment un bloc arrondi. */
+  .ac-row-wrap.expanded .ac-row{border-radius:var(--radius-xl) var(--radius-xl) 0 0;border-bottom:0;padding:14px 20px}
+  .ac-row-wrap.expanded .ac-row-amt{font-size:16px}
   .ac-row-panel{background:var(--surface);border:1px solid var(--border-light);border-top:0;border-radius:0 0 8px 8px;padding:14px 16px;animation:acPanelIn .15s ease-out}
+  .ac-row-wrap.expanded .ac-row-panel{background:var(--bg-2);border-radius:0 0 var(--radius-xl) var(--radius-xl);padding:12px 20px 16px}
   @keyframes acPanelIn{from{opacity:0;transform:translateY(-3px)}to{opacity:1;transform:translateY(0)}}
-  .ac-row-active{background:var(--surface-hi)!important;border-color:var(--primary)!important}
+  .ac-row-active{background:var(--surface)!important;border-color:var(--border-light)!important}
   .ac-row{display:grid;grid-template-columns:80px 1fr 210px 100px 36px;gap:12px;align-items:center;padding:8px 14px;background:var(--surface);border:1px solid var(--border-light);border-radius:8px;cursor:pointer;transition:background .12s,border-color .12s;font-size:13px}
   .ac-row-gmail{background:transparent;border:1px solid var(--border-soft);color:var(--text-dim);width:30px;height:30px;border-radius:6px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;transition:all .12s;padding:0}
   .ac-row-gmail svg{width:14px;height:14px}
@@ -13105,99 +13155,145 @@ function suiviDevisUndoLabel(g) {
   return "Annuler l'acceptation";
 }
 
-// ▼ suiviStepRowsHtml — timeline verticale du panneau étendu. Une ligne par
-// étape du parcours réel : envoi/accord → chaque échéance (portant SA facture
-// en chip) → jalon livraison (inséré avant le solde) → solde. Les entries hors
-// échéancier (frais/débours) s'affichent en fin. Ligne échéance cliquable =
-// bascule payé/attente (gardes d'ordre dans suiviLigneTogglePaiement).
+// ▼ suiviStepRowsHtml — rail vertical du parcours réel d'un devis (refonte
+// timeline). Une ligne par étape : envoi → accord → pour chaque échéance
+// (paiement PUIS facture d'acompte) → livraison → facture de solde → paiement
+// du solde. Factures = lignes à part entière (plus de chips accrochées).
+// Frais/débours hors échéancier en fin. L'étape « active » = la 1re non
+// franchie (pastille pulse). Les actions restent portées par le bandeau —
+// déplacées sur l'étape active en phase 3. Ordre acompte = paiement→facture
+// (règle fiscale app, cf nextStepHint), volontairement différent du mock.
 function suiviStepRowsHtml(g) {
   const stop = "event.stopPropagation();";
   const devisId = g.devisId;
   const dv = (S.suivi.devis && S.suivi.devis[devisId]) || {};
   const statutPrin = g.statutPrin;
-  const rows = [];
+  const noir = isDevisAuNoir(devisId);
+  const isRefused = statutPrin === "refuse";
+  const isAnnule = statutPrin === "annule";
+  const accepted = statutPrin === "attente" || statutPrin === "en_cours" || statutPrin === "termine" || isAnnule;
+  const echList = devisEcheances(devisId);
+  const acomptes = echList.filter(e => !e.isSolde);
+  const solde = echList.find(e => e.isSolde);
+  const dateOf = (ts) => dateFR(new Date(ts).toISOString().slice(0, 10));
 
-  // Ligne envoi + accord (absorbe l'ancien badge « Envoyé le … » — son
-  // annulation vit dans le menu Devis).
-  const envoiLbl = dv.envoiTs ? `Devis envoyé le ${dateFR(new Date(dv.envoiTs).toISOString().slice(0,10))}` : null;
-  let envoiRow;
-  if (statutPrin === "refuse") {
-    envoiRow = { cls: "refused", ico: ICO_SZ('x', 12), label: `${envoiLbl || "Devis"} · refusé par le client` };
-  } else if (statutPrin === "annule") {
-    envoiRow = { cls: "refused", ico: ICO_SZ('x', 12), label: `${envoiLbl || "Devis"} · mission annulée` };
-  } else if (statutPrin === "envoye") {
-    envoiRow = dv.envoiTs
-      ? { cls: "pending", ico: ICO_SZ('circle', 11), label: `${envoiLbl} · en attente d'accord` }
-      : { cls: "idle", ico: ICO_SZ('circle', 11), label: "Devis à envoyer au client" };
-  } else {
-    envoiRow = { cls: "paid", ico: ICO_SZ('check', 12), label: `${envoiLbl ? envoiLbl + " · " : "Devis "}accepté` };
+  // — Liste ordonnée des étapes, chacune avec son flag `done`. —
+  const steps = [];
+  steps.push({ key: "sent", kind: "milestone", label: "Devis envoyé",
+    sub: dv.envoiTs ? `Envoyé le ${dateOf(dv.envoiTs)}` : "Prêt à être envoyé au client",
+    done: !!dv.envoiTs || accepted || isRefused });
+  steps.push({ key: "accepted", kind: "decision",
+    label: isRefused ? "Refusé par le client" : "Accepté par le client",
+    done: accepted, forceRefused: isRefused });
+  if (accepted) {
+    for (const ech of acomptes) {
+      steps.push({ key: "pay:" + ech.echId, kind: "payment", label: ech.label, ech,
+        amount: fmt(ech.entry.montant), done: entryStatut(ech.entry) === "termine" });
+      if (!noir) steps.push({ key: "fa:" + ech.echId, kind: "invoice", label: "Facture d'acompte", ech,
+        done: !!findFactureForEch(devisId, ech) });
+    }
+    steps.push({ key: "livraison", kind: "milestone", isLivraison: true,
+      label: dv.livreeTs ? "Prestation livrée" : "Prestation à livrer",
+      sub: dv.livreeTs ? `Livrée le ${dateOf(dv.livreeTs)}` : null,
+      done: !!dv.livreeTs });
+    if (solde) {
+      if (!noir) steps.push({ key: "fs", kind: "invoice", label: "Facture de solde", ech: solde,
+        done: !!findFactureForEch(devisId, solde) });
+      steps.push({ key: "pay:solde", kind: "payment", label: solde.label, ech: solde, isSolde: true,
+        amount: fmt(solde.entry.montant), done: entryStatut(solde.entry) === "termine" });
+    }
   }
-  rows.push(`<div class="suv-tl-card meta ${envoiRow.cls}">
-    <span class="suv-tl-card-ico">${envoiRow.ico}</span>
-    <span class="suv-tl-card-label">${esc(envoiRow.label)}</span>
-    <span class="suv-tl-card-state"></span>
-  </div>`);
 
-  // Ligne d'une échéance (ou d'une entry frais) : état + montant + chip facture.
-  const stateProps = (s) => {
-    if (s === "refuse") return { cls: "refused", ico: ICO_SZ('x', 12), lbl: "Refusé" };
-    if (s === "annule") return { cls: "refused", ico: ICO_SZ('x', 12), lbl: "Annulé" };
-    if (s === "termine") return { cls: "paid", ico: ICO_SZ('check', 12), lbl: "Soldée" };
-    if (s === "attente") return { cls: "pending", ico: ICO_SZ('circle', 11), lbl: "À encaisser" };
-    return { cls: "idle", ico: ICO_SZ('circle', 11), lbl: "En attente d'acceptation" };
+  // Étape active = 1re non franchie (parcours figé si refus/annulation).
+  const activeIdx = (isRefused || isAnnule) ? -1 : steps.findIndex(s => !s.done);
+  steps.forEach((s, i) => {
+    s.status = s.forceRefused ? "refused" : s.done ? "done" : (i === activeIdx ? "active" : "upcoming");
+  });
+
+  // — Helpers de rendu —
+  const dotHtml = (status) => {
+    if (status === "done")    return `<span class="dv-dot done">${ICO_SZ('check', 14)}</span>`;
+    if (status === "active")  return `<span class="dv-dot active"><i></i></span>`;
+    if (status === "refused") return `<span class="dv-dot refused">${ICO_SZ('x', 13)}</span>`;
+    return `<span class="dv-dot upcoming"></span>`;
   };
-  const entryRow = (entry, label, isSolde, chip) => {
-    const s = entryStatut(entry);
-    const p = stateProps(s);
-    const clickable = (s === "attente" || s === "termine");
-    return `<div class="suv-tl-card ${p.cls}${clickable ? ' clickable' : ''}"${clickable ? ` onclick="${stop}suiviLigneTogglePaiement('${entry.id}')" title="Cliquer pour basculer payé / en attente"` : ""}>
-      <span class="suv-tl-card-ico">${p.ico}</span>
-      <span class="suv-tl-card-label">${esc(label)}${isSolde ? `<span class="suv-tl-solde-tag">solde</span>` : ""}</span>
-      <span class="suv-tl-card-amt">${fmt(entry.montant)}</span>
-      <span class="suv-tl-card-doc">${chip || ""}</span>
-      <span class="suv-tl-card-state">${p.lbl}</span>
-    </div>`;
-  };
-  const facChip = (ech) => {
+  const facBadge = (ech) => {
     const fac = findFactureForEch(devisId, ech);
     if (!fac) return "";
     const sent = fac.envoiTs
-      ? `<span class="suv-fac-sent" title="Envoyée le ${esc(dateFR(new Date(fac.envoiTs).toISOString().slice(0,10)))}">${ICO_SZ('check', 11)}</span>`
+      ? `<span class="suv-fac-sent" title="Envoyée le ${esc(dateOf(fac.envoiTs))}">${ICO_SZ('check', 11)}</span>`
       : "";
     return `<button type="button" class="suv-fac-chip" title="Facture ${ech.isSolde ? "de solde" : "d'acompte"} — aperçu, impression, envoi" onclick="${stop}factureActionMenu('${devisId}','${ech.echId}')">${ICO_SZ('fileText', 11)} ${esc(formatRef(fac.ref, "facture"))}${sent}</button>`;
   };
+  const stateChip = (kind, status) => {
+    let lbl = "";
+    if (kind === "payment") lbl = status === "done" ? "Payé" : status === "active" ? "À encaisser" : status === "upcoming" ? "En attente" : "";
+    else if (kind === "invoice") lbl = status === "done" ? "Envoyée" : (status === "active" || status === "upcoming") ? "À émettre" : "";
+    if (!lbl) return "";
+    return `<span class="dv-state ${status} dv-state-${kind}">${lbl}</span>`;
+  };
+  const rowHtml = (o) => {
+    const clk = o.onclick ? " clickable" : "";
+    const attrs = (o.onclick ? ` onclick="${o.onclick}"` : "") + (o.title ? ` title="${esc(o.title)}"` : "");
+    return `<div class="dv-step ${o.status}${clk}"${attrs}>
+      ${dotHtml(o.status)}
+      <div class="dv-step-main">
+        <div class="dv-step-top"><span class="dv-step-label">${esc(o.label)}</span>${o.badge || ""}</div>
+        ${o.sub ? `<span class="dv-step-sub">${esc(o.sub)}</span>` : ""}
+      </div>
+      <span class="dv-step-amt">${o.amount || ""}</span>
+      <span class="dv-step-state">${o.state || ""}${o.extra || ""}</span>
+    </div>`;
+  };
 
-  const echList = devisEcheances(devisId);
-  const accepted = statutPrin === "attente" || statutPrin === "en_cours" || statutPrin === "termine";
-  const acomptes = echList.filter(e => !e.isSolde);
-  const solde = echList.find(e => e.isSolde);
-  for (const ech of acomptes) rows.push(entryRow(ech.entry, ech.label, false, facChip(ech)));
+  // — Rendu des étapes du parcours —
+  const html = steps.map((s) => {
+    let sub = s.sub || null;
+    if (s.key === "accepted" && s.status === "active") sub = "La balle est dans le camp du client";
 
-  // Jalon livraison — à sa place chronologique, entre les acomptes et le solde.
-  if (accepted) {
-    if (dv.livreeTs) {
-      rows.push(`<div class="suv-tl-card meta paid">
-        <span class="suv-tl-card-ico">${ICO_SZ('check', 12)}</span>
-        <span class="suv-tl-card-label">Prestation livrée le ${esc(dateFR(new Date(dv.livreeTs).toISOString().slice(0,10)))}</span>
-        <span class="suv-tl-card-state"><button type="button" class="suv-tl-undo-x" title="Annuler la livraison" onclick="${stop}suiviUnmarkLivree('${devisId}')">${ICO_SZ('x', 11)}</button></span>
-      </div>`);
-    } else {
-      rows.push(`<div class="suv-tl-card meta idle clickable" onclick="${stop}suiviMarkLivree('${devisId}')" title="Marquer la prestation comme réalisée et livrée. Débloque la facture de solde.">
-        <span class="suv-tl-card-ico">${ICO_SZ('circle', 11)}</span>
-        <span class="suv-tl-card-label">Prestation à livrer</span>
-        <span class="suv-tl-card-state"></span>
-      </div>`);
+    if (s.kind === "payment") {
+      const st = entryStatut(s.ech.entry);
+      const clickable = st === "attente" || st === "termine";
+      return rowHtml({ status: s.status, label: s.label, amount: s.amount,
+        state: stateChip("payment", s.status),
+        onclick: clickable ? `${stop}suiviLigneTogglePaiement('${s.ech.entry.id}')` : null,
+        title: clickable ? "Cliquer pour basculer payé / en attente" : null });
     }
-  }
-  if (solde) rows.push(entryRow(solde.entry, solde.label, true, facChip(solde)));
+    if (s.kind === "invoice") {
+      return rowHtml({ status: s.status, label: s.label,
+        badge: facBadge(s.ech), state: stateChip("invoice", s.status) });
+    }
+    if (s.isLivraison) {
+      const clickable = s.status === "active";
+      const extra = s.status === "done"
+        ? `<button type="button" class="dv-step-x" title="Annuler la livraison" onclick="${stop}suiviUnmarkLivree('${devisId}')">${ICO_SZ('x', 12)}</button>`
+        : "";
+      return rowHtml({ status: s.status, label: s.label, sub, extra,
+        onclick: clickable ? `${stop}suiviMarkLivree('${devisId}')` : null,
+        title: clickable ? "Marquer la prestation comme réalisée et livrée. Débloque la facture de solde." : null });
+    }
+    // milestone envoi + décision accord
+    return rowHtml({ status: s.status, label: s.label, sub });
+  });
+
+  // Terminal « Mission annulée » (annulation post-acceptation).
+  if (isAnnule) html.push(rowHtml({ status: "refused", label: "Mission annulée" }));
 
   // Entries hors échéancier (frais/débours) — en fin de parcours.
   const fraisEntries = [...(g.lignes || [])]
     .filter(e => num(e.frais) !== 0)
     .sort((a, b) => (a.date || "").localeCompare(b.date || ""));
-  for (const e of fraisEntries) rows.push(entryRow(e, e.echeance || "Frais / débours", false, ""));
+  for (const e of fraisEntries) {
+    const st = entryStatut(e);
+    const status = st === "termine" ? "done" : (st === "refuse" || st === "annule") ? "refused" : "upcoming";
+    const clickable = st === "attente" || st === "termine";
+    html.push(rowHtml({ status, label: e.echeance || "Frais / débours", amount: fmt(e.montant),
+      state: st === "termine" ? `<span class="dv-state done">Réglé</span>` : status === "upcoming" ? `<span class="dv-state upcoming">En attente</span>` : "",
+      onclick: clickable ? `${stop}suiviLigneTogglePaiement('${e.id}')` : null,
+      title: clickable ? "Cliquer pour basculer réglé / en attente" : null }));
+  }
 
-  return `<div class="suv-tl">${rows.join("")}</div>`;
+  return `<div class="dv-rail">${html.join("")}</div>`;
 }
 
 // ▼ suiviExpandedPanelHtml — volet inline d'un devis (Suivi + Accueil).
