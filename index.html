@@ -10662,11 +10662,16 @@ window.suiviUpdateSnapshot = async function() {
   // Si aucune entry n'existe (devis legacy ou supprimées manuellement), on
   // recrée tout en envoye.
   const existingEntries = S.suivi.entries.filter(en => en.devisId === e.id);
-  const oldStatus = { acompte: null, reste: null, frais: null };
   const oldDate = (existingEntries[0] && existingEntries[0].date) || "";
+  // Préservation des statuts : par echId (devis pilotés par échéances) avec
+  // fallback par classification acompte/reste/frais (devis legacy 2-lignes
+  // sans echId). Un acompte soldé reste soldé, idem refusé/annulé.
+  const oldByEch = {};
+  const oldByClass = { acompte: null, reste: null, frais: null };
   for (const en of existingEntries) {
+    if (en.echId) oldByEch[en.echId] = en.statut || "envoye";
     const c = suiviClassifyEcheance(en.echeance);
-    if (c && oldStatus[c] === null) oldStatus[c] = en.statut || "envoye";
+    if (c && oldByClass[c] === null) oldByClass[c] = en.statut || "envoye";
   }
   S.suivi.entries = S.suivi.entries.filter(en => en.devisId !== e.id);
   const cat = (S.tarifs.catalog || DEFAULT_CATALOG).find(c => c.k === m.object);
@@ -10679,12 +10684,12 @@ window.suiviUpdateSnapshot = async function() {
   const urssafPct = getUrssafPct(m);
   const tm = tauxMatos();
   const tresoRatio = (t.tarifH > 0 && tm.tauxAvecSecurite > 0) ? (tm.tauxAvecSecurite / t.tarifH) : 0;
-  const mkLine = (echeance, montant, heures, statut) => {
+  const mkLine = (echId, echeance, montant, heures, statut) => {
     const ursaf = isDeclared ? r2(montant * urssafPct / 100) : 0;
     const tresorerie = r2(montant * tresoRatio);
     const salaire = r2(montant - ursaf - tresorerie);
     return {
-      id: uid(), devisId: e.id, date, client, prestation,
+      id: uid(), devisId: e.id, date, client, prestation, echId,
       montant: montant.toFixed(2),
       heures: heures.toFixed(2),
       echeance,
@@ -10698,9 +10703,13 @@ window.suiviUpdateSnapshot = async function() {
       statut: statut || "envoye"
     };
   };
-  const acompte = mkLine("Acompte 30 %", t.acompte, hoursTotal * 0.30, oldStatus.acompte);
-  const reste = mkLine("Reste à payer 70 %", t.reste, hoursTotal * 0.70, oldStatus.reste);
-  S.suivi.entries.unshift(acompte, reste);
+  // Recrée une entry par échéance en préservant les statuts (echId puis classify).
+  const echEntries = buildEcheanceLines(m.echeances, t.total, hoursTotal).map(l => {
+    let st = (l.echId && oldByEch[l.echId] != null) ? oldByEch[l.echId] : null;
+    if (st == null) st = oldByClass[l.isSolde ? "reste" : "acompte"];
+    return mkLine(l.echId, l.label, l.montant, l.heures, st);
+  });
+  S.suivi.entries.unshift(...echEntries);
   if (t.debours > 0) {
     S.suivi.entries.unshift({
       id: uid(), devisId: e.id, date, client, prestation,
@@ -10711,7 +10720,7 @@ window.suiviUpdateSnapshot = async function() {
       ca: "0.00", salaire: "0.00", ursaf: "0.00", tresorerie: "0.00",
       frais: t.debours.toFixed(2),
       commentaires: "",
-      statut: oldStatus.frais || "envoye"
+      statut: oldByClass.frais || "envoye"
     });
   }
 
@@ -11418,6 +11427,35 @@ function suiviClassifyEcheance(s) {
   return "other";
 }
 
+// ▼ buildEcheanceLines — répartit le total HT d'un devis sur ses échéances
+// configurées (m.echeances). Retourne [{echId, label, montant:number,
+// heures:number, isSolde:bool}]. La DERNIÈRE échéance absorbe l'arrondi ET tout
+// écart si Σ pct ≠ 100 → Σ montant = total exact (indispensable pour le CA et
+// les seuils micro-BNC). Fallback : aucune échéance à pct>0 → 1 ligne "Paiement"
+// 100 %. La dernière ligne = solde (isSolde), les précédentes = acomptes.
+function buildEcheanceLines(echeances, total, hoursTotal) {
+  const src = (echeances || []).filter(e => num(e.pct) > 0);
+  const list = src.length ? src : [{ id: "ech-full", label: "Paiement", pct: 100 }];
+  const n = list.length;
+  const T = num(total), H = num(hoursTotal);
+  let accM = 0, accH = 0;
+  return list.map((e, i) => {
+    const isSolde = i === n - 1;
+    let montant, heures;
+    if (isSolde) {
+      montant = r2(T - accM);
+      heures  = r2(H - accH);
+    } else {
+      montant = r2(T * num(e.pct) / 100);
+      heures  = r2(H * num(e.pct) / 100);
+      accM = r2(accM + montant);
+      accH = r2(accH + heures);
+    }
+    const label = (e.label && e.label.trim()) || (isSolde ? "Solde" : `Échéance ${i + 1}`);
+    return { echId: e.id, label, montant, heures, isSolde };
+  });
+}
+
 // ▼ migrateLegacyReconstructedFlag — nettoie les flags `legacyReconstructed`
 // stale laissés par l'ancien sync (avant fix `update()` du commit 11d6818).
 // Avant ce commit, `delete dvOrig.legacyReconstructed` n'était pas propagé
@@ -11870,12 +11908,12 @@ async function suiviAdd() {
   const tm         = tauxMatos();
   const tresoRatio = (t.tarifH > 0 && tm.tauxAvecSecurite > 0) ? (tm.tauxAvecSecurite / t.tarifH) : 0;
 
-  const mkLine = (echeance, montant, heures) => {
+  const mkLine = (echId, echeance, montant, heures) => {
     const ursaf      = isDeclared ? r2(montant * urssafPct / 100) : 0;
     const tresorerie = r2(montant * tresoRatio);
     const salaire    = r2(montant - ursaf - tresorerie);
     return {
-      id: uid(), devisId, date, client, prestation,
+      id: uid(), devisId, date, client, prestation, echId,
       montant: montant.toFixed(2),
       heures:  heures.toFixed(2),
       echeance,
@@ -11889,9 +11927,11 @@ async function suiviAdd() {
     };
   };
 
-  const acompte = mkLine("Acompte 30 %", t.acompte, hoursTotal * 0.30);
-  const reste   = mkLine("Reste à payer 70 %", t.reste, hoursTotal * 0.70);
-  S.suivi.entries.unshift(acompte, reste);
+  // Une entry par échéance configurée (buildEcheanceLines : la dernière absorbe
+  // l'arrondi → Σ montant = total). Remplace l'ancien split fixe 30 % / 70 %.
+  const echEntries = buildEcheanceLines(m.echeances, t.total, hoursTotal)
+    .map(l => mkLine(l.echId, l.label, l.montant, l.heures));
+  S.suivi.entries.unshift(...echEntries);
 
   // Si le devis a des débours refacturés, créer une entry séparée pour suivre leur paiement.
   // (Hors CA/URSSAF/trésorerie/salaire — c'est une avance de frais, neutre fiscalement.)
