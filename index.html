@@ -359,19 +359,9 @@
   .mk-iconbtn.sm{width:32px;height:32px}
   .mk-iconbtn.md{width:36px;height:36px}
 
-  /* ===== Rail vertical du parcours devis (refonte timeline) — colonne reliée,
-     une ligne par étape réelle (envoi → accord → paiement/facture par échéance
-     → livraison → facture solde → solde). Pastille par état. ===== */
-  .dv-rail{position:relative;display:flex;flex-direction:column;padding:2px 0}
-  .dv-step{position:relative;display:grid;grid-template-columns:26px minmax(0,1fr) max-content max-content;gap:12px;align-items:center;padding:10px 6px;border-radius:11px;transition:background .15s}
-  /* ligne verticale reliant les pastilles (derrière les dots) */
-  .dv-step::before{content:"";position:absolute;left:18px;top:0;bottom:0;width:2px;background:var(--border);z-index:0}
-  .dv-step:first-child::before{top:50%}
-  .dv-step:last-child::before{bottom:50%}
-  .dv-step.clickable{cursor:pointer}
-  .dv-step.active{background:rgba(74,158,255,.06)}
-  .dv-step.clickable:hover{background:rgba(74,158,255,.08)}
-  /* pastilles d'état */
+  /* ===== Parcours devis (refonte 1b) — frise horizontale de progression,
+     puis bande d'action unique, puis échéancier détaillé. ===== */
+  /* pastilles d'état (réutilisées frise + échéancier) */
   .dv-dot{position:relative;z-index:1;width:26px;height:26px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;flex:0 0 auto;box-sizing:border-box}
   .dv-dot.done{background:var(--success-dark);color:#fff}
   .dv-dot.refused{background:var(--danger-dark);color:#fff}
@@ -380,26 +370,49 @@
   .dv-dot.active i{width:9px;height:9px;border-radius:50%;background:var(--primary)}
   .dv-dot svg{display:block}
   @keyframes dvpulse{0%,100%{box-shadow:0 0 0 0 rgba(74,158,255,.28)}50%{box-shadow:0 0 0 5px rgba(74,158,255,0)}}
-  /* contenu */
-  .dv-step-main{min-width:0;display:flex;flex-direction:column;gap:2px}
-  .dv-step-top{display:flex;align-items:center;gap:8px;min-width:0}
-  .dv-step-label{font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .dv-step.done .dv-step-label{font-weight:600;color:#cfe3ff}
-  .dv-step.active .dv-step-label{font-weight:700;color:var(--text)}
-  .dv-step.upcoming .dv-step-label{font-weight:500;color:var(--text-dim)}
-  .dv-step.refused .dv-step-label{font-weight:700;color:#f0789a}
-  .dv-step-sub{font-size:11.5px;color:var(--text-dim)}
-  .dv-step-amt{font-size:14px;font-weight:700;text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
-  .dv-step.done .dv-step-amt{color:#4ade80}
-  .dv-step.active .dv-step-amt{color:var(--text)}
-  .dv-step.upcoming .dv-step-amt,.dv-step.refused .dv-step-amt{color:var(--text-dim)}
-  .dv-step-state{justify-self:end;display:inline-flex;align-items:center;gap:6px;text-align:right;white-space:nowrap}
-  /* zone d'actions inline de l'étape active (boutons + ↺) */
-  .dv-step-actions{justify-self:end;display:flex;align-items:center;gap:7px;flex-wrap:wrap;justify-content:flex-end}
-  /* pastille d'état (droite) */
-  .dv-state{font-size:11px;font-weight:600;padding:3px 9px;border-radius:6px;white-space:nowrap;text-align:right}
+
+  /* Frise horizontale — 5 phases reliées (ligne verte = franchi) */
+  .dv-stepper{display:flex;padding:8px 4px 2px}
+  .dv-node{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;position:relative}
+  .dv-node-line{position:absolute;top:13px;right:50%;left:-50%;height:2px;background:var(--border);z-index:0}
+  .dv-node-line.done{background:var(--success)}
+  .dv-node-label{margin-top:9px;font-size:11px;font-weight:500;text-align:center;color:var(--text-dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+  .dv-node.active .dv-node-label{font-weight:700;color:var(--text)}
+  .dv-node.done .dv-node-label{color:#8fbfa0}
+  .dv-node.refused .dv-node-label{font-weight:700;color:#f0789a}
+
+  /* Bande d'action unique — la prochaine chose à faire */
+  .dv-band{display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:var(--radius-lg);border:1px solid transparent;flex-wrap:wrap}
+  .dv-band-ico{flex:0 0 auto;display:inline-flex}
+  .dv-band-txt{flex:1;min-width:150px;font-size:13.5px;font-weight:600;line-height:1.4}
+  .dv-band-acts{display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end;margin-left:auto}
+  .dv-band.info{background:rgba(74,158,255,.08);border-color:rgba(74,158,255,.28);color:#cfe3ff}
+  .dv-band.info .dv-band-ico{color:var(--primary)}
+  .dv-band.warn{background:rgba(245,158,11,.08);border-color:rgba(245,158,11,.28);color:#f5d9a8}
+  .dv-band.warn .dv-band-ico{color:#fbbf24}
+  .dv-band.done{background:rgba(34,197,94,.08);border-color:rgba(34,197,94,.3);color:#a7e8c0}
+  .dv-band.done .dv-band-ico{color:#4ade80}
+  .dv-band.danger{background:rgba(220,38,38,.09);border-color:rgba(240,120,154,.3);color:#f0b4c4}
+  .dv-band.danger .dv-band-ico{color:#f0789a}
+
+  /* Échéancier — lignes de paiement (cartes) */
+  .dv-ech{display:flex;flex-direction:column;gap:7px}
+  .dv-ech-head{font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--text-dim);padding:2px 2px 0}
+  .dv-ech-row{display:grid;grid-template-columns:26px minmax(0,1fr) max-content max-content;gap:12px;align-items:center;padding:11px 12px;border-radius:11px;border:1px solid var(--border-soft);background:var(--surface);transition:background .15s,border-color .15s}
+  .dv-ech-row.active{border-color:rgba(74,158,255,.4);background:rgba(74,158,255,.06)}
+  .dv-ech-row.clickable{cursor:pointer}
+  .dv-ech-row.clickable:hover{border-color:var(--border-light)}
+  .dv-ech-label{min-width:0;display:flex;align-items:center;gap:8px;font-size:14px;overflow:hidden}
+  .dv-ech-row.done .dv-ech-label{color:#cfe3ff}
+  .dv-ech-row.active .dv-ech-label{font-weight:700;color:var(--text)}
+  .dv-ech-row.upcoming .dv-ech-label{color:var(--text-dim)}
+  .dv-ech-row.refused .dv-ech-label{color:#f0789a}
+  .dv-ech-amt{font-size:14px;font-weight:700;text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+  .dv-ech-row.done .dv-ech-amt{color:#4ade80}
+  .dv-ech-row.upcoming .dv-ech-amt,.dv-ech-row.refused .dv-ech-amt{color:var(--text-dim)}
+  /* pastille d'état (droite, réutilisée) */
+  .dv-state{justify-self:end;font-size:11px;font-weight:600;padding:3px 9px;border-radius:6px;white-space:nowrap;text-align:right}
   .dv-state.done{color:#4ade80;background:rgba(34,197,94,.12)}
-  .dv-state.done.dv-state-invoice{color:#5eead4;background:rgba(94,234,212,.1)}
   .dv-state.active{color:#fbbf24;background:rgba(245,158,11,.14)}
   .dv-state.upcoming{color:var(--text-dim);background:transparent}
   .dv-state.refused{color:#f0789a;background:transparent}
@@ -9269,25 +9282,25 @@ function rBinModal() {
 // Format des items : { h: titre court, b: explication 1-3 phrases }.
 const APP_CHANGELOG = [
   {
-    id: "2026-07-refonte-rail-parcours",
+    id: "2026-07-refonte-parcours-devis",
     date: "2026-07-06",
-    title: "Suivi : le parcours d'un devis devient un vrai « rail »",
+    title: "Suivi : nouveau parcours de devis — frise + action + échéancier",
     items: [
       {
-        h: "Une colonne reliée, une pastille par étape",
-        b: "Le panneau déplié affiche le parcours comme une timeline verticale reliée : Devis envoyé → Accepté → chaque paiement et chaque facture → Prestation livrée → solde. Chaque étape a sa pastille (verte = faite, bleue clignotante = en cours, grise = à venir), on voit d'un coup d'œil où on en est."
+        h: "Une frise de progression en haut",
+        b: "Le panneau déplié affiche le parcours comme une frise horizontale en 5 étapes : Envoyé → Accepté → Acompte → Livré → Soldé. Pastille verte = franchi, bleue clignotante = en cours, grise = à venir. On voit d'un coup d'œil où en est le devis."
       },
       {
-        h: "Les actions sont sur l'étape en cours",
-        b: "Plus de bandeau au-dessus : l'étape active porte directement ses boutons (Envoyer / Valider l'envoi, Accepté / Refusé, Paiement reçu, Émettre la facture, Marquer livré). Une flèche ↺ sur l'étape en cours défait proprement la dernière action (dépaiement, dé-facturation, dé-livraison…)."
+        h: "Une seule action mise en avant",
+        b: "Juste en dessous, une bande indique la prochaine chose à faire avec son bouton (Envoyer / Valider l'envoi, Accepté / Refusé, Encaisser, Émettre la facture, Marquer livré) et une flèche ↺ pour revenir en arrière proprement. Plus besoin de chercher : l'action du moment est toujours au même endroit."
       },
       {
-        h: "Factures en lignes à part entière",
-        b: "Chaque facture (acompte ou solde) a sa propre ligne dans le parcours, avec son état « à émettre » ou « envoyée » — plus lisible qu'une pastille accrochée. L'ordre reste : on encaisse l'acompte, PUIS on émet sa facture."
+        h: "L'échéancier détaillé en dessous",
+        b: "Chaque paiement (acomptes et solde) apparaît avec son montant et son état (payé / à encaisser / en attente). Une fois émise, la facture s'affiche en chip cliquable sur sa ligne (aperçu, impression, envoi)."
       },
       {
         h: "Envoi en deux temps + menu ⋮ déroulant",
-        b: "« Envoyer » (ouvre Gmail) et « Valider l'envoi » (marque le devis comme envoyé) sont désormais deux boutons distincts. Les actions rares (Éditer, Réviser, Maj Trame, Annuler, Supprimer) sont dans un petit menu ⋮ déroulant en bas du panneau."
+        b: "« Envoyer » (ouvre Gmail) et « Valider l'envoi » (marque le devis comme envoyé) sont deux boutons distincts. Les actions rares (Éditer, Réviser, Maj Trame, Annuler, Supprimer) sont dans un petit menu ⋮ déroulant en bas du panneau."
       }
     ]
   },
@@ -13024,7 +13037,7 @@ window.suiviDevisUndo = suiviDevisUndo;
 
 // ▼ devisParcoursSteps — séquence ordonnée des étapes du parcours d'un devis
 // avec, pour chacune, son statut (done/active/upcoming/refused). SOURCE UNIQUE
-// consommée par le rail (suiviStepRowsHtml) ET le retour arrière granulaire
+// consommée par le corps du panneau (suiviParcoursHtml) ET le retour arrière
 // (suiviStepBack) — pour qu'ils ne divergent jamais. Ordre : envoi → accord
 // → (paiement PUIS facture d'acompte)* → livraison → facture de solde →
 // paiement solde. Au noir : les étapes facture sont sautées. `backIdx` = index
@@ -13072,56 +13085,59 @@ function devisParcoursSteps(devisId) {
   return { steps, activeIdx, backIdx, statutPrin, isRefused, isAnnule, dv, noir, echList, acomptes, solde };
 }
 
-// ▼ suiviStepRowsHtml — rail vertical du parcours réel d'un devis (refonte
-// timeline). Une ligne par étape ; l'étape ACTIVE porte ses actions inline
-// (plus de bandeau « Prochaine étape »). Factures = lignes à part entière.
-// Frais/débours hors échéancier en fin. Ordre acompte = paiement→facture
-// (règle fiscale app, gardes dans suiviLigneTogglePaiement), ≠ du mock.
-function suiviStepRowsHtml(g) {
+// ▼ suiviParcoursHtml — corps du panneau devis (refonte 1b) : frise horizontale
+// de progression (5 phases) → bande d'action unique (la prochaine chose à faire)
+// → échéancier détaillé (lignes de paiement + frais/débours). Réutilise
+// devisParcoursSteps (source des étapes/statuts) et suiviStepBack (↺). Factures
+// = chips sur la ligne de leur échéance ; l'émission se fait via la bande.
+function suiviParcoursHtml(g) {
   const stop = "event.stopPropagation();";
   const devisId = g.devisId;
   const P = devisParcoursSteps(devisId);
-  const { steps, backIdx, dv } = P;
+  const { steps, activeIdx, backIdx, isRefused, isAnnule, dv } = P;
   const dateOf = (ts) => dateFR(new Date(ts).toISOString().slice(0, 10));
-  const backBtn = `<button type="button" class="mk-iconbtn sm dv-back" title="Revenir à l'étape précédente" onclick="${stop}suiviStepBack('${devisId}')">${ICO_SZ('rotateCcw', 14)}</button>`;
+  const activeStep = activeIdx >= 0 ? steps[activeIdx] : null;
 
-  // — Helpers de rendu —
   const dotHtml = (status) => {
     if (status === "done")    return `<span class="dv-dot done">${ICO_SZ('check', 14)}</span>`;
     if (status === "active")  return `<span class="dv-dot active"><i></i></span>`;
     if (status === "refused") return `<span class="dv-dot refused">${ICO_SZ('x', 13)}</span>`;
     return `<span class="dv-dot upcoming"></span>`;
   };
-  const facBadge = (ech) => {
-    const fac = findFactureForEch(devisId, ech);
-    if (!fac) return "";
-    const sent = fac.envoiTs
-      ? `<span class="suv-fac-sent" title="Envoyée le ${esc(dateOf(fac.envoiTs))}">${ICO_SZ('check', 11)}</span>`
-      : "";
-    return `<button type="button" class="suv-fac-chip" title="Facture ${ech.isSolde ? "de solde" : "d'acompte"} — aperçu, impression, envoi" onclick="${stop}factureActionMenu('${devisId}','${ech.echId}')">${ICO_SZ('fileText', 11)} ${esc(formatRef(fac.ref, "facture"))}${sent}</button>`;
-  };
-  const stateChip = (kind, status) => {
-    let lbl = "";
-    if (kind === "payment") lbl = status === "done" ? "Payé" : status === "active" ? "À encaisser" : status === "upcoming" ? "En attente" : "";
-    else if (kind === "invoice") lbl = status === "done" ? "Envoyée" : (status === "active" || status === "upcoming") ? "À émettre" : "";
-    if (!lbl) return "";
-    return `<span class="dv-state ${status} dv-state-${kind}">${lbl}</span>`;
-  };
-  const rowHtml = (o) => {
-    const clk = o.onclick ? " clickable" : "";
-    const attrs = (o.onclick ? ` onclick="${o.onclick}"` : "") + (o.title ? ` title="${esc(o.title)}"` : "");
-    return `<div class="dv-step ${o.status}${clk}"${attrs}>
-      ${dotHtml(o.status)}
-      <div class="dv-step-main">
-        <div class="dv-step-top"><span class="dv-step-label">${esc(o.label)}</span>${o.badge || ""}</div>
-        ${o.sub ? `<span class="dv-step-sub">${esc(o.sub)}</span>` : ""}
-      </div>
-      <span class="dv-step-amt">${o.amount || ""}</span>
-      ${o.right || `<span class="dv-step-state"></span>`}
-    </div>`;
-  };
 
-  // — Actions inline de l'étape active —
+  // ---------- 1. Frise horizontale (5 phases coarse) ----------
+  const phaseOfKey = (k) => {
+    if (k === "sent") return "envoye";
+    if (k === "accepted") return "accepte";
+    if (k === "livraison") return "livre";
+    if (k === "fs" || k === "pay:solde") return "solde";
+    return "acompte"; // pay:<acompte>, fa:<acompte>
+  };
+  const phaseNodes = [
+    { key: "envoye", label: "Envoyé" }, { key: "accepte", label: "Accepté" },
+    { key: "acompte", label: "Acompte" }, { key: "livre", label: "Livré" },
+    { key: "solde", label: "Soldé" },
+  ];
+  const acceptedDone = steps.find(s => s.key === "accepted").done;
+  const grp = { envoye: [], accepte: [], acompte: [], livre: [], solde: [] };
+  steps.forEach(s => grp[phaseOfKey(s.key)].push(s));
+  const activePhase = activeStep ? phaseOfKey(activeStep.key) : null;
+  const nodeStatus = (pk) => {
+    if (isRefused) return pk === "envoye" ? "done" : pk === "accepte" ? "refused" : "upcoming";
+    const done = grp[pk].length ? grp[pk].every(s => s.done) : acceptedDone;
+    if (done) return "done";
+    if (pk === activePhase) return "active";
+    return "upcoming";
+  };
+  const nodes = phaseNodes.map(n => ({ ...n, status: nodeStatus(n.key) }));
+  const stepperHtml = `<div class="dv-stepper">${nodes.map((n, i) => `<div class="dv-node ${n.status}">
+      ${i > 0 ? `<div class="dv-node-line${nodes[i - 1].status === "done" ? " done" : ""}"></div>` : ""}
+      ${dotHtml(n.status)}
+      <span class="dv-node-label">${esc(n.label)}</span>
+    </div>`).join("")}</div>`;
+
+  // ---------- 2. Bande d'action unique ----------
+  const backBtn = `<button type="button" class="mk-iconbtn sm" title="Revenir à l'étape précédente" onclick="${stop}suiviStepBack('${devisId}')">${ICO_SZ('rotateCcw', 14)}</button>`;
   const relanceBtn = (kind) => {
     const lastRel = dv.lastRelance;
     return lastRel
@@ -13151,39 +13167,54 @@ function suiviStepRowsHtml(g) {
     return [];
   };
 
-  // — Rendu des étapes du parcours —
-  const html = steps.map((s, i) => {
-    const isActive = s.status === "active";
-    const showBack = i === backIdx;
-    // libellé / sous-texte / montant / badge selon le type d'étape
-    let label = "", sub = null, amount = "", badge = "";
-    if (s.key === "sent") { label = "Devis envoyé"; sub = dv.envoiTs ? `Envoyé le ${dateOf(dv.envoiTs)}` : (isActive ? "Prêt à être envoyé au client" : null); }
-    else if (s.key === "accepted") { label = s.forceRefused ? "Refusé par le client" : "Accepté par le client"; if (isActive) sub = "La balle est dans le camp du client"; }
-    else if (s.isLivraison) { label = dv.livreeTs ? "Prestation livrée" : "Prestation à livrer"; if (dv.livreeTs) sub = `Livrée le ${dateOf(dv.livreeTs)}`; }
-    else if (s.kind === "invoice") { label = s.ech.isSolde ? "Facture de solde" : "Facture d'acompte"; badge = facBadge(s.ech); }
-    else if (s.kind === "payment") { label = s.ech.label; amount = fmt(s.ech.entry.montant); }
-    // cellule droite : actions (actif) sinon pastille d'état, + ↺ si backIdx
-    let right;
-    if (isActive) {
-      right = `<div class="dv-step-actions">${activeActions(s).join("")}${showBack ? backBtn : ""}</div>`;
-    } else {
-      const chip = s.kind === "payment" ? stateChip("payment", s.status)
-                 : s.kind === "invoice" ? stateChip("invoice", s.status) : "";
-      right = showBack
-        ? `<div class="dv-step-actions">${chip}${backBtn}</div>`
-        : `<span class="dv-step-state">${chip}</span>`;
-    }
-    return rowHtml({ status: s.status, label, sub, amount, badge, right });
-  });
-
-  // Terminal « Mission annulée » (annulation post-acceptation).
-  if (P.isAnnule) {
-    const right = backIdx === -2 ? `<div class="dv-step-actions">${backBtn}</div>` : `<span class="dv-step-state"></span>`;
-    html.push(rowHtml({ status: "refused", label: "Mission annulée", right }));
+  let band;
+  if (isRefused) {
+    band = { variant: "danger", ico: "x", txt: "Devis refusé par le client.",
+      acts: [`<button type="button" class="mk-btn subtle" onclick="${stop}suiviStepBack('${devisId}')">${ICO_SZ('rotateCcw', 13)} Annuler le refus</button>`] };
+  } else if (isAnnule) {
+    band = { variant: "danger", ico: "x", txt: "Mission annulée.",
+      acts: [`<button type="button" class="mk-btn subtle" onclick="${stop}suiviStepBack('${devisId}')">${ICO_SZ('rotateCcw', 13)} Annuler l'annulation</button>`] };
+  } else if (!activeStep) {
+    band = { variant: "done", ico: "check", txt: "Dossier soldé — tout est réglé.",
+      acts: backIdx >= 0 ? [backBtn] : [] };
+  } else {
+    const s = activeStep;
+    let variant = "info", ico = "info", txt = "";
+    if (s.key === "sent") { txt = "Prêt à envoyer le devis au client."; }
+    else if (s.key === "accepted") { txt = "En attente de la réponse du client."; }
+    else if (s.kind === "payment") { variant = "warn"; ico = "euro"; txt = `En attente de l'encaissement ${s.ech.isSolde ? "du solde" : `de « ${s.ech.label} »`} (${fmt(s.ech.entry.montant)}).`; }
+    else if (s.kind === "invoice") { txt = s.ech.isSolde ? "Prestation livrée — émets la facture de solde." : "Acompte encaissé — émets la facture d'acompte."; }
+    else if (s.isLivraison) { txt = "Réalise la prestation puis marque-la livrée."; }
+    const acts = activeActions(s);
+    if (backIdx >= 0) acts.push(backBtn);
+    band = { variant, ico, txt, acts };
   }
+  const bandHtml = `<div class="dv-band ${band.variant}">
+    <span class="dv-band-ico">${ICO_SZ(band.ico, 16)}</span>
+    <span class="dv-band-txt">${esc(band.txt)}</span>
+    ${band.acts.length ? `<div class="dv-band-acts">${band.acts.join("")}</div>` : ""}
+  </div>`;
 
-  // Entries hors échéancier (frais/débours) — en fin de parcours. Cliquables
-  // pour basculer réglé/en attente (guardées par suiviLigneTogglePaiement).
+  // ---------- 3. Échéancier (lignes de paiement + frais/débours) ----------
+  const facBadge = (ech) => {
+    const fac = findFactureForEch(devisId, ech);
+    if (!fac) return "";
+    const sent = fac.envoiTs
+      ? `<span class="suv-fac-sent" title="Envoyée le ${esc(dateOf(fac.envoiTs))}">${ICO_SZ('check', 11)}</span>`
+      : "";
+    return `<button type="button" class="suv-fac-chip" title="Facture ${ech.isSolde ? "de solde" : "d'acompte"} — aperçu, impression, envoi" onclick="${stop}factureActionMenu('${devisId}','${ech.echId}')">${ICO_SZ('fileText', 11)} ${esc(formatRef(fac.ref, "facture"))}${sent}</button>`;
+  };
+  const payLbl = (status) => status === "done" ? "Payé" : status === "active" ? "À encaisser" : "En attente";
+  const echRows = [];
+  for (const s of steps.filter(x => x.kind === "payment")) {
+    const chip = facBadge(s.ech);
+    echRows.push(`<div class="dv-ech-row ${s.status}">
+      ${dotHtml(s.status)}
+      <div class="dv-ech-label">${esc(s.ech.label)}${chip ? " " + chip : ""}</div>
+      <span class="dv-ech-amt">${fmt(s.ech.entry.montant)}</span>
+      <span class="dv-state ${s.status}">${payLbl(s.status)}</span>
+    </div>`);
+  }
   const fraisEntries = [...(g.lignes || [])]
     .filter(e => num(e.frais) !== 0)
     .sort((a, b) => (a.date || "").localeCompare(b.date || ""));
@@ -13191,14 +13222,18 @@ function suiviStepRowsHtml(g) {
     const st = entryStatut(e);
     const status = st === "termine" ? "done" : (st === "refuse" || st === "annule") ? "refused" : "upcoming";
     const clickable = st === "attente" || st === "termine";
-    const chip = st === "termine" ? `<span class="dv-state done">Réglé</span>` : status === "upcoming" ? `<span class="dv-state upcoming">En attente</span>` : "";
-    html.push(rowHtml({ status, label: e.echeance || "Frais / débours", amount: fmt(e.montant),
-      right: `<span class="dv-step-state">${chip}</span>`,
-      onclick: clickable ? `${stop}suiviLigneTogglePaiement('${e.id}')` : null,
-      title: clickable ? "Cliquer pour basculer réglé / en attente" : null }));
+    echRows.push(`<div class="dv-ech-row ${status}${clickable ? " clickable" : ""}"${clickable ? ` onclick="${stop}suiviLigneTogglePaiement('${e.id}')" title="Cliquer pour basculer réglé / en attente"` : ""}>
+      ${dotHtml(status)}
+      <div class="dv-ech-label">${esc(e.echeance || "Frais / débours")}</div>
+      <span class="dv-ech-amt">${fmt(e.montant)}</span>
+      <span class="dv-state ${status}">${st === "termine" ? "Réglé" : "En attente"}</span>
+    </div>`);
   }
+  const echHtml = echRows.length
+    ? `<div class="dv-ech"><div class="dv-ech-head">Échéancier</div>${echRows.join("")}</div>`
+    : "";
 
-  return `<div class="dv-rail">${html.join("")}</div>`;
+  return `${stepperHtml}${bandHtml}${echHtml}`;
 }
 
 // ▼ suiviStepBack — retour arrière granulaire (↺ « reculer d'un cran »).
@@ -13228,10 +13263,9 @@ async function suiviStepBack(devisId) {
 window.suiviStepBack = suiviStepBack;
 
 // ▼ suiviExpandedPanelHtml — volet inline d'un devis (Suivi + Accueil).
-// Structure (refonte) : rail du parcours (suiviStepRowsHtml) — l'étape ACTIVE
-// porte ses actions inline, plus de bandeau « Prochaine étape » — puis rangée
-// documents (Devis PDF, Débours) + dropdown ⋮ (suiviMoreMenuHtml), puis historique des
-// versions. Le retour arrière vit désormais sur l'étape active (↺ du rail).
+// Structure (refonte 1b) : frise + bande d'action + échéancier (suiviParcoursHtml)
+// → rangée documents (Devis PDF, Débours) + dropdown ⋮ (suiviMoreMenuHtml) →
+// historique des versions. Le retour arrière (↺) vit dans la bande d'action.
 function suiviExpandedPanelHtml(g) {
   const stop = "event.stopPropagation();";
   const lignes = g.lignes || [];
@@ -13251,7 +13285,7 @@ function suiviExpandedPanelHtml(g) {
   </div>`;
 
   return `<div class="suv-expanded-panel">
-    ${suiviStepRowsHtml(g)}
+    ${suiviParcoursHtml(g)}
     ${footer}
     ${suiviHistoryHtml(g.devisId)}
   </div>`;
@@ -13858,8 +13892,7 @@ function statutLabel(k) { const s = STATUTS.find(x => x[0] === k); return s ? s[
 // SUIVI v2 — Volet inline (replace ancienne modale, voir suiviExpandedRowHtml)
 // ============================================================================
 
-// (suiviTimelineStepHtml supprimée — remplacée par suiviStepRowsHtml, la
-// timeline fusionnée du panneau étendu qui porte aussi envoi/livraison/factures)
+// (corps du panneau = suiviParcoursHtml : frise + bande d'action + échéancier)
 
 // ============================================================================
 // rSV — vue Suivi v2
