@@ -9292,7 +9292,7 @@ const APP_CHANGELOG = [
       },
       {
         h: "« Prestation livrée » devient « Prestation réalisée »",
-        b: "L'étape avant la facture de solde marque désormais la séance réalisée (la prise de vue faite), distincte de la livraison des fichiers. La frise passe à 6 étapes : Envoyé · Accepté · Acompte · Réalisé · Soldé · Photos."
+        b: "L'étape avant la facture de solde marque désormais la séance réalisée (la prise de vue faite), distincte de la livraison des fichiers. La frise passe à 6 étapes : Envoyé · Accepté · Acompte · Réalisé · Soldé · Livré."
       }
     ]
   },
@@ -13164,7 +13164,7 @@ function suiviParcoursHtml(g) {
   const phaseNodes = [
     { key: "envoye", label: "Envoyé" }, { key: "accepte", label: "Accepté" },
     { key: "acompte", label: "Acompte" }, { key: "realise", label: "Réalisé" },
-    { key: "solde", label: "Soldé" }, { key: "photos", label: "Photos" },
+    { key: "solde", label: "Soldé" }, { key: "photos", label: "Livré" },
   ];
   const acceptedDone = steps.find(s => s.key === "accepted").done;
   const grp = { envoye: [], accepte: [], acompte: [], realise: [], solde: [], photos: [] };
