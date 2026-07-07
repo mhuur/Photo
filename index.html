@@ -9282,6 +9282,21 @@ function rBinModal() {
 // Format des items : { h: titre court, b: explication 1-3 phrases }.
 const APP_CHANGELOG = [
   {
+    id: "2026-07-etape-envoi-photos",
+    date: "2026-07-07",
+    title: "Suivi : étape finale « Envoi des photos »",
+    items: [
+      {
+        h: "Une dernière étape après le paiement",
+        b: "Le parcours ajoute « Envoi des photos » tout à la fin, après l'encaissement du solde : on livre les fichiers une fois payé, et l'app en garde la trace. Tant que les photos ne sont pas envoyées, la bande d'action te le rappelle."
+      },
+      {
+        h: "« Prestation livrée » devient « Prestation réalisée »",
+        b: "L'étape avant la facture de solde marque désormais la séance réalisée (la prise de vue faite), distincte de la livraison des fichiers. La frise passe à 6 étapes : Envoyé · Accepté · Acompte · Réalisé · Soldé · Photos."
+      }
+    ]
+  },
+  {
     id: "2026-07-refonte-parcours-devis",
     date: "2026-07-06",
     title: "Suivi : nouveau parcours de devis — frise + action + échéancier",
@@ -11695,19 +11710,20 @@ async function confirmRemoveFactures(list, actionLabel) {
   );
 }
 
-// ▼ suiviMarkLivree / suiviUnmarkLivree — jalon « Prestation livrée » (dv.livreeTs).
-// Débloque la facture de solde (facture à la livraison). Champ additif sur le
-// devis (absent = non livrée), pas de migration.
+// ▼ suiviMarkLivree / suiviUnmarkLivree — jalon « Prestation réalisée »
+// (dv.livreeTs, nom de champ conservé). Marque la prestation faite (la séance),
+// débloque la facture de solde. Distinct de l'envoi des photos (dv.photosTs),
+// qui vient APRÈS le paiement du solde. Champ additif, pas de migration.
 window.suiviMarkLivree = function(devisId) {
-  // Garde-fou d'ordre : la livraison vient après l'encaissement (et la
+  // Garde-fou d'ordre : la réalisation vient après l'encaissement (et la
   // facturation, sauf devis au noir) de tous les acomptes. La fonction est
   // exposée window → elle valide elle-même, pas seulement l'UI qui l'appelle.
   const noir = isDevisAuNoir(devisId);
   const acomptes = devisEcheances(devisId).filter(e => !e.isSolde);
   const ready = acomptes.every(e => e.statut === "termine" && (noir || findFactureForEch(devisId, e)));
   if (!ready) {
-    uiAlert("Encaisse et facture d'abord tous les acomptes — le jalon livraison vient ensuite dans le parcours (suis le bandeau « Prochaine étape »).",
-      { title: "Pas encore l'étape livraison", kind: "warn" });
+    uiAlert("Encaisse et facture d'abord tous les acomptes — marquer la prestation réalisée vient ensuite dans le parcours.",
+      { title: "Pas encore l'étape « prestation réalisée »", kind: "warn" });
     return;
   }
   if (!S.suivi.devis) S.suivi.devis = {};
@@ -11719,13 +11735,41 @@ window.suiviMarkLivree = function(devisId) {
 window.suiviUnmarkLivree = async function(devisId) {
   const dv = S.suivi.devis && S.suivi.devis[devisId];
   if (!dv || !dv.livreeTs) return;
-  // Annuler la livraison retire la facture de solde si elle a été émise (elle
-  // n'était plus justifiée sans livraison).
+  // Annuler la réalisation retire la facture de solde si elle a été émise (elle
+  // n'était plus justifiée sans prestation réalisée).
   const soldeEch = devisEcheances(devisId).find(e => e.isSolde);
   const fs = soldeEch && findFactureForEch(devisId, soldeEch);
-  if (fs && !(await confirmRemoveFactures([fs], "Annuler la livraison"))) return;
+  if (fs && !(await confirmRemoveFactures([fs], "Annuler la prestation réalisée"))) return;
   if (fs) removeFactures(devisId, [fs]);
   delete dv.livreeTs;
+  save();
+  render();
+};
+
+// ▼ suiviMarkPhotos / suiviUnmarkPhotos — jalon FINAL « Envoi des photos »
+// (dv.photosTs). Livraison des fichiers au client, APRÈS encaissement du solde
+// (levier : on livre une fois payé). Marqueur opérationnel — n'affecte NI le
+// statut fiscal des entries (soldé = payé, inchangé) NI le bilan. Champ additif.
+window.suiviMarkPhotos = function(devisId) {
+  // Garde-fou d'ordre : les photos se livrent une fois le solde encaissé (ou
+  // toutes les échéances si pas de solde distinct).
+  const list = devisEcheances(devisId);
+  const paid = list.length && list.every(e => e.statut === "termine");
+  if (!paid) {
+    uiAlert("Encaisse d'abord le solde — l'envoi des photos est la dernière étape, après paiement complet.",
+      { title: "Pas encore l'étape « envoi des photos »", kind: "warn" });
+    return;
+  }
+  if (!S.suivi.devis) S.suivi.devis = {};
+  if (!S.suivi.devis[devisId]) S.suivi.devis[devisId] = { ref: "" };
+  S.suivi.devis[devisId].photosTs = Date.now();
+  save();
+  render();
+};
+window.suiviUnmarkPhotos = function(devisId) {
+  const dv = S.suivi.devis && S.suivi.devis[devisId];
+  if (!dv || !dv.photosTs) return;
+  delete dv.photosTs;
   save();
   render();
 };
@@ -12902,7 +12946,7 @@ async function suiviLigneTogglePaiement(id) {
         const livree = !!(dv && dv.livreeTs);
         const fsEmise = !!findFactureForEch(e.devisId, ech);
         if (!livree || !fsEmise) {
-          uiAlert("La facture de solde s'émet à la livraison, avant l'encaissement du solde.\n\nSuis le bandeau « Prochaine étape » : marque la prestation livrée, émets la facture de solde, puis pointe le solde comme reçu.",
+          uiAlert("La facture de solde s'émet une fois la prestation réalisée, avant l'encaissement du solde.\n\nSuis la bande d'action : marque la prestation réalisée, émets la facture de solde, puis pointe le solde comme reçu.",
             { title: "Le solde se facture d'abord", kind: "warn" });
           return;
         }
@@ -13066,6 +13110,8 @@ function devisParcoursSteps(devisId) {
       if (!noir) steps.push({ key: "fs", kind: "invoice", ech: solde, done: !!findFactureForEch(devisId, solde) });
       steps.push({ key: "pay:solde", kind: "payment", ech: solde, isSolde: true, done: entryStatut(solde.entry) === "termine" });
     }
+    // Étape finale : envoi des photos au client (après paiement complet).
+    steps.push({ key: "photos", kind: "milestone", isPhotos: true, done: !!dv.photosTs });
   }
 
   // Étape active = 1re non franchie (parcours figé si refus/annulation).
@@ -13086,8 +13132,9 @@ function devisParcoursSteps(devisId) {
 }
 
 // ▼ suiviParcoursHtml — corps du panneau devis (refonte 1b) : frise horizontale
-// de progression (5 phases) → bande d'action unique (la prochaine chose à faire)
-// → échéancier détaillé (lignes de paiement + frais/débours). Réutilise
+// de progression (6 phases : Envoyé/Accepté/Acompte/Réalisé/Soldé/Photos) →
+// bande d'action unique (la prochaine chose à faire) → échéancier détaillé
+// (lignes de paiement + frais/débours). Réutilise
 // devisParcoursSteps (source des étapes/statuts) et suiviStepBack (↺). Factures
 // = chips sur la ligne de leur échéance ; l'émission se fait via la bande.
 function suiviParcoursHtml(g) {
@@ -13105,21 +13152,22 @@ function suiviParcoursHtml(g) {
     return `<span class="dv-dot upcoming"></span>`;
   };
 
-  // ---------- 1. Frise horizontale (5 phases coarse) ----------
+  // ---------- 1. Frise horizontale (6 phases coarse) ----------
   const phaseOfKey = (k) => {
     if (k === "sent") return "envoye";
     if (k === "accepted") return "accepte";
-    if (k === "livraison") return "livre";
+    if (k === "livraison") return "realise";
+    if (k === "photos") return "photos";
     if (k === "fs" || k === "pay:solde") return "solde";
     return "acompte"; // pay:<acompte>, fa:<acompte>
   };
   const phaseNodes = [
     { key: "envoye", label: "Envoyé" }, { key: "accepte", label: "Accepté" },
-    { key: "acompte", label: "Acompte" }, { key: "livre", label: "Livré" },
-    { key: "solde", label: "Soldé" },
+    { key: "acompte", label: "Acompte" }, { key: "realise", label: "Réalisé" },
+    { key: "solde", label: "Soldé" }, { key: "photos", label: "Photos" },
   ];
   const acceptedDone = steps.find(s => s.key === "accepted").done;
-  const grp = { envoye: [], accepte: [], acompte: [], livre: [], solde: [] };
+  const grp = { envoye: [], accepte: [], acompte: [], realise: [], solde: [], photos: [] };
   steps.forEach(s => grp[phaseOfKey(s.key)].push(s));
   const activePhase = activeStep ? phaseOfKey(activeStep.key) : null;
   const nodeStatus = (pk) => {
@@ -13162,7 +13210,10 @@ function suiviParcoursHtml(g) {
       `<button type="button" class="mk-btn green" title="Émettre la facture et l'envoyer au client (aperçu + Gmail)." onclick="${stop}factureEmettreEnvoyerFlow('${devisId}','${s.ech.echId}')">${ICO_SZ('fileText', 13)} Émettre et envoyer</button>`,
     ];
     if (s.isLivraison) return [
-      `<button type="button" class="mk-btn blue" title="Marquer la prestation réalisée et livrée. Débloque la facture de solde." onclick="${stop}suiviMarkLivree('${devisId}')">${ICO_SZ('check', 13)} Marquer livré</button>`,
+      `<button type="button" class="mk-btn blue" title="Marquer la prestation (séance) réalisée. Débloque la facture de solde." onclick="${stop}suiviMarkLivree('${devisId}')">${ICO_SZ('check', 13)} Prestation réalisée</button>`,
+    ];
+    if (s.isPhotos) return [
+      `<button type="button" class="mk-btn blue" title="Marquer les photos livrées au client. Dernière étape du parcours." onclick="${stop}suiviMarkPhotos('${devisId}')">${ICO_SZ('camera', 13)} Photos envoyées</button>`,
     ];
     return [];
   };
@@ -13175,7 +13226,7 @@ function suiviParcoursHtml(g) {
     band = { variant: "danger", ico: "x", txt: "Mission annulée.",
       acts: [`<button type="button" class="mk-btn subtle" onclick="${stop}suiviStepBack('${devisId}')">${ICO_SZ('rotateCcw', 13)} Annuler l'annulation</button>`] };
   } else if (!activeStep) {
-    band = { variant: "done", ico: "check", txt: "Dossier soldé — tout est réglé.",
+    band = { variant: "done", ico: "check", txt: "Dossier clôturé — payé et photos envoyées.",
       acts: backIdx >= 0 ? [backBtn] : [] };
   } else {
     const s = activeStep;
@@ -13183,8 +13234,9 @@ function suiviParcoursHtml(g) {
     if (s.key === "sent") { txt = "Prêt à envoyer le devis au client."; }
     else if (s.key === "accepted") { txt = "En attente de la réponse du client."; }
     else if (s.kind === "payment") { variant = "warn"; ico = "euro"; txt = `En attente de l'encaissement ${s.ech.isSolde ? "du solde" : `de « ${s.ech.label} »`} (${fmt(s.ech.entry.montant)}).`; }
-    else if (s.kind === "invoice") { txt = s.ech.isSolde ? "Prestation livrée — émets la facture de solde." : "Acompte encaissé — émets la facture d'acompte."; }
-    else if (s.isLivraison) { txt = "Réalise la prestation puis marque-la livrée."; }
+    else if (s.kind === "invoice") { txt = s.ech.isSolde ? "Prestation réalisée — émets la facture de solde." : "Acompte encaissé — émets la facture d'acompte."; }
+    else if (s.isLivraison) { txt = "Réalise la prestation (la séance), puis marque-la réalisée."; }
+    else if (s.isPhotos) { txt = "Solde encaissé — envoie les photos au client pour clôturer."; }
     const acts = activeActions(s);
     if (backIdx >= 0) acts.push(backBtn);
     band = { variant, ico, txt, acts };
@@ -13250,6 +13302,7 @@ async function suiviStepBack(devisId) {
   if (!step) return;
   if (step.key === "sent")      return devisEnvoiUndo(devisId);     // retire envoiTs (confirm)
   if (step.key === "accepted")  return suiviDevisUndo(devisId);     // dé-accepte (branche « tout attente »)
+  if (step.isPhotos)            return suiviUnmarkPhotos(devisId);  // retire photosTs (envoi photos)
   if (step.kind === "payment")  return suiviLigneTogglePaiement(step.ech.entry.id); // dé-paye + cascade
   if (step.isLivraison)         return suiviUnmarkLivree(devisId);  // retire livreeTs (+ FS si émise)
   if (step.kind === "invoice") {
