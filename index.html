@@ -2342,7 +2342,7 @@
       font-size: 9pt !important;
       line-height: 1.5 !important;
       color: #1a1a1a !important;
-      text-align: justify !important;
+      text-align: left !important;
       hyphens: auto !important;
       -webkit-hyphens: auto !important;
       flex: 1 1 auto !important;
@@ -2358,7 +2358,7 @@
       font-size: 9pt !important;
       line-height: 1.5 !important;
       color: #1a1a1a !important;
-      text-align: justify !important;
+      text-align: left !important;
       font-style: normal !important;
     }
     /* Numbered section: bold inline title + body, same typography as preamble */
@@ -2367,7 +2367,7 @@
       font-size: 9pt !important;
       line-height: 1.5 !important;
       color: #1a1a1a !important;
-      text-align: justify !important;
+      text-align: left !important;
       break-inside: avoid !important;
       page-break-inside: avoid !important;
     }
@@ -9333,6 +9333,29 @@ function rBinModal() {
 // Format des items : { h: titre court, b: explication 1-3 phrases }.
 const APP_CHANGELOG = [
   {
+    id: "2026-07-cgv-modele-pro",
+    date: "2026-07-13",
+    title: "Nouveau modèle de CGV, complet et à jour",
+    items: [
+      {
+        h: "12 sections au lieu de 8",
+        b: "Le modèle photographe a été entièrement réécrit : devis et acompte, rétractation, paiement, annulation par le client, annulation par le photographe, déroulement de la prise de vue, livraison et retouches, cession de droits, droit à l'image, usage promotionnel, données personnelles et médiation."
+      },
+      {
+        h: "Deux corrections juridiques importantes",
+        b: "Le délai de rétractation passe de 7 à 14 jours (le délai légal pour un contrat conclu à distance), avec l'exception prévue pour les prestations à date déterminée. Et les sommes versées sont désormais qualifiées d'« acomptes » par dérogation expresse : sans cette clause, elles seraient présumées être des arrhes, et une annulation de ton fait t'obligerait à rembourser le double."
+      },
+      {
+        h: "Un barème d'annulation chiffré",
+        b: "Plus de 30 jours avant : acompte conservé. Entre 30 et 8 jours : 50 % du total. Moins de 8 jours ou absence : la totalité. Les reports à plus de 30 jours restent gratuits."
+      },
+      {
+        h: "CGV imprimées plus lisibles",
+        b: "Le texte des CGV n'est plus justifié : les mots ne se collent plus les uns aux autres dans les colonnes étroites."
+      }
+    ]
+  },
+  {
     id: "2026-07-cgv-accessibles",
     date: "2026-07-13",
     title: "Les CGV sont de nouveau accessibles",
@@ -9746,22 +9769,62 @@ function rCgvSectionEditModal() {
 }
 
 // Photographer template — populates preambule + sections array
-const CGV_TEMPLATE_PREAMBLE = "Le présent document précise les conditions générales de vente applicables aux prestations photographiques et audiovisuelles. Il complète et fait partie intégrante du devis qu'il accompagne.";
+// ▼ CGV_TEMPLATE — modèle photographe (préambule + 12 sections).
+// Points juridiques verrouillés par ce modèle, à NE PAS diluer en le réécrivant :
+//   - § 2 : les sommes versées sont des ACOMPTES (art. 1590 C. civ.), par
+//     dérogation EXPRESSE à l'art. L214-1 C. conso. Sans cette clause, elles
+//     sont présumées ARRHES → annulation du fait du photographe = restitution
+//     AU DOUBLE. C'est la clause la plus importante du document.
+//   - § 3 : rétractation = 14 jours (L221-18) pour un consommateur en contrat
+//     à distance / hors établissement — PAS 7. Exception « activité de loisirs
+//     à date déterminée » (L221-28 4°) + exécution anticipée (L221-25).
+//   - § 9 : cession de droits = mention obligatoire de l'étendue, la
+//     destination, le lieu et la durée (art. L131-3 CPI), renvoyée au devis.
+// La section « Pénalités de retard » (L441-10) est ajoutée AUTOMATIQUEMENT en
+// dernier par rDevisPreview pour les clients non-B2C : ne pas la dupliquer ici.
+const CGV_TEMPLATE_PREAMBLE = "Les présentes conditions générales de vente régissent les prestations photographiques et audiovisuelles réalisées par le Prestataire, dont l'identité et les coordonnées figurent en tête du devis. Elles forment, avec le devis accepté, l'intégralité de l'accord entre le Prestataire et le Client, et prévalent sur toute autre condition. L'acceptation du devis emporte adhésion sans réserve aux présentes.";
 const CGV_TEMPLATE_SECTIONS = [
-  { title: "Objet", body: "Le prestataire propose des prestations photographiques et/ou audiovisuelles. Les présentes conditions générales, ainsi que le devis associé, constituent le cadre contractuel entre le prestataire et le commanditaire." },
-  { title: "Réservation et acompte", body: "La réservation d'une prestation se fait sous réserve de la disponibilité du prestataire. Elle nécessite le retour du devis signé avec la mention « bon pour accord », accompagné d'un acompte de 30 % du montant total. Le solde est dû à l'issue de la prestation, avant livraison des fichiers." },
-  { title: "Délai de rétractation", body: "Le commanditaire dispose d'un délai de rétractation de 7 jours à compter de la signature du devis. Toute décision de rétractation effectuée dans ce délai donne lieu au remboursement du montant versé. Passé ce délai, l'acompte n'est plus remboursable." },
-  { title: "Délais et livraison", body: "Le prestataire s'efforce de respecter les délais de livraison indiqués (généralement sous 15 jours ouvrés). Ces délais sont donnés à titre indicatif et ne peuvent donner lieu à indemnité en cas de dépassement raisonnable." },
-  { title: "Prise de vue", body: "En extérieur, en cas de mauvais temps ou de force majeure, le prestataire se réserve le droit de suspendre la prestation s'il juge que celle-ci risque de compromettre la qualité du travail ou la sécurité de son matériel. Une nouvelle date sera convenue d'un commun accord." },
-  { title: "Force majeure et maladie", body: "En cas de force majeure ou de maladie empêchant la réalisation de la prestation, le prestataire peut annuler ou reporter sans engager sa responsabilité. L'acompte est intégralement remboursé en cas d'annulation par le prestataire ; il s'engage par ailleurs à proposer un remplaçant si le commanditaire le souhaite." },
-  { title: "Propriété intellectuelle et droit à l'image", body: "Les œuvres réalisées confèrent au prestataire des droits de propriété intellectuelle conformément au code de la propriété intellectuelle. Le commanditaire s'engage à diffuser les fichiers livrés en l'état (sans recadrage ni retouche), sauf accord préalable écrit. Le prestataire conserve le droit de diffuser les œuvres dans le cadre de sa communication professionnelle (portfolio, réseaux sociaux, expositions à but non lucratif), sauf mention contraire écrite." },
-  { title: "Annulation", body: "Toute annulation du commanditaire après signature du devis entraîne la conservation de l'acompte par le prestataire à titre de dédommagement." }
+  { title: "Objet",
+    body: "Le Prestataire réalise des prestations photographiques et/ou audiovisuelles dont la nature, le contenu, la date et le prix sont définis au devis. Le devis, une fois accepté, et les présentes conditions constituent le contrat liant les parties. Toute prestation non mentionnée au devis fait l'objet d'un accord écrit préalable et d'une facturation complémentaire." },
+
+  { title: "Devis, réservation et acompte",
+    body: "Le devis est valable pendant la durée qu'il indique. La réservation devient ferme à réception du devis accepté, revêtu de la mention « bon pour accord », accompagné du versement de l'acompte qui y est stipulé. La date de la prestation n'est bloquée qu'à compter de cet encaissement. Les sommes versées à la commande constituent des ACOMPTES au sens de l'article 1590 du Code civil, et non des arrhes : par dérogation expresse à l'article L214-1 du Code de la consommation, elles engagent fermement les deux parties, et aucune ne peut se dédire par simple abandon ou restitution au double des sommes versées. Les conséquences d'une annulation sont réglées aux articles 5 et 6." },
+
+  { title: "Droit de rétractation",
+    body: "Lorsque le contrat est conclu à distance ou hors établissement avec un Client consommateur, celui-ci dispose d'un délai de quatorze (14) jours à compter de son acceptation pour se rétracter, sans motif ni pénalité (art. L221-18 du Code de la consommation) ; les sommes versées lui sont alors remboursées sous quatorze jours. Conformément à l'article L221-28, 4° du même code, ce droit ne s'applique pas aux prestations de loisirs devant être fournies à une date ou à une période déterminée : lorsque le devis fixe la date de la prestation, le Client reconnaît que ce droit n'a pas vocation à s'appliquer. Si le Client demande expressément que la prestation débute avant l'expiration du délai de rétractation, il reste redevable du montant correspondant au service déjà fourni au jour de sa rétractation (art. L221-25). Le droit de rétractation ne bénéficie pas au Client professionnel agissant dans le cadre de son activité." },
+
+  { title: "Prix et modalités de paiement",
+    body: "Les prix figurent au devis. Le Prestataire relevant du régime de la franchise en base de TVA, ils s'entendent nets de taxe. Le paiement s'effectue selon l'échéancier du devis, par virement bancaire aux coordonnées qui y figurent. Sauf stipulation contraire, le solde est exigible après la réalisation de la prestation ; la livraison des fichiers intervient après encaissement intégral du prix. Les frais avancés pour le compte du Client (débours) lui sont refacturés à l'euro près sur justificatifs. Aucun escompte n'est accordé pour paiement anticipé." },
+
+  { title: "Annulation ou report par le Client",
+    body: "Toute annulation doit être notifiée par écrit. Au-delà du délai de rétractation lorsqu'il s'applique, et compte tenu de l'immobilisation de la date : une annulation à plus de 30 jours de la prestation entraîne la conservation de l'acompte à titre d'indemnité ; entre 30 et 8 jours, une indemnité égale à 50 % du montant total est due, acompte inclus ; à moins de 8 jours, ou en cas d'absence du Client le jour convenu, l'intégralité du montant reste due, la date ne pouvant plus être recommercialisée. Un report unique peut être accordé sans frais s'il est demandé plus de 30 jours avant la date, sous réserve des disponibilités du Prestataire ; les sommes versées sont alors reportées sur la nouvelle date." },
+
+  { title: "Annulation ou report par le Prestataire, force majeure",
+    body: "En cas de force majeure, de maladie ou d'accident empêchant l'exécution de la prestation, le Prestataire peut l'annuler ou la reporter sans que sa responsabilité soit engagée. Il s'efforce alors de proposer une nouvelle date ou un confrère de niveau équivalent ; à défaut d'accord, les sommes versées sont intégralement remboursées sous quatorze jours, à l'exclusion de toute autre indemnité. Si le Prestataire annule pour une cause qui lui est imputable et étrangère à la force majeure, les sommes versées sont intégralement remboursées, sans préjudice de la réparation du préjudice justifié subi par le Client." },
+
+  { title: "Déroulement de la prise de vue",
+    body: "Le Client fournit les autorisations d'accès et de prise de vue nécessaires aux lieux choisis et garantit des conditions d'exécution sûres. Tout retard du Client s'impute sur la durée de prestation prévue au devis, sans prolongation ni réduction de prix. En extérieur, en cas d'intempéries ou de circonstances compromettant la qualité du travail ou la sécurité des personnes et du matériel, le Prestataire peut suspendre ou reporter la séance ; une nouvelle date est alors fixée d'un commun accord, sans frais. Le Prestataire conserve la maîtrise artistique et technique de son travail : choix du cadrage, de la lumière et du traitement." },
+
+  { title: "Livraison, sélection et retouches",
+    body: "Le Prestataire opère une sélection artistique parmi les prises de vue ; les fichiers non retenus, ainsi que les fichiers bruts (RAW), qui constituent des documents de travail, ne sont pas livrés. Les images retenues sont livrées en haute définition, par galerie en ligne ou support numérique, après encaissement intégral du prix. Le délai de livraison indiqué (à titre indicatif, généralement quinze jours ouvrés) court à compter de la prestation ; un dépassement raisonnable ne peut donner lieu à indemnité. Les retouches usuelles (exposition, colorimétrie, retouches légères) sont comprises. Toute demande de retouche supplémentaire ou de modification substantielle fait l'objet d'un devis complémentaire. Le Prestataire archive les fichiers livrés pendant douze mois à titre commercial, sans obligation de conservation au-delà : il appartient au Client d'en assurer la sauvegarde." },
+
+  { title: "Propriété intellectuelle et cession de droits",
+    body: "Les photographies sont des œuvres de l'esprit protégées par le Code de la propriété intellectuelle ; le Prestataire en demeure l'auteur et conserve ses droits moraux, notamment le droit au respect de l'œuvre et à la paternité. La remise des fichiers n'emporte aucune cession de droits patrimoniaux. Toute exploitation autre qu'un usage strictement privé et familial suppose une cession expresse, dont l'étendue, la destination, le support, le territoire et la durée sont précisés au devis, conformément à l'article L131-3 du Code de la propriété intellectuelle, et donne lieu à rémunération distincte. Les images sont diffusées telles que livrées : sauf accord écrit, aucun recadrage, filtre, surimpression ni retouche n'est autorisé. Toute publication doit être accompagnée du crédit photographique sous la forme indiquée au devis." },
+
+  { title: "Droit à l'image des personnes",
+    body: "Le Client se porte garant d'avoir recueilli, préalablement à la prestation, l'autorisation des personnes photographiées, et celle des représentants légaux pour les mineurs, aux fins de prise de vue et d'exploitation conforme au devis. Le Prestataire ne saurait être tenu responsable d'une réclamation d'un tiers photographié à la demande du Client ; ce dernier le garantit contre tout recours à ce titre." },
+
+  { title: "Utilisation des images par le Prestataire",
+    body: "Sauf refus écrit du Client, notifiable à tout moment et sans frais, le Prestataire est autorisé à exploiter les images réalisées à des fins de promotion de son activité : site internet, portfolio, réseaux sociaux, concours et expositions à but non lucratif, tirages de démonstration. Cette autorisation, consentie à titre gratuit, ne confère aucun droit d'exploitation commerciale au bénéfice de tiers. Le retrait du consentement vaut pour l'avenir et n'impose pas le retrait des supports imprimés déjà diffusés." },
+
+  { title: "Données personnelles, réclamation et droit applicable",
+    body: "Les données communiquées par le Client sont traitées aux seules fins d'exécution du contrat, de facturation et du respect des obligations comptables ; elles sont conservées pendant la durée légale et ne sont cédées à aucun tiers. Le Client dispose d'un droit d'accès, de rectification, d'effacement et d'opposition, qu'il exerce auprès du Prestataire aux coordonnées figurant sur le devis. Toute réclamation lui est adressée par écrit ; à défaut de solution amiable, le Client consommateur peut recourir gratuitement au médiateur de la consommation mentionné sur le devis. Les présentes sont soumises au droit français ; en cas de litige, les règles légales de compétence s'appliquent." }
 ];
 
 window.cgvLoadTemplate = async function() {
   const existing = (S.mission.cgvSections || []).filter(s => s.title || s.body);
   if (existing.length > 0 && !await uiConfirm(
-    `Cela remplacera tes ${existing.length} section${existing.length > 1 ? "s" : ""} CGV par le modèle photographe (8 sections + préambule).`,
+    `Cela remplacera tes ${existing.length} section${existing.length > 1 ? "s" : ""} CGV par le modèle photographe (${CGV_TEMPLATE_SECTIONS.length} sections + préambule).`,
     { title: "Charger le modèle CGV", confirmLabel: "Remplacer", kind: "warn" }
   )) return;
   S.mission.cgvSections = CGV_TEMPLATE_SECTIONS.map(s => ({ id: uid(), title: s.title, body: s.body }));
