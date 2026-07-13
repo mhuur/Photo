@@ -414,6 +414,11 @@
     cursor:pointer;color-scheme:dark}
   .dv-ech-date:hover{color:var(--text);border-color:var(--border-light)}
   .dv-ech-date:focus{outline:none;border-color:var(--primary);color:var(--text)}
+  /* Régularisation d'un devis annulé (acompte conservé / remboursé) */
+  .dv-regul-note{font-size:11px;color:var(--text-dim);font-variant-numeric:tabular-nums;white-space:nowrap}
+  .dv-regul-hint{display:flex;align-items:flex-start;gap:6px;margin-top:2px;padding:8px 10px;font-size:11px;line-height:1.5;
+    color:var(--text-muted);background:var(--surface);border:1px dashed var(--border-soft);border-radius:var(--radius-md)}
+  .dv-regul-hint svg{flex-shrink:0;margin-top:2px}
   .dv-ech-amt{font-size:14px;font-weight:700;text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
   .dv-ech-row.done .dv-ech-amt{color:#4ade80}
   .dv-ech-row.upcoming .dv-ech-amt,.dv-ech-row.refused .dv-ech-amt{color:var(--text-dim)}
@@ -9325,6 +9330,25 @@ function rBinModal() {
 // Format des items : { h: titre court, b: explication 1-3 phrases }.
 const APP_CHANGELOG = [
   {
+    id: "2026-07-annulation-acompte",
+    date: "2026-07-13",
+    title: "Annulation : que devient l'acompte déjà encaissé ?",
+    items: [
+      {
+        h: "L'app te demande qui se désiste",
+        b: "Annuler une mission dont l'acompte est déjà encaissé pose désormais la question : le client se désiste (tu gardes l'acompte) ou tu annules (tu le rembourses) ? La réponse détermine le traitement fiscal."
+      },
+      {
+        h: "L'encaissement ne disparaît plus du bilan",
+        b: "Avant, annuler une mission effaçait l'acompte encaissé du bilan, rétroactivement, du mois où il avait été déclaré — une sous-déclaration si tu gardais l'argent. L'encaissement reste maintenant acquis sur son mois : en comptabilité de caisse, un mois passé ne se réécrit jamais."
+      },
+      {
+        h: "Le remboursement est une régularisation",
+        b: "Si tu rembourses, le montant est déduit du CA du mois où tu rembourses (et non du mois d'origine) : c'est exactement ce qu'attend l'URSSAF. La date est modifiable, et tu peux basculer entre « conservé » et « remboursé » si tu changes d'avis, dans le bloc « Sommes encaissées » du devis annulé."
+      }
+    ]
+  },
+  {
     id: "2026-07-date-encaissement",
     date: "2026-07-13",
     title: "Compta : les recettes sont rattachées au mois de l'encaissement",
@@ -13242,10 +13266,45 @@ function suiviDevisRevertRefus(devisId) {
 
 // Annulation après acceptation (mission tombée à l'eau, annulation tardive).
 // Distingué de "refuse" qui couvre uniquement le refus client AVANT acceptation.
-function suiviDevisAnnuler(devisId) {
-  for (const e of suiviGroupLigne(devisId)) {
+// Annulation d'une mission. Si des sommes ont DÉJÀ été encaissées (acompte),
+// leur sort fiscal dépend de qui se désiste — on ne peut pas le deviner :
+//   - le CLIENT se désiste, tu gardes l'acompte → la recette reste acquise,
+//     elle demeure dans le CA de son mois d'encaissement. Rien à régulariser.
+//   - TU annules, tu rembourses l'acompte → régularisation : le montant est
+//     déduit du CA du mois OÙ tu rembourses (e.dateRemboursement). Le mois
+//     d'origine, potentiellement déjà déclaré, n'est jamais réécrit.
+// Dans les deux cas l'encaissement passé reste compté (cf. entryEncaisse) :
+// l'argent est bien entré sur le compte, l'effacer serait une sous-déclaration.
+async function suiviDevisAnnuler(devisId) {
+  const lignes = suiviGroupLigne(devisId);
+  const encaissees = lignes.filter(e => entryStatut(e) === "termine" && num(e.montant) > 0);
+  let rembourse = false;
+  if (encaissees.length) {
+    const total = encaissees.reduce((s, e) => s + num(e.montant), 0);
+    const choice = await uiChoice(
+      `${fmt(total)} déjà encaissé${encaissees.length > 1 ? "s" : ""} sur ce devis. Qui se désiste ?\n\n` +
+      `Cette réponse détermine le traitement fiscal : un acompte conservé reste du chiffre d'affaires, ` +
+      `un acompte remboursé se déduit du CA du mois où tu rembourses.`,
+      {
+        title: "Annuler la mission",
+        cancelLabel: "Ne pas annuler",
+        choices: [
+          { label: "Le client se désiste — je garde l'acompte", value: "client" },
+          { label: "J'annule — je rembourse l'acompte", value: "moi", kind: "danger" }
+        ]
+      }
+    );
+    if (!choice) return;              // « Ne pas annuler » → on ne touche à rien
+    rembourse = (choice === "moi");
+  }
+  for (const e of lignes) {
     e.statutAvantAnnul = entryStatut(e);
     e.statut = "annule";
+    // Remboursement : daté d'aujourd'hui par défaut, corrigeable ensuite dans
+    // le bloc « Sommes encaissées » du panneau (date du virement de retour).
+    if (rembourse && e.statutAvantAnnul === "termine" && num(e.montant) > 0) {
+      e.dateRemboursement = isoDateLocal(new Date());
+    }
   }
   // Timestamp du changement de statut → utilisé par la section « Annulés/refusés »
   // de l'Accueil (filtre 7 jours sur la BASCULE de statut, pas sur la date d'émission).
@@ -13261,6 +13320,9 @@ function suiviDevisRevertAnnul(devisId) {
   for (const x of suiviGroupLigne(devisId)) {
     x.statut = x.statutAvantAnnul || "attente";
     delete x.statutAvantAnnul;
+    // La mission repart : le remboursement d'acompte n'a plus lieu d'être
+    // (sinon la régularisation négative survit et fausse le bilan).
+    delete x.dateRemboursement;
   }
   // Le devis n'est plus annulé → on retire le timestamp pour qu'il sorte
   // de la section « Annulés/refusés » de l'Accueil.
@@ -13328,6 +13390,29 @@ window.suiviDevisUndo = suiviDevisUndo;
 // à un mois du bilan (compta de caisse, cf. entryEncaissementDate) : la changer
 // déplace l'encaissement de mois — et d'année si besoin. Vider le champ =
 // retour au repli (pmtTs, puis date du devis).
+// ▼ suiviToggleRemboursement / suiviSetDateRemboursement — sort d'un acompte
+// encaissé sur un devis ANNULÉ. `dateRemboursement` posée ⇒ le montant est
+// déduit du CA du mois de cette date (régularisation URSSAF). Absente ⇒ acompte
+// conservé, la recette reste acquise sur son mois d'encaissement. Dans les deux
+// cas le mois d'origine reste intact (cf. bilanCompute).
+window.suiviToggleRemboursement = function(id) {
+  const e = (S.suivi.entries || []).find(x => x.id === id);
+  if (!e || !entryEncaisse(e)) return;
+  if (e.dateRemboursement) delete e.dateRemboursement;
+  else e.dateRemboursement = isoDateLocal(new Date());
+  save();
+  render();
+};
+window.suiviSetDateRemboursement = function(id, val) {
+  const e = (S.suivi.entries || []).find(x => x.id === id);
+  if (!e || !entryEncaisse(e)) return;
+  const v = String(val || "").slice(0, 10);
+  if (/^\d{4}-\d{2}-\d{2}$/.test(v)) e.dateRemboursement = v;
+  else delete e.dateRemboursement; // champ vidé → acompte conservé
+  save();
+  render();
+};
+
 window.suiviSetDatePaiement = function(id, val) {
   const e = (S.suivi.entries || []).find(x => x.id === id);
   if (!e || entryStatut(e) !== "termine") return;
@@ -13555,7 +13640,40 @@ function suiviParcoursHtml(g) {
     ? `<div class="dv-ech"><div class="dv-ech-head">Échéancier</div>${echRows.join("")}</div>`
     : "";
 
-  return `${stepperHtml}${bandHtml}${echHtml}`;
+  // ---------- 4. Régularisation (devis annulé avec des sommes encaissées) ----------
+  // L'encaissement passé reste dans le CA de son mois (compta de caisse). Ici on
+  // pilote uniquement son SORT : conservé (rien à faire) ou remboursé (déduit du
+  // CA du mois du remboursement). Modifiable après coup — on peut se tromper, ou
+  // rembourser plus tard que prévu.
+  const encaissees = (g.lignes || []).filter(e => entryEncaisse(e) && num(e.montant) > 0);
+  const isAnnule = devisPrincipal(g.lignes || []) === "annule";
+  let regulHtml = "";
+  if (isAnnule && encaissees.length) {
+    const rows = encaissees.map(e => {
+      const remb = !!e.dateRemboursement;
+      const encDate = (entryEncaissementDate(e) || "").slice(0, 10);
+      return `<div class="dv-ech-row ${remb ? "refused" : "done"}">
+        ${dotHtml(remb ? "refused" : "done")}
+        <div class="dv-ech-label">
+          ${esc(e.echeance || "Acompte")}
+          <span class="dv-regul-note">encaissé le ${esc(dateFR(encDate) || "—")}</span>
+          ${remb ? `<input type="date" class="dv-ech-date" value="${esc(String(e.dateRemboursement).slice(0,10))}" onclick="${stop}" onchange="${stop}suiviSetDateRemboursement('${e.id}', this.value)"
+              title="Date du remboursement — le montant est déduit du CA de CE mois (régularisation URSSAF).">` : ""}
+        </div>
+        <span class="dv-ech-amt">${remb ? "−" : ""}${fmt(num(e.montant))}</span>
+        <button type="button" class="mk-btn ${remb ? "subtle" : "ghost"}" style="height:var(--btn-h-sm);font-size:11px"
+          title="${remb ? "Le client garde finalement l'acompte : la recette reste acquise, plus de régularisation." : "Tu rembourses l'acompte : le montant sera déduit du CA du mois du remboursement."}"
+          onclick="${stop}suiviToggleRemboursement('${e.id}')">${remb ? "Finalement conservé" : "Rembourser"}</button>
+      </div>`;
+    }).join("");
+    regulHtml = `<div class="dv-ech" style="margin-top:var(--space-md)">
+      <div class="dv-ech-head">Sommes encaissées — devis annulé</div>
+      ${rows}
+      <div class="dv-regul-hint">${ICO_SZ('info', 12)} <span>L'argent encaissé reste dans le chiffre d'affaires du mois où il est tombé (comptabilité de caisse) : un mois déjà déclaré n'est jamais réécrit. Si tu rembourses, le montant est déduit du CA du mois du remboursement — c'est la régularisation attendue par l'URSSAF.</span></div>
+    </div>`;
+  }
+
+  return `${stepperHtml}${bandHtml}${echHtml}${regulHtml}`;
 }
 
 // ▼ suiviStepBack — retour arrière granulaire (↺ « reculer d'un cran »).
@@ -15427,19 +15545,35 @@ function isoDateLocal(d) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
+// ▼ entryEncaisse — l'argent est-il RÉELLEMENT entré sur le compte ?
+// En compta de caisse, un encaissement reste un encaissement même si le devis
+// est annulé après coup : l'acompte est sur le compte, il fait partie du CA du
+// mois où il est tombé. On ne réécrit JAMAIS un mois passé (potentiellement
+// déjà déclaré) — un remboursement éventuel se régularise sur le mois OÙ il est
+// effectué (cf. e.dateRemboursement). D'où la reconnaissance des entries
+// annulées qui étaient encaissées avant l'annulation (statutAvantAnnul).
+function entryEncaisse(e) {
+  const s = entryStatut(e);
+  if (s === "termine") return true;
+  if (s === "annule" && e.statutAvantAnnul === "termine") return true;
+  return false;
+}
+
 function bilanCompute() {
   const byMonth = {};
+  const bucket = (ym) => {
+    if (!byMonth[ym]) byMonth[ym] = { heures:0, paye:0, ca:0, salaire:0, ursaf:0, tresorerie:0, frais:0 };
+    return byMonth[ym];
+  };
   for (const e of S.suivi.entries) {
     // Bilan de caisse : SEULES les entries encaissées y figurent, rattachées au
     // mois de leur encaissement (et non au mois du devis/prestation).
-    // Les colonnes non monétaires (heures) suivent l'argent : chaque ligne du
-    // bilan décrit l'activité qui a produit l'encaissé de ce mois-là.
-    if (entryStatut(e) !== "termine") continue;
+    if (!entryEncaisse(e)) continue;
     const date = entryEncaissementDate(e);
     if (!date || date.length < 7) continue;
-    const ym = date.slice(0, 7);
-    if (!byMonth[ym]) byMonth[ym] = { heures:0, paye:0, ca:0, salaire:0, ursaf:0, tresorerie:0, frais:0 };
-    const b = byMonth[ym];
+    const b = bucket(date.slice(0, 7));
+    // Les colonnes non monétaires (heures) suivent l'argent : chaque ligne du
+    // bilan décrit l'activité qui a produit l'encaissé de ce mois-là.
     b.heures     += num(e.heures);
     b.paye       += num(e.montant);
     b.ca         += num(e.ca       != null && e.ca       !== "" ? e.ca       : e.montant);
@@ -15447,6 +15581,22 @@ function bilanCompute() {
     b.tresorerie += num(e.tresorerie);
     b.frais      += num(e.frais);
     b.ursaf      += num(e.ursaf);
+
+    // Remboursement (devis annulé, acompte rendu au client) : contribution
+    // NÉGATIVE sur le mois du remboursement — c'est la régularisation attendue
+    // (on déduit du CA de la période où l'on rembourse). Le mois d'origine
+    // reste intact. Les heures ne sont PAS négativées (une ligne « -3 h » n'a
+    // aucun sens ; seul l'argent se régularise).
+    const dr = String(e.dateRemboursement || "");
+    if (dr.length >= 7) {
+      const r = bucket(dr.slice(0, 7));
+      r.paye       -= num(e.montant);
+      r.ca         -= num(e.ca       != null && e.ca       !== "" ? e.ca       : e.montant);
+      r.salaire    -= num(e.salaire);
+      r.tresorerie -= num(e.tresorerie);
+      r.frais      -= num(e.frais);
+      r.ursaf      -= num(e.ursaf);
+    }
   }
 
   // Étend la plage [min..max] pour inclure les mois sans entries mais avec charges fixes
@@ -15485,8 +15635,11 @@ function bilanCompute() {
       return { ym, ...b, abos, amort, marge };
     })
     // Élide uniquement les mois "vraiment vides" (avant tout abo/matériel/encaissement).
-    .filter(r => r.heures > 0 || r.paye > 0 || r.ca > 0 || r.salaire > 0 || r.ursaf > 0
-              || r.tresorerie > 0 || r.frais > 0 || r.abos > 0 || r.amort > 0)
+    // ⚠ `!== 0` et pas `> 0` : un mois ne contenant QU'UN REMBOURSEMENT n'a que
+    // des valeurs négatives — il doit rester visible (c'est une régularisation
+    // de CA, la ligne compte pour l'URSSAF).
+    .filter(r => r.heures !== 0 || r.paye !== 0 || r.ca !== 0 || r.salaire !== 0 || r.ursaf !== 0
+              || r.tresorerie !== 0 || r.frais !== 0 || r.abos > 0 || r.amort > 0)
     .sort((a, b) => b.ym.localeCompare(a.ym));
 }
 
