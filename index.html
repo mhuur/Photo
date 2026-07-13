@@ -515,6 +515,16 @@
     .devis-preview .dp-receipt-line, .view-devis-snapshot .dp-receipt-line{padding:2pt 0;font-size:9pt}
     .devis-preview .dp-receipt-line.total, .view-devis-snapshot .dp-receipt-line.total{padding-top:3pt;border-top:0.5pt solid #888!important}
     .devis-preview .dp-receipt-line.restant, .view-devis-snapshot .dp-receipt-line.restant{font-size:11pt;font-weight:700}
+    /* Facture : conteneur en BLOC, pas en flex. Chrome ne fragmente pas
+       correctement un conteneur flex à l'impression — il IGNORE les
+       break-inside:avoid de ses enfants, d'où l'encadré « Acomptes déjà
+       facturés » coupé en deux avec le « Net à payer » orphelin page 2.
+       Le flex n'existe que pour le devis (dp-spacer qui pousse la signature
+       en bas de page) ; sur une facture, spacer et signature sont masqués.
+       Spécificité 0,2,0 > 0,1,0 de la règle conteneur. */
+    .devis-preview.view-facture, .view-devis-snapshot.view-facture {
+      display: block !important;
+    }
     /* Encadrés facture : bordures grises (les vars thème --border-soft/--accent
        impriment du bleu/turquoise sinon — border-color non couvert par la
        règle universelle). */
@@ -1503,7 +1513,7 @@
   .devis-preview .dp-bank{margin-top:14px;padding-top:10px;border-top:1px dashed var(--border-soft);font-size:13px}
   .devis-preview .dp-bank-line{display:flex;align-items:baseline;gap:10px;padding:3px 0}
   .devis-preview .dp-bank-line .lbl{color:var(--text-dim);font-size:12px;font-weight:400;min-width:64px;flex-shrink:0}
-  .devis-preview .dp-bank-line .val{color:var(--text);font-variant-numeric:tabular-nums;word-break:break-all}
+  .devis-preview .dp-bank-line .val{color:var(--text);font-variant-numeric:tabular-nums;word-break:normal;overflow-wrap:break-word}
   .devis-preview .dp-bank-line.iban .val{font-size:13px;letter-spacing:.02em}
   .devis-preview .dp-payment-text{font-size:13px;color:var(--text);line-height:1.6;white-space:pre-wrap;margin-top:10px;padding-top:8px;border-top:1px dashed var(--border-soft)}
   /* Spacer (pushes signature/footer to bottom on print) */
@@ -2196,10 +2206,14 @@
       min-width: 42pt !important;
       flex-shrink: 0 !important;
     }
+    /* word-break:break-all coupait l'IBAN n'importe où (dernier chiffre seul
+       sur la ligne suivante). On ne casse qu'aux espaces des groupes de 4 ;
+       break-word ne coupe un groupe que s'il ne tient pas seul sur la ligne. */
     .devis-preview .dp-bank-line .val, .view-devis-snapshot .dp-bank-line .val {
       color: #1a1a1a !important;
       font-variant-numeric: tabular-nums !important;
-      word-break: break-all !important;
+      word-break: normal !important;
+      overflow-wrap: break-word !important;
     }
     .devis-preview .dp-bank-line.iban .val, .view-devis-snapshot .dp-bank-line.iban .val {
       letter-spacing: .02em !important;
@@ -9402,6 +9416,10 @@ const APP_CHANGELOG = [
       {
         h: "Impression noir & blanc propre",
         b: "Le récapitulatif de paiement et les encadrés des factures s'impriment désormais avec des bordures grises et des tailles harmonisées (plus de bordures bleues ou turquoise issues du thème sombre)."
+      },
+      {
+        h: "Plus d'encadré coupé entre deux pages",
+        b: "Le bloc « Acomptes déjà facturés » et son « Net à payer (solde) » ne se coupent plus en deux à cheval sur deux pages : ils basculent ensemble sur la page suivante. Au passage, le libellé « facture Facture n° … » est corrigé et l'IBAN ne se casse plus en laissant un chiffre isolé."
       }
     ]
   },
@@ -10376,7 +10394,9 @@ function rFactureSoldeBody(facture, dv, devisId) {
     netAPayer = r2(totalDevis - acompteTotal);
     const lignesDeduites = acomptesEch.map(e => {
       const f = findFactureForEch(devisId, e);
-      const ref = f ? ` — facture ${esc(formatRef(f.ref, "facture"))}${f.dateEmission ? ` du ${esc(dateFR(f.dateEmission))}` : ""}` : "";
+      // formatRef renvoie déjà « Facture n° … » — pas de préfixe « facture »
+      // en plus (sinon : « — facture Facture n° FA-… »).
+      const ref = f ? ` — ${esc(formatRef(f.ref, "facture"))}${f.dateEmission ? ` du ${esc(dateFR(f.dateEmission))}` : ""}` : "";
       return `<div class="dp-line">
         <div class="lbl">${esc(e.label)}${ref}</div>
         <div class="qty"></div>
