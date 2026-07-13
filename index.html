@@ -2996,7 +2996,7 @@ const DEFAULT_CATALOG = [
 //   MIGRATIONS au load       identité, paiement, blackMode, paiementType, dureeValidite, CGV, bugs
 //   PERSISTANCE              ▼ save  ▼ saveToCloud  ▼ loadFromCloud
 //   CORE HELPERS             ▼ upd  ▼ recomputeRef  ▼ genFooterMentions  ▼ genHeaderEmetteur
-//   PREVIEWS IMPRIMÉES       ▼ rDevisPreview  ▼ rDeboursPreview  ▼ rFacturePreview  ▼ rPreviewTabs
+//   PREVIEWS IMPRIMÉES       ▼ rDevisPreview  ▼ rDeboursPreview  ▼ rPreviewTabs
 //   LIGNES & TOTALS          ▼ rLigne  ▼ totals  ▼ rTauxBreakdown
 //   DISPATCH                 ▼ render  (mission→rMS, suivi→rSV, profil→rPF, ...)
 //   MODALS & SECTIONS        ▼ rContactPickerModal  ▼ rTextEditorModal  ▼ rEditSection
@@ -5799,121 +5799,6 @@ function rDeboursPreview() {
   </div>`;
 }
 
-// ============ FACTURE PREVIEW ============
-// ▼ rFacturePreview — preview facture (opts: acompte/solde)
-function rFacturePreview(opts) {
-  // opts: { paidEntries: [{label, amount, date}] } — list of paid échéances. If null, treats as draft (paid=0).
-  const d = S.mission;
-  const t = totals();
-  const hasClient = !!(d.client && (d.client.id || d.client.name));
-  const hasContent = (d.lignes || []).length > 0;
-  if (!hasClient || !hasContent) {
-    return `<div class="devis-preview"><div class="dp-empty">La facture sera disponible une fois le devis rempli (client + au moins une ligne).<br><span style="font-size:13px;color:var(--text-dim)">Pour générer une facture avec un montant payé, va dans Suivi et marque les échéances comme payées.</span></div></div>`;
-  }
-  const sel = d.client.id ? S.clients.entries.find(x => x.id === d.client.id) : null;
-  const cli = sel || d.client;
-  const ref = (d.ref || "DEV-…-…").replace(/^(DEVIS|DEV)/, "FACTURE");
-
-  const tarifH = t.tarifHEff || t.tarifH;
-  const cat = (S.tarifs.catalog || DEFAULT_CATALOG).find(c => c.k === d.object);
-
-  // Build line items HTML (same as devis, without débours)
-  let linesHtml = "";
-  for (const l of (d.lignes || [])) {
-    if (l.type === "heures") {
-      const h = num(l.duree) * (l.unit === "j" ? HOURS_PER_DAY : 1);
-      const amount = h * tarifH;
-      linesHtml += `<div class="dp-line">
-        <div class="lbl">${esc(l.intitule || "(Sans intitulé)")}${l.description ? `<div class="desc">${esc(l.description)}</div>` : ""}</div>
-        <div class="qty">${num(l.duree).toFixed(2).replace(".",",")} ${l.unit === "j" ? "jour(s) × 8h" : "h"} × ${tarifH.toFixed(2).replace(".",",")} €/h</div>
-        <div class="amt">${fmt(amount)}</div>
-      </div>`;
-    } else if (l.type === "materiel" && l.devis !== "debours") {
-      linesHtml += `<div class="dp-line">
-        <div class="lbl">${esc(l.intitule || "(Sans intitulé)")}<div class="desc">${l.description ? esc(l.description) : "Matériel"}</div></div>
-        <div class="qty"></div>
-        <div class="amt">${fmt(num(l.prix))}</div>
-      </div>`;
-    }
-  }
-  // Déplacement line if mode is "principal"
-  const deplDevisMode = t.effectiveDeplMode || "principal";
-  if (deplDevisMode === "principal" && t.depl > 0) {
-    linesHtml += `<div class="dp-line">
-      <div class="lbl">Déplacement</div>
-      <div class="qty"></div>
-      <div class="amt">${fmt(t.depl)}</div>
-    </div>`;
-  }
-
-  // Payment summary
-  const paidEntries = (opts && Array.isArray(opts.paidEntries)) ? opts.paidEntries : [];
-  const totalPaid = r2(paidEntries.reduce((s, p) => s + num(p.amount), 0));
-  const restant = r2(t.total - totalPaid);
-  const fullyPaid = restant <= 0.01;
-
-  return `<div class="devis-preview" id="facturePreview">
-    <div class="dp-top-row">
-      ${(d.logoUrl || (S.identite && S.identite.logoUrl)) ? `<div class="dp-logo-wrap"><img src="${esc(d.logoUrl || S.identite.logoUrl)}" alt="Logo" class="dp-logo"></div>` : `<div class="dp-logo-spacer"></div>`}
-      <div class="dp-doc-ref" style="color:var(--success)">${esc(ref)}</div>
-    </div>
-    <div class="dp-header-grid">
-      ${(() => {
-        const inner = genHeaderEmetteur(S.identite, d.photographe);
-        if (inner.trim()) return `<div class="dp-header-left">${inner}</div>`;
-        return `<div class="dp-header-left empty">Renseigner ton identité dans l'onglet « Profil ».</div>`;
-      })()}
-      <div class="dp-header-right">
-        <div class="dp-meta-block">
-          <div>Émission : <strong>${dateFR(d.dateEmission) || "—"}</strong></div>
-        </div>
-        <div class="dp-client-block dp-client-box">
-          <div class="dp-client-label">Destinataire</div>
-          <span class="name">${esc(cli.name || "(Sélectionner un client)")}</span>
-          ${cli.address ? `<div>${esc(cli.address)}</div>` : ""}
-          ${cli.cityPostal ? `<div>${esc(cli.cityPostal)}</div>` : ""}
-        </div>
-      </div>
-    </div>
-
-    <div class="dp-doc-title" style="color:var(--success)">FACTURE</div>
-
-    ${cat ? `<div class="dp-section">
-      <h4>Prestation</h4>
-      <div class="dp-client"><div class="name">${esc(cat.l)}</div></div>
-    </div>` : ""}
-
-    <div class="dp-section">
-      <h4>Détail</h4>
-      ${linesHtml || `<div class="dp-empty" style="padding:14px">Aucune ligne.</div>`}
-    </div>
-
-    <div class="dp-totals">
-      <div class="dp-line"><span class="lbl">Sous-total</span><span class="amt">${fmt(t.subtotal)}</span></div>
-      ${t.remise > 0 ? `<div class="dp-line"><span class="lbl">Remise (${num(d.remisePct).toString().replace(".",",")} %)</span><span class="amt">−${fmt(t.remise)}</span></div>` : ""}
-      <div class="dp-line grand"><span class="lbl">Total HT</span><span class="amt">${fmt(t.total)}</span></div>
-      <div class="dp-totals-tva">${esc(tvaMention(S.identite))}</div>
-    </div>
-
-    <div class="dp-receipt">
-      <h4>Récapitulatif paiement</h4>
-      ${paidEntries.length > 0 ? `<div class="dp-receipt-list">
-        ${paidEntries.map(p => `<div class="dp-receipt-line">
-          <span class="lbl">${esc(p.label)}${p.date ? ` — <span class="dim">${esc(p.date)}</span>` : ""}</span>
-          <span class="amt">${fmt(p.amount)}</span>
-        </div>`).join("")}
-      </div>` : ""}
-      <div class="dp-receipt-line total"><span class="lbl">Total payé</span><span class="amt" style="color:var(--success)">${fmt(totalPaid)}</span></div>
-      <div class="dp-receipt-line restant ${fullyPaid ? 'paid' : ''}"><span class="lbl">${fullyPaid ? "✓ Soldée" : "Reste à payer"}</span><span class="amt" style="color:${fullyPaid ? 'var(--success)' : 'var(--warning)'}">${fmt(restant)}</span></div>
-    </div>
-
-
-    <div class="dp-actions">
-      <button class="btn-add-neon ghost" onclick="window.print()">${ICO_SZ('printer',13)} Imprimer</button>
-    </div>
-  </div>`;
-}
-
 // ============ TABBED PREVIEW WRAPPER ============
 // ▼ rPreviewTabs — onglets Devis/Débours dans la preview live
 function rPreviewTabs() {
@@ -6685,6 +6570,14 @@ window.stripLogosFromSnapshots = async function() {
       dv.snapshotDeboursHtml = dv.snapshotDeboursHtml.replace(re, 'src=""');
     }
     re.lastIndex = 0;
+    if (Array.isArray(dv.factures)) {
+      for (const f of dv.factures) {
+        if (typeof f.snapshotHtml === "string" && re.test(f.snapshotHtml)) {
+          f.snapshotHtml = f.snapshotHtml.replace(re, 'src=""');
+        }
+        re.lastIndex = 0;
+      }
+    }
     if (dv.snapshotMission && typeof dv.snapshotMission.logoUrl === "string" && dv.snapshotMission.logoUrl.startsWith("data:")) {
       dv.snapshotMission.logoUrl = "";
     }
@@ -6741,6 +6634,19 @@ async function autoCleanupDoc() {
         for (const m of matches) logosFreed += m.length;
         dv.snapshotDeboursHtml = dv.snapshotDeboursHtml.replace(re, 'src=""');
         logosStripped += matches.length;
+      }
+    }
+    // Snapshots factures (FA/FS) : le logo y était figé inline avant le strip
+    // au freeze — couverts aussi (ré-injecté à l'affichage par rViewFactureModal).
+    if (Array.isArray(dv.factures)) {
+      for (const f of dv.factures) {
+        if (typeof f.snapshotHtml !== "string") continue;
+        const matches = f.snapshotHtml.match(re) || [];
+        if (matches.length) {
+          for (const m of matches) logosFreed += m.length;
+          f.snapshotHtml = f.snapshotHtml.replace(re, 'src=""');
+          logosStripped += matches.length;
+        }
       }
     }
     if (dv.snapshotMission && typeof dv.snapshotMission.logoUrl === "string" && dv.snapshotMission.logoUrl.startsWith("data:")) {
@@ -10149,10 +10055,15 @@ function rViewDevisModal() {
   const view = viewDevisModal.view || "devis";
   const hasDebours = !!(dv.snapshotDeboursHtml && dv.snapshotDeboursHtml.trim());
   let snapshot = (view === "debours" ? dv.snapshotDeboursHtml : dv.snapshotHtml) || "";
-  // Inject current logo if absent from older snapshots
-  const currentLogo = (S.mission && S.mission.logoUrl) || "";
-  if (snapshot && currentLogo && !snapshot.includes('class="dp-logo"')) {
-    snapshot = `<div class="dp-logo-wrap"><img src="${esc(currentLogo)}" alt="Logo" class="dp-logo"></div>${snapshot}`;
+  // Ré-injection du logo courant : snapshots anciens sans logo (préfixe) OU
+  // snapshots strippés par autoCleanupDoc (img présent mais src="").
+  const currentLogo = (S.mission && S.mission.logoUrl) || (S.identite && S.identite.logoUrl) || "";
+  if (snapshot && currentLogo) {
+    if (!snapshot.includes('class="dp-logo"')) {
+      snapshot = `<div class="dp-logo-wrap"><img src="${esc(currentLogo)}" alt="Logo" class="dp-logo"></div>${snapshot}`;
+    } else {
+      snapshot = snapshot.replace(/<img src="" alt="Logo" class="dp-logo">/g, `<img src="${esc(currentLogo)}" alt="Logo" class="dp-logo">`);
+    }
   }
   const when = dv.snapshotAt ? new Date(dv.snapshotAt).toLocaleString("fr-FR") : null;
   const tabs = hasDebours ? `<div class="preview-tabs-nav" style="margin:0 0 12px">
@@ -10270,7 +10181,7 @@ function rFactureAcompteBody(facture, dv, devisId) {
 //  - section "Frais débours refacturés" (B4) si snapshotDeboursHtml présent
 function rFactureSoldeBody(facture, dv, devisId) {
   let snapshot = (dv && dv.snapshotHtml) || "";
-  const currentLogo = (S.mission && S.mission.logoUrl) || "";
+  const currentLogo = (S.mission && S.mission.logoUrl) || (S.identite && S.identite.logoUrl) || "";
   if (snapshot && currentLogo && !snapshot.includes('class="dp-logo"')) {
     snapshot = `<div class="dp-logo-wrap"><img src="${esc(currentLogo)}" alt="Logo" class="dp-logo"></div>${snapshot}`;
   }
@@ -10375,9 +10286,12 @@ function rViewFactureModal() {
   // Snapshot figé : à la 1ère ouverture après émission, on capture le body HTML
   // pour qu'il soit immuable même si le devis sous-jacent est modifié plus tard.
   if (!facture.snapshotHtml) {
-    facture.snapshotHtml = facture.type === "solde"
+    const body = facture.type === "solde"
       ? rFactureSoldeBody(facture, dv, devisId)
       : rFactureAcompteBody(facture, dv, devisId);
+    // Jamais de logo data-URL inline dans un snapshot persisté (piège
+    // Firestore 1 MB) : strippé au freeze, ré-injecté à l'affichage.
+    facture.snapshotHtml = body.replace(/src="data:image\/[^"]+"/g, 'src=""');
     save();
   }
 
@@ -10426,7 +10340,10 @@ function rViewFactureModal() {
           // Le récap paiement est dynamique (statut paiement live) → injecté
           // dans le snapshot juste avant le footer mentions, pas concaténé
           // après (sinon il apparaît visuellement après les mentions légales).
-          const snap = facture.snapshotHtml;
+          let snap = facture.snapshotHtml;
+          // Ré-injection du logo courant (strippé au freeze / par autoCleanupDoc).
+          const logo = (S.identite && S.identite.logoUrl) || (S.mission && S.mission.logoUrl) || "";
+          if (logo) snap = snap.replace(/<img src="" alt="Logo" class="dp-logo">/g, `<img src="${esc(logo)}" alt="Logo" class="dp-logo">`);
           if (snap.includes('class="dp-facture-footer"')) {
             return snap.replace(/(<div class="dp-facture-footer">)/, receiptHtml + '$1');
           }
