@@ -108,6 +108,16 @@ Par entry : `e.montant` = encaissé total (toujours rempli). `e.ca` = part décl
 
 **Plage mois bilan** : `bilanCompute()` génère TOUS les mois entre 1ʳᵉ activité (entry/abo/matériel) et aujourd'hui, sinon les mois sans encaissement mais avec abos/amort actifs sont oubliés.
 
+### Rattachement des recettes = date d'ENCAISSEMENT (compta de caisse)
+
+Micro-BNC = **comptabilité de caisse** (art. 93 CGI) : une recette est rattachée à la date où l'argent arrive, JAMAIS à celle de la prestation ni de la facture. `bilanCompute()` ne prend que les entries `termine` et les range via **`entryEncaissementDate(e)`** — cascade : `e.datePaiement` (saisie/corrigée par l'user, source de vérité) → `e.pmtTs` (horodatage du clic « payé », backfillé par `migrateDatePaiement`) → `e.date` (repli legacy : entries encaissées avant l'existence des 2 champs — garde leur rattachement historique, on ne re-attribue PAS des exercices déjà déclarés).
+
+- `e.date` reste la date de **prestation/devis** — ne jamais l'utiliser pour du fiscal.
+- `e.datePaiement` (YYYY-MM-DD) : posée par `suiviLigneTogglePaiement`, éditable via l'input date de la ligne d'échéance (`suiviSetDatePaiement`). **Invariant : `statut ≠ "termine"` ⇒ pas de `datePaiement`/`pmtTs`** — nettoyés à toutes les transitions arrière (`suiviLigneTogglePaiement`, `suiviDevisUndo`, `suiviDevisAccepter`, revert d'acceptation).
+- Les colonnes non monétaires (heures) suivent l'argent : une ligne du bilan décrit l'activité qui a produit l'encaissé de CE mois.
+- **`isoDateLocal(d)` et PAS `toISOString()`** pour dater un paiement : `toISOString` décale d'un jour le soir (UTC) — un encaissement du 31/07 à 23 h basculerait en août, donc de mois, voire d'année.
+- Tout ce qui somme des recettes (KPI Accueil, bilan, jauges seuils micro-BNC/TVA) passe par `bilanCompute` → suit automatiquement.
+
 ### Débours
 
 Toggle `devis: "principal"|"debours"` par ligne matériel + déplacement.

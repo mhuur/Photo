@@ -407,6 +407,13 @@
   .dv-ech-row.active .dv-ech-label{font-weight:700;color:var(--text)}
   .dv-ech-row.upcoming .dv-ech-label{color:var(--text-dim)}
   .dv-ech-row.refused .dv-ech-label{color:#f0789a}
+  /* Date d'encaissement (lignes réglées) — pilote le rattachement au mois du
+     bilan (compta de caisse). Éditable pour coller au relevé bancaire. */
+  .dv-ech-date{flex-shrink:0;height:24px;padding:0 6px;font-size:11px;font-family:inherit;font-variant-numeric:tabular-nums;
+    color:var(--text-muted);background:var(--surface-2);border:1px solid var(--border-soft);border-radius:var(--radius-sm);
+    cursor:pointer;color-scheme:dark}
+  .dv-ech-date:hover{color:var(--text);border-color:var(--border-light)}
+  .dv-ech-date:focus{outline:none;border-color:var(--primary);color:var(--text)}
   .dv-ech-amt{font-size:14px;font-weight:700;text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
   .dv-ech-row.done .dv-ech-amt{color:#4ade80}
   .dv-ech-row.upcoming .dv-ech-amt,.dv-ech-row.refused .dv-ech-amt{color:var(--text-dim)}
@@ -3886,6 +3893,7 @@ async function loadFromCloud(ownerUid) {
       migrateClientNums();
       const phonesFixed = migratePhoneLeadingZero();
       const livraisonFixed = migrateLivraisonOrpheline();
+      const datePaiementFixed = migrateDatePaiement();
       // Migration snapshotHash (JSON mission entier → hash court). AVANT
       // autoCleanupDoc pour que le check de taille voie le doc allégé.
       const hashesMigrated = migrateSnapshotHashes();
@@ -3902,7 +3910,7 @@ async function loadFromCloud(ownerUid) {
       // migration re-tourne à chaque ouverture, et plus problématique : le
       // live sync subscribeWorkspaceData écraserait nos changements à la
       // première update Firestore — voir ce site pour le miroir).
-      if (chainsMigrated || phonesFixed || cleanedUp || livraisonFixed || hashesMigrated) saveToCloud();
+      if (chainsMigrated || phonesFixed || cleanedUp || livraisonFixed || hashesMigrated || datePaiementFixed) saveToCloud();
       // Adopte le timestamp cloud comme nouveau référentiel local (sinon
       // notre prochain save aurait un localCts plus ancien que le cloud
       // alors qu'on vient de tout merger).
@@ -4155,11 +4163,13 @@ function subscribeWorkspaceData(ownerUid) {
     const livraisonFixedLive = migrateLivraisonOrpheline();
     // Migration snapshotHash (idempotente) — même raison.
     const hashesMigratedLive = migrateSnapshotHashes();
+    // Migration datePaiement (idempotente) — même raison.
+    const datePaiementFixedLive = migrateDatePaiement();
     // Adopte le timestamp cloud comme nouveau référentiel local (sinon
     // notre prochain save aurait un localCts plus ancien que le cloud).
     if (cloudCts > 0) S._localChangeTs = cloudCts;
     localStorage.setItem(SK, JSON.stringify(S));
-    if (chainsMigratedLive || phonesFixedLive || livraisonFixedLive || hashesMigratedLive) saveToCloud();
+    if (chainsMigratedLive || phonesFixedLive || livraisonFixedLive || hashesMigratedLive || datePaiementFixedLive) saveToCloud();
     // Préserve le focus de l'input courant pendant le re-render
     const active = document.activeElement;
     const id = active && active.id;
@@ -9315,6 +9325,25 @@ function rBinModal() {
 // Format des items : { h: titre court, b: explication 1-3 phrases }.
 const APP_CHANGELOG = [
   {
+    id: "2026-07-date-encaissement",
+    date: "2026-07-13",
+    title: "Compta : les recettes sont rattachées au mois de l'encaissement",
+    items: [
+      {
+        h: "Le bon mois, enfin",
+        b: "Un paiement reçu en juillet pour un devis de mai comptait jusqu'ici dans le mois de mai. Il compte désormais en juillet. C'est la règle du micro-BNC (comptabilité de caisse) : la recette suit l'argent, pas la date de la prestation."
+      },
+      {
+        h: "Une date d'encaissement modifiable",
+        b: "Chaque échéance réglée affiche sa date d'encaissement dans l'échéancier. Elle est pré-remplie au moment où tu pointes le paiement, et tu peux la corriger pour coller à ton relevé bancaire — utile si tu pointes en retard, surtout à cheval sur deux mois."
+      },
+      {
+        h: "Conséquence sur les totaux",
+        b: "Les KPI de l'Accueil, le bilan mensuel et les jauges de seuils (plafond micro-BNC, franchise TVA) suivent cette date. Les paiements pointés avant cette mise à jour gardent leur rattachement d'origine s'ils n'ont pas de date d'encaissement connue : rien ne bouge dans les exercices déjà déclarés."
+      }
+    ]
+  },
+  {
     id: "2026-07-zero-effet-de-bord",
     date: "2026-07-13",
     title: "Plus rien ne s'enclenche tout seul",
@@ -12012,6 +12041,31 @@ function migrateLivraisonOrpheline() {
   return changed;
 }
 
+// ▼ migrateDatePaiement — one-shot idempotent : backfill de `e.datePaiement`
+// (rattachement fiscal des recettes, cf. entryEncaissementDate) sur les entries
+// déjà encaissées qui portent un `pmtTs`. Les entries encaissées SANS pmtTs
+// (pointées avant l'existence du champ) sont laissées telles quelles : elles
+// retombent sur `e.date` et gardent donc leur rattachement historique — on ne
+// re-attribue pas d'office des exercices potentiellement déjà déclarés.
+// Nettoie aussi l'invariant inverse (datePaiement sur une entry non encaissée).
+// Retourne true si changement → saveToCloud requis (piège migrations CLAUDE.md).
+function migrateDatePaiement() {
+  let changed = false;
+  for (const e of (S.suivi && S.suivi.entries) || []) {
+    const paid = entryStatut(e) === "termine";
+    if (!paid) {
+      if (e.datePaiement != null) { delete e.datePaiement; changed = true; }
+      continue;
+    }
+    if (e.datePaiement || !e.pmtTs) continue;
+    const d = new Date(num(e.pmtTs));
+    if (isNaN(d.getTime())) continue;
+    e.datePaiement = isoDateLocal(d);
+    changed = true;
+  }
+  return changed;
+}
+
 // ▼ migrateLegacyReconstructedFlag — nettoie les flags `legacyReconstructed`
 // stale laissés par l'ancien sync (avant fix `update()` du commit 11d6818).
 // Avant ce commit, `delete dvOrig.legacyReconstructed` n'était pas propagé
@@ -13025,6 +13079,9 @@ function suiviDevisAccepter(devisId) {
   for (const e of suiviGroupLigne(devisId)) {
     delete e.statutAvantRefus;
     e.statut = "attente";
+    // Invariant : statut ≠ "termine" ⇒ pas de date d'encaissement.
+    delete e.pmtTs;
+    delete e.datePaiement;
   }
   save();
   render();
@@ -13129,6 +13186,11 @@ async function suiviLigneTogglePaiement(id) {
     }
     e.statut = "termine";
     e.pmtTs = Date.now();
+    // Date d'encaissement (rattachement fiscal, cf. entryEncaissementDate).
+    // Pré-remplie à aujourd'hui, CORRIGEABLE ensuite (date du relevé bancaire)
+    // via le champ de la ligne d'échéance — un pointage tardif ne doit pas
+    // envoyer la recette dans le mauvais mois.
+    e.datePaiement = isoDateLocal(new Date());
   } else if (s === "termine") {
     if (ech) {
       const laterPaid = [...list].reverse().find(x => x.index > ech.index && x.statut === "termine");
@@ -13146,6 +13208,7 @@ async function suiviLigneTogglePaiement(id) {
     rewindLivraisonOnUnpay(e.devisId, e.id);
     e.statut = "attente";
     delete e.pmtTs;
+    delete e.datePaiement;
   } else {
     return;
   }
@@ -13236,6 +13299,7 @@ async function suiviDevisUndo(devisId) {
     rewindLivraisonOnUnpay(e.devisId, e.id);
     e.statut = "attente";
     delete e.pmtTs;
+    delete e.datePaiement;
     save();
     render();
     return;
@@ -13248,11 +13312,31 @@ async function suiviDevisUndo(devisId) {
   removeFactures(devisId, allFac.slice());
   const dvA = S.suivi.devis && S.suivi.devis[devisId];
   if (dvA && dvA.livreeTs) delete dvA.livreeTs;
-  for (const x of lignes) x.statut = "envoye";
+  for (const x of lignes) {
+    x.statut = "envoye";
+    // Invariant : statut ≠ "termine" ⇒ pas de date d'encaissement.
+    delete x.pmtTs;
+    delete x.datePaiement;
+  }
   save();
   render();
 }
 window.suiviDevisUndo = suiviDevisUndo;
+
+// ▼ suiviSetDatePaiement — corrige la date d'encaissement d'une entry réglée
+// (champ date de la ligne d'échéance). C'est cette date qui rattache la recette
+// à un mois du bilan (compta de caisse, cf. entryEncaissementDate) : la changer
+// déplace l'encaissement de mois — et d'année si besoin. Vider le champ =
+// retour au repli (pmtTs, puis date du devis).
+window.suiviSetDatePaiement = function(id, val) {
+  const e = (S.suivi.entries || []).find(x => x.id === id);
+  if (!e || entryStatut(e) !== "termine") return;
+  const v = String(val || "").slice(0, 10);
+  if (/^\d{4}-\d{2}-\d{2}$/.test(v)) e.datePaiement = v;
+  else delete e.datePaiement;
+  save();
+  render();
+};
 
 // ▼ devisParcoursSteps — séquence ordonnée des étapes du parcours d'un devis
 // avec, pour chacune, son statut (done/active/upcoming/refused). SOURCE UNIQUE
@@ -13434,12 +13518,21 @@ function suiviParcoursHtml(g) {
     return `<button type="button" class="suv-fac-chip" title="Imprimer la facture ${ech.isSolde ? "de solde" : "d'acompte"} (aperçu avant impression)" onclick="${stop}facturePrintDirect('${devisId}','${ech.echId}')">${ICO_SZ('fileText', 11)} ${esc(formatRef(fac.ref, "facture"))}${sent}</button>`;
   };
   const payLbl = (status) => status === "done" ? "Payé" : status === "active" ? "À encaisser" : "En attente";
+  // Date d'encaissement, éditable, sur les lignes réglées : c'est ELLE qui
+  // rattache la recette à un mois du bilan (compta de caisse). Pré-remplie au
+  // pointage, à corriger si l'argent est tombé un autre jour (relevé bancaire).
+  const dateEnc = (e) => {
+    if (!e || entryStatut(e) !== "termine") return "";
+    const v = esc((entryEncaissementDate(e) || "").slice(0, 10));
+    return `<input type="date" class="dv-ech-date" value="${v}" onclick="${stop}" onchange="${stop}suiviSetDatePaiement('${e.id}', this.value)"
+      title="Date d'encaissement — c'est elle qui rattache la recette au mois du bilan (compta de caisse). Corrige-la si l'argent est arrivé un autre jour.">`;
+  };
   const echRows = [];
   for (const s of steps.filter(x => x.kind === "payment")) {
     const chip = facBadge(s.ech);
     echRows.push(`<div class="dv-ech-row ${s.status}">
       ${dotHtml(s.status)}
-      <div class="dv-ech-label">${esc(s.ech.label)}${chip ? " " + chip : ""}</div>
+      <div class="dv-ech-label">${esc(s.ech.label)}${chip ? " " + chip : ""}${dateEnc(s.ech.entry)}</div>
       <span class="dv-ech-amt">${fmt(s.ech.entry.montant)}</span>
       <span class="dv-state ${s.status}">${payLbl(s.status)}</span>
     </div>`);
@@ -13453,7 +13546,7 @@ function suiviParcoursHtml(g) {
     const clickable = st === "attente" || st === "termine";
     echRows.push(`<div class="dv-ech-row ${status}${clickable ? " clickable" : ""}"${clickable ? ` onclick="${stop}suiviLigneTogglePaiement('${e.id}')" title="Cliquer pour basculer réglé / en attente"` : ""}>
       ${dotHtml(status)}
-      <div class="dv-ech-label">${esc(e.echeance || "Frais / débours")}</div>
+      <div class="dv-ech-label">${esc(e.echeance || "Frais / débours")}${dateEnc(e)}</div>
       <span class="dv-ech-amt">${fmt(e.montant)}</span>
       <span class="dv-state ${status}">${st === "termine" ? "Réglé" : "En attente"}</span>
     </div>`);
@@ -15310,24 +15403,50 @@ function _abonnementsForMonth(ym) {
   return r2(total);
 }
 
+// ▼ entryEncaissementDate — date (YYYY-MM-DD) qui rattache une entry encaissée
+// à un mois du bilan. Micro-BNC = comptabilité de CAISSE (art. 93 CGI) : la
+// recette est rattachée à la date d'ENCAISSEMENT, jamais à celle de la
+// prestation ni de la facture. Cascade :
+//   1. e.datePaiement — date saisie/corrigée par l'utilisateur (relevé bancaire)
+//   2. e.pmtTs        — horodatage du clic « payé » (backfill migration)
+//   3. e.date         — repli legacy : entries encaissées avant l'existence des
+//                       deux champs. Conserve leur rattachement historique
+//                       (années déjà déclarées : pas de re-attribution sauvage).
+function entryEncaissementDate(e) {
+  if (e.datePaiement && String(e.datePaiement).length >= 7) return String(e.datePaiement);
+  if (e.pmtTs) {
+    const d = new Date(num(e.pmtTs));
+    if (!isNaN(d.getTime())) return isoDateLocal(d);
+  }
+  return e.date || "";
+}
+
+// Date locale au format YYYY-MM-DD (PAS toISOString : décale d'un jour le soir,
+// un paiement du 31/07 à 23h basculerait en août — donc de mois, voire d'année).
+function isoDateLocal(d) {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
 function bilanCompute() {
   const byMonth = {};
   for (const e of S.suivi.entries) {
-    const date = e.date || "";
-    if (date.length < 7) continue;
+    // Bilan de caisse : SEULES les entries encaissées y figurent, rattachées au
+    // mois de leur encaissement (et non au mois du devis/prestation).
+    // Les colonnes non monétaires (heures) suivent l'argent : chaque ligne du
+    // bilan décrit l'activité qui a produit l'encaissé de ce mois-là.
+    if (entryStatut(e) !== "termine") continue;
+    const date = entryEncaissementDate(e);
+    if (!date || date.length < 7) continue;
     const ym = date.slice(0, 7);
     if (!byMonth[ym]) byMonth[ym] = { heures:0, paye:0, ca:0, salaire:0, ursaf:0, tresorerie:0, frais:0 };
     const b = byMonth[ym];
-    const paid = entryStatut(e) === "termine";
-    if (paid) {
-      b.heures     += num(e.heures);
-      b.paye       += num(e.montant);
-      b.ca         += num(e.ca       != null && e.ca       !== "" ? e.ca       : e.montant);
-      b.salaire    += num(e.salaire);
-      b.tresorerie += num(e.tresorerie);
-      b.frais      += num(e.frais);
-      b.ursaf      += num(e.ursaf);
-    }
+    b.heures     += num(e.heures);
+    b.paye       += num(e.montant);
+    b.ca         += num(e.ca       != null && e.ca       !== "" ? e.ca       : e.montant);
+    b.salaire    += num(e.salaire);
+    b.tresorerie += num(e.tresorerie);
+    b.frais      += num(e.frais);
+    b.ursaf      += num(e.ursaf);
   }
 
   // Étend la plage [min..max] pour inclure les mois sans entries mais avec charges fixes
