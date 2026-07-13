@@ -6594,6 +6594,53 @@ window.stripLogosFromSnapshots = async function() {
   return stripped;
 };
 
+// ▼ purgeRenderedSnapshots — libère le poids Firestore : supprime les HTML
+// rendus stockés (dv.snapshotHtml, dv.snapshotDeboursHtml,
+// factures[].snapshotHtml) partout où le document est régénérable à
+// l'affichage (dv.snapshotMission présent ; factures d'acompte toujours
+// régénérables depuis leurs champs figés). Couvre devis vivants + corbeille.
+// À lancer en console (F12) APRÈS vérification visuelle de quelques devis /
+// débours / factures archivés — une fois purgé, le rendu à la volée est la
+// seule source d'affichage.
+window.purgeRenderedSnapshots = async function() {
+  if (typeof uiConfirm === "function") {
+    const ok = await uiConfirm(
+      "Supprimer les HTML rendus stockés dans les archives ?\n\nLes documents seront régénérés à l'affichage depuis leurs données figées (snapshotMission, champs facture). Vérifie d'abord visuellement quelques devis, feuilles débours et factures archivés.\n\nIrréversible (mais les données chiffrées restent intactes).",
+      { title: "Purger les snapshots HTML", confirmLabel: "Purger", kind: "warn" }
+    );
+    if (!ok) return 0;
+  }
+  const before = JSON.stringify(S).length;
+  let count = 0;
+  const purgeDv = dv => {
+    if (!dv) return;
+    const renderable = !!dv.snapshotMission;
+    if (renderable && dv.snapshotHtml) { delete dv.snapshotHtml; count++; }
+    if (renderable && dv.snapshotDeboursHtml) { delete dv.snapshotDeboursHtml; count++; }
+    if (Array.isArray(dv.factures)) {
+      for (const f of dv.factures) {
+        if (!f || !f.snapshotHtml) continue;
+        // La facture de solde re-embarque le devis : il faut snapshotMission.
+        if (f.type === "solde" && !renderable) continue;
+        delete f.snapshotHtml; count++;
+      }
+    }
+  };
+  const map = (S.suivi && S.suivi.devis) || {};
+  for (const id in map) purgeDv(map[id]);
+  const binItems = (S.suivi && S.suivi.bin && Array.isArray(S.suivi.bin.items)) ? S.suivi.bin.items : [];
+  for (const item of binItems) {
+    const list = (item && item.payload && Array.isArray(item.payload.devis)) ? item.payload.devis : [];
+    for (const dv of list) purgeDv(dv);
+  }
+  const after = JSON.stringify(S).length;
+  const freedKB = ((before - after) / 1024).toFixed(1);
+  if (!count) { console.log("Rien à purger (déjà fait, ou archives sans snapshotMission conservées)."); return 0; }
+  save();
+  console.log(`✓ ${count} snapshots HTML purgés, ${freedKB} KB libérés (doc : ${(after/1024).toFixed(0)} KB).`);
+  return count;
+};
+
 // ▼ autoCleanupDoc — nettoyage automatique au boot si le doc dépasse 900 KB.
 // Étapes en cascade, sûres :
 //   1. Supprime les devis orphelins (S.suivi.devis sans entry Suivi)
@@ -7641,6 +7688,9 @@ function formatRef(ref, type) {
 //   - Maj Trame en cours : rev = rev de l'original (in-place, pas de bump).
 //   - Réviser en cours : rev = rev(target) + 1 (la nouvelle qui sera créée).
 function currentRevForPreview() {
+  // Render d'archive en cours (renderDevisDocFromSnapshot) : la rev vient du
+  // devis archivé, pas des marqueurs de flow du brouillon.
+  if (_archiveRenderRev != null) return _archiveRenderRev;
   const m = S.mission;
   // Édition en place : pas de bump, on garde la rev du devis édité.
   if (m.editDevisId)     return computeRevisionNumber(m.editDevisId);
@@ -7919,11 +7969,10 @@ function reconstructMissionFromSuivi(devisId, opts) {
   return { mission: fresh, recovered };
 }
 
-// ▼ ensureLegacySnapshot — reconstitue un snapshot complet (HTML devis +
-// HTML débours + snapshotMission + méta) pour un devis legacy à partir des
-// entries Suivi. Idempotent : no-op si dv.snapshotHtml existe déjà.
-// Marque dv.legacyReconstructed = true. Retourne dv.
-// Le HTML inclut un bandeau « 📦 Reconstitué » visible aussi à l'impression.
+// ▼ ensureLegacySnapshot — reconstitue les données figées (snapshotMission +
+// méta) pour un devis legacy à partir des entries Suivi. Le HTML n'est PLUS
+// stocké : l'affichage régénère via renderDevisDocFromSnapshot, qui pose le
+// bandeau « Reconstitué » quand dv.legacyReconstructed = true. Retourne dv.
 function ensureLegacySnapshot(devisId) {
   if (!S.suivi.devis) S.suivi.devis = {};
   let dv = S.suivi.devis[devisId];
@@ -7932,7 +7981,7 @@ function ensureLegacySnapshot(devisId) {
   // est déterministe, donc régénérer à chaque appel permet de bénéficier
   // des corrections du helper sans migration explicite. Pour les snapshots
   // « vrais » (issus de suiviAdd avec un brouillon édité), on ne touche pas.
-  if (dv.snapshotHtml && !dv.legacyReconstructed) return dv;
+  if ((dv.snapshotMission || dv.snapshotHtml) && !dv.legacyReconstructed) return dv;
 
   const ents = (S.suivi.entries || []).filter(e => e.devisId === devisId);
   if (ents.length === 0) return dv;
@@ -7952,46 +8001,6 @@ function ensureLegacySnapshot(devisId) {
     synth.dateEmission = dates[0];
   }
 
-  // Swap S.mission temporairement pour rendre les previews avec ce contexte.
-  const savedMission = S.mission;
-  S.mission = synth;
-  let snapshotHtml = "";
-  let snapshotDeboursHtml = "";
-  try {
-    const dHtml = rDevisPreview();
-    if (dHtml) {
-      const tmp = document.createElement("div");
-      tmp.innerHTML = dHtml;
-      const inner = tmp.querySelector("#devisPreview") || tmp.firstElementChild;
-      if (inner) {
-        inner.querySelectorAll(".dp-actions").forEach(n => n.remove());
-        snapshotHtml = inner.innerHTML;
-      }
-    }
-    const totalDebours = ents.reduce((s, e) => s + num(e.frais), 0);
-    if (totalDebours > 0) {
-      const dDebours = rDeboursPreview();
-      if (dDebours && !dDebours.includes("dp-empty")) {
-        const tmpD = document.createElement("div");
-        tmpD.innerHTML = dDebours;
-        const innerD = tmpD.querySelector("#deboursPreview") || tmpD.firstElementChild;
-        if (innerD) {
-          innerD.querySelectorAll(".dp-actions").forEach(n => n.remove());
-          snapshotDeboursHtml = innerD.innerHTML;
-        }
-      }
-    }
-  } catch (e) {
-    console.warn("ensureLegacySnapshot render failed", e);
-  } finally {
-    S.mission = savedMission;
-  }
-
-  // Bandeau « reconstitué » injecté en tête (visible à l'impression PDF).
-  const banner = `<div class="dp-reconstructed-banner">📦 Document reconstitué a posteriori — données issues du suivi des paiements.</div>`;
-  if (snapshotHtml) snapshotHtml = banner + snapshotHtml;
-  if (snapshotDeboursHtml) snapshotDeboursHtml = banner + snapshotDeboursHtml;
-
   // Ref rétroactive si manquante / format non conforme (nouveau ou legacy).
   const refOk = dv.ref && (
     /^DEV-\d{6}-\d+$/.test(dv.ref) ||
@@ -8005,8 +8014,10 @@ function ensureLegacySnapshot(devisId) {
   const totalHT      = ents.filter(e => num(e.frais) === 0).reduce((s, e) => s + num(e.montant), 0);
   const totalDebours = ents.reduce((s, e) => s + num(e.frais), 0);
 
-  dv.snapshotHtml         = snapshotHtml;
-  dv.snapshotDeboursHtml  = snapshotDeboursHtml;
+  // Plus de stockage du HTML rendu : le HTML stocké éventuel (reconstitutions
+  // antérieures) est retiré, l'affichage régénère depuis snapshotMission.
+  delete dv.snapshotHtml;
+  delete dv.snapshotDeboursHtml;
   dv.snapshotMission      = JSON.parse(JSON.stringify(synth));
   dv.snapshotAt           = dv.snapshotAt || new Date().toISOString();
   dv.snapshotTotal        = totalHT;
@@ -8021,6 +8032,46 @@ function ensureLegacySnapshot(devisId) {
   return dv;
 }
 window.ensureLegacySnapshot = ensureLegacySnapshot;
+
+// ▼ renderDevisDocFromSnapshot — régénère le HTML d'un devis archivé (ou de
+// sa feuille débours) depuis dv.snapshotMission, par swap temporaire de
+// S.mission (les renderers lisent l'état global). Lecture seule : S.mission
+// restauré en finally, aucun save(). Retourne "" si pas de snapshotMission
+// (les callers retombent alors sur le snapshotHtml stocké, s'il existe).
+// C'est le cœur de la bascule « ne plus stocker le rendu » : les nouveaux
+// devis n'écrivent plus snapshotHtml/snapshotDeboursHtml (poids Firestore),
+// purgeRenderedSnapshots() nettoie les anciens après vérification visuelle.
+let _archiveRenderRev = null; // rev<N> affiché pendant un render d'archive
+function renderDevisDocFromSnapshot(devisId, which) {
+  const dv = S.suivi && S.suivi.devis && S.suivi.devis[devisId];
+  if (!dv || !dv.snapshotMission) return "";
+  const savedMission = S.mission;
+  _archiveRenderRev = computeRevisionNumber(devisId);
+  try {
+    // Copie profonde : les renderers ne doivent jamais muter le snapshot figé.
+    S.mission = JSON.parse(JSON.stringify(dv.snapshotMission));
+    const html = which === "debours" ? rDeboursPreview() : rDevisPreview();
+    if (!html) return "";
+    const tmp = document.createElement("div");
+    tmp.innerHTML = html;
+    // Les vrais rendus portent toujours l'id ; le placeholder dp-empty
+    // (pas de client / lignes / débours) n'en a pas → pas de document.
+    const el = tmp.querySelector(which === "debours" ? "#deboursPreview" : "#devisPreview");
+    if (!el) return "";
+    el.querySelectorAll(".dp-actions").forEach(n => n.remove());
+    let inner = el.innerHTML;
+    if (dv.legacyReconstructed) {
+      inner = `<div class="dp-reconstructed-banner">Document reconstitué a posteriori — données issues du suivi des paiements.</div>` + inner;
+    }
+    return inner;
+  } catch (e) {
+    console.warn("renderDevisDocFromSnapshot failed", e);
+    return "";
+  } finally {
+    S.mission = savedMission;
+    _archiveRenderRev = null;
+  }
+}
 
 // ▼ computeRevisionNumber — numéro de révision d'un devis dans sa chaîne
 // (0-indexé). Lit dv.revNum (figé, posé par migrateRevisionChains/suiviAdd) ;
@@ -9290,6 +9341,25 @@ function rBinModal() {
 // Format des items : { h: titre court, b: explication 1-3 phrases }.
 const APP_CHANGELOG = [
   {
+    id: "2026-07-rerender-archives",
+    date: "2026-07-13",
+    title: "Stockage cloud : documents régénérés à l'affichage",
+    items: [
+      {
+        h: "Plus de rendu HTML stocké",
+        b: "Les devis, feuilles débours et factures archivés ne stockent plus leur mise en page : le document est régénéré à l'ouverture depuis ses données figées (lignes, montants, taux, CGV de l'époque — rien ne change sur les chiffres). Chaque nouveau devis pèse environ 3 fois moins dans le cloud."
+      },
+      {
+        h: "Purge des archives existantes",
+        b: "Après avoir vérifié visuellement quelques documents archivés, lance purgeRenderedSnapshots() dans la console (F12) pour supprimer les rendus stockés des anciens devis et factures — l'espace récupéré éloigne durablement la limite de stockage."
+      },
+      {
+        h: "À savoir",
+        b: "La mise en page d'un ancien document suit désormais les améliorations de l'app (montants, textes et taux restent figés). L'adresse du client est lue dans le référentiel Clients au moment de l'affichage."
+      }
+    ]
+  },
+  {
     id: "2026-07-alerte-stockage",
     date: "2026-07-13",
     title: "Stockage cloud : alerte avant saturation",
@@ -10145,8 +10215,11 @@ function rViewDevisModal() {
   if (!dv) return "";
   const ref = dv.ref || viewDevisModal.devisId;
   const view = viewDevisModal.view || "devis";
-  const hasDebours = !!(dv.snapshotDeboursHtml && dv.snapshotDeboursHtml.trim());
-  let snapshot = (view === "debours" ? dv.snapshotDeboursHtml : dv.snapshotHtml) || "";
+  const hasDebours = !!((dv.snapshotDeboursHtml && dv.snapshotDeboursHtml.trim()) || (dv.snapshotMission && num(dv.snapshotDebours) > 0));
+  // Rendu à la volée depuis snapshotMission (source canonique) ; fallback sur
+  // le HTML stocké pour les archives sans snapshotMission (pré-feature).
+  let snapshot = renderDevisDocFromSnapshot(viewDevisModal.devisId, view === "debours" ? "debours" : "devis")
+    || (view === "debours" ? dv.snapshotDeboursHtml : dv.snapshotHtml) || "";
   // Ré-injection du logo courant : snapshots anciens sans logo (préfixe) OU
   // snapshots strippés par autoCleanupDoc (img présent mais src="").
   const currentLogo = (S.mission && S.mission.logoUrl) || (S.identite && S.identite.logoUrl) || "";
@@ -10272,7 +10345,9 @@ function rFactureAcompteBody(facture, dv, devisId) {
 //  - section "Acomptes déjà facturés" (déduction des FA précédentes) si applicable
 //  - section "Frais débours refacturés" (B4) si snapshotDeboursHtml présent
 function rFactureSoldeBody(facture, dv, devisId) {
-  let snapshot = (dv && dv.snapshotHtml) || "";
+  // Partie devis : rendue à la volée depuis snapshotMission (fallback : le
+  // snapshotHtml stocké des vieilles archives sans snapshotMission).
+  let snapshot = renderDevisDocFromSnapshot(devisId, "devis") || (dv && dv.snapshotHtml) || "";
   const currentLogo = (S.mission && S.mission.logoUrl) || (S.identite && S.identite.logoUrl) || "";
   if (snapshot && currentLogo && !snapshot.includes('class="dp-logo"')) {
     snapshot = `<div class="dp-logo-wrap"><img src="${esc(currentLogo)}" alt="Logo" class="dp-logo"></div>${snapshot}`;
@@ -10317,9 +10392,8 @@ function rFactureSoldeBody(facture, dv, devisId) {
 
   // Section débours refacturés (B4)
   let deboursHtml = "";
-  const snapDebours = (dv && dv.snapshotDeboursHtml) || "";
   const totalDebours = (dv && num(dv.snapshotDebours)) || 0;
-  if (snapDebours && totalDebours > 0) {
+  if (totalDebours > 0) {
     deboursHtml = `<div class="dp-section dp-facture-debours">
       <h4>Frais débours refacturés</h4>
       <div class="hint" style="margin:0 0 8px;font-size:11px">Avancés pour le compte du client, refacturés au centime près sur justificatifs (CGI 267-II).</div>
@@ -10344,7 +10418,7 @@ function rViewFactureModal() {
   const ech = devisEcheanceByEchId(devisId, echId);
   const type = ech && ech.isSolde ? "solde" : "acompte";
   const lignes = (S.suivi.entries || []).filter(e => e.devisId === devisId);
-  if (!dv || !dv.snapshotHtml) {
+  if (!dv || !(dv.snapshotMission || dv.snapshotHtml)) {
     return `<div class="modal-overlay" onclick="if(event.target===this)viewFactureClose()">
       <div class="modal-card">
         <div class="modal-title">Facture indisponible</div>
@@ -10375,17 +10449,18 @@ function rViewFactureModal() {
     </div>`;
   }
 
-  // Snapshot figé : à la 1ère ouverture après émission, on capture le body HTML
-  // pour qu'il soit immuable même si le devis sous-jacent est modifié plus tard.
-  if (!facture.snapshotHtml) {
-    const body = facture.type === "solde"
+  // Corps rendu à la volée depuis les données figées de la facture (montant,
+  // ref, dates — champs snapshot*) + snapshotMission du devis pour la solde.
+  // Plus AUCUN stockage de HTML rendu (poids Firestore). Les factures
+  // historiques gardent leur snapshotHtml comme fallback jusqu'à la purge
+  // (purgeRenderedSnapshots).
+  let bodyHtml = "";
+  try {
+    bodyHtml = facture.type === "solde"
       ? rFactureSoldeBody(facture, dv, devisId)
       : rFactureAcompteBody(facture, dv, devisId);
-    // Jamais de logo data-URL inline dans un snapshot persisté (piège
-    // Firestore 1 MB) : strippé au freeze, ré-injecté à l'affichage.
-    facture.snapshotHtml = body.replace(/src="data:image\/[^"]+"/g, 'src=""');
-    save();
-  }
+  } catch (e) { console.warn("Facture render failed", e); }
+  if (!bodyHtml) bodyHtml = facture.snapshotHtml || "";
 
   // Statut paiement live (peut évoluer post-émission, ne fige pas le snapshot)
   const ents = lignes.filter(e => num(e.frais) === 0);
@@ -10432,8 +10507,8 @@ function rViewFactureModal() {
           // Le récap paiement est dynamique (statut paiement live) → injecté
           // dans le snapshot juste avant le footer mentions, pas concaténé
           // après (sinon il apparaît visuellement après les mentions légales).
-          let snap = facture.snapshotHtml;
-          // Ré-injection du logo courant (strippé au freeze / par autoCleanupDoc).
+          let snap = bodyHtml;
+          // Ré-injection du logo courant (snapshots historiques strippés par autoCleanupDoc).
           const logo = (S.identite && S.identite.logoUrl) || (S.mission && S.mission.logoUrl) || "";
           if (logo) snap = snap.replace(/<img src="" alt="Logo" class="dp-logo">/g, `<img src="${esc(logo)}" alt="Logo" class="dp-logo">`);
           if (snap.includes('class="dp-facture-footer"')) {
@@ -10875,28 +10950,11 @@ window.suiviUpdateSnapshot = async function() {
   const m = S.mission;
   const t = totals();
 
-  // 1. Mise à jour du snapshot devis
-  const previewEl = document.getElementById("devisPreview");
-  if (previewEl) {
-    const clone = previewEl.cloneNode(true);
-    clone.querySelectorAll(".dp-actions").forEach(n => n.remove());
-    e.snap.snapshotHtml = clone.innerHTML;
-  }
-  // 2. Mise à jour du snapshot débours (rendu à la volée)
-  try {
-    const deboursHtml = rDeboursPreview();
-    if (deboursHtml && !deboursHtml.includes("dp-empty")) {
-      const tmp = document.createElement("div");
-      tmp.innerHTML = deboursHtml;
-      const deboursEl = tmp.querySelector("#deboursPreview") || tmp.firstElementChild;
-      if (deboursEl) {
-        deboursEl.querySelectorAll(".dp-actions").forEach(n => n.remove());
-        e.snap.snapshotDeboursHtml = deboursEl.innerHTML;
-      }
-    } else {
-      e.snap.snapshotDeboursHtml = "";
-    }
-  } catch (err) { console.warn("Snapshot débours failed", err); }
+  // 1-2. Plus de capture du HTML rendu : l'affichage régénère depuis
+  // snapshotMission (mis à jour ci-dessous). On supprime le HTML stocké
+  // périmé pour qu'il ne shadow pas les modifications via le fallback.
+  delete e.snap.snapshotHtml;
+  delete e.snap.snapshotDeboursHtml;
 
   e.snap.snapshotAt = new Date().toISOString();
   e.snap.snapshotTotal = t.total;
@@ -12177,7 +12235,8 @@ function missionStripForCompare(m) {
   return JSON.stringify(x);
 }
 
-// ▼ suiviAdd — archive le devis : 2 entries Suivi + 2 snapshots
+// ▼ suiviAdd — archive le devis : 2 entries Suivi + snapshotMission (données
+// figées ; le HTML est régénéré à l'affichage, plus jamais stocké)
 async function suiviAdd() {
   const m = S.mission;
   // Maj Trame (legacy in-place) : si total HT inchangé vs original, on met
@@ -12190,26 +12249,10 @@ async function suiviAdd() {
     const totalSame = Math.abs(origTotal - tNew.total) < 0.01;
     if (totalSame && dvOrig) {
       // Mise à jour EN PLACE du snapshot. Même devisId, ref, dates V1.
-      const previewEl = document.getElementById("devisPreview");
-      if (previewEl) {
-        const clone = previewEl.cloneNode(true);
-        clone.querySelectorAll(".dp-actions").forEach(n => n.remove());
-        dvOrig.snapshotHtml = clone.innerHTML;
-      }
-      try {
-        const dHtml = rDeboursPreview();
-        if (dHtml && !dHtml.includes("dp-empty")) {
-          const tmp = document.createElement("div");
-          tmp.innerHTML = dHtml;
-          const innerD = tmp.querySelector("#deboursPreview") || tmp.firstElementChild;
-          if (innerD) {
-            innerD.querySelectorAll(".dp-actions").forEach(n => n.remove());
-            dvOrig.snapshotDeboursHtml = innerD.innerHTML;
-          }
-        } else {
-          dvOrig.snapshotDeboursHtml = "";
-        }
-      } catch (err) { console.warn("Maj Trame débours render failed", err); }
+      // Plus de capture HTML : l'affichage régénère depuis snapshotMission
+      // (mis à jour ci-dessous) ; on retire le HTML stocké périmé.
+      delete dvOrig.snapshotHtml;
+      delete dvOrig.snapshotDeboursHtml;
       dvOrig.snapshotAt = new Date().toISOString();
       dvOrig.snapshotTotal = tNew.total;
       dvOrig.snapshotDebours = tNew.debours || 0;
@@ -12288,32 +12331,10 @@ async function suiviAdd() {
   const prestation = cat ? cat.l : "";
   const devisId = uid();
 
-  // Snapshot the rendered devis HTML so we can re-display it later from Suivi
-  // Capture aussi la feuille débours si elle existe (rendue dans le DOM même si
-  // l'onglet preview actif n'est pas Débours — on la rend juste pour le snapshot).
-  let snapshotHtml = "";
-  let snapshotDeboursHtml = "";
-  try {
-    const el = document.getElementById("devisPreview");
-    if (el) {
-      const clone = el.cloneNode(true);
-      clone.querySelectorAll(".dp-actions").forEach(n => n.remove());
-      snapshotHtml = clone.innerHTML;
-    }
-    // Génère le HTML débours à la volée (pas besoin que l'onglet soit actif).
-    const deboursHtml = rDeboursPreview();
-    if (deboursHtml && !deboursHtml.includes("dp-empty")) {
-      const tmp = document.createElement("div");
-      tmp.innerHTML = deboursHtml;
-      const deboursEl = tmp.querySelector("#deboursPreview") || tmp.firstElementChild;
-      if (deboursEl) {
-        deboursEl.querySelectorAll(".dp-actions").forEach(n => n.remove());
-        snapshotDeboursHtml = deboursEl.innerHTML;
-      }
-    }
-  } catch (e) {
-    console.warn("Snapshot devis/débours failed", e);
-  }
+  // Plus de capture du HTML rendu (snapshotHtml/snapshotDeboursHtml) : le
+  // document est régénéré à l'affichage depuis snapshotMission
+  // (renderDevisDocFromSnapshot). Économie majeure de poids Firestore
+  // (~20 KB de HTML par devis).
 
   // Préserve le tableau factures[] s'il existait déjà (cas suiviUpdateSnapshot
   // appelle indirectement par re-archivage). Tier 1 : 1 facture max par devis.
@@ -12350,8 +12371,6 @@ async function suiviAdd() {
   // décision manuelle qu'on doit préserver pour les futures révisions.
   S.suivi.devis[devisId] = {
     ref: m.ref || "",
-    snapshotHtml,
-    snapshotDeboursHtml,
     snapshotAt: new Date().toISOString(),
     snapshotTotal: t.total,
     snapshotDebours: t.debours || 0,
@@ -14194,7 +14213,8 @@ function rSuiviBinView() {
   `;
 }
 
-// Ouvre la modal devis sur l'onglet Débours (snapshotDeboursHtml capturé au suiviAdd).
+// Ouvre la modal devis sur l'onglet Débours (rendu à la volée depuis
+// snapshotMission, fallback snapshotDeboursHtml pour les vieilles archives).
 window.viewDeboursOpen = function(devisId) {
   // Reconstitution paresseuse pour les devis legacy.
   ensureLegacySnapshot(devisId);
@@ -14203,7 +14223,7 @@ window.viewDeboursOpen = function(devisId) {
     uiAlert("Aucun snapshot disponible. Réenregistre le devis depuis l'onglet Devis (« + Enregistrer dans Suivi »).", { kind: "warn" });
     return;
   }
-  if (!dv.snapshotDeboursHtml) {
+  if (!dv.snapshotDeboursHtml && !(dv.snapshotMission && num(dv.snapshotDebours) > 0)) {
     uiAlert("Pas de feuille débours pour ce devis (aucun frais débours). Réenregistre le devis depuis l'onglet Devis si tu en as ajouté depuis.", { kind: "warn" });
     return;
   }
