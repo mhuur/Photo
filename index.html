@@ -456,6 +456,34 @@
      dp-client-block dans le même header-grid reste visible. */
   .view-facture-solde .dp-meta-block.dp-meta-box{display:none!important}
   .view-facture-solde .dp-validity-mention{display:none!important}
+  /* Facture (modal) : le snapshot devis embarqué contient des blocs sans objet
+     sur une facture — signature « Bon pour accord », rétractation, médiateur,
+     CGV (page dédiée en print), échéancier prévisionnel, spacer. Masqués écran
+     + print via CSS (rétroactif : les snapshots figés sont immuables). On garde
+     .dp-bank (IBAN, nécessaire pour régler le solde) et la ligne délai (dp-delai,
+     enfant direct de dp-payment-info). Spécificité ≥ (0,4,0) obligatoire : la
+     règle print .dp-conditions.cgv{display:flex!important} est à (0,3,0). */
+  .devis-preview.view-facture .dp-spacer,
+  .devis-preview.view-facture .dp-signature-row,
+  .devis-preview.view-facture .dp-retractation,
+  .devis-preview.view-facture .dp-mediateur,
+  .devis-preview.view-facture .dp-cgv-fallback,
+  .devis-preview.view-facture .devis-page-break,
+  .devis-preview.view-facture .dp-conditions.cgv,
+  .devis-preview.view-facture .dp-page-footer-preview,
+  .devis-preview.view-facture .dp-payment-block:not(.dp-bank){display:none!important}
+  /* Sections propres à la facture (acomptes déduits, débours refacturés) :
+     lignes à 2-3 enfants (pas de colonne n°) → flex, pas la grille 4 colonnes
+     de .dp-line. Le « Net à payer (solde) » est stylé comme un total. */
+  .devis-preview .dp-acomptes-deduits .dp-line,
+  .devis-preview .dp-facture-debours .dp-line{display:flex;justify-content:space-between;align-items:baseline;gap:14px;grid-template-columns:none}
+  .devis-preview .dp-acomptes-deduits .dp-line .lbl,
+  .devis-preview .dp-facture-debours .dp-line .lbl{flex:1;min-width:0}
+  .devis-preview .dp-acomptes-deduits .dp-line .qty,
+  .devis-preview .dp-facture-debours .dp-line .qty{display:none}
+  .devis-preview .dp-acomptes-deduits .dp-line .amt,
+  .devis-preview .dp-facture-debours .dp-line .amt{flex-shrink:0;white-space:nowrap;min-width:0}
+  .devis-preview .dp-acomptes-deduits .dp-line.grand{margin-top:6px;padding-top:8px;border-top:1px solid var(--border);font-weight:700;font-size:15px}
   @media print{
     .dp-facture-meta{background:transparent;border:1px solid #888}
     .dp-facture-meta .dp-fm-row > .lbl{color:#666}
@@ -463,6 +491,23 @@
     .dp-facture-status.paid{background:transparent;color:#1b6e3a;border:2px solid #1b6e3a}
     .dp-facture-status.pending{background:transparent;color:#9a4d00;border:2px solid #9a4d00}
     .dp-facture-footer{color:#444}
+    /* Alignement print des sections facture — doit battre la grille
+       .devis-preview .dp-line (0,2,0)!important du bloc print principal. */
+    .devis-preview .dp-acomptes-deduits .dp-line, .view-devis-snapshot .dp-acomptes-deduits .dp-line,
+    .devis-preview .dp-facture-debours .dp-line, .view-devis-snapshot .dp-facture-debours .dp-line{
+      display:flex!important;justify-content:space-between!important;align-items:baseline!important;
+      grid-template-columns:none!important;gap:10pt!important;padding:2pt 0!important;font-size:9pt!important}
+    .devis-preview .dp-acomptes-deduits .dp-line .lbl, .view-devis-snapshot .dp-acomptes-deduits .dp-line .lbl,
+    .devis-preview .dp-facture-debours .dp-line .lbl, .view-devis-snapshot .dp-facture-debours .dp-line .lbl{flex:1!important;min-width:0!important}
+    .devis-preview .dp-acomptes-deduits .dp-line .qty, .view-devis-snapshot .dp-acomptes-deduits .dp-line .qty,
+    .devis-preview .dp-facture-debours .dp-line .qty, .view-devis-snapshot .dp-facture-debours .dp-line .qty{display:none!important}
+    .devis-preview .dp-acomptes-deduits .dp-line .amt, .view-devis-snapshot .dp-acomptes-deduits .dp-line .amt,
+    .devis-preview .dp-facture-debours .dp-line .amt, .view-devis-snapshot .dp-facture-debours .dp-line .amt{flex-shrink:0!important;white-space:nowrap!important;min-width:0!important}
+    .devis-preview .dp-acomptes-deduits .dp-line.grand, .view-devis-snapshot .dp-acomptes-deduits .dp-line.grand{
+      margin-top:3pt!important;padding:4pt 0 0!important;border-top:1pt solid #1a1a1a!important;
+      font-size:11pt!important;font-weight:700!important;background:transparent!important;border-radius:0!important}
+    /* Accent navy sur le montant clé (cohérent avec le Total HT du devis). */
+    .devis-preview .dp-acomptes-deduits .dp-line.grand .amt, .view-devis-snapshot .dp-acomptes-deduits .dp-line.grand .amt{color:#1e3a8a!important}
   }
 
   /* Tarifs : carte synthèse coûts horaires */
@@ -10335,6 +10380,7 @@ function rViewFactureModal() {
       <div class="modal-title" style="color:var(--success)">${titlePrefix} ${esc(formatRef(facture.ref, "facture"))} — ${esc(client)}</div>
       <div class="modal-sub">Émise le ${esc(dateFR(facture.dateEmission))} · Échéance ${esc(dateFR(facture.dateEcheance))} · ${paidLines.length}/${ents.length} échéance${ents.length > 1 ? "s" : ""} payée${paidLines.length > 1 ? "s" : ""}</div>
       <div class="devis-preview view-devis-snapshot view-facture view-facture-${type}">
+        ${type === "solde" ? `<div class="dp-doc-title" style="color:var(--success)">FACTURE DE SOLDE</div>` : ""}
         ${statusBannerHtml}
         ${(() => {
           // Le récap paiement est dynamique (statut paiement live) → injecté
