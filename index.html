@@ -6613,50 +6613,47 @@ async function autoCleanupDoc() {
     orphansFreed += JSON.stringify(S.suivi.devis[id]).length;
     delete S.suivi.devis[id];
   }
-  // 2. Strip logos dans snapshots
+  // 2. Strip logos dans snapshots — devis vivants (snapshotHtml, débours,
+  // factures, snapshotMission) ET corbeille devis (les chaînes supprimées
+  // conservent leurs snapshots complets dans payload.devis[]).
   const re = /src="data:image\/[^"]+"/g;
   let logosStripped = 0;
   let logosFreed = 0;
-  const remainingDevis = (S.suivi && S.suivi.devis) || {};
-  for (const id in remainingDevis) {
-    const dv = remainingDevis[id];
-    if (typeof dv.snapshotHtml === "string") {
-      const matches = dv.snapshotHtml.match(re) || [];
-      if (matches.length) {
-        for (const m of matches) logosFreed += m.length;
-        dv.snapshotHtml = dv.snapshotHtml.replace(re, 'src=""');
-        logosStripped += matches.length;
-      }
-    }
-    if (typeof dv.snapshotDeboursHtml === "string") {
-      const matches = dv.snapshotDeboursHtml.match(re) || [];
-      if (matches.length) {
-        for (const m of matches) logosFreed += m.length;
-        dv.snapshotDeboursHtml = dv.snapshotDeboursHtml.replace(re, 'src=""');
-        logosStripped += matches.length;
-      }
-    }
-    // Snapshots factures (FA/FS) : le logo y était figé inline avant le strip
-    // au freeze — couverts aussi (ré-injecté à l'affichage par rViewFactureModal).
-    if (Array.isArray(dv.factures)) {
-      for (const f of dv.factures) {
-        if (typeof f.snapshotHtml !== "string") continue;
-        const matches = f.snapshotHtml.match(re) || [];
-        if (matches.length) {
-          for (const m of matches) logosFreed += m.length;
-          f.snapshotHtml = f.snapshotHtml.replace(re, 'src=""');
-          logosStripped += matches.length;
-        }
-      }
-    }
+  const stripField = (obj, key) => {
+    if (!obj || typeof obj[key] !== "string") return;
+    const matches = obj[key].match(re) || [];
+    if (!matches.length) return;
+    for (const m of matches) logosFreed += m.length;
+    obj[key] = obj[key].replace(re, 'src=""');
+    logosStripped += matches.length;
+  };
+  const stripDevis = dv => {
+    if (!dv) return;
+    stripField(dv, "snapshotHtml");
+    stripField(dv, "snapshotDeboursHtml");
+    // Snapshots factures (FA/FS) : logo figé inline avant le strip au freeze
+    // — couverts aussi (ré-injecté à l'affichage par rViewFactureModal).
+    if (Array.isArray(dv.factures)) for (const f of dv.factures) stripField(f, "snapshotHtml");
     if (dv.snapshotMission && typeof dv.snapshotMission.logoUrl === "string" && dv.snapshotMission.logoUrl.startsWith("data:")) {
       logosFreed += dv.snapshotMission.logoUrl.length;
       dv.snapshotMission.logoUrl = "";
     }
+  };
+  const remainingDevis = (S.suivi && S.suivi.devis) || {};
+  for (const id in remainingDevis) stripDevis(remainingDevis[id]);
+  const binItems = (S.suivi && S.suivi.bin && Array.isArray(S.suivi.bin.items)) ? S.suivi.bin.items : [];
+  for (const item of binItems) {
+    const list = (item && item.payload && Array.isArray(item.payload.devis)) ? item.payload.devis : [];
+    for (const dv of list) stripDevis(dv);
   }
   const after = JSON.stringify(S).length;
   const totalFreedKB = ((before - after) / 1024).toFixed(0);
-  if (orphans.length > 0 || logosStripped > 0) {
+  const cleaned = orphans.length > 0 || logosStripped > 0;
+  // Au-delà de 1024 KB, saveToCloud échoue silencieusement (sync gelée) :
+  // si le doc reste proche de la limite APRÈS nettoyage, l'utilisateur doit
+  // être prévenu même quand il n'y a plus rien à retirer automatiquement.
+  const stillFat = after > 940 * 1024;
+  if (cleaned) {
     console.warn(`[auto-cleanup] doc ${(before/1024).toFixed(0)}KB → ${(after/1024).toFixed(0)}KB (libéré ${totalFreedKB}KB) : ${orphans.length} orphelins, ${logosStripped} logos.`);
     save();
     if (typeof uiAlert === "function") {
@@ -6665,13 +6662,27 @@ async function autoCleanupDoc() {
         `Nettoyage automatique :\n` +
         `• ${orphans.length} devis orphelin${orphans.length > 1 ? "s" : ""} supprimé${orphans.length > 1 ? "s" : ""} (= sans entry Suivi associée, donc invisible${orphans.length > 1 ? "s" : ""} dans l'app)\n` +
         `• ${logosStripped} logo${logosStripped > 1 ? "s" : ""} dupliqué${logosStripped > 1 ? "s" : ""} retiré${logosStripped > 1 ? "s" : ""} des archives (logo réinjecté à l'impression)\n\n` +
-        `Doc : ${(after/1024).toFixed(0)} KB (-${totalFreedKB} KB).`,
-        { title: "Sync optimisée", kind: "info" }
+        `Doc : ${(after/1024).toFixed(0)} KB (-${totalFreedKB} KB).` +
+        (stillFat ? `\n\nLe doc reste proche de la limite. Si tu n'as rien à récupérer dans la corbeille des devis (Historique → Corbeille), la vider libérera son contenu. Détail poste par poste : checkDocSize() dans la console (F12).` : ""),
+        { title: "Sync optimisée", kind: stillFat ? "warn" : "info" }
       );
     }
     return true;
   }
-  return false;
+  if (stillFat) {
+    console.warn(`[auto-cleanup] doc ${(after/1024).toFixed(0)}KB — plus rien à nettoyer automatiquement, limite 1024 KB proche.`);
+    if (typeof uiAlert === "function") {
+      const binKB = (S.suivi && S.suivi.bin) ? (JSON.stringify(S.suivi.bin).length / 1024).toFixed(0) : "0";
+      uiAlert(
+        `Le doc Firestore fait ${(after/1024).toFixed(0)} KB — la limite dure est 1024 KB. Au-delà, la synchronisation cloud échoue silencieusement.\n\n` +
+        `Le nettoyage automatique n'a plus rien à retirer. Pistes :\n` +
+        `• Vider la corbeille des devis (Historique → Corbeille) : ${binKB} KB de devis supprimés y sont conservés\n` +
+        `• Lancer checkDocSize() dans la console (F12) pour voir le détail poste par poste`,
+        { title: "Stockage cloud presque plein", kind: "warn" }
+      );
+    }
+  }
+  return cleaned;
 }
 
 window.cleanOrphanDevis = async function() {
@@ -6713,25 +6724,55 @@ window.checkDocSize = function() {
   console.log("\nRÉPARTITION :");
   console.table(breakdown);
 
-  // Zoom sur S.suivi.devis (le plus gros candidat — snapshotHtml inline)
+  const jlen = v => JSON.stringify(v === undefined ? null : v).length;
+
+  // Ventilation de S.suivi (souvent le champ dominant) : devis / entries / corbeille…
+  if (S.suivi) {
+    const suiviTotal = jlen(S.suivi);
+    const sub = Object.keys(S.suivi).map(k => ({
+      champ: "suivi." + k,
+      KB: (jlen(S.suivi[k]) / 1024).toFixed(2),
+      pct: ((jlen(S.suivi[k]) / suiviTotal) * 100).toFixed(1) + "%"
+    })).sort((a, b) => parseFloat(b.KB) - parseFloat(a.KB));
+    console.log(`\nVENTILATION S.suivi (${(suiviTotal/1024).toFixed(1)} KB) :`);
+    console.table(sub);
+  }
+
+  // Zoom sur S.suivi.devis (snapshotHtml + débours + factures + snapshotMission inline)
   if (S.suivi && S.suivi.devis) {
     const dvList = [];
     for (const id in S.suivi.devis) {
       const dv = S.suivi.devis[id];
-      const dvTotal = JSON.stringify(dv).length;
+      const dvTotal = jlen(dv);
       const html = (dv.snapshotHtml || "").length;
       const deboursHtml = (dv.snapshotDeboursHtml || "").length;
+      const factures = jlen(dv.factures || []);
+      const mission = dv.snapshotMission ? jlen(dv.snapshotMission) : 0;
       dvList.push({
         ref: dv.ref || id.slice(0, 8),
         total_KB: (dvTotal/1024).toFixed(1),
         snapshotHtml_KB: (html/1024).toFixed(1),
-        snapshotDeboursHtml_KB: (deboursHtml/1024).toFixed(1),
-        otherFields_KB: ((dvTotal - html - deboursHtml)/1024).toFixed(1)
+        debours_KB: (deboursHtml/1024).toFixed(1),
+        factures_KB: (factures/1024).toFixed(1),
+        snapMission_KB: (mission/1024).toFixed(1),
+        autres_KB: ((dvTotal - html - deboursHtml - factures - mission)/1024).toFixed(1)
       });
     }
     dvList.sort((a, b) => parseFloat(b.total_KB) - parseFloat(a.total_KB));
     console.log(`\nDÉTAIL DEVIS (${dvList.length} archivés) — top 15 :`);
     console.table(dvList.slice(0, 15));
+  }
+
+  // Corbeille devis : les chaînes supprimées restent stockées dans le doc.
+  if (S.suivi && S.suivi.bin && Array.isArray(S.suivi.bin.items) && S.suivi.bin.items.length) {
+    const binTotal = jlen(S.suivi.bin);
+    const binList = S.suivi.bin.items.map(it => ({
+      label: it.label || it.id,
+      KB: (jlen(it) / 1024).toFixed(1),
+      suppr_le: it.deletedAt ? new Date(it.deletedAt).toLocaleDateString("fr-FR") : "—"
+    }));
+    console.log(`\nCORBEILLE DEVIS (${binList.length} item(s), ${(binTotal/1024).toFixed(1)} KB conservés dans le doc — à vider via Historique → Corbeille) :`);
+    console.table(binList);
   }
   return total;
 };
@@ -9243,6 +9284,21 @@ function rBinModal() {
 // l'utilisateur. Plus récent en premier. id = clé stable, sert au "lu/non-lu".
 // Format des items : { h: titre court, b: explication 1-3 phrases }.
 const APP_CHANGELOG = [
+  {
+    id: "2026-07-alerte-stockage",
+    date: "2026-07-13",
+    title: "Stockage cloud : alerte avant saturation",
+    items: [
+      {
+        h: "Prévenu avant le blocage",
+        b: "Quand le stockage cloud approche de sa limite (1 Mo), l'app te prévient au démarrage et t'indique quoi faire — notamment vider la corbeille des devis, qui conserve les devis supprimés avec tout leur poids. Avant, la synchronisation pouvait se figer sans aucun message."
+      },
+      {
+        h: "Nettoyage automatique plus complet",
+        b: "Le nettoyage au démarrage couvre désormais aussi les devis de la corbeille et les factures archivées (logos dupliqués retirés puis réinjectés à l'affichage)."
+      }
+    ]
+  },
   {
     id: "2026-07-impression-factures",
     date: "2026-07-13",
