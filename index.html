@@ -2634,6 +2634,9 @@
 
   /* Liste sommaire CGV (formulaire de gauche) — minimal */
   .cgv-summary-list{display:flex;flex-direction:column;gap:4px;max-width:780px}
+  /* Actions CGV (ajouter / charger le modèle) + lignes préambule et signature */
+  .cgv-actions{display:flex;gap:var(--space-sm);flex-wrap:wrap;margin-top:var(--space-md)}
+  .cgv-field-row{display:flex;align-items:center;justify-content:space-between;gap:var(--space-md);flex-wrap:wrap;max-width:780px}
   .cgv-summary-row{display:flex;align-items:center;gap:10px;padding:8px 12px;background:var(--surface);border:1px solid var(--border-light);border-radius:6px;transition:border-color .12s,background .12s}
   .cgv-summary-row:hover{border-color:var(--primary);background:rgba(74,158,255,.04)}
   .cgv-summary-num{font-size:12px;font-weight:700;color:var(--primary);min-width:22px;font-variant-numeric:tabular-nums}
@@ -9330,6 +9333,25 @@ function rBinModal() {
 // Format des items : { h: titre court, b: explication 1-3 phrases }.
 const APP_CHANGELOG = [
   {
+    id: "2026-07-cgv-accessibles",
+    date: "2026-07-13",
+    title: "Les CGV sont de nouveau accessibles",
+    items: [
+      {
+        h: "Une section « Conditions & CGV » dans le devis",
+        b: "Les CGV n'étaient éditables que depuis l'aperçu du devis — lequel ne s'affiche qu'avec un client et une ligne. Et le bouton « Ajouter une section » vivait à l'intérieur du bloc CGV : sans CGV, aucun moyen d'en créer une. Impasse. Une section dédiée, toujours visible, est de retour en bas de l'accordéon du devis."
+      },
+      {
+        h: "Le modèle photographe est revenu",
+        b: "Un bouton « Charger le modèle photographe » remplit préambule + 8 sections types (acompte, rétractation, annulation, droit à l'image, force majeure…), à adapter ensuite. Il était présent dans le code mais plus aucun bouton ne le déclenchait."
+      },
+      {
+        h: "Préambule et bloc signature éditables au même endroit",
+        b: "La même section permet de rédiger le préambule des CGV et de personnaliser le bloc « Bon pour accord », sans dépendre de l'aperçu."
+      }
+    ]
+  },
+  {
     id: "2026-07-annulation-acompte",
     date: "2026-07-13",
     title: "Annulation : que devient l'acompte déjà encaissé ?",
@@ -10006,11 +10028,14 @@ function rCgvEditor() {
 
     <div class="cgv-summary-list">
       ${sections.length === 0
-        ? `<div class="cgv-edit-empty">Aucune section. Clique sur « + Ajouter une section » ci-dessous, ou utilise « ${ICO_SZ('clipboard', 13)} Charger modèle photographe » pour partir d'un modèle pré-rempli.</div>`
+        ? `<div class="cgv-edit-empty">Aucune section CGV. Pars du <strong>modèle photographe</strong> (8 sections : acompte, rétractation, annulation, droit à l'image…) puis adapte-le — c'est le plus rapide et ça évite de laisser le sort de l'acompte non écrit.</div>`
         : sectionsHtml}
     </div>
 
-    <button class="btn-add-neon" type="button" style="margin-top:10px" onclick="cgvSectionAdd()">${ICO_SZ('plus', 14)} Ajouter une section</button>
+    <div class="cgv-actions">
+      <button class="mk-btn subtle" type="button" onclick="cgvSectionAdd()">${ICO_SZ('plus', 14)} Ajouter une section</button>
+      <button class="mk-btn subtle" type="button" onclick="cgvLoadTemplate()" title="Remplit préambule + 8 sections types pour un photographe. Remplace les sections existantes.">${ICO_SZ('clipboard', 14)} Charger le modèle photographe</button>
+    </div>
   `;
 }
 
@@ -10229,6 +10254,7 @@ const ENCADRE_LABELS = {
   photographe: "Photographe (en-tête du devis)",
   conditionsPaiement: "Conditions de paiement",
   signatureBlock: "Bon pour accord",
+  cgvPreambule: "Préambule des CGV",
   cgv: "Conditions générales de vente (CGV)"
 };
 
@@ -11243,17 +11269,46 @@ function rDV() { return ""; }
 // ▼ rDevisAccordion — squelette des 6 sections du formulaire devis
 function rDevisAccordion() {
   const sums = devisSectionSummaries();
-  // Section « Conditions & signature » retirée : tous ses contenus sont
-  // désormais éditables in-place dans la preview du devis (clic ⋮) :
-  // - logo → onglet Profil
-  // - photographe richtext → fallback identité Profil (legacy peu utilisé)
-  // - préambule CGV / conditions paiement / sections CGV / signature → preview
+  // Le logo vit dans l'onglet Profil ; le champ « photographe » (legacy) est un
+  // simple fallback de l'identité Profil. Le reste (CGV, préambule, signature)
+  // est éditable in-place dans la preview ET depuis la section « Conditions &
+  // CGV » ci-dessous — indispensable : la preview ne se rend qu'avec un client
+  // + une ligne, et son bouton « ＋ section CGV » vit DANS le bloc CGV, donc
+  // invisible tant qu'aucune CGV n'existe (impasse : rien pour créer la 1ʳᵉ).
   return `<div class="edit-accordion-list">
     ${rEditSectionRaw("identification", "Identification & client",     sums.identification, rDevisSectionIdentification())}
     ${rEditSectionRaw("prestations",    "Prestations",                 sums.prestations,    rDevisSectionPrestations())}
     ${rEditSectionRaw("deplacement",    "Déplacements",                sums.deplacement,    rDevisSectionDeplacement())}
     ${rEditSectionRaw("majorations",    "Majorations & paiements",     sums.majorations,    rDevisSectionMajorations())}
+    ${rEditSectionRaw("conditions",     "Conditions & CGV",            sums.conditions,     rDevisSectionCgv())}
   </div>`;
+}
+
+// ▼ rDevisSectionCgv — § 5/5 : préambule CGV + sections CGV + bloc signature.
+// Point d'entrée TOUJOURS visible (contrairement à la preview, conditionnée à
+// un client + une ligne). Expose le modèle photographe : il qualifie l'acompte
+// et fixe le sort des sommes en cas d'annulation (arrhes vs acompte, L214-1
+// C. conso) — à ne pas laisser vide.
+function rDevisSectionCgv() {
+  const d = S.mission;
+  const hasPreambule = !!(d.cgvPreambule || "").trim();
+  const hasSignature = !!(d.signatureBlock || "").trim();
+  return `
+    <h5>Préambule CGV</h5>
+    <div class="cgv-field-row">
+      <span class="hint" style="margin:0">${hasPreambule ? "Renseigné" : "Vide — le modèle en fournit un."}</span>
+      <button class="mk-btn subtle" type="button" onclick="textEditorOpen('cgvPreambule')">${ICO_SZ('edit', 13)} ${hasPreambule ? "Modifier" : "Rédiger"}</button>
+    </div>
+
+    <h5 style="margin-top:var(--gap-section)">Sections CGV</h5>
+    ${rCgvEditor()}
+
+    <h5 style="margin-top:var(--gap-section)">Bloc signature</h5>
+    <div class="cgv-field-row">
+      <span class="hint" style="margin:0">${hasSignature ? "Personnalisé" : "Bloc par défaut (« Fait à… / Bon pour accord »)."}</span>
+      <button class="mk-btn subtle" type="button" onclick="textEditorOpen('signatureBlock')">${ICO_SZ('edit', 13)} Modifier</button>
+    </div>
+  `;
 }
 
 // Section fusionnée « Majorations & paiements » : remise/URSSAF (ex
