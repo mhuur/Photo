@@ -3512,7 +3512,10 @@ const ICO_SZ = (key, sz) => {
     clipboard: '<rect width="8" height="4" x="8" y="2" rx="1" ry="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/>',
     fileText: '<path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><polyline points="14 2 14 8 20 8"/><line x1="16" x2="8" y1="13" y2="13"/><line x1="16" x2="8" y1="17" y2="17"/><polyline points="10 9 9 9 8 9"/>',
     banknote: '<rect width="20" height="12" x="2" y="6" rx="2"/><circle cx="12" cy="12" r="2"/><path d="M6 12h.01M18 12h.01"/>',
-    euro: '<path d="M4 10h12"/><path d="M4 14h9"/><path d="M19 6a7.7 7.7 0 0 0-5.2-2A7.9 7.9 0 0 0 6 12c0 4.4 3.5 8 7.8 8 2 0 3.8-.8 5.2-2"/>'
+    euro: '<path d="M4 10h12"/><path d="M4 14h9"/><path d="M19 6a7.7 7.7 0 0 0-5.2-2A7.9 7.9 0 0 0 6 12c0 4.4 3.5 8 7.8 8 2 0 3.8-.8 5.2-2"/>',
+    // Absente jusqu'ici : ICO_SZ('mail') rendait un SVG VIDE (bouton « Envoyer »
+    // de la bande d'action sans icône). Cf. piège « 2 dictionnaires d'icônes ».
+    mail: '<rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/>'
   };
   return _ICO(map[key] || '', sz);
 };
@@ -5026,41 +5029,6 @@ function openGmailComposeForFacture(devisId, echId) {
   openGmailCompose(to, subject, body);
 }
 
-// ▼ devisActionMenu — menu du chip Devis (document) : aperçu, impression,
-// envoi, marque d'envoi. Les actions de cycle de vie (éditer / réviser / maj
-// trame / annuler / supprimer) vivent dans le dropdown ⋮ (suiviMoreMenuHtml).
-window.devisActionMenu = async function(devisId) {
-  const dv = S.suivi.devis && S.suivi.devis[devisId];
-  const choices = [
-    { label: "Aperçu / Imprimer", value: "view", kind: "ghost" },
-    { label: "Ouvrir Gmail", value: "gmail", kind: "ghost" }
-  ];
-  if (dv && dv.envoiTs) {
-    choices.push({
-      label: "Annuler la marque d'envoi", value: "unsend", kind: "danger",
-      tooltip: `Retire « Envoyé le ${dateFR(new Date(dv.envoiTs).toISOString().slice(0,10))} » — si la marque a été posée par erreur ou pour renvoyer le devis.`
-    });
-  } else {
-    choices.push({
-      label: "Marquer comme envoyé", value: "mark",
-      tooltip: "Pose la date d'envoi et fait avancer le parcours. Rien d'autre ne marque le devis comme envoyé."
-    });
-  }
-  const choice = await uiChoice("Que veux-tu faire avec ce devis ?", {
-    title: "Devis", choices, cancelLabel: "Annuler"
-  });
-  if (!choice) return;
-  if (choice === "view") {
-    viewDevisOpen(devisId);
-  } else if (choice === "gmail") {
-    openGmailComposeForDevis(devisId);
-  } else if (choice === "mark") {
-    devisMarkEnvoi(devisId);
-  } else if (choice === "unsend") {
-    devisEnvoiUndo(devisId);
-  }
-};
-
 // ▼ devisEnvoyerCompose / devisMarkEnvoi — les 2 boutons de l'étape « Devis
 // envoyé » du rail. « Envoyer » ouvre UNIQUEMENT Gmail pré-rempli (pas
 // d'impression auto, pas de marquage). « Valider l'envoi » pose envoiTs
@@ -5075,55 +5043,6 @@ window.devisMarkEnvoi = function(devisId) {
   S.suivi.devis[devisId].envoiTs = new Date().toISOString();
   save();
   render();
-};
-
-// ▼ factureActionMenu — menu du chip facture (dans la ligne de son échéance) :
-// aperçu, Gmail, marque d'envoi, suppression. Aucune action combinée : ouvrir
-// l'aperçu n'imprime pas et n'ouvre pas Gmail.
-window.factureActionMenu = async function(devisId, echId) {
-  const ech = devisEcheanceByEchId(devisId, echId);
-  const isSolde = ech ? ech.isSolde : true;
-  const fac = ech ? findFactureForEch(devisId, ech) : null;
-  const choices = [
-    { label: "Aperçu / Imprimer", value: "view", kind: "ghost" },
-    { label: "Ouvrir Gmail", value: "gmail", kind: "ghost" }
-  ];
-  if (fac && fac.envoiTs) {
-    choices.push({
-      label: "Annuler la marque d'envoi", value: "unsend", kind: "danger",
-      tooltip: `Retire « Envoyée le ${dateFR(new Date(fac.envoiTs).toISOString().slice(0,10))} » — si la marque a été posée par erreur ou pour renvoyer la facture.`
-    });
-  } else if (fac) {
-    choices.push({
-      label: "Marquer comme envoyée", value: "mark",
-      tooltip: "Pose la date d'envoi de la facture. Seul point qui la marque comme envoyée."
-    });
-  }
-  choices.push({ label: "Supprimer la facture", value: "delete", kind: "danger" });
-  const choice = await uiChoice("Que veux-tu faire avec cette facture ?", {
-    title: isSolde ? "Facture de solde" : "Facture d'acompte",
-    cancelLabel: "Annuler",
-    choices
-  });
-  if (!choice) return;
-  if (choice === "view") {
-    viewFactureOpen(devisId, echId);
-  } else if (choice === "gmail") {
-    openGmailComposeForFacture(devisId, echId);
-  } else if (choice === "unsend") {
-    factureEnvoiUndo(devisId, echId);
-  } else if (choice === "mark") {
-    factureMarkEnvoi(devisId, echId);
-  } else if (choice === "delete") {
-    const fac = ech ? findFactureForEch(devisId, ech) : null;
-    if (!fac) return;
-    const ok = await uiConfirm(
-      `Supprimer définitivement la facture ${formatRef(fac.ref, "facture")} ?\n\n` +
-      `À ne faire que si elle a été émise par erreur.`,
-      { title: "Supprimer la facture", kind: "danger", confirmLabel: "Supprimer", cancelLabel: "Garder" }
-    );
-    if (ok) { removeFactures(devisId, [fac]); render(); }
-  }
 };
 
 // ▼ factureEmettreFlow — bouton « Émettre la facture » de la bande d'action.
@@ -9359,6 +9278,10 @@ const APP_CHANGELOG = [
       {
         h: "« Émettre et envoyer » devient « Émettre la facture »",
         b: "Le bouton fige le numéro et la date de la facture puis ouvre son aperçu — sans imprimer ni ouvrir Gmail. Tu imprimes et envoies ensuite, quand tu veux."
+      },
+      {
+        h: "Un clic sur « Facture » ou « Devis PDF » ouvre l'aperçu",
+        b: "Plus de menu intermédiaire « Que veux-tu faire ? » : le chip ouvre directement l'aperçu, prêt à imprimer. Les actions secondaires (ouvrir Gmail, marquer envoyé, supprimer la facture) sont désormais dans le pied de l'aperçu."
       }
     ]
   },
@@ -10261,6 +10184,10 @@ function rViewDevisModal() {
             Aucun snapshot disponible pour ce devis.<br><span style="font-size:13px;color:var(--text-dim)">Les snapshots sont créés à partir de l'émission depuis l'onglet Mission « + Enregistrer dans Suivi ».</span>
            </div>`}
       <div class="modal-actions">
+        <button class="btn-add-neon ghost" title="Ouvrir Gmail pré-rempli. Le PDF doit être glissé manuellement dans le mail." onclick="openGmailComposeForDevis('${viewDevisModal.devisId}')">${ICO_SZ('mail',13)} Ouvrir Gmail</button>
+        ${dv.envoiTs
+          ? `<button class="btn-add-neon ghost" title="Retire « Envoyé le ${esc(dateFR(new Date(dv.envoiTs).toISOString().slice(0,10)))} »." onclick="devisEnvoiUndo('${viewDevisModal.devisId}')">${ICO_SZ('rotateCcw',13)} Annuler l'envoi</button>`
+          : `<button class="btn-add-neon ghost" title="Marquer le devis comme envoyé au client (fait avancer le parcours)." onclick="devisMarkEnvoi('${viewDevisModal.devisId}')">${ICO_SZ('check',13)} Marquer envoyé</button>`}
         ${snapshot ? `<button class="btn-add-neon ghost" onclick="printWithTip()">${ICO_SZ('printer',13)} ${printLabel}</button>` : ""}
         <button class="btn-add-neon" onclick="viewDevisClose()">Fermer</button>
       </div>
@@ -10533,12 +10460,34 @@ function rViewFactureModal() {
         })()}
       </div>
       <div class="modal-actions">
+        <button class="btn-add-neon ghost" title="Supprimer définitivement cette facture (émise par erreur)." onclick="factureDelConfirm('${devisId}','${echId}')">${ICO_SZ('trash',13)} Supprimer</button>
+        <button class="btn-add-neon ghost" title="Ouvrir Gmail pré-rempli. Le PDF doit être glissé manuellement dans le mail." onclick="openGmailComposeForFacture('${devisId}','${echId}')">${ICO_SZ('mail',13)} Ouvrir Gmail</button>
+        ${facture.envoiTs
+          ? `<button class="btn-add-neon ghost" title="Retire « Envoyée le ${esc(dateFR(new Date(facture.envoiTs).toISOString().slice(0,10)))} »." onclick="factureEnvoiUndo('${devisId}','${echId}')">${ICO_SZ('rotateCcw',13)} Annuler l'envoi</button>`
+          : `<button class="btn-add-neon ghost" title="Marquer la facture comme envoyée au client." onclick="factureMarkEnvoi('${devisId}','${echId}')">${ICO_SZ('check',13)} Marquer envoyée</button>`}
         <button class="btn-add-neon ghost" onclick="printWithTip()">${ICO_SZ('printer',13)} Imprimer</button>
         <button class="btn-add-neon" onclick="viewFactureClose()">Fermer</button>
       </div>
     </div>
   </div>`;
 }
+
+// ▼ factureDelConfirm — suppression d'une facture depuis le pied de son aperçu.
+// Ferme la modale après suppression (son contenu n'existe plus).
+window.factureDelConfirm = async function(devisId, echId) {
+  const ech = devisEcheanceByEchId(devisId, echId);
+  const fac = ech ? findFactureForEch(devisId, ech) : null;
+  if (!fac) return;
+  const ok = await uiConfirm(
+    `Supprimer définitivement la facture ${formatRef(fac.ref, "facture")} ?\n\n` +
+    `À ne faire que si elle a été émise par erreur.`,
+    { title: "Supprimer la facture", kind: "danger", confirmLabel: "Supprimer", cancelLabel: "Garder" }
+  );
+  if (!ok) return;
+  removeFactures(devisId, [fac]);
+  viewFactureModal = null;
+  render();
+};
 
 // ============ REMISE COMPUTATION ============
 // Compute remise max recommandée (with 10% safety margin) + détail des coûts.
@@ -13420,7 +13369,9 @@ function suiviParcoursHtml(g) {
     const sent = fac.envoiTs
       ? `<span class="suv-fac-sent" title="Envoyée le ${esc(dateOf(fac.envoiTs))}">${ICO_SZ('check', 11)}</span>`
       : "";
-    return `<button type="button" class="suv-fac-chip" title="Facture ${ech.isSolde ? "de solde" : "d'acompte"} — aperçu, impression, envoi" onclick="${stop}factureActionMenu('${devisId}','${ech.echId}')">${ICO_SZ('fileText', 11)} ${esc(formatRef(fac.ref, "facture"))}${sent}</button>`;
+    // Clic = aperçu direct (impression depuis la modale). Les actions
+    // secondaires (Gmail, marquer envoyée, supprimer) sont dans son pied.
+    return `<button type="button" class="suv-fac-chip" title="Ouvrir l'aperçu de la facture ${ech.isSolde ? "de solde" : "d'acompte"} (impression, envoi)" onclick="${stop}viewFactureOpen('${devisId}','${ech.echId}')">${ICO_SZ('fileText', 11)} ${esc(formatRef(fac.ref, "facture"))}${sent}</button>`;
   };
   const payLbl = (status) => status === "done" ? "Payé" : status === "active" ? "À encaisser" : "En attente";
   const echRows = [];
@@ -13494,7 +13445,7 @@ function suiviExpandedPanelHtml(g) {
   const totalDebours = lignes.reduce((s, e) => s + num(e.frais), 0);
   const menuOpen = suiviMoreMenuOpen === g.devisId;
   const footer = `<div class="suv-expanded-print">
-    <button class="mk-btn subtle" title="Devis — aperçu, impression, envoi" onclick="${stop}devisActionMenu('${g.devisId}')">${ICO_SZ('fileText',13)} Devis PDF</button>
+    <button class="mk-btn subtle" title="Ouvrir l'aperçu du devis (impression, envoi)" onclick="${stop}viewDevisOpen('${g.devisId}')">${ICO_SZ('fileText',13)} Devis PDF</button>
     ${totalDebours > 0 ? `<button class="mk-btn subtle" title="Feuille de débours" onclick="${stop}viewDeboursOpen('${g.devisId}')">${ICO_SZ('euro',13)} Débours</button>` : ""}
     <span style="flex:1"></span>
     <div class="dv-more">
