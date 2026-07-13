@@ -9244,6 +9244,33 @@ function rBinModal() {
 // Format des items : { h: titre court, b: explication 1-3 phrases }.
 const APP_CHANGELOG = [
   {
+    id: "2026-07-impression-factures",
+    date: "2026-07-13",
+    title: "Impression : factures et feuille débours nettoyées",
+    items: [
+      {
+        h: "Facture de solde en 1 page",
+        b: "La facture de solde n'embarque plus la signature « Bon pour accord », les CGV ni l'échéancier prévisionnel du devis : fini les 4 pages dont une quasi vide. L'IBAN reste affiché pour régler le solde, et un titre « FACTURE DE SOLDE » apparaît en tête du document."
+      },
+      {
+        h: "Détail des échéances aligné",
+        b: "Les sections « Acomptes déjà facturés » et « Frais débours refacturés » sont correctement alignées (libellé à gauche, montant à droite), et le « Net à payer (solde) » ressort comme un vrai total. Corrigé aussi sur les factures déjà émises."
+      },
+      {
+        h: "Pied de page adapté au document",
+        b: "La mention « Original — ne tient pas lieu de facture » ne s'imprime plus que sur les devis. Une facture n'affiche plus cette mention contradictoire, la feuille débours indique qu'elle est une annexe."
+      },
+      {
+        h: "Feuille débours allégée",
+        b: "Plus de bloc signature ni de CGV en double sur la feuille débours : elle se concentre sur les frais à rembourser et les coordonnées de remboursement."
+      },
+      {
+        h: "Impression noir & blanc propre",
+        b: "Le récapitulatif de paiement et les encadrés des factures s'impriment désormais avec des bordures grises et des tailles harmonisées (plus de bordures bleues ou turquoise issues du thème sombre)."
+      }
+    ]
+  },
+  {
     id: "2026-07-etape-envoi-photos",
     date: "2026-07-07",
     title: "Suivi : étape finale « Envoi des photos »",
