@@ -3860,6 +3860,9 @@ async function loadFromCloud(ownerUid) {
       migrateClientNums();
       const phonesFixed = migratePhoneLeadingZero();
       const livraisonFixed = migrateLivraisonOrpheline();
+      // Migration snapshotHash (JSON mission entier → hash court). AVANT
+      // autoCleanupDoc pour que le check de taille voie le doc allégé.
+      const hashesMigrated = migrateSnapshotHashes();
       // migrateLegacyReconstructedFlag() DÉSACTIVÉ : faux positifs sur les
       // devis legacy édités via « 💾 Enregistrer les modifications »
       // (suiviUpdateSnapshot), qui remplace snapshotHtml par le live (sans
@@ -3873,7 +3876,7 @@ async function loadFromCloud(ownerUid) {
       // migration re-tourne à chaque ouverture, et plus problématique : le
       // live sync subscribeWorkspaceData écraserait nos changements à la
       // première update Firestore — voir ce site pour le miroir).
-      if (chainsMigrated || phonesFixed || cleanedUp || livraisonFixed) saveToCloud();
+      if (chainsMigrated || phonesFixed || cleanedUp || livraisonFixed || hashesMigrated) saveToCloud();
       // Adopte le timestamp cloud comme nouveau référentiel local (sinon
       // notre prochain save aurait un localCts plus ancien que le cloud
       // alors qu'on vient de tout merger).
@@ -4124,11 +4127,13 @@ function subscribeWorkspaceData(ownerUid) {
     // Migration livraison orpheline (idempotente) — même raison : rattraper
     // un snapshot cloud non migré pour ne pas ré-injecter le jalon retiré.
     const livraisonFixedLive = migrateLivraisonOrpheline();
+    // Migration snapshotHash (idempotente) — même raison.
+    const hashesMigratedLive = migrateSnapshotHashes();
     // Adopte le timestamp cloud comme nouveau référentiel local (sinon
     // notre prochain save aurait un localCts plus ancien que le cloud).
     if (cloudCts > 0) S._localChangeTs = cloudCts;
     localStorage.setItem(SK, JSON.stringify(S));
-    if (chainsMigratedLive || phonesFixedLive || livraisonFixedLive) saveToCloud();
+    if (chainsMigratedLive || phonesFixedLive || livraisonFixedLive || hashesMigratedLive) saveToCloud();
     // Préserve le focus de l'input courant pendant le re-render
     const active = document.activeElement;
     const id = active && active.id;
@@ -9296,6 +9301,10 @@ const APP_CHANGELOG = [
       {
         h: "Nettoyage automatique plus complet",
         b: "Le nettoyage au démarrage couvre désormais aussi les devis de la corbeille et les factures archivées (logos dupliqués retirés puis réinjectés à l'affichage)."
+      },
+      {
+        h: "Archives ~30 % plus légères",
+        b: "Un défaut faisait stocker chaque devis archivé avec une copie interne superflue de toutes ses données (~12-15 KB par devis). Corrigé : la conversion se fait automatiquement au démarrage et libère une grosse part de l'espace cloud."
       }
     ]
   },
@@ -10799,11 +10808,48 @@ function validateDevis() {
 
 // ----------------------------------------------------------------------------
 // SNAPSHOT DIRTY — détecte si le devis a divergé du dernier snapshot Suivi.
-// Hash léger : JSON.stringify(mission). Stocké dans suivi.devis[id].snapshotHash
-// (cf. Patch F dans suiviAdd).
+// Vrai hash court (FNV-1a 32 bits + longueur) sur JSON.stringify(mission),
+// stocké dans suivi.devis[id].snapshotHash (cf. Patch F dans suiviAdd).
+// ⚠ Historique : devisHash retournait JSON.stringify(S.mission) ENTIER
+// (~12-15 KB par devis archivé ≈ 30 % du poids de S.suivi.devis dans
+// Firestore). Les anciens snapshotHash sont convertis par
+// migrateSnapshotHashes — hash(ancienne string) ≡ devisHash() recalculé sur
+// la même mission, l'équivalence de comparaison est préservée.
 // ----------------------------------------------------------------------------
+function devisHashStr(str) {
+  let h = 0x811c9dc5;
+  for (let i = 0; i < str.length; i++) {
+    h ^= str.charCodeAt(i);
+    h = Math.imul(h, 0x01000193);
+  }
+  return "h" + (h >>> 0).toString(36) + "-" + str.length.toString(36);
+}
 function devisHash() {
-  return JSON.stringify(S.mission);
+  return devisHashStr(JSON.stringify(S.mission));
+}
+
+// ▼ migrateSnapshotHashes — one-shot idempotent : convertit les snapshotHash
+// legacy (le JSON mission entier, reconnaissable à son accolade ouvrante
+// initiale, charCode 123) en hash court. Couvre les devis vivants ET la
+// corbeille (payload.devis[]). Retourne true si changement → saveToCloud
+// obligatoire derrière (piège migrations locales : sinon le live sync
+// ré-injecte l'ancien state).
+function migrateSnapshotHashes() {
+  let changed = false;
+  const mig = dv => {
+    if (dv && typeof dv.snapshotHash === "string" && dv.snapshotHash.charCodeAt(0) === 123) {
+      dv.snapshotHash = devisHashStr(dv.snapshotHash);
+      changed = true;
+    }
+  };
+  const map = (S.suivi && S.suivi.devis) || {};
+  for (const id in map) mig(map[id]);
+  const binItems = (S.suivi && S.suivi.bin && Array.isArray(S.suivi.bin.items)) ? S.suivi.bin.items : [];
+  for (const item of binItems) {
+    const list = (item && item.payload && Array.isArray(item.payload.devis)) ? item.payload.devis : [];
+    for (const dv of list) mig(dv);
+  }
+  return changed;
 }
 function devisCurrentSuiviEntry() {
   const ref = S.mission.ref;
