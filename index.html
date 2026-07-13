@@ -485,12 +485,39 @@
   .devis-preview .dp-facture-debours .dp-line .amt{flex-shrink:0;white-space:nowrap;min-width:0}
   .devis-preview .dp-acomptes-deduits .dp-line.grand{margin-top:6px;padding-top:8px;border-top:1px solid var(--border);font-weight:700;font-size:15px}
   @media print{
-    .dp-facture-meta{background:transparent;border:1px solid #888}
-    .dp-facture-meta .dp-fm-row > .lbl{color:#666}
-    .dp-facture-meta .dp-fm-row > strong{color:#000}
-    .dp-facture-status.paid{background:transparent;color:#1b6e3a;border:2px solid #1b6e3a}
-    .dp-facture-status.pending{background:transparent;color:#9a4d00;border:2px solid #9a4d00}
-    .dp-facture-footer{color:#444}
+    /* !important sur les couleurs : la règle universelle print
+       .devis-preview *{color:#1a1a1a!important} est à (0,1,0)!important,
+       il faut l'égaler en importance pour que la spécificité tranche. */
+    .dp-facture-meta{background:transparent;border:0.5pt solid #888;font-size:9pt;padding:6pt 8pt;gap:3pt 10pt;border-radius:3pt}
+    .devis-preview .dp-facture-meta .dp-fm-row > .lbl, .view-devis-snapshot .dp-facture-meta .dp-fm-row > .lbl{color:#666!important;font-size:7pt}
+    .devis-preview .dp-facture-meta .dp-fm-row > strong, .view-devis-snapshot .dp-facture-meta .dp-fm-row > strong{color:#000!important}
+    .devis-preview .dp-facture-status, .view-devis-snapshot .dp-facture-status{font-size:10pt;padding:5pt 8pt;margin:0 0 10pt;letter-spacing:.06em}
+    .devis-preview .dp-facture-status.paid, .view-devis-snapshot .dp-facture-status.paid{background:transparent!important;color:#1b6e3a!important;border:1.5pt solid #1b6e3a}
+    .devis-preview .dp-facture-status.pending, .view-devis-snapshot .dp-facture-status.pending{background:transparent!important;color:#9a4d00!important;border:1.5pt solid #9a4d00}
+    /* Pied mentions facture : même gabarit que les autres footers de doc (6.5pt centré italique) */
+    .devis-preview .dp-facture-footer, .view-devis-snapshot .dp-facture-footer{
+      margin:8pt 0 0;padding:3pt 0 0;border-top:0.4pt solid #ccc;
+      font-size:6.5pt;color:#666!important;font-style:italic;line-height:1.4;text-align:center}
+    /* Récap paiement : aucun style print jusqu'ici (tailles écran en px,
+       bordure bleu marine --border-light). Aligné sur la charte N&B du doc. */
+    .devis-preview .dp-receipt, .view-devis-snapshot .dp-receipt{
+      margin-top:10pt;padding:6pt 8pt;border:0.5pt solid #888!important;border-radius:3pt;
+      page-break-inside:avoid!important}
+    .devis-preview .dp-receipt h4, .view-devis-snapshot .dp-receipt h4{
+      margin:0 0 4pt;font-size:7pt!important;font-weight:400!important;color:#888!important;letter-spacing:0}
+    .devis-preview .dp-receipt-line, .view-devis-snapshot .dp-receipt-line{padding:2pt 0;font-size:9pt}
+    .devis-preview .dp-receipt-line.total, .view-devis-snapshot .dp-receipt-line.total{padding-top:3pt;border-top:0.5pt solid #888!important}
+    .devis-preview .dp-receipt-line.restant, .view-devis-snapshot .dp-receipt-line.restant{font-size:11pt;font-weight:700}
+    /* Encadrés facture : bordures grises (les vars thème --border-soft/--accent
+       impriment du bleu/turquoise sinon — border-color non couvert par la
+       règle universelle). */
+    .devis-preview .dp-acomptes-deduits, .view-devis-snapshot .dp-acomptes-deduits,
+    .devis-preview .dp-facture-debours, .view-devis-snapshot .dp-facture-debours{
+      border:0.5pt solid #888!important;border-radius:3pt;padding:6pt 8pt;margin:8pt 0;page-break-inside:avoid!important}
+    .devis-preview .dp-facture-debours .hint, .view-devis-snapshot .dp-facture-debours .hint{font-size:7pt!important;color:#555!important;margin:0 0 3pt}
+    .devis-preview .dp-acompte-note, .view-devis-snapshot .dp-acompte-note{
+      margin:8pt 0;padding:4pt 8pt;border-left:1pt solid #1a1a1a!important;border-radius:0;
+      font-size:8pt;color:#555!important;line-height:1.4}
     /* Alignement print des sections facture — doit battre la grille
        .devis-preview .dp-line (0,2,0)!important du bloc print principal. */
     .devis-preview .dp-acomptes-deduits .dp-line, .view-devis-snapshot .dp-acomptes-deduits .dp-line,
