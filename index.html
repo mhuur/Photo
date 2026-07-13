@@ -1535,6 +1535,10 @@
   @media print {
     @page {
       size: A4 portrait; margin: 18mm 18mm 20mm 18mm;
+      /* Mention par défaut (devis). Remplacée selon le doc imprimé (facture,
+         débours) par updatePagePrintFooter via style#pagePrintStyle injecté
+         sur beforeprint — les @page margin boxes ne sont pas sélectionnables
+         par classe, seul un override de cascade fonctionne. */
       @bottom-left {
         content: "Original — ne tient pas lieu de facture";
         font-family: -apple-system, "Segoe UI", "Helvetica Neue", Helvetica, Arial, sans-serif;
@@ -10077,6 +10081,35 @@ function _doPrint() {
   setTimeout(restore, 8000); // safety fallback
   window.print();
 }
+
+// ▼ updatePagePrintFooter — pied de page @page contextuel selon le doc imprimé.
+// Le CSS statique porte la mention devis (« Original — ne tient pas lieu de
+// facture ») ; sur une facture (qui EST l'original) ou une feuille débours,
+// cette mention est fausse → on la remplace via une feuille de style injectée.
+// Branché sur beforeprint : couvre printWithTip ET Ctrl+P direct.
+function updatePagePrintFooter() {
+  let kind = "devis";
+  if (typeof viewFactureModal !== "undefined" && viewFactureModal) {
+    kind = "facture";
+  } else if (typeof viewDevisModal !== "undefined" && viewDevisModal) {
+    kind = (viewDevisModal.view === "debours") ? "debours" : "devis";
+  } else if (typeof activePreviewTab !== "undefined" && activePreviewTab === "debours") {
+    kind = "debours";
+  }
+  const texts = {
+    devis: "Original — ne tient pas lieu de facture",
+    debours: "Feuille de débours — annexe, ne tient pas lieu de facture",
+    facture: "" // une facture est l'original : aucune mention
+  };
+  let el = document.getElementById("pagePrintStyle");
+  if (!el) {
+    el = document.createElement("style");
+    el.id = "pagePrintStyle";
+    document.head.appendChild(el);
+  }
+  el.textContent = `@media print{@page{@bottom-left{content:${JSON.stringify(texts[kind] || "")}}}}`;
+}
+window.addEventListener("beforeprint", updatePagePrintFooter);
 
 window.printWithTip = function() {
   if (printTipShown) {
