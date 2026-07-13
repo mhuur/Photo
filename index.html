@@ -4975,14 +4975,16 @@ async function gmailRelanceForDevis(devisId, kind) {
 window.gmailRelanceForDevis = gmailRelanceForDevis;
 
 // ============================================================================
-// Actions Devis / Facture — popups + persistance envoi
+// Actions Devis / Facture — persistance envoi
 // ----------------------------------------------------------------------------
-// _pendingEnvoiPopup : posé par devisActionMenu / factureActionMenu avant
-// d'ouvrir le modal de prévisualisation. Au moment où l'utilisateur ferme
-// le modal, on demande s'il a bien envoyé le devis/facture au client. Si
-// oui → stamp envoiTs + affichage de la date sous le bouton.
+// RÈGLE : aucune action n'a d'effet de bord. Imprimer/prévisualiser ne marque
+// JAMAIS rien et n'ouvre JAMAIS Gmail. `envoiTs` (devis ou facture) est posé
+// UNIQUEMENT par un clic explicite sur « Valider l'envoi » / « Marquer comme
+// envoyée » (devisMarkEnvoi / factureMarkEnvoi), Gmail ne s'ouvre que sur
+// « Envoyer » / « Relancer ». L'ancien mécanisme (_pendingEnvoiPopup : popup
+// « envoyé ? » à la fermeture du modal d'aperçu, après une impression même
+// annulée) faisait avancer le parcours tout seul — supprimé.
 // ============================================================================
-let _pendingEnvoiPopup = null;
 
 // Helper : ouvre Gmail compose pré-rempli pour un devis archivé (subject + body
 // + destinataire). Le PDF doit être attaché manuellement par l'utilisateur après
@@ -5030,14 +5032,18 @@ function openGmailComposeForFacture(devisId, echId) {
 window.devisActionMenu = async function(devisId) {
   const dv = S.suivi.devis && S.suivi.devis[devisId];
   const choices = [
-    { label: "Aperçu", value: "view", kind: "ghost" },
-    { label: "Imprimer", value: "print", kind: "ghost" },
-    { label: "Imprimer et envoyer", value: "printSend" }
+    { label: "Aperçu / Imprimer", value: "view", kind: "ghost" },
+    { label: "Ouvrir Gmail", value: "gmail", kind: "ghost" }
   ];
   if (dv && dv.envoiTs) {
     choices.push({
       label: "Annuler la marque d'envoi", value: "unsend", kind: "danger",
       tooltip: `Retire « Envoyé le ${dateFR(new Date(dv.envoiTs).toISOString().slice(0,10))} » — si la marque a été posée par erreur ou pour renvoyer le devis.`
+    });
+  } else {
+    choices.push({
+      label: "Marquer comme envoyé", value: "mark",
+      tooltip: "Pose la date d'envoi et fait avancer le parcours. Rien d'autre ne marque le devis comme envoyé."
     });
   }
   const choice = await uiChoice("Que veux-tu faire avec ce devis ?", {
@@ -5046,34 +5052,21 @@ window.devisActionMenu = async function(devisId) {
   if (!choice) return;
   if (choice === "view") {
     viewDevisOpen(devisId);
-  } else if (choice === "print") {
-    _pendingEnvoiPopup = { kind: "devis", devisId };
-    viewDevisOpen(devisId);
-  } else if (choice === "printSend") {
-    devisEnvoyerFlow(devisId);
+  } else if (choice === "gmail") {
+    openGmailComposeForDevis(devisId);
+  } else if (choice === "mark") {
+    devisMarkEnvoi(devisId);
   } else if (choice === "unsend") {
     devisEnvoiUndo(devisId);
   }
 };
 
-// ▼ devisEnvoyerFlow — action « Imprimer et envoyer » du menu Devis (chip Devis
-// PDF du panneau). Aperçu + Gmail pré-rempli + impression, puis popup « envoyé ? »
-// à la fermeture du modal (pose envoiTs). Cf devisEnvoyerCompose (étape « Devis
-// envoyé » du rail) pour la variante sans marquage auto.
-window.devisEnvoyerFlow = function(devisId) {
-  _pendingEnvoiPopup = { kind: "devis", devisId };
-  viewDevisOpen(devisId);
-  _printThenGmail(() => openGmailComposeForDevis(devisId));
-};
-
 // ▼ devisEnvoyerCompose / devisMarkEnvoi — les 2 boutons de l'étape « Devis
-// envoyé » du rail (refonte timeline). « Envoyer » ouvre l'aperçu + Gmail +
-// impression SANS marquer (compose seul). « Valider l'envoi » pose envoiTs
-// directement (confirme l'envoi, fait avancer le parcours). Annulable via ↺
-// (devisEnvoiUndo).
+// envoyé » du rail. « Envoyer » ouvre UNIQUEMENT Gmail pré-rempli (pas
+// d'impression auto, pas de marquage). « Valider l'envoi » pose envoiTs
+// (seul point qui fait avancer le parcours). Annulable via ↺ (devisEnvoiUndo).
 window.devisEnvoyerCompose = function(devisId) {
-  viewDevisOpen(devisId);
-  _printThenGmail(() => openGmailComposeForDevis(devisId));
+  openGmailComposeForDevis(devisId);
 };
 window.devisMarkEnvoi = function(devisId) {
   if (!S.suivi.devis) S.suivi.devis = {};
@@ -5084,40 +5077,26 @@ window.devisMarkEnvoi = function(devisId) {
   render();
 };
 
-// ▼ _printThenGmail — ouvre Gmail puis déclenche l'impression auto.
-// Limite navigateur : l'URL Gmail compose ne supporte pas l'attache de
-// fichier (sécurité). On ouvre Gmail d'abord (dans la fenêtre de transient
-// activation utilisateur, sinon window.open est bloqué comme popup), puis on
-// déclenche l'impression. L'utilisateur sauvegarde le PDF, switch sur l'onglet
-// Gmail, drag-drop manuel.
-function _printThenGmail(openGmailFn) {
-  // Délai pour laisser le modal preview se rendre avant d'ouvrir Gmail.
-  setTimeout(() => {
-    openGmailFn();
-    // Petit délai supplémentaire pour que la nouvelle fenêtre/onglet Gmail
-    // soit traitée avant qu'on lui colle le dialogue d'impression par dessus.
-    setTimeout(() => {
-      _doPrint();
-      showInfoToast("Sauvegarde le PDF puis glisse-le dans le mail Gmail (impossible d'attacher automatiquement).");
-    }, 250);
-  }, 300);
-}
-
 // ▼ factureActionMenu — menu du chip facture (dans la ligne de son échéance) :
-// aperçu, impression, envoi, marque d'envoi, suppression.
+// aperçu, Gmail, marque d'envoi, suppression. Aucune action combinée : ouvrir
+// l'aperçu n'imprime pas et n'ouvre pas Gmail.
 window.factureActionMenu = async function(devisId, echId) {
   const ech = devisEcheanceByEchId(devisId, echId);
   const isSolde = ech ? ech.isSolde : true;
   const fac = ech ? findFactureForEch(devisId, ech) : null;
   const choices = [
-    { label: "Aperçu", value: "view", kind: "ghost" },
-    { label: "Imprimer", value: "print", kind: "ghost" },
-    { label: "Imprimer et envoyer", value: "printSend" }
+    { label: "Aperçu / Imprimer", value: "view", kind: "ghost" },
+    { label: "Ouvrir Gmail", value: "gmail", kind: "ghost" }
   ];
   if (fac && fac.envoiTs) {
     choices.push({
       label: "Annuler la marque d'envoi", value: "unsend", kind: "danger",
       tooltip: `Retire « Envoyée le ${dateFR(new Date(fac.envoiTs).toISOString().slice(0,10))} » — si la marque a été posée par erreur ou pour renvoyer la facture.`
+    });
+  } else if (fac) {
+    choices.push({
+      label: "Marquer comme envoyée", value: "mark",
+      tooltip: "Pose la date d'envoi de la facture. Seul point qui la marque comme envoyée."
     });
   }
   choices.push({ label: "Supprimer la facture", value: "delete", kind: "danger" });
@@ -5129,13 +5108,12 @@ window.factureActionMenu = async function(devisId, echId) {
   if (!choice) return;
   if (choice === "view") {
     viewFactureOpen(devisId, echId);
+  } else if (choice === "gmail") {
+    openGmailComposeForFacture(devisId, echId);
   } else if (choice === "unsend") {
     factureEnvoiUndo(devisId, echId);
-  } else if (choice === "print") {
-    _pendingEnvoiPopup = { kind: "facture", devisId, echId };
-    viewFactureOpen(devisId, echId);
-  } else if (choice === "printSend") {
-    factureEmettreEnvoyerFlow(devisId, echId);
+  } else if (choice === "mark") {
+    factureMarkEnvoi(devisId, echId);
   } else if (choice === "delete") {
     const fac = ech ? findFactureForEch(devisId, ech) : null;
     if (!fac) return;
@@ -5148,16 +5126,23 @@ window.factureActionMenu = async function(devisId, echId) {
   }
 };
 
-// ▼ factureEmettreEnvoyerFlow — action « Émettre et envoyer » (bandeau
-// Prochaine étape + menu Facture > Imprimer et envoyer). Enchaîne : confirm
-// d'émission si la facture n'existe pas encore (géré dans viewFactureOpen),
-// aperçu + Gmail pré-rempli + impression, puis popup « envoyée ? » à la
-// fermeture (pose fac.envoiTs). Si l'émission est annulée, on n'ouvre rien.
-window.factureEmettreEnvoyerFlow = async function(devisId, echId) {
-  _pendingEnvoiPopup = { kind: "facture", devisId, echId };
+// ▼ factureEmettreFlow — bouton « Émettre la facture » de la bande d'action.
+// Confirm d'émission (fige numéro + date, géré dans viewFactureOpen) puis
+// ouverture de l'aperçu. RIEN d'autre : pas d'impression auto, pas de Gmail,
+// pas de marquage d'envoi (cf. factureMarkEnvoi, explicite).
+window.factureEmettreFlow = async function(devisId, echId) {
   await viewFactureOpen(devisId, echId);
-  if (!viewFactureModal) { _pendingEnvoiPopup = null; return; }
-  _printThenGmail(() => openGmailComposeForFacture(devisId, echId));
+};
+
+// ▼ factureMarkEnvoi — marque explicite « facture envoyée » (pose fac.envoiTs).
+// Seul point d'entrée : le menu du chip facture. Annulable via factureEnvoiUndo.
+window.factureMarkEnvoi = function(devisId, echId) {
+  const ech = devisEcheanceByEchId(devisId, echId);
+  const fac = ech ? findFactureForEch(devisId, ech) : null;
+  if (!fac || fac.envoiTs) return;
+  fac.envoiTs = Date.now();
+  save();
+  render();
 };
 
 // ▼ relanceMark — stampe lastRelance manuellement après un envoi confirmé.
@@ -9355,6 +9340,29 @@ function rBinModal() {
 // Format des items : { h: titre court, b: explication 1-3 phrases }.
 const APP_CHANGELOG = [
   {
+    id: "2026-07-zero-effet-de-bord",
+    date: "2026-07-13",
+    title: "Plus rien ne s'enclenche tout seul",
+    items: [
+      {
+        h: "Fini la question « envoyé au client ? »",
+        b: "Ouvrir un aperçu ou lancer une impression (même annulée) ne demande plus si le document a été envoyé, et ne fait plus avancer le parcours tout seul. Le devis ne bascule plus dans l'historique sans que tu l'aies décidé."
+      },
+      {
+        h: "Fini l'ouverture automatique de Gmail",
+        b: "Gmail ne s'ouvre plus que si tu cliques « Envoyer » ou « Relancer ». Les actions combinées « Imprimer et envoyer » (qui ouvraient l'aperçu, Gmail et la boîte d'impression d'un coup) sont supprimées."
+      },
+      {
+        h: "Le marquage d'envoi est explicite",
+        b: "Un devis passe « envoyé » via « Valider l'envoi » (ou le menu du chip Devis). Une facture via « Marquer comme envoyée » dans le menu de son chip. Rien d'autre ne pose cette date."
+      },
+      {
+        h: "« Émettre et envoyer » devient « Émettre la facture »",
+        b: "Le bouton fige le numéro et la date de la facture puis ouvre son aperçu — sans imprimer ni ouvrir Gmail. Tu imprimes et envoies ensuite, quand tu veux."
+      }
+    ]
+  },
+  {
     id: "2026-07-rerender-archives",
     date: "2026-07-13",
     title: "Stockage cloud : documents régénérés à l'affichage",
@@ -10043,26 +10051,13 @@ window.viewDevisOpen = function(devisId) {
   viewDevisModal = { devisId, view: "devis" };
   render();
 };
-window.viewDevisClose = async function() {
-  // Capture le pending AVANT de fermer le modal (sinon perdu).
-  const pending = _pendingEnvoiPopup;
-  _pendingEnvoiPopup = null;
+// Fermeture SANS effet de bord : fermer l'aperçu (ou annuler une impression)
+// ne demande plus « envoyé au client ? » et ne pose plus envoiTs — c'est ce
+// qui faisait avancer le parcours tout seul. Marquage explicite uniquement
+// (« Valider l'envoi » / menu Devis > Marquer comme envoyé).
+window.viewDevisClose = function() {
   viewDevisModal = null;
   render();
-  // Si on était dans un flow Imprimer / Imprimer+envoyer → popup confirm.
-  if (pending && pending.kind === "devis") {
-    const sent = await uiConfirm(
-      "Le devis a été envoyé au client ?",
-      { title: "Confirmation envoi", confirmLabel: "Envoyé", cancelLabel: "Pas encore", kind: "info" }
-    );
-    if (sent) {
-      if (!S.suivi.devis) S.suivi.devis = {};
-      if (!S.suivi.devis[pending.devisId]) S.suivi.devis[pending.devisId] = {};
-      S.suivi.devis[pending.devisId].envoiTs = Date.now();
-      save();
-      render();
-    }
-  }
 };
 window.viewDevisSetView = function(view) {
   if (!viewDevisModal) return;
@@ -13365,8 +13360,8 @@ function suiviParcoursHtml(g) {
   };
   const activeActions = (s) => {
     if (s.key === "sent") return [
-      `<button type="button" class="mk-btn subtle" title="Ouvrir l'aperçu + Gmail pré-rempli (glisse le PDF dans le mail)." onclick="${stop}devisEnvoyerCompose('${devisId}')">${ICO_SZ('mail', 13)} Envoyer</button>`,
-      `<button type="button" class="mk-btn green" title="Marquer le devis comme envoyé au client." onclick="${stop}devisMarkEnvoi('${devisId}')">${ICO_SZ('check', 13)} Valider l'envoi</button>`,
+      `<button type="button" class="mk-btn subtle" title="Ouvrir Gmail pré-rempli (rien d'autre : ni impression, ni marquage)." onclick="${stop}devisEnvoyerCompose('${devisId}')">${ICO_SZ('mail', 13)} Envoyer</button>`,
+      `<button type="button" class="mk-btn green" title="Marquer le devis comme envoyé au client (fait avancer le parcours)." onclick="${stop}devisMarkEnvoi('${devisId}')">${ICO_SZ('check', 13)} Valider l'envoi</button>`,
     ];
     if (s.key === "accepted") return [
       relanceBtn("devis"),
@@ -13378,7 +13373,7 @@ function suiviParcoursHtml(g) {
       `<button type="button" class="mk-btn green" title="Marquer cette échéance comme encaissée." onclick="${stop}suiviLigneTogglePaiement('${s.ech.entry.id}')">${ICO_SZ('euro', 13)} ${s.ech.isSolde ? "Solde reçu" : "Paiement reçu"}</button>`,
     ];
     if (s.kind === "invoice") return [
-      `<button type="button" class="mk-btn green" title="Émettre la facture et l'envoyer au client (aperçu + Gmail)." onclick="${stop}factureEmettreEnvoyerFlow('${devisId}','${s.ech.echId}')">${ICO_SZ('fileText', 13)} Émettre et envoyer</button>`,
+      `<button type="button" class="mk-btn green" title="Émettre la facture (fige son numéro et sa date) et ouvrir l'aperçu. Ni impression ni Gmail automatiques." onclick="${stop}factureEmettreFlow('${devisId}','${s.ech.echId}')">${ICO_SZ('fileText', 13)} Émettre la facture</button>`,
     ];
     if (s.isLivraison) return [
       `<button type="button" class="mk-btn blue" title="Marquer la prestation (séance) réalisée. Débloque la facture de solde." onclick="${stop}suiviMarkLivree('${devisId}')">${ICO_SZ('check', 13)} Prestation réalisée</button>`,
@@ -13762,27 +13757,11 @@ window.viewFactureOpen = async function(devisId, echId) {
   viewFactureModal = { devisId, echId: ech.echId };
   render();
 };
-window.viewFactureClose = async function() {
-  const pending = _pendingEnvoiPopup;
-  _pendingEnvoiPopup = null;
+// Fermeture SANS effet de bord (cf. viewDevisClose) : plus de popup
+// « facture envoyée ? ». Marquage explicite via le menu du chip facture.
+window.viewFactureClose = function() {
   viewFactureModal = null;
   render();
-  if (pending && pending.kind === "facture") {
-    const ech = devisEcheanceByEchId(pending.devisId, pending.echId);
-    const isSolde = ech ? ech.isSolde : true;
-    const sent = await uiConfirm(
-      `La facture ${isSolde ? "de solde" : "d'acompte"} a été envoyée au client ?`,
-      { title: "Confirmation envoi", confirmLabel: "Envoyée", cancelLabel: "Pas encore", kind: "info" }
-    );
-    if (sent) {
-      const fac = ech ? findFactureForEch(pending.devisId, ech) : null;
-      if (fac) {
-        fac.envoiTs = Date.now();
-        save();
-        render();
-      }
-    }
-  }
 };
 window.viewFacturePrint = function() {
   window.print();

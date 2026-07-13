@@ -175,6 +175,12 @@ Un devis = une chaîne de révisions partageant un `chainId` (= devisId du root)
 
 Input `tarifHOverride` dans Prestations (à côté du dropdown catalogue). Si renseigné, `totals()` l'utilise comme **tarif horaire absolu** (bypass `cat.p` + ajustements declare/blackMode). Persisté dans `snapshotMission` — **ne pas stripper au save**, c'est un choix utilisateur. `pickObject(k)` n'efface PAS l'override.
 
+### Zéro effet de bord (RÈGLE DURE)
+
+**Une action = un effet, celui écrit sur le bouton.** Ouvrir un aperçu ou imprimer ne doit JAMAIS marquer un état ni ouvrir Gmail. Interdits (supprimés le 2026-07, à ne pas réintroduire) : `_pendingEnvoiPopup` (popup « envoyé au client ? » à la fermeture du modal d'aperçu — faisait avancer le parcours après une impression même *annulée*), `_printThenGmail` (ouverture Gmail + `window.print()` enchaînés), et les actions combinées « Imprimer et envoyer » / « Émettre et envoyer ».
+
+`envoiTs` est posé UNIQUEMENT par `devisMarkEnvoi` / `factureMarkEnvoi` (clic explicite). Gmail ne s'ouvre que via `devisEnvoyerCompose` (« Envoyer »), `gmailRelanceForDevis` (« Relancer »), `openGmailComposeForFacture` (menu facture > Ouvrir Gmail). `factureEmettreFlow` émet + ouvre l'aperçu, rien de plus. Toute nouvelle action de document doit respecter ça.
+
 ### Workflow relance Gmail
 
 Dissociation explicite ouverture / marquage. Cliquer ✉ Relance (`gmailRelanceForDevis`) ouvre Gmail mais **ne stampe rien**. Bouton ✓ dédié (`relanceMark`) pose `lastRelance = now` après envoi confirmé. Tag « ↻ Relancé le DD/MM/YYYY ✕ » → clic = `relanceUndo`. Filtre « À relancer » Accueil utilise `max(dateMin, lastRelance)` pour le seuil 7j.
