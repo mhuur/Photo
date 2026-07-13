@@ -428,7 +428,16 @@
   .dv-menu-item.danger .dv-menu-ico{color:#f0789a}
   .dv-menu-divider{height:1px;background:var(--border);margin:5px 4px}
 
-  /* Chip facture (badge de la ligne facture du rail) — clic = menu facture */
+  /* Impression directe : la modale d'aperçu doit être dans le DOM (le CSS
+     print l'isole et l'imprime) mais reste invisible à l'écran. Hors champ,
+     PAS opacity/visibility (que le bloc print ne réinitialise pas → PDF vide).
+     En print, .modal-overlay repasse en position:static + inset:auto. */
+  /* right:auto + width:100vw obligatoires : avec inset:0 hérité, ne changer que
+     `left` étirerait l'overlay (flex centré → la carte pourrait dépasser à
+     l'écran). Ici la boîte entière vit entre -200vw et -100vw. */
+  .modal-overlay.print-silent{left:-200vw;right:auto;width:100vw}
+
+  /* Chip facture (badge de la ligne facture du rail) — clic = impression directe */
   .suv-fac-chip{display:inline-flex;align-items:center;gap:5px;padding:3px 9px;font-size:11px;font-weight:600;
     color:var(--text-muted);background:var(--surface);border:1px solid var(--border-light);border-radius:var(--radius-sm);
     cursor:pointer;font-family:inherit;font-variant-numeric:tabular-nums;white-space:nowrap;transition:color .12s,border-color .12s,background .12s}
@@ -5053,8 +5062,55 @@ window.factureEmettreFlow = async function(devisId, echId) {
   await viewFactureOpen(devisId, echId);
 };
 
+// ▼ printSilent — impression DIRECTE d'un document archivé : la modale
+// d'aperçu doit exister dans le DOM (c'est elle que le CSS print isole et
+// imprime), mais on ne veut pas la montrer à l'écran. On la rend hors champ
+// (left:-200vw) le temps de l'impression : le CSS print remet position:static
+// + inset:auto, donc elle s'imprime normalement. Fermée après l'impression.
+// ⚠ Ne pas utiliser opacity/visibility pour la masquer : le bloc print ne les
+// réinitialise pas → le PDF sortirait vide.
+let printSilent = false;
+function _printDirect() {
+  printSilent = true;
+  render();
+  const done = () => {
+    window.removeEventListener("afterprint", done);
+    printSilent = false;
+    viewFactureModal = null;
+    viewDevisModal = null;
+    render();
+  };
+  window.addEventListener("afterprint", done);
+  // 2 frames : laisse le navigateur peindre la modale (et charger le logo)
+  // avant d'ouvrir la boîte d'impression.
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    _doPrint();
+    // Filet si afterprint ne se déclenche pas (certains navigateurs).
+    setTimeout(() => { if (printSilent) done(); }, 60000);
+  }));
+}
+
+// ▼ facturePrintDirect / devisPrintDirect — clic sur le chip Facture /
+// « Devis PDF » : ouvre DIRECTEMENT l'aperçu avant impression du navigateur.
+// Aucune modale intermédiaire. Les actions rares (Gmail, marquer envoyée,
+// supprimer) vivent dans le dropdown ⋮ du panneau.
+window.facturePrintDirect = async function(devisId, echId) {
+  await viewFactureOpen(devisId, echId); // peut demander confirmation d'émission
+  if (!viewFactureModal) return;         // émission annulée
+  _printDirect();
+};
+window.devisPrintDirect = function(devisId, view) {
+  if (view === "debours") {
+    viewDeboursOpen(devisId);
+    if (!viewDevisModal) return;         // pas de feuille débours
+  } else {
+    viewDevisOpen(devisId);
+  }
+  _printDirect();
+};
+
 // ▼ factureMarkEnvoi — marque explicite « facture envoyée » (pose fac.envoiTs).
-// Seul point d'entrée : le menu du chip facture. Annulable via factureEnvoiUndo.
+// Point d'entrée : dropdown ⋮ du panneau. Annulable via factureEnvoiUndo.
 window.factureMarkEnvoi = function(devisId, echId) {
   const ech = devisEcheanceByEchId(devisId, echId);
   const fac = ech ? findFactureForEch(devisId, ech) : null;
@@ -9280,8 +9336,12 @@ const APP_CHANGELOG = [
         b: "Le bouton fige le numéro et la date de la facture puis ouvre son aperçu — sans imprimer ni ouvrir Gmail. Tu imprimes et envoies ensuite, quand tu veux."
       },
       {
-        h: "Un clic sur « Facture » ou « Devis PDF » ouvre l'aperçu",
-        b: "Plus de menu intermédiaire « Que veux-tu faire ? » : le chip ouvre directement l'aperçu, prêt à imprimer. Les actions secondaires (ouvrir Gmail, marquer envoyé, supprimer la facture) sont désormais dans le pied de l'aperçu."
+        h: "Un clic = l'aperçu avant impression, direct",
+        b: "Cliquer sur « Facture n° … », « Devis PDF » ou « Débours » ouvre immédiatement l'aperçu avant impression du navigateur. Plus aucune fenêtre intermédiaire : ni menu « Que veux-tu faire ? », ni modale d'aperçu."
+      },
+      {
+        h: "Les actions rares dans le menu ⋮",
+        b: "Ouvrir Gmail, marquer un devis ou une facture comme envoyé, supprimer une facture émise par erreur : tout est regroupé dans le menu ⋮ en bas du panneau, avec les autres actions rares (éditer, réviser, annuler)."
       }
     ]
   },
@@ -10173,7 +10233,7 @@ function rViewDevisModal() {
   </div>` : "";
   const printLabel = (view === "debours") ? "Imprimer débours" : "Imprimer devis";
   const titleRef = (view === "debours") ? formatRef(ref, "debours") : formatRef(ref, "devis");
-  return `<div class="modal-overlay" onclick="if(event.target===this)viewDevisClose()">
+  return `<div class="modal-overlay${printSilent ? " print-silent" : ""}" onclick="if(event.target===this)viewDevisClose()">
     <div class="modal-card modal-card-lg">
       <div class="modal-title">${esc(titleRef)}</div>
       ${when ? `<div class="modal-sub">Émis le ${esc(when)}</div>` : ""}
@@ -10438,7 +10498,7 @@ function rViewFactureModal() {
   const client = (dv && dv.snapshotClient) || (lignes[0] && lignes[0].client) || "—";
   const titlePrefix = type === "acompte" ? "🧾 Acompte" : "🧾 Solde";
 
-  return `<div class="modal-overlay" onclick="if(event.target===this)viewFactureClose()">
+  return `<div class="modal-overlay${printSilent ? " print-silent" : ""}" onclick="if(event.target===this)viewFactureClose()">
     <div class="modal-card modal-card-lg">
       <div class="modal-title" style="color:var(--success)">${titlePrefix} ${esc(formatRef(facture.ref, "facture"))} — ${esc(client)}</div>
       <div class="modal-sub">Émise le ${esc(dateFR(facture.dateEmission))} · Échéance ${esc(dateFR(facture.dateEcheance))} · ${paidLines.length}/${ents.length} échéance${ents.length > 1 ? "s" : ""} payée${paidLines.length > 1 ? "s" : ""}</div>
@@ -13369,9 +13429,9 @@ function suiviParcoursHtml(g) {
     const sent = fac.envoiTs
       ? `<span class="suv-fac-sent" title="Envoyée le ${esc(dateOf(fac.envoiTs))}">${ICO_SZ('check', 11)}</span>`
       : "";
-    // Clic = aperçu direct (impression depuis la modale). Les actions
-    // secondaires (Gmail, marquer envoyée, supprimer) sont dans son pied.
-    return `<button type="button" class="suv-fac-chip" title="Ouvrir l'aperçu de la facture ${ech.isSolde ? "de solde" : "d'acompte"} (impression, envoi)" onclick="${stop}viewFactureOpen('${devisId}','${ech.echId}')">${ICO_SZ('fileText', 11)} ${esc(formatRef(fac.ref, "facture"))}${sent}</button>`;
+    // Clic = aperçu avant impression du navigateur, directement. Aucune modale.
+    // Actions rares (Gmail, marquer envoyée, supprimer) → dropdown ⋮ du panneau.
+    return `<button type="button" class="suv-fac-chip" title="Imprimer la facture ${ech.isSolde ? "de solde" : "d'acompte"} (aperçu avant impression)" onclick="${stop}facturePrintDirect('${devisId}','${ech.echId}')">${ICO_SZ('fileText', 11)} ${esc(formatRef(fac.ref, "facture"))}${sent}</button>`;
   };
   const payLbl = (status) => status === "done" ? "Payé" : status === "active" ? "À encaisser" : "En attente";
   const echRows = [];
@@ -13445,8 +13505,8 @@ function suiviExpandedPanelHtml(g) {
   const totalDebours = lignes.reduce((s, e) => s + num(e.frais), 0);
   const menuOpen = suiviMoreMenuOpen === g.devisId;
   const footer = `<div class="suv-expanded-print">
-    <button class="mk-btn subtle" title="Ouvrir l'aperçu du devis (impression, envoi)" onclick="${stop}viewDevisOpen('${g.devisId}')">${ICO_SZ('fileText',13)} Devis PDF</button>
-    ${totalDebours > 0 ? `<button class="mk-btn subtle" title="Feuille de débours" onclick="${stop}viewDeboursOpen('${g.devisId}')">${ICO_SZ('euro',13)} Débours</button>` : ""}
+    <button class="mk-btn subtle" title="Imprimer le devis (aperçu avant impression)" onclick="${stop}devisPrintDirect('${g.devisId}','devis')">${ICO_SZ('fileText',13)} Devis PDF</button>
+    ${totalDebours > 0 ? `<button class="mk-btn subtle" title="Imprimer la feuille de débours (aperçu avant impression)" onclick="${stop}devisPrintDirect('${g.devisId}','debours')">${ICO_SZ('euro',13)} Débours</button>` : ""}
     <span style="flex:1"></span>
     <div class="dv-more">
       <button class="mk-iconbtn md" title="Plus d'actions — éditer, réviser, annuler la mission, supprimer" onclick="${stop}suiviMoreMenuToggle('${g.devisId}')">${ICO_SZ('moreVertical',15)}</button>
@@ -13477,17 +13537,43 @@ function suiviMoreMenuHtml(devisId) {
   const item = (action, ico, label, danger) =>
     `<button type="button" class="dv-menu-item${danger ? ' danger' : ''}" onclick="${stop}suiviMoreMenuPick('${devisId}','${action}')"><span class="dv-menu-ico">${ICO_SZ(ico, 15)}</span>${esc(label)}</button>`;
   const items = [];
+  items.push(item("gmail", "mail", "Ouvrir Gmail (devis)"));
+  if (dv && dv.envoiTs) items.push(item("unsend", "rotateCcw", "Annuler la marque d'envoi"));
   if (check.ok) {
     items.push(item("edit", "edit", "Éditer"));
     items.push(item("revise", "rotateCw", `Réviser → rev${nextRev}`));
     if (isLegacy) items.push(item("majTrame", "clipboard", "Maj Trame"));
   }
+  // Actions rares par facture émise (le chip, lui, imprime directement) :
+  // marquer envoyée / annuler la marque, et suppression si émise par erreur.
+  const facItem = (action, echId, ico, label, danger) =>
+    `<button type="button" class="dv-menu-item${danger ? ' danger' : ''}" onclick="${stop}suiviFacMenuPick('${devisId}','${echId}','${action}')"><span class="dv-menu-ico">${ICO_SZ(ico, 15)}</span>${esc(label)}</button>`;
+  const facItems = [];
+  for (const ech of devisEcheances(devisId)) {
+    const fac = findFactureForEch(devisId, ech);
+    if (!fac) continue;
+    const ref = formatRef(fac.ref, "facture");
+    facItems.push(fac.envoiTs
+      ? facItem("unsend", ech.echId, "rotateCcw", `${ref} — annuler la marque d'envoi`)
+      : facItem("mark", ech.echId, "check", `${ref} — marquer envoyée`));
+    facItems.push(facItem("delete", ech.echId, "trash", `${ref} — supprimer`, true));
+  }
   const destructive = [];
   if (statutPrin === "en_cours" || statutPrin === "termine") destructive.push(item("annuler", "x", "Annuler la mission", true));
   destructive.push(item("delete", "trash", "Supprimer le devis", true));
-  const divider = items.length ? `<div class="dv-menu-divider"></div>` : "";
-  return `<div class="dv-menu">${items.join("")}${divider}${destructive.join("")}</div>`;
+  const div1 = facItems.length ? `<div class="dv-menu-divider"></div>` : "";
+  const div2 = (items.length || facItems.length) ? `<div class="dv-menu-divider"></div>` : "";
+  return `<div class="dv-menu">${items.join("")}${div1}${facItems.join("")}${div2}${destructive.join("")}</div>`;
 }
+// ▼ suiviFacMenuPick — actions facture du dropdown ⋮ (marquer envoyée /
+// annuler la marque / supprimer). Le chip facture, lui, imprime directement.
+window.suiviFacMenuPick = async function(devisId, echId, action) {
+  suiviMoreMenuOpen = null;
+  if (action === "mark") factureMarkEnvoi(devisId, echId);
+  else if (action === "unsend") factureEnvoiUndo(devisId, echId);
+  else if (action === "delete") await factureDelConfirm(devisId, echId);
+  else render();
+};
 window.suiviMoreMenuToggle = function(devisId) {
   suiviMoreMenuOpen = (suiviMoreMenuOpen === devisId) ? null : devisId;
   render();
@@ -13504,6 +13590,8 @@ window.suiviMoreMenuPick = function(devisId, action) {
   else if (action === "majTrame") majTrameStart(devisId);
   else if (action === "annuler") suiviDevisAnnuler(devisId);
   else if (action === "delete") suiviDelDevisConfirm(devisId);
+  else if (action === "gmail") openGmailComposeForDevis(devisId);
+  else if (action === "unsend") devisEnvoiUndo(devisId);
   else render();
 };
 
