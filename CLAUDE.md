@@ -262,7 +262,7 @@ Dissociation explicite ouverture / marquage. Cliquer ✉ Relance (`gmailRelanceF
 - **Audit + proposition obligatoires (même en auto mode)** pour : navigation/menu, schéma `S`, suppression > 50 lignes, `sed` ou Edit multi-zones.
 - **Challenger** bienvenu : propose alternatives/questions, sépare clairement de ce que je demande, indique : maintenant / plus tard / juste à noter.
 - **Demander plutôt que deviner** sur les points métier (statut fiscal, conventions, intentions produit).
-- **Sanity check** : `./check.sh` après tout `sed` ou Edit multi-zones, **avant** `git commit`.
+- **Sanity check** : `./check.sh` après tout `sed` ou Edit multi-zones, **avant** `git commit`. Il inclut désormais un **parse JS réel** (node + `vm.Script` sur chaque `<script>` inline) : une erreur de syntaxe tue le script entier → **page blanche**, et le comptage d'accolades ne la voit pas. Cas typique attrapé : `const x` redéclaré dans la même portée (ex. réutiliser un nom déjà destructuré en tête de fonction — `isAnnule` dans `suiviParcoursHtml`). **Avant de déclarer une variable dans un renderer long, vérifier que le nom est libre** (`grep -n "const <nom>"`).
 - **Grep avant Edit sur `index.html`** : vérifier l'unicité de `old_string` (`grep -c`). Beaucoup de patterns courts collisionnent. Si non unique, élargir contexte ou cibler via ancre voisine.
 - **Reads serrés via ancres** : `grep -n "^// ▼ <nom>"` puis `Read offset=<L> limit=80`. Pas 200 lignes par sécurité.
 

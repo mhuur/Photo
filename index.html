@@ -13700,11 +13700,12 @@ function suiviParcoursHtml(g) {
   // pilote uniquement son SORT : conservé (rien à faire) ou remboursé (déduit du
   // CA du mois du remboursement). Modifiable après coup — on peut se tromper, ou
   // rembourser plus tard que prévu.
-  const encaissees = (g.lignes || []).filter(e => entryEncaisse(e) && num(e.montant) > 0);
-  const isAnnule = devisPrincipal(g.lignes || []) === "annule";
+  // `isAnnule` vient déjà du destructuring de P en tête de fonction — ne pas le
+  // redéclarer (collision `const` → erreur de parsing = script mort, page blanche).
+  const encaisseesAnnul = (g.lignes || []).filter(e => entryEncaisse(e) && num(e.montant) > 0);
   let regulHtml = "";
-  if (isAnnule && encaissees.length) {
-    const rows = encaissees.map(e => {
+  if (isAnnule && encaisseesAnnul.length) {
+    const rows = encaisseesAnnul.map(e => {
       const remb = !!e.dateRemboursement;
       const encDate = (entryEncaissementDate(e) || "").slice(0, 10);
       return `<div class="dv-ech-row ${remb ? "refused" : "done"}">

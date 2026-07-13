@@ -110,6 +110,29 @@ if git rev-parse --git-dir >/dev/null 2>&1; then
   fi
 fi
 
+# 5bis. SYNTAXE JS des blocs <script> inline (node, si dispo).
+# Le comptage d'accolades ne voit PAS une erreur de parsing (ex. `const x`
+# déclaré 2× dans la même portée) : le script entier meurt au chargement et
+# l'app rend une PAGE BLANCHE. Ce check l'attrape avant le commit.
+if command -v node >/dev/null 2>&1; then
+  node -e '
+    const fs = require("fs"), vm = require("vm");
+    const html = fs.readFileSync("index.html", "utf8");
+    const re = /<script(?![^>]*src=)[^>]*>([\s\S]*?)<\/script>/g;
+    let m, bad = 0;
+    while ((m = re.exec(html)) !== null) {
+      const startLine = html.slice(0, m.index).split("\n").length;
+      try { new vm.Script(m[1]); }
+      catch (e) {
+        bad = 1;
+        const l = (e.stack.match(/evalmachine[^:]*:(\d+)/) || [])[1];
+        console.error("✗ Erreur de syntaxe JS (ligne ~" + (startLine + Number(l || 0)) + ") : " + e.message);
+      }
+    }
+    process.exit(bad);
+  ' || ERR=1
+fi
+
 # 6. SCHEMA.md doit être à jour avec DEFAULT_S. Régénère et signale tout écart.
 # Si la regen change le fichier, l'utilisateur doit faire `git add SCHEMA.md`.
 if command -v py >/dev/null 2>&1 && [ -f gen-schema.py ]; then
