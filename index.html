@@ -66,17 +66,29 @@
   .sb .tab-icon{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;flex-shrink:0;color:inherit}
   .sb .tab-icon svg{width:18px;height:18px}
   .sb button.tab.active .tab-icon{color:var(--primary)}
-  /* === Sidebar — groupes dépliables (NAV) === */
+  /* === Sidebar — groupes dépliables au SURVOL (NAV) ===
+     Repliés au repos, dépliés au hover (et refermés en sortant). `.open` n'est
+     qu'un filet posé au clic pour le tactile (pas de :hover sur un écran
+     tactile) et le clavier (:focus-within). Aucun état persisté → aucun
+     « Enregistré » qui clignote au dépliage. */
   .sb-group{border-bottom:1px solid var(--border-soft)}
   .sb-group:last-of-type{border-bottom:0}
   .sb-group-head{display:flex;align-items:center;gap:11px;width:100%;background:none;border:0;color:#cfe3ff;padding:11px 16px;text-align:left;cursor:pointer;font:inherit;font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase}
-  .sb-group-head:hover{background:var(--surface)}
+  .sb-group:hover .sb-group-head,.sb-group.open .sb-group-head{background:var(--surface)}
   .sb-group-label{flex:1;min-width:0}
   .sb-group-chevron{display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--text-muted);transition:transform .15s ease}
-  .sb-group.open .sb-group-chevron{transform:rotate(90deg)}
+  .sb-group:hover .sb-group-chevron,.sb-group.open .sb-group-chevron,.sb-group:focus-within .sb-group-chevron{transform:rotate(90deg)}
+  /* Le corps du groupe : masqué au repos, révélé au survol / clic / focus. */
+  .sb-group-body{display:none;flex-direction:column}
+  .sb-group:hover .sb-group-body,.sb-group.open .sb-group-body,.sb-group:focus-within .sb-group-body{display:flex}
   /* Groupe replié contenant la page courante : on garde un repère visuel. */
-  .sb-group.has-active:not(.open) .sb-group-head{color:#fff}
-  .sb-group.has-active:not(.open) .sb-group-chevron{color:var(--primary)}
+  .sb-group.has-active .sb-group-head{color:#fff}
+  .sb-group.has-active .sb-group-chevron{color:var(--primary)}
+  /* Pastille « brouillon » remontée sur l'en-tête tant que le groupe est replié
+     (sinon elle serait invisible) — masquée dès que les items réapparaissent. */
+  .sb-group:hover .sb-group-head .brouillon-tag,
+  .sb-group.open .sb-group-head .brouillon-tag,
+  .sb-group:focus-within .sb-group-head .brouillon-tag{display:none}
   /* Sous-onglets : légèrement indentés sous l'en-tête de groupe. */
   .sb-group-body button.tab{padding-left:28px;font-size:13px}
   /* Pastille « brouillon » à côté du label Mission quand un brouillon est en cours */
@@ -3126,8 +3138,6 @@ const DEFAULT_S = {
   bugs: { items: [] },
   prefs: {
     relanceJours: 7,
-    // État plié/déplié des groupes de la sidebar (clés = NAV[].id).
-    navGroups: { "nav-mission": true, "nav-compta": true },
     gmailTemplates: {
       devis: {
         subject: "Relance — Devis {ref}",
@@ -3720,16 +3730,20 @@ window.uiChoice = function(message, opts = {}) {
 // Seuls les LABELS et le regroupement changent.
 // `id` de groupe préfixé nav- pour ne PAS collisionner avec les clés d'onglet
 // (le groupe « Mission » contient un onglet dont la clé est aussi "mission").
+// ⚠ Chaque icône n'apparaît QU'UNE FOIS dans la sidebar (groupes inclus) : une
+// icône dupliquée entre un groupe et l'un de ses enfants (c'était le cas de
+// camera et barChart) rend le menu illisible. Vérifier l'unicité en ajoutant
+// une entrée.
 const NAV = [
-  { id: "nav-mission", label: "Mission", icon: "camera", items: [
-    ["accueil", "Suivi devis",          "dashboard"],
-    ["mission", "Nouveau devis",        "camera"],
+  { id: "nav-mission", label: "Missions", icon: "camera", items: [
+    ["accueil", "Devis en cours",       "dashboard"],
+    ["mission", "Nouveau devis",        "plus"],
     ["tarifs",  "Catalogue",            "fileText"],
     ["clients", "Clients",              "users"],
     ["profil",  "Mon Profil",           "user"]
   ]},
   { id: "nav-compta", label: "Comptabilité", icon: "barChart", items: [
-    ["compta",  "Bilan comptable",      "barChart"],
+    ["compta",  "Bilan comptable",      "banknote"],
     ["suivi",   "Historique",           "kanban"],
     ["achats",  "Achats / Abonnements", "wallet"]
   ]}
@@ -8973,7 +8987,7 @@ function render() {
         const hasDraft = typeof missionHasDraft === "function" && missionHasDraft();
         const activeGroup = navGroupOfTab(tab);
         return NAV.map(g => {
-          const open = navGroupIsOpen(g.id);
+          const pinned = navGroupIsPinned(g.id);
           const rows = g.items.map(([k, l, ico]) => {
             const labelHtml = (k === "mission" && hasDraft)
               ? `${esc(l)} <span class="brouillon-tag">brouillon</span>`
@@ -8981,13 +8995,19 @@ function render() {
             const onclick = k === "mission" ? "missionOpen()" : `setTab('${k}')`;
             return `<button class="tab ${tab === k ? "active" : ""}" onclick="${onclick}"><span class="tab-icon">${ICONS[ico] || ""}</span>${labelHtml}</button>`;
           }).join("");
-          return `<div class="sb-group ${open ? "open" : ""}${g.id === activeGroup ? " has-active" : ""}">
-            <button type="button" class="sb-group-head" onclick="navGroupToggle('${g.id}')" aria-expanded="${open}">
+          // Groupe replié = ses items sont hors de vue. Deux repères restent
+          // donc sur l'en-tête : la page courante (.has-active) et la pastille
+          // « brouillon » (sinon elle disparaîtrait complètement). Le CSS la
+          // masque au survol, quand la vraie pastille de l'item réapparaît.
+          const headDraft = (hasDraft && g.items.some(([k]) => k === "mission"))
+            ? ` <span class="brouillon-tag">brouillon</span>` : "";
+          return `<div class="sb-group${pinned ? " open" : ""}${g.id === activeGroup ? " has-active" : ""}">
+            <button type="button" class="sb-group-head" onclick="navGroupToggle('${g.id}')" aria-expanded="${pinned}">
               <span class="tab-icon">${ICONS[g.icon] || ""}</span>
-              <span class="sb-group-label">${esc(g.label)}</span>
+              <span class="sb-group-label">${esc(g.label)}${headDraft}</span>
               <span class="sb-group-chevron" aria-hidden="true">${ICO_SZ('chevronRight', 14)}</span>
             </button>
-            <div class="sb-group-body" ${open ? "" : "hidden"}>${rows}</div>
+            <div class="sb-group-body">${rows}</div>
           </div>`;
         }).join("");
       })()}
@@ -9567,8 +9587,8 @@ const APP_CHANGELOG = [
     title: "Menu réorganisé en deux groupes",
     items: [
       {
-        h: "Mission et Comptabilité, dépliables",
-        b: "La barre latérale se replie en deux groupes. Mission : Suivi devis (l'ancien Accueil), Nouveau devis, Catalogue, Clients et Mon Profil (qui quitte le menu du compte). Comptabilité : Bilan comptable, Historique et Achats / Abonnements. L'état plié ou déplié est mémorisé et te suit d'un appareil à l'autre."
+        h: "Missions et Comptabilité, dépliables au survol",
+        b: "La barre latérale se replie en deux groupes qui s'ouvrent au passage de la souris et se referment ensuite. Missions : Devis en cours (l'ancien Accueil), Nouveau devis, Catalogue, Clients et Mon Profil (qui quitte le menu du compte). Comptabilité : Bilan comptable, Historique et Achats / Abonnements. Sur écran tactile, un appui sur le titre du groupe le déplie."
       },
       {
         h: "« Nouveau devis » toujours accessible",
@@ -17578,25 +17598,18 @@ function rBG() {
   return h;
 }
 
-// ▼ navGroupIsOpen / navGroupToggle / navGroupOpen — état plié/déplié des
-// groupes de la sidebar, persisté dans S.prefs.navGroups (donc synchronisé
-// entre appareils). Déplié par défaut. Un groupe replié qui contient la page
-// courante garde son en-tête surligné (.has-active) — on sait toujours où on est.
-function navGroupIsOpen(groupId) {
-  const st = (S.prefs && S.prefs.navGroups) || {};
-  return st[groupId] !== false;
-}
-function navGroupSet(groupId, open) {
-  if (!S.prefs) S.prefs = {};
-  if (!S.prefs.navGroups) S.prefs.navGroups = {};
-  if (S.prefs.navGroups[groupId] === open) return false;
-  S.prefs.navGroups[groupId] = open;
-  return true;
-}
+// ▼ navGroupToggle — les groupes de la sidebar se déplient au SURVOL (pur CSS,
+// cf. `.sb-group:hover`) et se replient quand la souris sort. Ce clic n'est
+// qu'un filet pour le tactile (pas de :hover sur un écran tactile → les
+// sous-onglets seraient inatteignables) et le clavier.
+// ⚠ État volontairement TRANSIENT (variable module, jamais dans S) : le passer
+// par S + save() faisait clignoter « Enregistré » à chaque dépliage, et polluait
+// le doc Firestore pour une préférence d'affichage.
+let navGroupPinned = {};
+function navGroupIsPinned(groupId) { return !!navGroupPinned[groupId]; }
 window.navGroupToggle = function(groupId) {
-  navGroupSet(groupId, !navGroupIsOpen(groupId));
-  save();
-  render();
+  navGroupPinned[groupId] = !navGroupPinned[groupId];
+  render();   // pas de save() : rien à persister
 };
 
 // ▼ missionOpen — clic sur « Nouveau devis » dans la sidebar. JAMAIS destructeur :
@@ -17615,11 +17628,9 @@ window.setTab = k => {
   // Tracker le dernier onglet avant Notes/bugs pour pré-remplir
   // automatiquement le formulaire « Onglet concerné ».
   if (k === "bugs" && tab && tab !== "bugs") lastTabBeforeBugs = tab;
-  // Navigation (souvent programmatique : missionTerminer → Historique) vers un
-  // onglet dont le groupe est replié → on déplie, sinon la page s'affiche mais
-  // son entrée de menu reste invisible.
-  const g = navGroupOfTab(k);
-  if (g && navGroupSet(g, true)) save();
+  // Naviguer referme les groupes épinglés au clic (tactile) : on retombe sur le
+  // comportement « replié au repos, déplié au survol ».
+  navGroupPinned = {};
   tab = k;
   render();
 };

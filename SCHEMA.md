@@ -134,9 +134,6 @@ Source : `index.html` (bloc `const DEFAULT_S = { ... };`).
   - **items** _(array (empty))_
 - **prefs** _(object)_
   - **relanceJours**: number _(default `7`)_
-  - **navGroups** _(object)_
-    - **nav-mission**: boolean _(default `true`)_
-    - **nav-compta**: boolean _(default `true`)_
   - **gmailTemplates** _(object)_
     - **devis** _(object)_
       - **subject**: string _(default `"Relance — Devis {ref}"`)_
