@@ -9333,6 +9333,25 @@ function rBinModal() {
 // Format des items : { h: titre court, b: explication 1-3 phrases }.
 const APP_CHANGELOG = [
   {
+    id: "2026-07-edition-preserve-encaissements",
+    date: "2026-07-14",
+    title: "Éditer un devis ne déplace plus tes recettes de mois",
+    items: [
+      {
+        h: "La date d'encaissement survit à l'édition",
+        b: "Éditer un devis déjà payé remettait ses encaissements à zéro : la date à laquelle l'argent était réellement tombé était perdue, et la recette se retrouvait rattachée au mois du devis. Un acompte encaissé en mai et déclaré en mai réapparaissait dans le bilan de juillet, avec son URSSAF. Corrigé : l'édition ne recalcule plus que les montants, tout l'historique de paiement reste attaché à l'échéance."
+      },
+      {
+        h: "Un encaissement ne peut plus disparaître par accident",
+        b: "Si une modification supprimerait une échéance déjà encaissée, l'app refuse et te dit laquelle. L'argent est entré : il reste dans le chiffre d'affaires de son mois."
+      },
+      {
+        h: "À vérifier une fois",
+        b: "Les devis édités après un paiement peuvent avoir une date d'encaissement erronée en base. Dans l'Historique, déplie le devis : la date affichée sur chaque ligne d'échéance réglée est celle qui compte pour le bilan. Corrige-la si l'argent est tombé un autre mois."
+      }
+    ]
+  },
+  {
     id: "2026-07-cgv-modele-pro",
     date: "2026-07-13",
     title: "Nouveau modèle de CGV, complet et à jour",
@@ -11116,6 +11135,55 @@ window.suiviUpdateSnapshot = async function() {
   const m = S.mission;
   const t = totals();
 
+  // 0. APPARIEMENT anciennes entries ↔ nouvelles échéances — calculé AVANT toute
+  // mutation, pour pouvoir abandonner proprement si l'édition ferait disparaître
+  // un encaissement (cf. garde-fou plus bas).
+  // Cascade : echId (devis pilotés par échéances) → position (legacy sans echId,
+  // les entries d'un devis sont stockées dans l'ordre des échéances). Une entry
+  // appariée est MUTÉE, pas recréée : son état de paiement (statut, pmtTs,
+  // datePaiement, dateRemboursement, reverts, commentaires) doit survivre à
+  // l'édition. Recréer à neuf effaçait `datePaiement` → `entryEncaissementDate`
+  // retombait sur le repli `e.date` (mois du DEVIS) et re-rattachait au mauvais
+  // mois une recette déjà déclarée. Faute fiscale.
+  const existingEntries = S.suivi.entries.filter(en => en.devisId === e.id);
+  const oldDate = (existingEntries[0] && existingEntries[0].date) || "";
+  const oldEch = existingEntries.filter(en => num(en.frais) === 0);
+  const oldFrais = existingEntries.find(en => num(en.frais) !== 0) || null;
+  const hoursTotal = (m.lignes || []).filter(l => l.type === "heures")
+    .reduce((s, l) => s + num(l.duree) * (l.unit === "j" ? HOURS_PER_DAY : 1), 0);
+  const echLines = buildEcheanceLines(m.echeances, t.total, hoursTotal);
+  const newEchIds = new Set(echLines.map(l => l.echId).filter(Boolean));
+  const oldByEchId = {};
+  for (const en of oldEch) if (en.echId && !oldByEchId[en.echId]) oldByEchId[en.echId] = en;
+  const usedOld = new Set();
+  const pairs = echLines.map((l, i) => {
+    let prev = (l.echId && oldByEchId[l.echId]) || null;
+    if (!prev || usedOld.has(prev.id)) {
+      // Repli positionnel — mais jamais sur une entry dont l'echId appartient à
+      // une AUTRE échéance de la nouvelle config (elle sera appariée par echId).
+      const cand = oldEch[i];
+      prev = (cand && !usedOld.has(cand.id) && !(cand.echId && newEchIds.has(cand.echId))) ? cand : null;
+    }
+    if (prev) usedOld.add(prev.id);
+    return { l, prev };
+  });
+  const prevDebours = (t.debours > 0 && oldFrais) ? oldFrais : null;
+  if (prevDebours) usedOld.add(prevDebours.id);
+
+  // Garde-fou : une entry ENCAISSÉE ne peut pas être supprimée par une édition.
+  // L'argent est sur le compte, il compte dans le CA de son mois (compta de
+  // caisse) — le faire disparaître = sous-déclaration silencieuse.
+  const orphansPaid = existingEntries.filter(en => !usedOld.has(en.id) && entryEncaisse(en));
+  if (orphansPaid.length) {
+    await uiAlert(
+      `Cette modification supprimerait ${orphansPaid.length > 1 ? "des encaissements déjà enregistrés" : "un encaissement déjà enregistré"} :\n\n` +
+      orphansPaid.map(en => `• ${en.echeance || "Paiement"} — ${fmt(en.montant)} (encaissé le ${dateFR(entryEncaissementDate(en)) || "?"})`).join("\n") +
+      `\n\nL'argent est entré : il reste dans le chiffre d'affaires de son mois. Annule d'abord ${orphansPaid.length > 1 ? "ces encaissements" : "cet encaissement"} dans l'Historique si tu veux vraiment retirer ${orphansPaid.length > 1 ? "ces échéances" : "cette échéance"}, ou crée une révision.`,
+      { title: "Encaissement en jeu", kind: "danger" }
+    );
+    return;
+  }
+
   // 1-2. Plus de capture du HTML rendu : l'affichage régénère depuis
   // snapshotMission (mis à jour ci-dessous). On supprime le HTML stocké
   // périmé pour qu'il ne shadow pas les modifications via le fallback.
@@ -11149,27 +11217,13 @@ window.suiviUpdateSnapshot = async function() {
   delete snapMission.editDevisId;
   e.snap.snapshotMission = snapMission;
 
-  // 3. Recalcule les entries Suivi (acompte / reste / débours) à partir des
-  // nouveaux montants. Conserve les statuts existants par classification
-  // d'échéance — un acompte déjà soldé reste soldé, idem refusé/annulé.
-  // Si aucune entry n'existe (devis legacy ou supprimées manuellement), on
-  // recrée tout en envoye.
-  const existingEntries = S.suivi.entries.filter(en => en.devisId === e.id);
-  const oldDate = (existingEntries[0] && existingEntries[0].date) || "";
-  // Préservation des statuts : par echId (devis pilotés par échéances) avec
-  // fallback par classification acompte/reste/frais (devis legacy 2-lignes
-  // sans echId). Un acompte soldé reste soldé, idem refusé/annulé.
-  const oldByEch = {};
-  const oldByClass = { acompte: null, reste: null, frais: null };
-  for (const en of existingEntries) {
-    if (en.echId) oldByEch[en.echId] = en.statut || "envoye";
-    const c = suiviClassifyEcheance(en.echeance);
-    if (c && oldByClass[c] === null) oldByClass[c] = en.statut || "envoye";
-  }
+  // 3. Réapplique les nouveaux montants aux entries Suivi (échéances + débours).
+  // Les entries appariées en 0. sont MUTÉES : seuls les champs dérivés du devis
+  // (libellé, montant, heures, CA, URSSAF, trésorerie) sont recalculés. Tout
+  // l'état de paiement reste porté par l'entry. Les non appariées (nouvelle
+  // échéance, devis legacy sans entries) sont créées en "envoye".
   S.suivi.entries = S.suivi.entries.filter(en => en.devisId !== e.id);
   const cat = (S.tarifs.catalog || DEFAULT_CATALOG).find(c => c.k === m.object);
-  const hoursTotal = (m.lignes || []).filter(l => l.type === "heures")
-    .reduce((s, l) => s + num(l.duree) * (l.unit === "j" ? HOURS_PER_DAY : 1), 0);
   const date = m.objectDate || oldDate || new Date().toISOString().slice(0, 10);
   const client = m.client.name || "";
   const prestation = cat ? cat.l : "";
@@ -11177,44 +11231,36 @@ window.suiviUpdateSnapshot = async function() {
   const urssafPct = getUrssafPct(m);
   const tm = tauxMatos();
   const tresoRatio = (t.tarifH > 0 && tm.tauxAvecSecurite > 0) ? (tm.tauxAvecSecurite / t.tarifH) : 0;
-  const mkLine = (echId, echeance, montant, heures, statut) => {
+  const applyLine = (prev, echId, echeance, montant, heures) => {
     const ursaf = isDeclared ? r2(montant * urssafPct / 100) : 0;
     const tresorerie = r2(montant * tresoRatio);
     const salaire = r2(montant - ursaf - tresorerie);
-    return {
-      id: uid(), devisId: e.id, date, client, prestation, echId,
-      montant: montant.toFixed(2),
-      heures: heures.toFixed(2),
-      echeance,
-      paiement: montant.toFixed(2),
-      ca: isDeclared ? montant.toFixed(2) : "0.00",
-      salaire: salaire.toFixed(2),
-      ursaf: ursaf.toFixed(2),
-      tresorerie: tresorerie.toFixed(2),
-      frais: "0",
-      commentaires: "",
-      statut: statut || "envoye"
-    };
+    const en = prev || { id: uid(), commentaires: "", statut: "envoye" };
+    en.devisId = e.id; en.date = date; en.client = client; en.prestation = prestation;
+    en.echId = echId;
+    en.echeance = echeance;
+    en.montant = montant.toFixed(2);
+    en.heures = heures.toFixed(2);
+    en.paiement = montant.toFixed(2);
+    en.ca = isDeclared ? montant.toFixed(2) : "0.00";
+    en.salaire = salaire.toFixed(2);
+    en.ursaf = ursaf.toFixed(2);
+    en.tresorerie = tresorerie.toFixed(2);
+    en.frais = "0";
+    return en;
   };
-  // Recrée une entry par échéance en préservant les statuts (echId puis classify).
-  const echEntries = buildEcheanceLines(m.echeances, t.total, hoursTotal).map(l => {
-    let st = (l.echId && oldByEch[l.echId] != null) ? oldByEch[l.echId] : null;
-    if (st == null) st = oldByClass[l.isSolde ? "reste" : "acompte"];
-    return mkLine(l.echId, l.label, l.montant, l.heures, st);
-  });
-  S.suivi.entries.unshift(...echEntries);
+  S.suivi.entries.unshift(...pairs.map(({ l, prev }) => applyLine(prev, l.echId, l.label, l.montant, l.heures)));
   if (t.debours > 0) {
-    S.suivi.entries.unshift({
-      id: uid(), devisId: e.id, date, client, prestation,
-      montant: t.debours.toFixed(2),
-      heures: "0.00",
-      echeance: "Frais de débours",
-      paiement: t.debours.toFixed(2),
-      ca: "0.00", salaire: "0.00", ursaf: "0.00", tresorerie: "0.00",
-      frais: t.debours.toFixed(2),
-      commentaires: "",
-      statut: oldByClass.frais || "envoye"
-    });
+    const en = prevDebours || { id: uid(), commentaires: "", statut: "envoye" };
+    en.devisId = e.id; en.date = date; en.client = client; en.prestation = prestation;
+    delete en.echId;
+    en.echeance = "Frais de débours";
+    en.montant = t.debours.toFixed(2);
+    en.heures = "0.00";
+    en.paiement = t.debours.toFixed(2);
+    en.ca = "0.00"; en.salaire = "0.00"; en.ursaf = "0.00"; en.tresorerie = "0.00";
+    en.frais = t.debours.toFixed(2);
+    S.suivi.entries.unshift(en);
   }
 
   // Édition en place : nettoie le marqueur transient pour ne pas le
