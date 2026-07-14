@@ -140,6 +140,7 @@ Source : `index.html` (bloc `const DEFAULT_S = { ... };`).
 - **prefs** _(object)_
   - **relanceJours**: number _(default `7`)_
   - **bgPhoto**: string _(default `"jade-portrait"`)_
+  - **bgScrim**: number _(default `0.84`)_
   - **gmailTemplates** _(object)_
     - **devis** _(object)_
       - **subject**: string _(default `"Relance — Devis {ref}"`)_

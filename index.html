@@ -42,6 +42,11 @@
        ⚠ --surface reste OPAQUE (dropdowns, modales, <option> en dépendent). */
     --surface-glass:rgba(26,24,34,.85);
     --surface-sunken:rgba(8,7,10,.5);
+    /* Fond des champs de saisie. Doit rester QUASI OPAQUE : tant que toutes les
+       vues ne sont pas passées en `.v2-panel`, des inputs posés directement sur
+       la photo de fond laissaient l'image transparaître au travers (Profil,
+       Catalogue…) et le formulaire devenait illisible. */
+    --field-bg:rgba(8,7,10,.82);
     /* Bordures en blanc alpha (et non plus en teinte de fond) : elles tiennent
        au-dessus de la photo comme au-dessus du near-black. */
     --border:rgba(255,255,255,.14);--border-light:rgba(255,255,255,.24);--border-soft:rgba(255,255,255,.08);
@@ -63,7 +68,9 @@
     --font-mono:'Space Mono',ui-monospace,monospace;
     /* Photo de fond (voir body). Surchargée par html[data-bg="…"]. */
     --bg-photo:url('assets/jade-portrait.jpg');
-    --bg-scrim:.92;
+    /* Défaut CSS ; la vraie valeur est posée en inline par applyBgPhoto()
+       depuis S.prefs.bgScrim (réglable : setBgScrim(0.70) en console). */
+    --bg-scrim:.84;
     /* === Charte graphique — espacements & tailles === */
     /* Échelle d'espacement (multiples de 4) */
     --space-xs: 4px;
@@ -122,16 +129,19 @@
   html[data-bg="none"]{--bg-photo:none}
   #app{display:flex;min-height:100vh}
   /* Sidebar en verre dépoli au-dessus de la photo de fond (charte V2). */
-  .sb{width:220px;background:rgba(12,11,15,.72);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);color:var(--text);border-right:1px solid var(--border-soft);display:flex;flex-direction:column;position:sticky;top:0;height:100vh;overflow-y:auto;flex-shrink:0;z-index:100}
+  .sb{width:216px;background:rgba(12,11,15,.72);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);color:var(--text);border-right:1px solid var(--border-soft);display:flex;flex-direction:column;position:sticky;top:0;height:100vh;overflow-y:auto;flex-shrink:0;z-index:100}
   /* Wordmark — Big Shoulders Display 900 UPPERCASE + point ember (la charte
      n'a pas de logo : le nom EST la marque). Le point est posé par ::after. */
   .sb h1{font-family:var(--font-display);font-size:22px;font-weight:900;padding:22px 20px 16px;margin:0;color:#fff;letter-spacing:0;text-transform:uppercase;line-height:.92;text-align:left;cursor:default;border-bottom:1px solid var(--border-soft);display:flex;align-items:baseline;gap:6px}
   .sb h1::after{content:"";width:5px;height:5px;border-radius:50%;background:var(--ember-400);flex-shrink:0}
-  .sb button.tab{display:flex;align-items:center;gap:11px;width:100%;background:none;border:0;color:var(--text-muted);padding:10px 16px;text-align:left;cursor:pointer;font:inherit;font-size:13px;border-left:3px solid transparent}
-  .sb button.tab:hover{background:var(--surface);color:var(--text)}
-  .sb button.tab.active{background:var(--surface);color:#fff;border-left-color:var(--primary)}
-  .sb .tab-icon{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;flex-shrink:0;color:inherit}
-  .sb .tab-icon svg{width:18px;height:18px}
+  .sb-nav{display:flex;flex-direction:column;gap:var(--space-xs);padding:14px 10px;overflow-y:auto}
+  /* Item d'onglet : liseré azure à gauche quand actif (le fond seul ne suffit
+     pas à le distinguer sur une sidebar translucide). */
+  .sb button.tab{display:flex;align-items:center;gap:11px;width:100%;background:transparent;border:0;border-left:2px solid transparent;color:var(--text-muted);padding:8px 11px;text-align:left;cursor:pointer;font:inherit;font-size:13px;border-radius:0 var(--radius-sm) var(--radius-sm) 0;margin-left:-1px;transition:background .12s,color .12s}
+  .sb button.tab:hover{background:rgba(255,255,255,.05);color:var(--ink-000)}
+  .sb button.tab.active{background:rgba(46,134,240,.10);border-left-color:var(--azure-fill-hi);color:#fff}
+  .sb .tab-icon{display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;flex-shrink:0;color:inherit}
+  .sb .tab-icon svg{width:16px;height:16px}
   .sb button.tab.active .tab-icon{color:var(--primary)}
   /* === Sidebar — groupes dépliables au CLIC (NAV) ===
      Accordéon inline classique (VS Code / Notion / Linear) : un clic déplie, le
@@ -141,37 +151,44 @@
      retrouve dans le vide (reflow). C'est précisément pour ça que les vraies
      apps réservent le survol aux panneaux flottants (qui, eux, ne poussent rien).
      Aucun état persisté → aucun « Enregistré » qui clignote au dépliage. */
-  .sb-group{border-bottom:1px solid var(--border-soft)}
-  .sb-group:last-of-type{border-bottom:0}
-  .sb-group-head{display:flex;align-items:center;gap:11px;width:100%;background:none;border:0;color:#C6C2D2;padding:11px 16px;text-align:left;cursor:pointer;font:inherit;font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase}
-  .sb-group-head:hover{background:var(--surface)}
-  .sb-group-label{flex:1;min-width:0}
-  .sb-group-chevron{display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--text-muted);transition:transform .15s ease}
+  /* En-tête de groupe : mono technique (charte V2), pas un onglet. */
+  .sb-group-head{display:flex;align-items:center;gap:10px;width:100%;background:transparent;border:0;color:var(--ink-400);padding:8px 11px;text-align:left;cursor:pointer;font-family:var(--font-mono);font-size:10px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;border-radius:var(--radius-sm);transition:color .12s}
+  .sb-group-head:hover{color:var(--ink-200)}
+  .sb-group-head .tab-icon{width:15px;height:15px}
+  .sb-group-head .tab-icon svg{width:15px;height:15px}
+  .sb-group-label{flex:1;min-width:0;display:flex;align-items:center;gap:6px}
+  .sb-group-chevron{display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--ink-500);transition:transform .2s ease}
   .sb-group.open .sb-group-chevron{transform:rotate(90deg)}
-  .sb-group-body{display:none;flex-direction:column}
+  /* Corps du groupe : filet vertical à gauche, comme une arborescence. */
+  .sb-group-body{display:none;flex-direction:column;gap:1px;padding:2px 0 6px;margin:2px 0 4px 17px;border-left:1px solid var(--border-soft)}
   .sb-group.open .sb-group-body{display:flex}
   /* Groupe replié contenant la page courante : on garde un repère visuel. */
-  .sb-group.has-active .sb-group-head{color:#fff}
-  .sb-group.has-active .sb-group-chevron{color:var(--primary)}
-  /* Pastille « brouillon » remontée sur l'en-tête tant que le groupe est replié
-     (sinon elle serait invisible) — masquée dès que les items réapparaissent. */
-  .sb-group.open .sb-group-head .brouillon-tag{display:none}
-  /* Sous-onglets : légèrement indentés sous l'en-tête de groupe. */
-  .sb-group-body button.tab{padding-left:28px;font-size:13px}
-  /* Pastille « brouillon » à côté du label Mission quand un brouillon est en cours */
-  .sb .brouillon-tag{font-size:9px;color:var(--warning);background:rgba(232,117,28,.10);padding:2px 7px;border-radius:999px;margin-left:6px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;border:1px solid rgba(232,117,28,.4);text-shadow:0 0 4px rgba(232,117,28,.5);box-shadow:0 0 8px rgba(232,117,28,.25);animation:brouillon-pulse 2s ease-in-out infinite}
-  @keyframes brouillon-pulse{0%,100%{opacity:.7;box-shadow:0 0 6px rgba(232,117,28,.2)}50%{opacity:1;box-shadow:0 0 12px rgba(232,117,28,.45)}}
+  .sb-group.has-active .sb-group-head{color:var(--ink-100)}
+  .sb-group.has-active .sb-group-head .tab-icon{color:var(--primary)}
+  /* Repère « brouillon en cours » = un POINT ember, jamais un mot.
+     La sidebar fait 216 px : une pastille texte « BROUILLON » à côté de
+     « Nouveau devis » ne rentre pas (le label passait sur 2 lignes) et, sur
+     l'en-tête de groupe replié, elle poussait le chevron hors du cadre.
+     Le mot reste accessible en tooltip (attribut title). Charte : pas
+     d'animation décorative infinie → le halo pulsé est supprimé. */
+  .sb .brouillon-tag{width:6px;height:6px;border-radius:50%;background:var(--ember-400);flex-shrink:0;margin-left:auto;font-size:0;line-height:0;padding:0;border:0;overflow:hidden}
+  .sb .sb-group-head .brouillon-tag{margin-left:0}
+  .sb .sb-group.open .sb-group-head .brouillon-tag{display:none}
+  .sb button.tab{white-space:nowrap}
+  /* === Pied de sidebar : Bugs & suggestions + Mon compte === */
+  .sb-foot{margin-top:auto;padding:12px 10px;border-top:1px solid var(--border-soft)}
+  .sb-foot .tab{margin-bottom:var(--space-xs)}
   /* Sidebar — section user (avatar + menu inline aligné sur les tabs du haut) */
-  .sb-user-section{margin-top:auto;border-top:1px solid var(--border)}
+  .sb-user-section{border-top:0}
   /* Items du menu inline — mêmes proportions que .sb button.tab pour alignement parfait */
   .sb-user-menu{display:none;flex-direction:column}
   .sb-user-menu.open{display:flex}
-  .sb-user-menu-head{padding:10px 16px;border-bottom:1px solid var(--border-soft);background:rgba(69,193,253,.04)}
-  .sb-user-menu-email{font-size:13px;font-weight:600;color:#C6C2D2;text-shadow:0 0 4px rgba(69,193,253,.4);word-break:break-all;line-height:1.3}
-  .sb-user-menu-role{font-size:11px;color:var(--text-muted);margin-top:3px;line-height:1.3}
-  .sb-user-menu button{display:flex;align-items:center;gap:11px;width:100%;background:none;border:0;color:var(--text-muted);padding:10px 16px;text-align:left;cursor:pointer;font:inherit;font-size:13px;border-left:3px solid transparent;transition:background .12s,color .12s}
-  .sb-user-menu button:hover{background:var(--surface);color:var(--text)}
-  .sb-user-menu button svg{flex-shrink:0;width:18px;height:18px}
+  .sb-user-menu-head{padding:8px 11px 10px;margin-bottom:var(--space-xs);border-bottom:1px solid var(--border-soft)}
+  .sb-user-menu-email{font-size:12px;font-weight:600;color:var(--ink-200);word-break:break-all;line-height:1.3}
+  .sb-user-menu-role{font-size:11px;color:var(--text-dim);margin-top:3px;line-height:1.3}
+  .sb-user-menu button{display:flex;align-items:center;gap:10px;width:100%;background:transparent;border:0;color:var(--text-muted);padding:7px 11px;text-align:left;cursor:pointer;font:inherit;font-size:12px;border-radius:var(--radius-sm);transition:background .12s,color .12s}
+  .sb-user-menu button:hover{background:rgba(255,255,255,.05);color:var(--ink-000)}
+  .sb-user-menu button svg{flex-shrink:0;width:16px;height:16px}
   .sb-user-menu-count{display:inline-block;font-size:10px;font-weight:600;color:var(--accent);background:rgba(2,220,185,.12);border:1px solid rgba(2,220,185,.30);border-radius:var(--radius-sm);padding:1px 5px;margin-left:6px;letter-spacing:.3px}
   .sb-user-menu-dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--warning);box-shadow:0 0 6px rgba(232,117,28,.6);margin-left:6px;vertical-align:middle}
   /* Templates Gmail — lexique + toolbar d'insertion (pattern Mailchimp/HubSpot) */
@@ -207,15 +224,15 @@
   .maj-entry-items li strong{font-size:13px;font-weight:600;color:var(--text)}
   .maj-entry-items li p{margin:0;font-size:13px;line-height:1.55;color:var(--text-muted)}
   /* Trigger : avatar + label email à droite, full-width comme un tab */
-  .sb-user-trigger{display:flex;align-items:center;gap:11px;width:100%;background:none;border:0;color:var(--text-muted);padding:10px 16px;text-align:left;cursor:pointer;font:inherit;font-size:13px;border-left:3px solid transparent;transition:background .12s,color .12s}
-  .sb-user-trigger:hover{background:var(--surface);color:var(--text)}
-  .sb-user-trigger.open{background:var(--surface);color:#fff}
-  .sb-user-avatar{width:26px;height:26px;border-radius:50%;background:rgba(0,0,0,.22);border:1px solid rgba(69,193,253,.35);padding:0;overflow:hidden;display:inline-flex;align-items:center;justify-content:center;color:var(--text);font-family:'Inter',sans-serif;font-size:11px;font-weight:600;flex-shrink:0;pointer-events:none}
-  .sb-user-trigger:hover .sb-user-avatar{border-color:var(--primary);box-shadow:0 0 8px rgba(69,193,253,.35);background:rgba(69,193,253,.08)}
+  .sb-user-trigger{display:flex;align-items:center;gap:10px;width:100%;background:transparent;border:0;color:var(--text-muted);padding:7px 11px;text-align:left;cursor:pointer;font:inherit;font-size:12px;border-radius:var(--radius-sm);transition:background .12s,color .12s}
+  .sb-user-trigger:hover{background:rgba(255,255,255,.05);color:var(--ink-000)}
+  .sb-user-trigger.open{background:rgba(255,255,255,.05);color:#fff}
+  .sb-user-avatar{width:24px;height:24px;border-radius:50%;background:var(--ink-800);border:1px solid var(--border);padding:0;overflow:hidden;display:inline-flex;align-items:center;justify-content:center;color:var(--ink-200);font-family:'Inter',sans-serif;font-size:10px;font-weight:700;flex-shrink:0;pointer-events:none}
+  .sb-user-trigger:hover .sb-user-avatar{border-color:var(--border-light)}
   .sb-user-avatar img{width:100%;height:100%;object-fit:cover;display:block}
-  .sb-user-initials{display:inline-flex;align-items:center;justify-content:center;width:100%;height:100%;color:#C6C2D2;text-shadow:0 0 6px rgba(69,193,253,.5)}
-  .sb-user-trigger-label{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px}
-  main{flex:1;padding:24px 32px;max-width:1100px;position:relative}
+  .sb-user-initials{display:inline-flex;align-items:center;justify-content:center;width:100%;height:100%;color:var(--ink-200)}
+  .sb-user-trigger-label{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;color:var(--text);font-weight:600}
+  main{flex:1;min-width:0;padding:28px 40px 60px;max-width:1180px;position:relative}
   h2{margin-top:0}
   /* === Titre de page — V2 (refonte 2026-07) ===
      Le néon (Tilt Neon + glow pulsé) est ABANDONNÉ : la charte Saintilann pose
@@ -253,7 +270,7 @@
   .field.sm{max-width:140px}
   .field label{font-size:13px;color:var(--text-muted);margin-bottom:var(--space-xs)}
   .field input:not([type="checkbox"]):not([type="radio"]),.field select{height:var(--input-h)}
-  .field input,.field textarea,.field select{padding:var(--space-sm) var(--space-md);border:1px solid var(--border-soft);border-radius:var(--radius-md);font:inherit;background:rgba(0,0,0,.35);color:var(--text);transition:border-color .15s,box-shadow .15s,background .15s;font-variant-numeric:tabular-nums}
+  .field input,.field textarea,.field select{padding:var(--space-sm) var(--space-md);border:1px solid var(--border-soft);border-radius:var(--radius-md);font:inherit;background:var(--field-bg);color:var(--text);transition:border-color .15s,box-shadow .15s,background .15s;font-variant-numeric:tabular-nums}
   .field input:hover:not(:disabled),.field textarea:hover:not(:disabled),.field select:hover:not(:disabled){border-color:rgba(69,193,253,.4);box-shadow:0 0 8px rgba(69,193,253,.1)}
   .field input:focus,.field textarea:focus,.field select:focus{outline:none;border-color:var(--primary);background:rgba(69,193,253,.08);box-shadow:inset 0 0 0 1px rgba(69,193,253,.22),0 0 12px rgba(69,193,253,.35),0 0 24px rgba(69,193,253,.12)}
   .field textarea{min-height:60px;resize:vertical}
@@ -472,7 +489,11 @@
   .v2-page-head{display:flex;align-items:center;gap:var(--space-xl);padding-bottom:18px;border-bottom:1px solid var(--border);margin-bottom:var(--space-xl);flex-wrap:wrap}
   .v2-page-head .v2-page-title{display:flex;flex-direction:column;gap:var(--space-xs);min-width:130px}
   .v2-page-head h1{font-family:var(--font-display);font-weight:700;font-size:26px;text-transform:uppercase;color:#fff;margin:0;line-height:.92;letter-spacing:0}
-  .v2-page-head .v2-page-actions{margin-left:auto;display:flex;align-items:center;gap:var(--space-sm);flex-wrap:wrap}
+  .v2-page-head .v2-page-actions{margin-left:auto;display:flex;align-items:center;gap:var(--space-md);flex-wrap:wrap}
+  /* Flash « Enregistré » (#savedFlash) : vide au repos, donc :not(:empty) pour
+     ne pas afficher la pastille jade en permanence. */
+  .v2-page-actions .saved{font-family:var(--font-mono);font-size:10px;font-weight:400;letter-spacing:.12em;text-transform:uppercase;color:var(--success);display:inline-flex;align-items:center;gap:8px}
+  .v2-page-actions .saved:not(:empty)::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--success);flex-shrink:0}
 
   /* Panneau translucide V2 : la photo de fond respire au travers. */
   .v2-panel{background:var(--surface-glass);border:1px solid var(--border-soft);border-radius:var(--radius-md);padding:16px 18px 18px}
@@ -755,7 +776,7 @@
 
   /* Compta : KPI cards en haut de l'onglet */
   .cp-kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:8px;margin:8px 0 16px}
-  .cp-kpi{display:flex;flex-direction:column;gap:3px;padding:8px 12px;background:rgba(0,0,0,.22);border:1px solid rgba(69,193,253,.28);border-radius:6px;box-shadow:inset 0 0 0 1px rgba(69,193,253,.06),0 0 6px rgba(69,193,253,.08);transition:border-color .15s,box-shadow .15s}
+  .cp-kpi{display:flex;flex-direction:column;gap:3px;padding:8px 12px;background:var(--field-bg);border:1px solid rgba(69,193,253,.28);border-radius:6px;box-shadow:inset 0 0 0 1px rgba(69,193,253,.06),0 0 6px rgba(69,193,253,.08);transition:border-color .15s,box-shadow .15s}
   .cp-kpi:hover{border-color:rgba(69,193,253,.5);box-shadow:inset 0 0 0 1px rgba(69,193,253,.14),0 0 12px rgba(69,193,253,.18)}
   .cp-kpi-label{font-size:10px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em}
   .cp-kpi-value{font-size:16px;font-weight:700;font-variant-numeric:tabular-nums;color:#C6C2D2;text-shadow:0 0 6px rgba(69,193,253,.4)}
@@ -869,7 +890,7 @@
   .cli-toolbar .btn svg{width:14px;height:14px;vertical-align:-2px;margin-right:5px}
   .cli-search-wrap{position:relative;flex:1;min-width:280px;max-width:520px}
   .cli-search-wrap > svg{position:absolute;left:14px;top:50%;transform:translateY(-50%);width:16px;height:16px;color:var(--text-dim);pointer-events:none}
-  .cli-search-wrap > input{width:100%;padding:11px 14px 11px 40px;border:1px solid var(--border-soft);border-radius:8px;font:inherit;font-size:14px;background:rgba(0,0,0,.35);color:var(--text);transition:border-color .15s,box-shadow .15s,background .15s;box-sizing:border-box}
+  .cli-search-wrap > input{width:100%;padding:11px 14px 11px 40px;border:1px solid var(--border-soft);border-radius:8px;font:inherit;font-size:14px;background:var(--field-bg);color:var(--text);transition:border-color .15s,box-shadow .15s,background .15s;box-sizing:border-box}
   .cli-search-wrap > input:hover{border-color:rgba(69,193,253,.4);box-shadow:0 0 8px rgba(69,193,253,.1)}
   .cli-search-wrap > input:focus{outline:none;border-color:var(--primary);background:rgba(69,193,253,.08);box-shadow:inset 0 0 0 1px rgba(69,193,253,.22),0 0 12px rgba(69,193,253,.35),0 0 24px rgba(69,193,253,.12)}
   /* Table épurée — pas de bordures de cellules, juste un séparateur fin entre lignes */
@@ -1020,7 +1041,7 @@
 
   /* Client picker */
   .cli-pick{position:relative;max-width:320px}
-  .cli-pick .selected{display:flex;align-items:center;gap:10px;height:var(--input-h);padding:0 12px;background:rgba(0,0,0,.35);border:1px solid var(--border-soft);border-radius:6px;font-size:13px;transition:border-color .15s,box-shadow .15s,background .15s}
+  .cli-pick .selected{display:flex;align-items:center;gap:10px;height:var(--input-h);padding:0 12px;background:var(--field-bg);border:1px solid var(--border-soft);border-radius:6px;font-size:13px;transition:border-color .15s,box-shadow .15s,background .15s}
   .cli-pick .selected:hover{border-color:rgba(69,193,253,.4);box-shadow:0 0 8px rgba(69,193,253,.1)}
   .cli-pick .selected .name{flex:1;color:var(--text);font-weight:500}
   .cli-pick .selected .num{color:var(--text-muted);font-size:13px;font-variant-numeric:tabular-nums}
@@ -1303,13 +1324,13 @@
 
   /* Locked field with ⋮ menu (URSSAF) */
   .lock-field{display:flex;align-items:stretch;gap:0;width:100%;max-width:120px;position:relative;height:var(--input-h)}
-  .lock-field input{flex:1;width:50px;height:var(--input-h);text-align:center;font-variant-numeric:tabular-nums;background:rgba(0,0,0,.35);color:var(--text);border:1px solid var(--border-soft);transition:background .15s,border-color .15s,box-shadow .15s}
+  .lock-field input{flex:1;width:50px;height:var(--input-h);text-align:center;font-variant-numeric:tabular-nums;background:var(--field-bg);color:var(--text);border:1px solid var(--border-soft);transition:background .15s,border-color .15s,box-shadow .15s}
   .lock-field input:not(:disabled):hover{border-color:rgba(69,193,253,.4);box-shadow:0 0 8px rgba(69,193,253,.1)}
   .lock-field input:focus{outline:none;border-color:var(--primary);background:rgba(69,193,253,.08);box-shadow:inset 0 0 0 1px rgba(69,193,253,.22),0 0 12px rgba(69,193,253,.35),0 0 24px rgba(69,193,253,.12)}
-  .lock-field input:disabled{opacity:0.85;cursor:not-allowed;background:rgba(0,0,0,.35);color:var(--text);position:relative}
+  .lock-field input:disabled{opacity:0.85;cursor:not-allowed;background:var(--field-bg);color:var(--text);position:relative}
   .lock-field:has(input:disabled){position:relative}
   .lock-field:has(input:disabled)::after{content:"";position:absolute;inset:0;background:rgba(255,255,255,.06);border-radius:6px;pointer-events:none}
-  .lock-menu-btn{background:rgba(0,0,0,.35);border:1px solid transparent;border-left:1px solid var(--border-soft);border-radius:0 6px 6px 0;color:var(--text-muted);cursor:pointer;padding:0 11px;font-size:15px;line-height:1;font-weight:700;transition:all .15s}
+  .lock-menu-btn{background:var(--field-bg);border:1px solid transparent;border-left:1px solid var(--border-soft);border-radius:0 6px 6px 0;color:var(--text-muted);cursor:pointer;padding:0 11px;font-size:15px;line-height:1;font-weight:700;transition:all .15s}
   .lock-menu-btn:hover{background:rgba(69,193,253,.1);color:var(--primary)}
   .lock-field input{border-radius:6px 0 0 6px;border-right:0}
   .lock-popup{position:absolute;top:100%;right:0;margin-top:4px;background:rgba(15,34,64,.95);border:1px solid var(--primary);border-radius:6px;box-shadow:0 0 14px rgba(69,193,253,.35),0 8px 24px rgba(0,0,0,.5);z-index:30;min-width:180px;padding:4px;display:none;backdrop-filter:blur(8px)}
@@ -1319,7 +1340,7 @@
   /* Variante .with-unit — suffixe d'unité (ex. €/km) sandwiché entre input et bouton ⋮ */
   .lock-field.with-unit{max-width:170px}
   .lock-field.with-unit input{text-align:right;padding-right:6px}
-  .lock-field .lock-unit{display:inline-flex;align-items:center;height:var(--input-h);background:rgba(0,0,0,.35);color:var(--text-dim);font-size:13px;padding:0 var(--space-sm) 0 4px;flex-shrink:0;font-variant-numeric:tabular-nums;user-select:none}
+  .lock-field .lock-unit{display:inline-flex;align-items:center;height:var(--input-h);background:var(--field-bg);color:var(--text-dim);font-size:13px;padding:0 var(--space-sm) 0 4px;flex-shrink:0;font-variant-numeric:tabular-nums;user-select:none}
   /* Si la lock-field n'a pas de bouton ⋮ (pas de verrou), l'unité est le dernier élément → coins arrondis à droite */
   .lock-field .lock-unit:last-child{border-radius:0 6px 6px 0}
 
@@ -1479,7 +1500,7 @@
   .catalog-table th.catalog-th-cell-cible,
   .catalog-table td.cible-cell{border-left:1px solid rgba(69,193,253,.20);border-right:1px solid rgba(69,193,253,.20);background:rgba(69,193,253,.04)}
   .catalog-table td.cible-cell{text-align:right;padding:6px 10px}
-  .catalog-table td.cible-cell .tr-tarif-input{font-size:14px;font-weight:700;color:#45C1FD;width:80px;background:rgba(0,0,0,.30);border:1px solid rgba(69,193,253,.45);border-radius:6px;padding:4px 10px;text-shadow:0 0 4px rgba(69,193,253,.25)}
+  .catalog-table td.cible-cell .tr-tarif-input{font-size:14px;font-weight:700;color:#45C1FD;width:80px;background:var(--field-bg);border:1px solid rgba(69,193,253,.45);border-radius:6px;padding:4px 10px;text-shadow:0 0 4px rgba(69,193,253,.25)}
   .catalog-table td.cible-cell .tr-tarif-input:hover{border-color:var(--primary);background:rgba(69,193,253,.10);box-shadow:0 0 8px rgba(69,193,253,.18)}
   .catalog-table td.cible-cell .tr-tarif-input:focus{outline:none;border-color:var(--primary);background:rgba(69,193,253,.12);box-shadow:inset 0 0 0 1px rgba(69,193,253,.30),0 0 12px rgba(69,193,253,.40),0 0 24px rgba(69,193,253,.15)}
   .catalog-table td.cible-cell .tarif-input-wrap{gap:6px}
@@ -2597,10 +2618,10 @@
      pour étiqueter une zone (ex. « Échéances » au-dessus de la liste). */
   .field-label-only{font-size:13px;color:var(--text-muted);margin-bottom:var(--space-xs);margin-top:var(--space-md)}
   .ech-row{display:flex;align-items:center;gap:10px;background:transparent;border:0;border-radius:0;padding:2px 0}
-  .ech-row input.lbl{flex:1;height:var(--input-h);border:1px solid var(--border-soft);background:rgba(0,0,0,.35);color:var(--text);font:inherit;font-size:13px;padding:0 10px;border-radius:6px;min-width:0;transition:border-color .15s,box-shadow .15s,background .15s}
+  .ech-row input.lbl{flex:1;height:var(--input-h);border:1px solid var(--border-soft);background:var(--field-bg);color:var(--text);font:inherit;font-size:13px;padding:0 10px;border-radius:6px;min-width:0;transition:border-color .15s,box-shadow .15s,background .15s}
   .ech-row input.lbl:hover{border-color:rgba(69,193,253,.4);box-shadow:0 0 8px rgba(69,193,253,.1)}
   .ech-row input.lbl:focus{outline:none;border-color:var(--primary);background:rgba(69,193,253,.08);box-shadow:inset 0 0 0 1px rgba(69,193,253,.22),0 0 12px rgba(69,193,253,.35),0 0 24px rgba(69,193,253,.12)}
-  .ech-row .pct-wrap{display:flex;align-items:center;gap:3px;height:var(--input-h);background:rgba(0,0,0,.35);border:1px solid var(--border-soft);border-radius:6px;padding:0 8px;width:90px;transition:border-color .15s,box-shadow .15s,background .15s;flex-shrink:0;box-sizing:border-box}
+  .ech-row .pct-wrap{display:flex;align-items:center;gap:3px;height:var(--input-h);background:var(--field-bg);border:1px solid var(--border-soft);border-radius:6px;padding:0 8px;width:90px;transition:border-color .15s,box-shadow .15s,background .15s;flex-shrink:0;box-sizing:border-box}
   .ech-row .pct-wrap:hover{border-color:rgba(69,193,253,.4);box-shadow:0 0 8px rgba(69,193,253,.1)}
   .ech-row .pct-wrap:focus-within{border-color:var(--primary);background:rgba(69,193,253,.08);box-shadow:inset 0 0 0 1px rgba(69,193,253,.22),0 0 12px rgba(69,193,253,.35),0 0 24px rgba(69,193,253,.12)}
   .ech-row .pct-wrap input{width:50px;height:100%;border:0;background:transparent;text-align:right;color:var(--text);font:inherit;font-size:13px;font-variant-numeric:tabular-nums;padding:0}
@@ -2657,7 +2678,7 @@
   .client-line-picker{flex:0 0 auto;min-width:0}
   .client-line-contact{flex:1 1 320px;min-width:280px;max-width:480px;display:flex;align-items:center}
   /* Match cli-pick .selected exactly so client + contact boxes line up perfectly */
-  .contact-inline{display:flex;align-items:center;gap:10px;height:var(--input-h);background:rgba(0,0,0,.35);border:1px solid var(--border-soft);border-radius:6px;padding:0 12px;font-size:13px;color:var(--text);width:100%;box-sizing:border-box;transition:border-color .15s,box-shadow .15s,background .15s}
+  .contact-inline{display:flex;align-items:center;gap:10px;height:var(--input-h);background:var(--field-bg);border:1px solid var(--border-soft);border-radius:6px;padding:0 12px;font-size:13px;color:var(--text);width:100%;box-sizing:border-box;transition:border-color .15s,box-shadow .15s,background .15s}
   .contact-inline:hover{border-color:rgba(69,193,253,.4);box-shadow:0 0 8px rgba(69,193,253,.1)}
   .contact-inline-lbl{color:var(--text-muted);font-size:13px;font-variant-numeric:tabular-nums;flex-shrink:0}
   .contact-inline-val{flex:1;color:var(--text);font-size:13px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
@@ -2910,24 +2931,24 @@
   .lg-section-mat{margin-top:30px}
   .lg-row-wrap{display:flex;flex-direction:column;gap:6px}
   .lg-row{display:flex;align-items:center;gap:10px}
-  .lg-justif{display:inline-flex;align-items:center;gap:4px;height:var(--input-h);padding:0 12px;border:1px solid var(--border-soft);background:rgba(0,0,0,.35);color:var(--text-muted);border-radius:6px;font-size:13px;font-weight:500;cursor:pointer;flex-shrink:0;font-variant-numeric:tabular-nums;transition:background .15s,color .15s,border-color .15s,box-shadow .15s}
+  .lg-justif{display:inline-flex;align-items:center;gap:4px;height:var(--input-h);padding:0 12px;border:1px solid var(--border-soft);background:var(--field-bg);color:var(--text-muted);border-radius:6px;font-size:13px;font-weight:500;cursor:pointer;flex-shrink:0;font-variant-numeric:tabular-nums;transition:background .15s,color .15s,border-color .15s,box-shadow .15s}
   .lg-justif:hover{border-color:rgba(69,193,253,.4);color:var(--text);box-shadow:0 0 8px rgba(69,193,253,.1)}
   .lg-justif.on{background:rgba(2,220,185,.08);color:#86efac;border-color:var(--success);font-weight:600;box-shadow:inset 0 0 0 1px rgba(2,220,185,.25),0 0 12px rgba(2,220,185,.35);text-shadow:0 0 6px rgba(2,220,185,.5)}
   .lg-justif.on:hover{background:rgba(2,220,185,.14);box-shadow:inset 0 0 0 1px rgba(2,220,185,.3),0 0 16px rgba(2,220,185,.5)}
   .lg-cession-detail{padding:10px 14px;background:rgba(0,0,0,.18);border:1px solid var(--border-soft);border-radius:6px;display:flex;flex-direction:column;gap:8px;margin-left:0;margin-top:2px}
   .lg-cession-detail .row{margin:0;gap:10px}
   .lg-cession-detail .field label{font-size:11px;color:var(--text-muted);margin-bottom:2px}
-  .lg-cession-detail input[type="text"]{height:var(--input-h);padding:0 10px;border:1px solid var(--border-soft);border-radius:6px;background:rgba(0,0,0,.35);color:var(--text);font:inherit;font-size:13px;transition:border-color .15s,box-shadow .15s,background .15s}
+  .lg-cession-detail input[type="text"]{height:var(--input-h);padding:0 10px;border:1px solid var(--border-soft);border-radius:6px;background:var(--field-bg);color:var(--text);font:inherit;font-size:13px;transition:border-color .15s,box-shadow .15s,background .15s}
   .lg-cession-detail input[type="text"]:hover{border-color:rgba(69,193,253,.4);box-shadow:0 0 8px rgba(69,193,253,.1)}
   .lg-cession-detail input[type="text"]:focus{outline:none;border-color:var(--primary);background:rgba(69,193,253,.08);box-shadow:inset 0 0 0 1px rgba(69,193,253,.22),0 0 12px rgba(69,193,253,.35),0 0 24px rgba(69,193,253,.12)}
   .lg-cession-detail .lg-desc{margin:0;min-height:32px}
-  .lg-title{flex:1;min-width:160px;height:var(--input-h);padding:0 10px;border:1px solid var(--border-soft);border-radius:6px;background:rgba(0,0,0,.35);color:var(--text);font:inherit;font-size:13px;font-weight:500;transition:border-color .15s,box-shadow .15s,background .15s}
+  .lg-title{flex:1;min-width:160px;height:var(--input-h);padding:0 10px;border:1px solid var(--border-soft);border-radius:6px;background:var(--field-bg);color:var(--text);font:inherit;font-size:13px;font-weight:500;transition:border-color .15s,box-shadow .15s,background .15s}
   .lg-title:hover{border-color:rgba(69,193,253,.4);box-shadow:0 0 8px rgba(69,193,253,.1)}
   .lg-title:focus{outline:none;border-color:var(--primary);background:rgba(69,193,253,.08);box-shadow:inset 0 0 0 1px rgba(69,193,253,.22),0 0 12px rgba(69,193,253,.35),0 0 24px rgba(69,193,253,.12)}
-  .lg-num{width:80px;height:var(--input-h);padding:0 10px;border:1px solid var(--border-soft);border-radius:6px;background:rgba(0,0,0,.35);color:var(--text);font:inherit;font-size:13px;text-align:right;font-variant-numeric:tabular-nums;transition:border-color .15s,box-shadow .15s,background .15s;flex-shrink:0}
+  .lg-num{width:80px;height:var(--input-h);padding:0 10px;border:1px solid var(--border-soft);border-radius:6px;background:var(--field-bg);color:var(--text);font:inherit;font-size:13px;text-align:right;font-variant-numeric:tabular-nums;transition:border-color .15s,box-shadow .15s,background .15s;flex-shrink:0}
   .lg-num:hover{border-color:rgba(69,193,253,.4);box-shadow:0 0 8px rgba(69,193,253,.1)}
   .lg-num:focus{outline:none;border-color:var(--primary);background:rgba(69,193,253,.08);box-shadow:inset 0 0 0 1px rgba(69,193,253,.22),0 0 12px rgba(69,193,253,.35),0 0 24px rgba(69,193,253,.12)}
-  .lg-prix{display:flex;align-items:center;gap:4px;width:90px;height:var(--input-h);background:rgba(0,0,0,.35);border:1px solid var(--border-soft);border-radius:6px;padding:0 10px;transition:border-color .15s,box-shadow .15s,background .15s;flex-shrink:0;box-sizing:border-box}
+  .lg-prix{display:flex;align-items:center;gap:4px;width:90px;height:var(--input-h);background:var(--field-bg);border:1px solid var(--border-soft);border-radius:6px;padding:0 10px;transition:border-color .15s,box-shadow .15s,background .15s;flex-shrink:0;box-sizing:border-box}
   .lg-prix:hover{border-color:rgba(69,193,253,.4);box-shadow:0 0 8px rgba(69,193,253,.1)}
   .lg-prix:focus-within{border-color:var(--primary);background:rgba(69,193,253,.08);box-shadow:inset 0 0 0 1px rgba(69,193,253,.22),0 0 12px rgba(69,193,253,.35),0 0 24px rgba(69,193,253,.12)}
   .lg-prix input{flex:1;width:100%;height:100%;border:0;background:transparent;color:var(--text);font:inherit;font-size:13px;font-variant-numeric:tabular-nums;text-align:right;padding:0;min-width:0}
@@ -2977,7 +2998,7 @@
   .lg-expand.has{color:var(--primary)}
   .lg-del{background:transparent;border:0;color:var(--text-dim);font-size:18px;line-height:1;cursor:pointer;height:var(--input-h);width:30px;display:flex;align-items:center;justify-content:center;padding:0;border-radius:4px;flex-shrink:0}
   .lg-del:hover{background:var(--danger-soft);color:var(--danger)}
-  .lg-desc{width:100%;padding:8px 10px;border:1px solid var(--border-soft);border-radius:6px;background:rgba(0,0,0,.35);color:var(--text-muted);font:inherit;font-size:13px;resize:vertical;min-height:60px;transition:border-color .15s,box-shadow .15s,background .15s,color .15s;box-sizing:border-box}
+  .lg-desc{width:100%;padding:8px 10px;border:1px solid var(--border-soft);border-radius:6px;background:var(--field-bg);color:var(--text-muted);font:inherit;font-size:13px;resize:vertical;min-height:60px;transition:border-color .15s,box-shadow .15s,background .15s,color .15s;box-sizing:border-box}
   .lg-desc:hover{border-color:rgba(69,193,253,.4);box-shadow:0 0 8px rgba(69,193,253,.1)}
   .lg-desc:focus{outline:none;border-color:var(--primary);background:rgba(69,193,253,.08);box-shadow:inset 0 0 0 1px rgba(69,193,253,.22),0 0 12px rgba(69,193,253,.35),0 0 24px rgba(69,193,253,.12);color:var(--text)}
 
@@ -3259,6 +3280,10 @@ const DEFAULT_S = {
     // Photo de fond de l'app (charte V2). Valeurs : "jade-portrait" |
     // "azure-helmet" | "ember-parking" | "none". Appliquée par applyBgPhoto().
     bgPhoto: "jade-portrait",
+    // Opacité du voile posé sur la photo. Plus c'est haut, plus la photo
+    // s'efface. Borné [0.55, 0.98] par applyBgPhoto (au-dessous, le texte des
+    // zones sans panneau devient illisible sur les hautes lumières).
+    bgScrim: 0.84,
     gmailTemplates: {
       devis: {
         subject: "Relance — Devis {ref}",
@@ -3615,83 +3640,64 @@ let cloudT = null;
 // Style outline 1.75px, 18×18. Pas de CDN : tout dans index.html.
 // Source : lucide.dev (icônes : layout-dashboard, camera, kanban, wallet, users, bar-chart-3, user, bug).
 const _ICO = (paths, sz = 18) => `<svg xmlns="http://www.w3.org/2000/svg" width="${sz}" height="${sz}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;flex-shrink:0">${paths}</svg>`;
-const ICONS = {
-  dashboard: _ICO('<rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/>'),
-  camera:    _ICO('<path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/>'),
-  kanban:    _ICO('<path d="M6 5v11"/><path d="M12 5v6"/><path d="M18 5v14"/>'),
-  wallet:    _ICO('<path d="M19 7V4a1 1 0 0 0-1-1H5a2 2 0 0 0 0 4h15a1 1 0 0 1 1 1v4h-3a2 2 0 0 0 0 4h3a1 1 0 0 0 1-1v-2a1 1 0 0 0-1-1"/><path d="M3 5v14a2 2 0 0 0 2 2h15a1 1 0 0 0 1-1v-4"/>'),
-  users:     _ICO('<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>'),
-  barChart:  _ICO('<path d="M3 3v18h18"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/>'),
-  user:      _ICO('<path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>'),
-  bug:       _ICO('<path d="m8 2 1.88 1.88"/><path d="M14.12 3.88 16 2"/><path d="M9 7.13v-1a3.003 3.003 0 1 1 6 0v1"/><path d="M12 20c-3.3 0-6-2.7-6-6v-3a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v3c0 3.3-2.7 6-6 6"/><path d="M12 20v-9"/><path d="M6.53 9C4.6 8.8 3 7.1 3 5"/><path d="M6 13H2"/><path d="M3 21c0-2.1 1.7-3.9 3.8-4"/><path d="M20.97 5c0 2.1-1.6 3.8-3.5 4"/><path d="M22 13h-4"/><path d="M17.2 17c2.1.1 3.8 1.9 3.8 4"/>'),
-  phone:     _ICO('<path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>'),
-  mail:      _ICO('<rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/>'),
-  search:    _ICO('<circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>'),
-  plus:      _ICO('<path d="M5 12h14"/><path d="M12 5v14"/>'),
-  download:  _ICO('<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/>'),
-  trash:     _ICO('<path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>'),
-  edit:      _ICO('<path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>'),
-  send:      _ICO('<line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>'),
-  info:           _ICO('<circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/>'),
-  alertTriangle:  _ICO('<path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/>'),
-  alertOctagon:   _ICO('<polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/>'),
-  // === Ajouts pour la charte « pas d'emoji, que du Lucide » ===
-  save:           _ICO('<path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/>'),
-  unlock:         _ICO('<rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 9.9-1"/>'),
-  rotateCcw:      _ICO('<path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/>'),
-  eye:            _ICO('<path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/>'),
-  printer:        _ICO('<polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/>'),
-  rotateCw:       _ICO('<path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/>'),
-  check:          _ICO('<polyline points="20 6 9 17 4 12"/>'),
-  x:              _ICO('<path d="M18 6 6 18"/><path d="m6 6 12 12"/>'),
-  moreVertical:   _ICO('<circle cx="12" cy="12" r="1"/><circle cx="12" cy="5" r="1"/><circle cx="12" cy="19" r="1"/>'),
-  gripVertical:   _ICO('<circle cx="9" cy="12" r="1"/><circle cx="9" cy="5" r="1"/><circle cx="9" cy="19" r="1"/><circle cx="15" cy="12" r="1"/><circle cx="15" cy="5" r="1"/><circle cx="15" cy="19" r="1"/>'),
-  chevronRight:   _ICO('<path d="m9 18 6-6-6-6"/>'),
-  chevronDown:    _ICO('<path d="m6 9 6 6 6-6"/>'),
-  circle:         _ICO('<circle cx="12" cy="12" r="10"/>'),
-  circleFilled:   _ICO('<circle cx="12" cy="12" r="9" fill="currentColor" stroke="none"/>'),
-  clipboard:      _ICO('<rect width="8" height="4" x="8" y="2" rx="1" ry="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/>'),
-  lightbulb:      _ICO('<path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5"/><path d="M9 18h6"/><path d="M10 22h4"/>'),
-  banknote:       _ICO('<rect width="20" height="12" x="2" y="6" rx="2"/><circle cx="12" cy="12" r="2"/><path d="M6 12h.01M18 12h.01"/>'),
-  euro:           _ICO('<path d="M4 10h12"/><path d="M4 14h9"/><path d="M19 6a7.7 7.7 0 0 0-5.2-2A7.9 7.9 0 0 0 6 12c0 4.4 3.5 8 7.8 8 2 0 3.8-.8 5.2-2"/>'),
-  fileText:       _ICO('<path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><polyline points="14 2 14 8 20 8"/><line x1="16" x2="8" y1="13" y2="13"/><line x1="16" x2="8" y1="17" y2="17"/><polyline points="10 9 9 9 8 9"/>'),
-  settings:       _ICO('<path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/>'),
-  logOut:         _ICO('<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/>')
+// SOURCE UNIQUE des tracés Lucide. `ICONS` (taille fixe 18) et `ICO_SZ`
+// (taille variable) en DÉRIVENT tous les deux — il y avait avant 2 maps
+// séparées, et ICO_SZ.map n'étant qu'un sous-ensemble d'ICONS, toute icône
+// ajoutée d'un seul côté rendait un SVG VIDE via ICO_SZ (sans erreur).
+// Ajouter une icône ICI et nulle part ailleurs.
+const ICO_PATHS = {
+  dashboard:     '<rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/>',
+  camera:        '<path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/>',
+  kanban:        '<path d="M6 5v11"/><path d="M12 5v6"/><path d="M18 5v14"/>',
+  wallet:        '<path d="M19 7V4a1 1 0 0 0-1-1H5a2 2 0 0 0 0 4h15a1 1 0 0 1 1 1v4h-3a2 2 0 0 0 0 4h3a1 1 0 0 0 1-1v-2a1 1 0 0 0-1-1"/><path d="M3 5v14a2 2 0 0 0 2 2h15a1 1 0 0 0 1-1v-4"/>',
+  users:         '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>',
+  barChart:      '<path d="M3 3v18h18"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/>',
+  user:          '<path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>',
+  bug:           '<path d="m8 2 1.88 1.88"/><path d="M14.12 3.88 16 2"/><path d="M9 7.13v-1a3.003 3.003 0 1 1 6 0v1"/><path d="M12 20c-3.3 0-6-2.7-6-6v-3a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v3c0 3.3-2.7 6-6 6"/><path d="M12 20v-9"/><path d="M6.53 9C4.6 8.8 3 7.1 3 5"/><path d="M6 13H2"/><path d="M3 21c0-2.1 1.7-3.9 3.8-4"/><path d="M20.97 5c0 2.1-1.6 3.8-3.5 4"/><path d="M22 13h-4"/><path d="M17.2 17c2.1.1 3.8 1.9 3.8 4"/>',
+  phone:         '<path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>',
+  mail:          '<rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/>',
+  search:        '<circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>',
+  plus:          '<path d="M5 12h14"/><path d="M12 5v14"/>',
+  download:      '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/>',
+  trash:         '<path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>',
+  edit:          '<path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>',
+  send:          '<line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>',
+  info:          '<circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/>',
+  alertTriangle: '<path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/>',
+  alertOctagon:  '<polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/>',
+  save:          '<path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/>',
+  unlock:        '<rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 9.9-1"/>',
+  rotateCcw:     '<path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/>',
+  eye:           '<path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/>',
+  printer:       '<polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/>',
+  rotateCw:      '<path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/>',
+  check:         '<polyline points="20 6 9 17 4 12"/>',
+  x:             '<path d="M18 6 6 18"/><path d="m6 6 12 12"/>',
+  moreVertical:  '<circle cx="12" cy="12" r="1"/><circle cx="12" cy="5" r="1"/><circle cx="12" cy="19" r="1"/>',
+  gripVertical:  '<circle cx="9" cy="12" r="1"/><circle cx="9" cy="5" r="1"/><circle cx="9" cy="19" r="1"/><circle cx="15" cy="12" r="1"/><circle cx="15" cy="5" r="1"/><circle cx="15" cy="19" r="1"/>',
+  chevronRight:  '<path d="m9 18 6-6-6-6"/>',
+  chevronDown:   '<path d="m6 9 6 6 6-6"/>',
+  circle:        '<circle cx="12" cy="12" r="10"/>',
+  circleFilled:  '<circle cx="12" cy="12" r="9" fill="currentColor" stroke="none"/>',
+  clipboard:     '<rect width="8" height="4" x="8" y="2" rx="1" ry="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/>',
+  lightbulb:     '<path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5"/><path d="M9 18h6"/><path d="M10 22h4"/>',
+  banknote:      '<rect width="20" height="12" x="2" y="6" rx="2"/><circle cx="12" cy="12" r="2"/><path d="M6 12h.01M18 12h.01"/>',
+  euro:          '<path d="M4 10h12"/><path d="M4 14h9"/><path d="M19 6a7.7 7.7 0 0 0-5.2-2A7.9 7.9 0 0 0 6 12c0 4.4 3.5 8 7.8 8 2 0 3.8-.8 5.2-2"/>',
+  fileText:      '<path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><polyline points="14 2 14 8 20 8"/><line x1="16" x2="8" y1="13" y2="13"/><line x1="16" x2="8" y1="17" y2="17"/><polyline points="10 9 9 9 8 9"/>',
+  settings:      '<path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/>',
+  logOut:        '<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/>',
+  filePlus:      '<path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M9 15h6"/><path d="M12 18v-6"/>',
+  tag:           '<path d="M12.586 2.586A2 2 0 0 0 11.172 2H4a2 2 0 0 0-2 2v7.172a2 2 0 0 0 .586 1.414l8.704 8.704a2.426 2.426 0 0 0 3.42 0l6.58-6.58a2.426 2.426 0 0 0 0-3.42Z"/><circle cx="7.5" cy="7.5" r="1.2"/>',
+  pieChart:      '<path d="M21.21 15.89A10 10 0 1 1 8 2.83"/><path d="M22 12A10 10 0 0 0 12 2v10Z"/>',
+  history:       '<path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/>',
+  cart:          '<circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/>'
 };
-// Variante taille personnalisée — pour usage inline dans du texte ou boutons compacts
+const ICONS = Object.fromEntries(Object.entries(ICO_PATHS).map(([k, p]) => [k, _ICO(p)]));
+// Variante taille personnalisée — pour usage inline dans du texte ou boutons compacts.
 const ICO_SZ = (key, sz) => {
-  const map = {
-    save: '<path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/>',
-    unlock: '<rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 9.9-1"/>',
-    rotateCcw: '<path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/>',
-    rotateCw: '<path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/>',
-    eye: '<path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/>',
-    check: '<polyline points="20 6 9 17 4 12"/>',
-    x: '<path d="M18 6 6 18"/><path d="m6 6 12 12"/>',
-    plus: '<path d="M5 12h14"/><path d="M12 5v14"/>',
-    chevronRight: '<path d="m9 18 6-6-6-6"/>',
-    chevronDown: '<path d="m6 9 6 6 6-6"/>',
-    moreVertical: '<circle cx="12" cy="12" r="1"/><circle cx="12" cy="5" r="1"/><circle cx="12" cy="19" r="1"/>',
-    gripVertical: '<circle cx="9" cy="12" r="1"/><circle cx="9" cy="5" r="1"/><circle cx="9" cy="19" r="1"/><circle cx="15" cy="12" r="1"/><circle cx="15" cy="5" r="1"/><circle cx="15" cy="19" r="1"/>',
-    circle: '<circle cx="12" cy="12" r="10"/>',
-    circleFilled: '<circle cx="12" cy="12" r="9" fill="currentColor" stroke="none"/>',
-    info: '<circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/>',
-    alertTriangle: '<path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/>',
-    alertOctagon: '<polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/>',
-    send: '<line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>',
-    trash: '<path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>',
-    printer: '<polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/>',
-    camera: '<path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/>',
-    lightbulb: '<path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5"/><path d="M9 18h6"/><path d="M10 22h4"/>',
-    clipboard: '<rect width="8" height="4" x="8" y="2" rx="1" ry="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/>',
-    fileText: '<path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><polyline points="14 2 14 8 20 8"/><line x1="16" x2="8" y1="13" y2="13"/><line x1="16" x2="8" y1="17" y2="17"/><polyline points="10 9 9 9 8 9"/>',
-    banknote: '<rect width="20" height="12" x="2" y="6" rx="2"/><circle cx="12" cy="12" r="2"/><path d="M6 12h.01M18 12h.01"/>',
-    euro: '<path d="M4 10h12"/><path d="M4 14h9"/><path d="M19 6a7.7 7.7 0 0 0-5.2-2A7.9 7.9 0 0 0 6 12c0 4.4 3.5 8 7.8 8 2 0 3.8-.8 5.2-2"/>',
-    // Absente jusqu'ici : ICO_SZ('mail') rendait un SVG VIDE (bouton « Envoyer »
-    // de la bande d'action sans icône). Cf. piège « 2 dictionnaires d'icônes ».
-    mail: '<rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/>'
-  };
-  return _ICO(map[key] || '', sz);
+  const p = ICO_PATHS[key];
+  if (!p) console.warn(`ICO_SZ: icône inconnue "${key}" — ajoute-la à ICO_PATHS.`);
+  return _ICO(p || '', sz);
 };
 
 // ▼ uiAlert / uiConfirm / uiPrompt — dialogs stylisés (remplacent alert/confirm/prompt natifs).
@@ -3858,17 +3864,51 @@ window.uiChoice = function(message, opts = {}) {
 const NAV = [
   { id: "nav-mission", label: "Missions", icon: "camera", items: [
     ["accueil", "Devis en cours",       "dashboard"],
-    ["mission", "Nouveau devis",        "plus"],
-    ["tarifs",  "Catalogue",            "fileText"],
+    ["mission", "Nouveau devis",        "filePlus"],
+    ["tarifs",  "Catalogue",            "tag"],
     ["clients", "Clients",              "users"],
     ["profil",  "Mon Profil",           "user"]
   ]},
   { id: "nav-compta", label: "Comptabilité", icon: "barChart", items: [
-    ["compta",  "Bilan comptable",      "banknote"],
-    ["suivi",   "Historique",           "kanban"],
-    ["achats",  "Achats / Abonnements", "wallet"]
+    ["compta",  "Bilan comptable",      "pieChart"],
+    ["suivi",   "Historique",           "history"],
+    ["achats",  "Achats / Abonnements", "cart"]
   ]}
 ];
+
+// ▼ TAB_EYEBROW — surtitre mono de chaque page (charte V2 : « — TABLEAU DE
+// BORD »). Consommé par v2PageHead(). Une clé absente = pas d'eyebrow.
+const TAB_EYEBROW = {
+  accueil:    "Tableau de bord",
+  mission:    "Mission",
+  tarifs:     "Tarification",
+  clients:    "Répertoire",
+  profil:     "Émetteur des devis",
+  compta:     "Micro-BNC · comptabilité de caisse",
+  suivi:      "Archive des devis",
+  achats:     "Dépenses & investissements",
+  bugs:       "Retours",
+  majlog:     "Journal des versions",
+  parametres: "Configuration",
+  templates:  "Modèles d'e-mails"
+};
+
+// ▼ v2PageHead — en-tête de page standard (charte V2) : eyebrow mono + h1
+// display + zone d'actions à droite. SOURCE UNIQUE : tous les renderers passent
+// par ici, plus aucun `<h1 class="page-title">` en dur.
+// `titleHtml` : suffixe HTML déjà échappé collé au titre (pills, compteurs).
+// `actions`   : HTML de la zone droite. Le flash « Enregistré » (#savedFlash)
+//               y est toujours ajouté — plusieurs renderers le ciblent par id.
+function v2PageHead(tabKey, { titleHtml = "", actions = "" } = {}) {
+  const eyebrow = TAB_EYEBROW[tabKey];
+  return `<div class="v2-page-head">
+    <div class="v2-page-title">
+      ${eyebrow ? `<span class="v2-eyebrow">— ${esc(eyebrow)}</span>` : ""}
+      <h1>${esc(pageTitle(tabKey))}${titleHtml}</h1>
+    </div>
+    <div class="v2-page-actions">${actions}<span id="savedFlash" class="saved"></span></div>
+  </div>`;
+}
 
 // Liste plate dérivée — conserve l'API historique (pageTitle, lookups).
 const TABS = NAV.flatMap(g => g.items);
@@ -9142,18 +9182,30 @@ function totalsHtml(t) {
   `;
 }
 
-// ▼ applyBgPhoto — pose html[data-bg] selon S.prefs.bgPhoto (charte V2 : photo
-// de marque sous voile lourd). Le CSS fait le reste (--bg-photo). Appelé depuis
-// render() : ça couvre le boot, le merge cloud et le live sync sans câblage.
+// ▼ applyBgPhoto — pose html[data-bg] + --bg-scrim selon S.prefs (charte V2 :
+// photo de marque sous voile). Le CSS fait le reste. Appelé depuis render() :
+// ça couvre le boot, le merge cloud et le live sync sans câblage.
 const BG_PHOTOS = ["jade-portrait", "azure-helmet", "ember-parking", "none"];
+const BG_SCRIM_MIN = 0.55, BG_SCRIM_MAX = 0.98;
 function applyBgPhoto() {
-  const want = BG_PHOTOS.includes((S.prefs || {}).bgPhoto) ? S.prefs.bgPhoto : "jade-portrait";
+  const p = S.prefs || {};
+  const want = BG_PHOTOS.includes(p.bgPhoto) ? p.bgPhoto : "jade-portrait";
   if (document.documentElement.dataset.bg !== want) document.documentElement.dataset.bg = want;
+  const raw = parseFloat(p.bgScrim);
+  const scrim = isNaN(raw) ? 0.84 : Math.min(BG_SCRIM_MAX, Math.max(BG_SCRIM_MIN, raw));
+  document.documentElement.style.setProperty("--bg-scrim", String(scrim));
 }
 // Console F12 : setBgPhoto("azure-helmet" | "ember-parking" | "jade-portrait" | "none")
 function setBgPhoto(v) {
   if (!BG_PHOTOS.includes(v)) { console.warn("Valeurs : " + BG_PHOTOS.join(" | ")); return; }
   upd("prefs.bgPhoto", v);
+  applyBgPhoto();
+}
+// Console F12 : setBgScrim(0.70) — plus bas = photo plus présente.
+function setBgScrim(v) {
+  const n = parseFloat(v);
+  if (isNaN(n)) { console.warn(`Nombre entre ${BG_SCRIM_MIN} et ${BG_SCRIM_MAX}`); return; }
+  upd("prefs.bgScrim", Math.min(BG_SCRIM_MAX, Math.max(BG_SCRIM_MIN, n)));
   applyBgPhoto();
 }
 
@@ -9191,6 +9243,7 @@ function render() {
   app.innerHTML = `
     <aside class="sb">
       <h1>Saintilann</h1>
+      <nav class="sb-nav">
       ${(() => {
         // Sidebar en 2 groupes dépliables (cf. NAV). « Nouveau devis » est
         // désormais TOUJOURS visible (il n'apparaissait avant que s'il portait
@@ -9202,7 +9255,7 @@ function render() {
           const open = navGroupIsOpen(g.id);
           const rows = g.items.map(([k, l, ico]) => {
             const labelHtml = (k === "mission" && hasDraft)
-              ? `${esc(l)} <span class="brouillon-tag">brouillon</span>`
+              ? `${esc(l)} <span class="brouillon-tag" title="Brouillon en cours">brouillon</span>`
               : esc(l);
             const onclick = k === "mission" ? "missionOpen()" : `setTab('${k}')`;
             return `<button class="tab ${tab === k ? "active" : ""}" onclick="${onclick}"><span class="tab-icon">${ICONS[ico] || ""}</span>${labelHtml}</button>`;
@@ -9212,7 +9265,7 @@ function render() {
           // « brouillon » (sinon elle disparaîtrait complètement). Le CSS la
           // masque au survol, quand la vraie pastille de l'item réapparaît.
           const headDraft = (hasDraft && g.items.some(([k]) => k === "mission"))
-            ? ` <span class="brouillon-tag">brouillon</span>` : "";
+            ? ` <span class="brouillon-tag" title="Brouillon en cours">brouillon</span>` : "";
           return `<div class="sb-group${open ? " open" : ""}${g.id === activeGroup ? " has-active" : ""}">
             <button type="button" class="sb-group-head" onclick="navGroupToggle('${g.id}')" aria-expanded="${open}">
               <span class="tab-icon">${ICONS[g.icon] || ""}</span>
@@ -9223,6 +9276,8 @@ function render() {
           </div>`;
         }).join("");
       })()}
+      </nav>
+      <div class="sb-foot">
       ${(() => {
         const photo = user.photoURL || "";
         const initials = ((user.displayName || user.email || "?")
@@ -9230,25 +9285,34 @@ function render() {
         const avatarInner = photo
           ? `<img src="${esc(photo)}" alt="" referrerpolicy="no-referrer" onerror="this.replaceWith(Object.assign(document.createElement('span'),{className:'sb-user-initials',textContent:'${esc(initials)}'}))">`
           : `<span class="sb-user-initials">${esc(initials)}</span>`;
-        return `<div class="sb-user-section">
-          <div class="sb-user-menu" id="sbUserMenu" role="menu">
-            <div class="sb-user-menu-head">
-              <div class="sb-user-menu-email">${esc(user.email)}</div>
-              <div class="sb-user-menu-role">${roleLabel}</div>
-            </div>
-            <button type="button" role="menuitem" onclick="userMenuClose();setTab('bugs')">${ICONS.bug}<span>Signaler un bug</span></button>
-            <button type="button" role="menuitem" onclick="userMenuClose();setTab('templates')">${ICONS.mail}<span>Templates</span></button>
-            <button type="button" role="menuitem" onclick="userMenuClose();setTab('parametres')">${ICONS.settings}<span>Paramètres</span></button>
-            <button type="button" role="menuitem" onclick="userMenuClose();setTab('majlog')">${ICONS.lightbulb}<span>Mises à jour${majLogHasUnread() ? ` <span class="sb-user-menu-dot" title="Nouvelles mises à jour"></span>` : ""}</span></button>
-            <button type="button" role="menuitem" onclick="userMenuClose();binModalToggle()">${ICONS.trash}<span>Corbeille${(() => { const n = (S.bin && S.bin.items && S.bin.items.length) || 0; return n > 0 ? ` <span class="sb-user-menu-count">${n}</span>` : ""; })()}</span></button>
-            <button type="button" role="menuitem" onclick="userMenuClose();signOut()">${ICONS.logOut}<span>Se déconnecter</span></button>
-          </div>
-          <button class="sb-user-trigger" id="sbUserTrigger" type="button" onclick="userMenuToggle(event)" aria-label="Mon compte" title="${esc(user.email)}">
-            <span class="sb-user-avatar">${avatarInner}</span>
-            <span class="sb-user-trigger-label">Mon compte</span>
+        // « Bugs & suggestions » est PROMU hors du menu user : c'est un point
+        // d'entrée de premier niveau dans la maquette V2 (pied de sidebar).
+        // Il est donc retiré du menu (sinon doublon). Le reste du menu
+        // (Templates, Paramètres, Mises à jour, Corbeille, Déconnexion) sera
+        // absorbé par l'onglet « Mon Compte » en phase 6.
+        return `
+          <button class="tab ${tab === "bugs" ? "active" : ""}" type="button" onclick="setTab('bugs')">
+            <span class="tab-icon">${ICONS.bug}</span>Bugs & suggestions
           </button>
-        </div>`;
+          <div class="sb-user-section">
+            <div class="sb-user-menu" id="sbUserMenu" role="menu">
+              <div class="sb-user-menu-head">
+                <div class="sb-user-menu-email">${esc(user.email)}</div>
+                <div class="sb-user-menu-role">${roleLabel}</div>
+              </div>
+              <button type="button" role="menuitem" onclick="userMenuClose();setTab('templates')">${ICONS.mail}<span>Templates</span></button>
+              <button type="button" role="menuitem" onclick="userMenuClose();setTab('parametres')">${ICONS.settings}<span>Paramètres</span></button>
+              <button type="button" role="menuitem" onclick="userMenuClose();setTab('majlog')">${ICONS.lightbulb}<span>Mises à jour${majLogHasUnread() ? ` <span class="sb-user-menu-dot" title="Nouvelles mises à jour"></span>` : ""}</span></button>
+              <button type="button" role="menuitem" onclick="userMenuClose();binModalToggle()">${ICONS.trash}<span>Corbeille${(() => { const n = (S.bin && S.bin.items && S.bin.items.length) || 0; return n > 0 ? ` <span class="sb-user-menu-count">${n}</span>` : ""; })()}</span></button>
+              <button type="button" role="menuitem" onclick="userMenuClose();signOut()">${ICONS.logOut}<span>Se déconnecter</span></button>
+            </div>
+            <button class="sb-user-trigger" id="sbUserTrigger" type="button" onclick="userMenuToggle(event)" aria-label="Mon compte" title="${esc(user.email)}">
+              <span class="sb-user-avatar">${avatarInner}</span>
+              <span class="sb-user-trigger-label">Mon compte</span>
+            </button>
+          </div>`;
       })()}
+      </div>
     </aside>
     <main>${view}</main>
     ${rTextEditorModal()}
@@ -9794,6 +9858,29 @@ function rBinModal() {
 // Format des items : { h: titre court, b: explication 1-3 phrases }.
 const APP_CHANGELOG = [
   {
+    id: "2026-07-refonte-v2-nav",
+    date: "2026-07-14",
+    title: "Nouvelle navigation (étape 2/7)",
+    items: [
+      {
+        h: "Sidebar redessinée",
+        b: "Les groupes « Missions » et « Comptabilité » passent en petites capitales techniques, avec une icône propre à chaque onglet. L'onglet actif se repère à un liseré bleu. Le brouillon en cours n'est plus une étiquette « BROUILLON » (qui débordait) mais un point orange — passe la souris dessus pour le libellé."
+      },
+      {
+        h: "« Bugs & suggestions » sort du menu",
+        b: "C'est maintenant un bouton à part entière en bas de la sidebar, à côté de « Mon compte », au lieu d'être caché dans le menu du compte."
+      },
+      {
+        h: "En-têtes de page uniformes",
+        b: "Chaque page a désormais le même en-tête : un surtitre (« — Tableau de bord », « — Répertoire »…), le titre en gros, et les actions à droite. Le « Enregistré » s'affiche au même endroit partout."
+      },
+      {
+        h: "Voile de fond réglable",
+        b: "La photo de fond est moins masquée qu'à l'étape 1. Tu peux ajuster à ton goût depuis la console (F12) avec setBgScrim(0.75) — plus le nombre est bas, plus la photo ressort. Le réglage arrivera dans « Mon compte »."
+      }
+    ]
+  },
+  {
     id: "2026-07-refonte-v2-socle",
     date: "2026-07-14",
     title: "Nouvelle identité visuelle (étape 1/7)",
@@ -10287,7 +10374,7 @@ function rMAJ() {
     }
   }
   return `
-    <h1 class="page-title" style="display:flex;align-items:center;gap:10px">${ICO_SZ('lightbulb', 22)}<span>${esc(pageTitle("majlog"))}</span></h1>
+    ${v2PageHead("majlog")}
     <div class="hint" style="margin-bottom:var(--space-lg)">Ce qui a évolué dans l'application, du plus récent au plus ancien.</div>
     <div class="maj-list">
       ${APP_CHANGELOG.map(entry => `
@@ -11942,7 +12029,7 @@ function rMS() {
 
   const quick = isMissionQuick();
   return `
-    <h1 class="page-title">${esc(pageTitle("mission"))}${quick ? ` <span class="mode-pill">Prestation rapide</span>` : ""} <span id="savedFlash" class="saved"></span></h1>
+    ${v2PageHead("mission", { titleHtml: quick ? ` <span class="mode-pill">Prestation rapide</span>` : "" })}
     ${rMissionModeBar()}
     <div class="mission-toolbar" id="missionToolbar">${rMissionToolbarInner()}</div>
     <div class="devis-banners" id="devisBanners">${rDevisBanners()}</div>
@@ -15313,7 +15400,7 @@ function rSV() {
   }
 
   return `
-    <h1 class="page-title">${esc(pageTitle("suivi"))} <span id="savedFlash" class="saved"></span></h1>
+    ${v2PageHead("suivi")}
     ${suiviLegendHtml()}
     ${emptyHtml || `<div class="ac-list">${rowsHtml}</div>`}
   `;
@@ -15351,7 +15438,7 @@ function rSuiviBinView() {
     : "";
 
   return `
-    <h1 class="page-title">${esc(pageTitle("suivi"))} <span id="savedFlash" class="saved"></span></h1>
+    ${v2PageHead("suivi")}
 
     ${suiviLegendHtml()}
 
@@ -15975,7 +16062,7 @@ function rCL() {
   setTimeout(() => clientsApplyFilters(), 0);
 
   return `
-    <h1 class="page-title">${esc(pageTitle("clients"))} <span class="meta">— ${total}</span> <span id="savedFlash" class="saved"></span></h1>
+    ${v2PageHead("clients", { actions: `<span class="v2-meta">${total}</span>` })}
 
     <div class="cli-toolbar">
       <button class="btn" onclick="clientsAdd()">${ICONS.plus}Ajouter</button>
@@ -16656,7 +16743,7 @@ function rCP() {
   const stop = "event.stopPropagation();";
 
   return `
-    <h1 class="page-title">${esc(pageTitle("compta"))} <span id="savedFlash" class="saved"></span></h1>
+    ${v2PageHead("compta")}
 
     <div class="cp-kpi-grid">
       <div class="cp-kpi"><span class="cp-kpi-label">CA mois (${esc(MOIS_FR[today.getMonth()])} ${esc(currentYear)})</span><strong class="cp-kpi-value">${fmt(caMois)}</strong></div>
@@ -16851,7 +16938,7 @@ function rCatalogue() {
       </div>
     </div>` : "";
   return `
-    <h1 class="page-title">${esc(pageTitle("tarifs"))} <span class="page-counter">· ${esc(counters)}</span> <span id="savedFlash" class="saved"></span></h1>
+    ${v2PageHead("tarifs", { actions: `<span class="v2-meta">${esc(counters)}</span>` })}
     <div class="catalog-toolbar" style="max-width:1080px">
       <div class="seg seg-neon">
         <button class="${isDecl?"on ok":""}" onclick="tarifViewMode('declare')">${ICO_SZ('check', 14)} Déclaré</button>
@@ -16939,7 +17026,7 @@ function rAchats() {
   const tm = tauxMatos();
 
   return `
-    <h1 class="page-title">${esc(pageTitle("achats"))} <span id="savedFlash" class="saved"></span></h1>
+    ${v2PageHead("achats")}
 
     <h3>Synthèse coûts horaires</h3>
     <div class="hint" style="max-width:780px">Coût horaire à intégrer dans tes tarifs (Net = Tarif − URSSAF − ce coût). Heures : estimation prudente ≈ 900 h/an. Facteur sécurité : marge pour les imprévus (ex. 15 %).</div>
@@ -17179,7 +17266,7 @@ function rAC() {
   };
 
   return `
-    <h1 class="page-title">${esc(pageTitle("accueil"))} <span id="savedFlash" class="saved"></span></h1>
+    ${v2PageHead("accueil")}
 
     <div class="cp-kpi-grid">
       <div class="cp-kpi"><span class="cp-kpi-label">CA mois (${esc(MOIS_FR[today.getMonth()])} ${esc(currentYear)})</span><strong class="cp-kpi-value">${fmt(caMois)}</strong></div>
@@ -17260,7 +17347,7 @@ function rPF() {
   const isFranchise = id.regimeTVA === "franchise";
 
   return `
-    <h1 class="page-title">${esc(pageTitle("profil"))} <span id="savedFlash" class="saved"></span></h1>
+    ${v2PageHead("profil")}
     <div class="hint" style="max-width:780px;margin-bottom:20px">
       Identité de l'émetteur. Ces informations alimentent automatiquement l'en-tête et les mentions légales de tous tes devis et factures. Mentions obligatoires : SIRET, forme juridique, mention « EI » si applicable, médiateur conso si tu vends à des particuliers (art. L612-1 C. conso. — sanction 3 000 € si oublié).
     </div>
@@ -17430,7 +17517,7 @@ function rPF() {
 // préférences, partage workspace, sauvegarde. Templates Gmail dans rTemplates (vue séparée).
 function rParametres() {
   return `
-    <h1 class="page-title">${esc(pageTitle("parametres"))} <span id="savedFlash" class="saved"></span></h1>
+    ${v2PageHead("parametres")}
 
     <h3>Préférences</h3>
     <div class="row">
@@ -17450,7 +17537,7 @@ function rParametres() {
 // via le menu user. Wrap le helper rGmailTemplatesSection existant.
 function rTemplates() {
   return `
-    <h1 class="page-title">${esc(pageTitle("templates"))} <span id="savedFlash" class="saved"></span></h1>
+    ${v2PageHead("templates")}
     ${rGmailTemplatesSection()}
   `;
 }
@@ -17769,7 +17856,7 @@ function rBG() {
   const nOpen = allItems.filter(it => !it.validated).length;
   const nDone = allItems.filter(it => it.validated).length;
 
-  let h = `<h1 class="page-title">${esc(pageTitle("bugs"))} <span id="savedFlash" class="saved"></span></h1>`;
+  let h = `${v2PageHead("bugs")}`;
   h += `<div class="fb-bar">
     <div class="fb-title">Notes &amp; Remarques</div>
     <button class="fb-copy-btn" onclick="bugCopy()" id="bug-copy-btn">📋 Copier toutes les actions en cours</button>
