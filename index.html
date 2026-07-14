@@ -906,6 +906,9 @@
   .hist td.cp-num{text-align:right;font-variant-numeric:tabular-nums;padding-right:14px;white-space:nowrap}
   .hist td.cp-zero{text-align:right;padding-right:14px;white-space:nowrap}
   .hist td.cp-zero > span{color:var(--text-dim);opacity:.45}
+  /* Le marqueur « noir » reste plein contraste même dans une cellule à zéro
+     (mois 100 % au noir : le tiret s'atténue, pas le tag). */
+  .hist td.cp-zero > span.cp-noir-tag{color:var(--ember-300);opacity:1}
   .hist td.cp-marge{text-align:right;font-variant-numeric:tabular-nums;padding-right:14px;font-weight:600;white-space:nowrap}
   .hist td.cp-marge.pos{color:var(--success)}
   .hist td.cp-marge.neg{color:var(--danger)}
@@ -1348,7 +1351,8 @@
   .bug-card-meta{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
 
   /* Couleurs par onglet — palette cohérente, badge léger + texte saturé */
-  .bug-tab-badge{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;padding:2px 8px;border-radius:10px}
+  /* Repli neutre : couvre toute clé sans variant dédié (achats, compte, clés legacy). */
+  .bug-tab-badge{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;padding:2px 8px;border-radius:10px;background:var(--surface-2);color:var(--text-muted)}
   /* Variant <select> : badge éditable. Garde le look pill, ajoute flèche custom. */
   select.bug-tab-select{appearance:none;-webkit-appearance:none;border:0;cursor:pointer;font:inherit;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;padding:2px 16px 2px 8px;border-radius:10px;line-height:1.6;background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 8'><path d='M0 1l4 5 4-5z' fill='%23aaa' opacity='.7'/></svg>");background-position:right 4px center;background-repeat:no-repeat;background-size:7px}
   select.bug-tab-select:hover{filter:brightness(1.15)}
@@ -1361,6 +1365,8 @@
   .bug-tab-badge.bug-tab-clients{background:rgba(6,182,212,.16);color:#22d3ee}
   .bug-tab-badge.bug-tab-compta{background:rgba(232,117,28,.16);color:#F5943C}
   .bug-tab-badge.bug-tab-profil{background:rgba(236,72,153,.16);color:#ec4899}
+  .bug-tab-badge.bug-tab-achats{background:rgba(46,134,240,.16);color:#2E86F0}
+  .bug-tab-badge.bug-tab-compte{background:var(--surface-2);color:var(--text-soft)}
   .bug-tab-badge.bug-tab-bugs{background:var(--surface-2);color:var(--text-muted)}
   .bug-tab-badge.bug-tab-autres{background:var(--surface-2);color:var(--text-dim)}
 
@@ -3673,7 +3679,7 @@ if (S.mission) {
   }
   // Date d'émission par défaut = aujourd'hui (modifiable manuellement par l'user via l'input)
   if (!S.mission.dateEmission) {
-    S.mission.dateEmission = new Date().toISOString().slice(0, 10);
+    S.mission.dateEmission = isoDateLocal(new Date());
   }
   // Migration logo : déplacé de S.mission vers S.identite (un logo unique
   // pour tous les devis). On copie une seule fois si Profil n'en a pas.
@@ -4040,7 +4046,7 @@ function navGroupOfTab(tabKey) {
 // dans le pied de sidebar). Centralisés ici pour que pageTitle() couvre TOUTE
 // l'app. Profil n'y est plus : il vit dans le groupe Mission de la sidebar.
 const TABS_AUX_LABELS = {
-  bugs:   "Notes",
+  bugs:   "Bugs & suggestions",
   compte: "Mon compte"
 };
 
@@ -4236,7 +4242,7 @@ async function loadFromCloud(ownerUid) {
       if (d.bin)     S.bin     = { items: Array.isArray(d.bin.items) ? d.bin.items : [] };
       if (d.prefs)   S.prefs   = { ...DEFAULT_S.prefs, ...d.prefs };
       if (S.mission && !S.mission.dateEmission) {
-        S.mission.dateEmission = new Date().toISOString().slice(0, 10);
+        S.mission.dateEmission = isoDateLocal(new Date());
       }
       const chainsMigrated = suiviMigrate();
       migrateClientNums();
@@ -4891,7 +4897,7 @@ async function missionNew(presetClient, mode) {
   if (!quick) m.declare = true;
   // Champs identification / prestation
   m.ref = "";
-  m.dateEmission = new Date().toISOString().slice(0, 10);
+  m.dateEmission = isoDateLocal(new Date());
   m.datePrestation = "";
   m.object = "";
   m.objectText = "";
@@ -4966,7 +4972,7 @@ async function missionCancel() {
   const dm = DEFAULT_S.mission;
   // Identification / objet
   m.ref = "";
-  m.dateEmission = new Date().toISOString().slice(0, 10);
+  m.dateEmission = isoDateLocal(new Date());
   m.datePrestation = "";
   m.object = "";
   m.objectText = "";
@@ -5817,7 +5823,7 @@ function validityDate(dateEmission, dureeValidite) {
   if (isNaN(d.getTime())) return "";
   const days = Math.max(1, parseInt(dureeValidite) || 30);
   d.setDate(d.getDate() + days);
-  return d.toISOString().slice(0, 10);
+  return isoDateLocal(d);
 }
 
 // Compute the validity text shown on the devis ("Devis valable jusqu'au DD/MM/YYYY (N jours).").
@@ -6872,11 +6878,12 @@ window.bugFilterToggleSort = function() {
   render();
 };
 
-// Calcule le nombre d'items par onglet (parmi les non-validées) pour les chips.
+// Calcule le nombre d'items par onglet pour les chips. Suit le toggle
+// « validées » : le compteur doit refléter ce que la liste affiche réellement.
 function bugTabCounts() {
   const counts = {};
   for (const it of (S.bugs && S.bugs.items) || []) {
-    if (it.validated) continue;
+    if (!bugFilters.showValidated && it.validated) continue;
     const t = it.tab || "autres";
     counts[t] = (counts[t] || 0) + 1;
   }
@@ -6935,7 +6942,7 @@ function bugRelativeTime(ts) {
   if (d < 30) return `il y a ${Math.floor(d / 7)} sem`;
   // Au-delà : date absolue
   const date = new Date(ts);
-  return dateFR(date.toISOString().slice(0, 10));
+  return dateFR(isoDateLocal(date));
 }
 
 function bugDraftSet(field, val) {
@@ -8111,7 +8118,7 @@ function computeDateEcheance(dateEmission, delaiKey) {
   } else if (k === "15_mois_suiv") {
     target = new Date(d.getFullYear(), d.getMonth() + 1, 15);
   }
-  return target.toISOString().slice(0, 10);
+  return isoDateLocal(target);
 }
 
 // ▼ isDevisAuNoir — heuristique : devis dont les entries ont toutes ca=0 et
@@ -8172,7 +8179,7 @@ function ensureFactureForDevis(devisId, ech) {
   const existing = findFactureForEch(devisId, ech);
   if (existing) return existing;
   const type = ech.isSolde ? "solde" : "acompte";
-  const today = new Date().toISOString().slice(0, 10);
+  const today = isoDateLocal(new Date());
   const ym = today.slice(0, 7);
   const prefix = ech.isSolde ? "FS" : "FA";
   const seq = nextFactureSequence(ym, prefix);
@@ -8318,7 +8325,7 @@ function reconstructMissionFromSuivi(devisId, opts) {
   }
   // Date d'émission rétroactive : min(entries.date) si dispo, sinon today.
   const dates = ents.map(e => e.date).filter(d => d && d.length >= 10).sort();
-  fresh.dateEmission = dates[0] || new Date().toISOString().slice(0, 10);
+  fresh.dateEmission = dates[0] || isoDateLocal(new Date());
 
   // Ref rétroactive au format actuel DEV-YYYYMM-NNN.
   // Calcul direct (n'appelle pas recomputeRef qui mute S.mission).
@@ -8701,7 +8708,7 @@ window.reviseDevisStart = async function(devisId) {
       S.mission.objectDate = S.mission.dateEmission;
     }
   } else {
-    S.mission.dateEmission = new Date().toISOString().slice(0, 10);
+    S.mission.dateEmission = isoDateLocal(new Date());
   }
   // Reset ref pour qu'elle soit recalculée à la prochaine séquence
   S.mission.ref = "";
@@ -9275,11 +9282,11 @@ function render() {
           : (majLogHasUnread() ? ` <span class="sb-user-menu-dot" title="Nouvelles mises à jour"></span>` : "");
         return `
           <button class="tab ${tab === "bugs" ? "active" : ""}" type="button" onclick="setTab('bugs')">
-            <span class="tab-icon">${ICONS.bug}</span>Bugs & suggestions
+            <span class="tab-icon">${ICONS.bug}</span>${TABS_AUX_LABELS.bugs}
           </button>
           <button class="tab sb-user-tab ${tab === "compte" ? "active" : ""}" type="button" onclick="setTab('compte')" title="${esc(user.email)}">
             <span class="sb-user-avatar">${avatarInner}</span>
-            <span class="sb-user-tab-label">Mon compte${badge}</span>
+            <span class="sb-user-tab-label">${TABS_AUX_LABELS.compte}${badge}</span>
           </button>`;
       })()}
       </div>
@@ -9837,6 +9844,21 @@ function rBinModal() {
 // l'utilisateur. Plus récent en premier. id = clé stable, sert au "lu/non-lu".
 // Format des items : { h: titre court, b: explication 1-3 phrases }.
 const APP_CHANGELOG = [
+  {
+    id: "2026-07-chasse-aux-bugs",
+    date: "2026-07-14",
+    title: "Chasse aux bugs — dates justes et recoins corrigés",
+    items: [
+      { h: "Les dates ne perdent plus un jour",
+        b: "La date limite de validité du devis et la date d'échéance de paiement étaient calculées un jour trop tôt (un décalage de fuseau horaire : « 30 jours fin de mois » tombait le 30 août au lieu du 31). Même correction pour le mois courant du bilan et les dates affichées dans le parcours, qui pouvaient glisser la nuit." },
+      { h: "L'arrondi commercial ne plante plus",
+        b: "Activer un arrondi (palier ou total cible) faisait disparaître la section Majorations dès que l'écart dépassait ta marge max. Corrigé." },
+      { h: "Achats : une seule définition de « en cours »",
+        b: "Le compteur d'abonnements, le total de la table et le montant du KPI utilisaient deux règles différentes (date de fin future vs dates réelles). Ils racontent maintenant la même histoire." },
+      { h: "Divers recoins",
+        b: "La sauvegarde exporte aussi la corbeille générale · ouvrir un devis depuis une fiche client fonctionne même si le filtre Corbeille était resté actif · l'onglet s'appelle « Bugs & suggestions » partout (fini le titre « Notes ») · badges et compteurs des notes corrigés · la déconnexion nettoie proprement la synchronisation." }
+    ]
+  },
   {
     id: "2026-07-refonte-v2-fin",
     date: "2026-07-14",
@@ -10874,7 +10896,7 @@ function rLogoField() {
   }
   return `<div class="logo-field">
     <label class="mk-btn subtle">${ICO_SZ('camera',14)} Choisir un logo<input type="file" accept="image/*" onchange="logoUpload(this)" hidden></label>
-    <span class="hint" style="margin:0">PNG/JPG/SVG · transparent recommandé · max ~500 KB · réutilisé sur tous tes devis</span>
+    <span class="hint" style="margin:0">PNG/JPG/SVG · transparent recommandé · max ~800 KB · réutilisé sur tous tes devis</span>
   </div>`;
 }
 
@@ -11148,7 +11170,7 @@ function rViewDevisModal() {
       <div class="modal-actions">
         <button class="mk-btn subtle" title="Ouvrir Gmail pré-rempli. Le PDF doit être glissé manuellement dans le mail." onclick="openGmailComposeForDevis('${viewDevisModal.devisId}')">${ICO_SZ('mail',13)} Ouvrir Gmail</button>
         ${dv.envoiTs
-          ? `<button class="mk-btn subtle" title="Retire « Envoyé le ${esc(dateFR(new Date(dv.envoiTs).toISOString().slice(0,10)))} »." onclick="devisEnvoiUndo('${viewDevisModal.devisId}')">${ICO_SZ('rotateCcw',13)} Annuler l'envoi</button>`
+          ? `<button class="mk-btn subtle" title="Retire « Envoyé le ${esc(dateFR(isoDateLocal(new Date(dv.envoiTs))))} »." onclick="devisEnvoiUndo('${viewDevisModal.devisId}')">${ICO_SZ('rotateCcw',13)} Annuler l'envoi</button>`
           : `<button class="mk-btn subtle" title="Marquer le devis comme envoyé au client (fait avancer le parcours)." onclick="devisMarkEnvoi('${viewDevisModal.devisId}')">${ICO_SZ('check',13)} Marquer envoyé</button>`}
         ${snapshot ? `<button class="mk-btn subtle" onclick="printWithTip()">${ICO_SZ('printer',13)} ${printLabel}</button>` : ""}
         <button class="mk-btn subtle" onclick="viewDevisClose()">Fermer</button>
@@ -11425,7 +11447,7 @@ function rViewFactureModal() {
         <button class="mk-btn subtle" title="Supprimer définitivement cette facture (émise par erreur)." onclick="factureDelConfirm('${devisId}','${echId}')">${ICO_SZ('trash',13)} Supprimer</button>
         <button class="mk-btn subtle" title="Ouvrir Gmail pré-rempli. Le PDF doit être glissé manuellement dans le mail." onclick="openGmailComposeForFacture('${devisId}','${echId}')">${ICO_SZ('mail',13)} Ouvrir Gmail</button>
         ${facture.envoiTs
-          ? `<button class="mk-btn subtle" title="Retire « Envoyée le ${esc(dateFR(new Date(facture.envoiTs).toISOString().slice(0,10)))} »." onclick="factureEnvoiUndo('${devisId}','${echId}')">${ICO_SZ('rotateCcw',13)} Annuler l'envoi</button>`
+          ? `<button class="mk-btn subtle" title="Retire « Envoyée le ${esc(dateFR(isoDateLocal(new Date(facture.envoiTs))))} »." onclick="factureEnvoiUndo('${devisId}','${echId}')">${ICO_SZ('rotateCcw',13)} Annuler l'envoi</button>`
           : `<button class="mk-btn subtle" title="Marquer la facture comme envoyée au client." onclick="factureMarkEnvoi('${devisId}','${echId}')">${ICO_SZ('check',13)} Marquer envoyée</button>`}
         <button class="mk-btn subtle" onclick="printWithTip()">${ICO_SZ('printer',13)} Imprimer</button>
         <button class="mk-btn subtle" onclick="viewFactureClose()">Fermer</button>
@@ -11987,7 +12009,7 @@ window.suiviUpdateSnapshot = async function() {
   // échéance, devis legacy sans entries) sont créées en "envoye".
   S.suivi.entries = S.suivi.entries.filter(en => en.devisId !== e.id);
   const cat = (S.tarifs.catalog || DEFAULT_CATALOG).find(c => c.k === m.object);
-  const date = m.objectDate || oldDate || new Date().toISOString().slice(0, 10);
+  const date = m.objectDate || oldDate || isoDateLocal(new Date());
   const client = m.client.name || "";
   const prestation = cat ? cat.l : "";
   const isDeclared = missionIsDeclared(m);
@@ -12668,6 +12690,7 @@ function rDevisArrondiBlock() {
     } else {
       const signe = t.arrondi > 0 ? "+" : "−";
       const effRemisePct = r2((t.subtotal - t.total) / t.subtotal * 100);
+      const ri = computeRemiseInfo();
       const overMax = effRemisePct > ri.remiseMaxPct;
       apercu = `<div class="arrondi-apercu">
         <span>${fmt(t.totalAvantArrondi)} <span class="arrondi-arrow">→</span> <strong>${fmt(t.total)}</strong></span>
@@ -13557,7 +13580,7 @@ async function suiviAdd() {
     }
     m.revisesDevisId = m.majTrameDevisId;
     delete m.majTrameDevisId;
-    m.dateEmission = new Date().toISOString().slice(0, 10);
+    m.dateEmission = isoDateLocal(new Date());
     m.objectDate = m.dateEmission;
     m.ref = "";
     recomputeRef();
@@ -13590,7 +13613,7 @@ async function suiviAdd() {
   const cat = (S.tarifs.catalog || DEFAULT_CATALOG).find(c => c.k === m.object);
   const t = totals();
   const hoursTotal = (m.lignes || []).filter(l => l.type === "heures").reduce((s, l) => s + num(l.duree) * (l.unit === "j" ? HOURS_PER_DAY : 1), 0);
-  const date = m.objectDate || new Date().toISOString().slice(0, 10);
+  const date = m.objectDate || isoDateLocal(new Date());
   const client = m.client.name || "";
   const prestation = cat ? cat.l : "";
   const devisId = uid();
@@ -14117,7 +14140,7 @@ function suiviAddLigne(devisId) {
   const id = uid();
   S.suivi.entries.push({
     id, devisId,
-    date:        lead.date || new Date().toISOString().slice(0, 10),
+    date:        lead.date || isoDateLocal(new Date()),
     client:      lead.client || "",
     prestation:  lead.prestation || "",
     montant:     "0",
@@ -14732,7 +14755,7 @@ function suiviParcoursHtml(g) {
   const devisId = g.devisId;
   const P = devisParcoursSteps(devisId);
   const { steps, activeIdx, backIdx, isRefused, isAnnule, dv, quick } = P;
-  const dateOf = (ts) => dateFR(new Date(ts).toISOString().slice(0, 10));
+  const dateOf = (ts) => dateFR(isoDateLocal(new Date(ts)));
   const activeStep = activeIdx >= 0 ? steps[activeIdx] : null;
 
   const dotHtml = (status) => {
@@ -15269,7 +15292,7 @@ window.viewFactureOpen = async function(devisId, echId) {
   // facture définitifs). Sans cela, l'émission se faisait silencieusement à
   // la 1ère ouverture du modal — flou côté user (« est-ce un brouillon ? »).
   if (!findFactureForEch(devisId, ech) && isFactureApplicable(devisId, ech)) {
-    const today = new Date().toISOString().slice(0, 10);
+    const today = isoDateLocal(new Date());
     const ym = today.slice(0, 7);
     const prefix = ech.isSolde ? "FS" : "FA";
     const seq = nextFactureSequence(ym, prefix);
@@ -15997,6 +16020,12 @@ window.clientsApplyFilters = clientsApplyFilters;
 // et c'est l'exemption sticky (`g.devisId === sticky`) qui rend visible un devis
 // encore en cours. Sans ça, cliquer un devis en cours menait à une page vide.
 window.clientsOpenDevis = function(devisId) {
+  // Chip Corbeille actif → rSV rendrait rSuiviBinView, qui ignore le sticky :
+  // le devis serait invisible. On rebascule sur « Tous » d'abord.
+  if (suiviFilterPrincipal === "corbeille") {
+    suiviFilterPrincipal = "all";
+    try { localStorage.setItem("suiviFilterPrincipal", "all"); } catch (e) {}
+  }
   suiviExpandedDevis = devisId;
   setTab("suivi");
 };
@@ -16140,7 +16169,7 @@ function clientsExportCSV() {
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
-  a.download = `clients-${new Date().toISOString().slice(0, 10)}.csv`;
+  a.download = `clients-${isoDateLocal(new Date())}.csv`;
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
@@ -16510,7 +16539,7 @@ window.refreshAbonnementMensuel = refreshAbonnementMensuel;
 function addInvestissement() {
   S.investissements.entries.unshift({
     id:         uid(),
-    date:       new Date().toISOString().slice(0, 10),
+    date:       isoDateLocal(new Date()),
     descriptif: "",
     prix:       "0",
     dureeVie:   "5"
@@ -16612,6 +16641,15 @@ function tarifFacteurSecurite(val) {
 window.tarifFacteurSecurite = tarifFacteurSecurite;
 
 // Compute amortization rates (per hour)
+// ▼ aboActifNow — un abonnement est actif AUJOURD'HUI (début passé ou absent,
+// fin absente ou future). SOURCE UNIQUE partagée par tauxMatos (montant du KPI)
+// et rAchats (compteur « en cours », total, grisage de ligne) — avant, rAchats
+// testait juste `!dateFin` et les deux pouvaient se contredire.
+function aboActifNow(e) {
+  const today = isoDateLocal(new Date());
+  return (!e.dateDebut || e.dateDebut <= today) && (!e.dateFin || e.dateFin >= today);
+}
+
 function tauxMatos() {
   const heures = num(S.tarifs.heuresAnnuelles) || 900;
   const heuresParMois = heures / 12;
@@ -16626,11 +16664,7 @@ function tauxMatos() {
   for (const e of (S.abonnements.entries || [])) {
     const annual = num(e.annuel);
     if (annual <= 0) continue;
-    const startDate = e.dateDebut || null;
-    const endDate = e.dateFin || null;
-    const isActiveNow = (!startDate || startDate <= today.toISOString().slice(0, 10))
-                     && (!endDate   || endDate   >= today.toISOString().slice(0, 10));
-    if (isActiveNow) mensuelActif += annual / 12;
+    if (aboActifNow(e)) mensuelActif += annual / 12;
   }
   // Total dépensé en abonnements depuis le 1er janvier de cette année (mois × mensuel)
   // Note : suppose que les abos actifs maintenant l'étaient toute l'année. Approximation acceptable.
@@ -16765,7 +16799,7 @@ window.comptaClearYears = comptaClearYears;
 // inclus à droite). Pas de librairie externe — barres + labels mois/année.
 function comptaChartHtml() {
   const today = new Date();
-  const currentYM = today.toISOString().slice(0, 7);
+  const currentYM = isoDateLocal(today).slice(0, 7);
   const all = bilanCompute();
   const months = [];
   for (let i = 11; i >= 0; i--) {
@@ -16851,7 +16885,7 @@ function comptaExportCSV() {
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
-  a.download = `compta-bilan-${new Date().toISOString().slice(0, 10)}.csv`;
+  a.download = `compta-bilan-${isoDateLocal(new Date())}.csv`;
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
@@ -17049,8 +17083,8 @@ function bilanRender() {
     const tag = noir > 0.005
       ? ` <span class="cp-noir-tag" title="Part encaissée mais NON déclarée : ${fmt(noir)}. Le CA ne compte que le déclaré (seuils micro-BNC / TVA).">noir</span>`
       : "";
-    if (num(r.ca) === 0 && !tag) return `<td class="cp-zero">${dash}</td>`;
-    return `<td class="cp-num">${num(r.ca) === 0 ? dash : fmt(r.ca)}${tag}</td>`;
+    if (num(r.ca) === 0) return `<td class="cp-zero">${dash}${tag}</td>`;
+    return `<td class="cp-num">${fmt(r.ca)}${tag}</td>`;
   };
 
   const KEYS = ["heures","paye","ca","salaire","ursaf","tresorerie","frais","abos","amort","marge"];
@@ -17103,7 +17137,7 @@ function rCP() {
 
   // KPI : mois courant + cumul YTD année en cours
   const today = new Date();
-  const currentYM = today.toISOString().slice(0, 7);
+  const currentYM = isoDateLocal(today).slice(0, 7);
   const currentYear = today.getFullYear().toString();
   const monthRow = allData.find(r => r.ym === currentYM);
   const ytdRows = allData.filter(r => r.ym.slice(0, 4) === currentYear);
@@ -17365,10 +17399,10 @@ function rCatalogue() {
 function rAchats() {
   // Abonnements
   const abEntries = S.abonnements.entries;
-  const abActif = abEntries.filter(e => !e.dateFin);
+  const abActif = abEntries.filter(aboActifNow);
   const abTotalAnnuel = abActif.reduce((s, e) => s + num(e.annuel), 0);
   const abRows = abEntries.map(e => {
-    const isActif = !e.dateFin;
+    const isActif = aboActifNow(e);
     return `
     <tr class="${isActif ? "" : "row-inactive"}">
       <td><input value="${esc(e.libelle)}" oninput="editAbonnement('${e.id}','libelle',this.value)" placeholder="Libellé" class="tr-cell-input"></td>
@@ -17552,7 +17586,7 @@ function rAchats() {
 // (pattern suiviExpandedDevis identique au sticky filter Suivi).
 function rAC() {
   const today = new Date();
-  const todayYM = today.toISOString().slice(0, 7);
+  const todayYM = isoDateLocal(today).slice(0, 7);
   const currentYear = today.getFullYear().toString();
   const seuil = parseInt((S.prefs && S.prefs.relanceJours) || 7, 10);
 
@@ -18013,7 +18047,7 @@ function rCompteGeneral() {
   const initials = (((user && (user.displayName || user.email)) || "?")
     .split(/[\s@.]/).filter(Boolean).map(s => s[0]).join("").slice(0, 2) || "?").toUpperCase();
   const avatar = photo
-    ? `<img src="${esc(photo)}" alt="" referrerpolicy="no-referrer">`
+    ? `<img src="${esc(photo)}" alt="" referrerpolicy="no-referrer" onerror="this.replaceWith(Object.assign(document.createElement('span'),{className:'cpt-id-initials',textContent:'${esc(initials)}'}))">`
     : `<span class="cpt-id-initials">${esc(initials)}</span>`;
   const memberCount = Object.keys(workspaceState.members || {}).length;
 
@@ -18156,7 +18190,7 @@ function rGmailTemplatesSection() {
   return `
     <h3 style="margin-top:32px">Modèles de relance Gmail</h3>
     <div class="hint" style="max-width:780px;margin-bottom:14px">
-      Ces modèles s'utilisent quand tu cliques sur « ✉ Relance devis » ou « ✉ Relance paiement » (Suivi, Accueil).
+      Ces modèles s'utilisent quand tu cliques sur le bouton de relance ${ICO_SZ('send', 12)} d'un devis (Accueil, Historique) : ils pré-remplissent le brouillon Gmail.
     </div>
 
     ${lexique}
@@ -18269,6 +18303,7 @@ function backupExportAll() {
       investissements: S.investissements,
       tarifs:          S.tarifs,
       bugs:            S.bugs,
+      bin:             S.bin,
       prefs:           S.prefs
     }
   };
@@ -18276,7 +18311,7 @@ function backupExportAll() {
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
-  a.download = `backup-devis-photo-${new Date().toISOString().slice(0, 10)}.json`;
+  a.download = `backup-devis-photo-${isoDateLocal(new Date())}.json`;
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
@@ -18356,6 +18391,7 @@ async function backupImport(input) {
     S.tarifs = { catalog: d.tarifs.catalog, heuresAnnuelles: d.tarifs.heuresAnnuelles || "900", facteurSecurite: d.tarifs.facteurSecurite || "0" };
   }
   if (d.bugs)  S.bugs  = { items: Array.isArray(d.bugs.items) ? d.bugs.items : [] };
+  if (d.bin)   S.bin   = { items: Array.isArray(d.bin.items) ? d.bin.items : [] };
   if (d.prefs) S.prefs = { ...DEFAULT_S.prefs, ...d.prefs };
   // Re-passe les migrations par sécurité
   if (typeof migrateClientNums === "function") migrateClientNums();
@@ -18486,7 +18522,7 @@ function rBG() {
       <textarea class="bug-form-text-quick" rows="10" placeholder="Description (optionnelle) — étapes pour reproduire, ce qui s'est passé, ce que tu attendais…" oninput="bugDraftSet('text', this.value)">${esc(bugDraft.text || "")}</textarea>
       <div class="bug-form-hint" style="display:flex;align-items:flex-start;gap:6px">
         <span style="flex-shrink:0;color:var(--warning);margin-top:1px">${ICO_SZ('lightbulb', 14)}</span>
-        <span><strong>Capture :</strong> renomme-la selon <code>#${nextNum}</code> et envoie-la par mail.</span>
+        <span><strong>Capture :</strong> renomme-la <code>note-${nextNum}.png</code> et envoie-la par mail.</span>
       </div>
     </div>
   </div>`;
@@ -18676,13 +18712,9 @@ window.setTab = k => {
   render();
 };
 
-window.signIn = () => auth.signInWithPopup(new firebase.auth.GoogleAuthProvider()).catch(err => uiAlert(err.message, { title: "Erreur de connexion", kind: "danger" }));
-window.signOut = () => auth.signOut();
-
-// Raccourcis clavier sur l'onglet Notes :
+// Raccourcis clavier sur l'onglet Bugs & suggestions :
 //   /     → focus la barre de recherche
 //   Alt+N → focus le champ Nom du formulaire (création remarque)
-//   Esc   → ferme le lightbox screenshot s'il est ouvert
 window.addEventListener("keydown", (ev) => {
   if (typeof tab === "undefined" || tab !== "bugs") return;
   // Ne pas voler le focus si on tape déjà dans un input/textarea
