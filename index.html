@@ -2904,15 +2904,14 @@
   .presta-tarif-hint{flex:1;min-width:200px;font-size:12px;color:var(--text-dim);line-height:1.5;padding:0 0 var(--space-sm) var(--space-sm)}
   .presta-tarif-hint a{color:var(--primary);text-decoration:none;font-weight:500}
   .presta-tarif-hint a:hover{text-decoration:underline}
-  .presta-status-row{display:flex;flex-direction:column;align-items:flex-start;gap:var(--space-sm);max-width:780px}
-  .presta-status-row .seg{width:320px;max-width:100%}
-  .presta-status-row .seg button{flex:1;justify-content:center}
-  /* Remise non déclarée (Mission, au black + Net max) */
-  .presta-remise-noire{display:flex;align-items:center;gap:var(--space-sm);margin-top:var(--space-xs)}
-  .presta-remise-noire label{font-size:13px;color:var(--text-muted);display:flex;align-items:center;gap:6px;margin:0;white-space:nowrap}
+  /* .presta-status-row / .presta-remise-noire supprimés avec le toggle
+     « Déclaré / Au black » du formulaire Mission. La remise non déclarée du
+     Catalogue a ses propres classes (.catalog-remise-field). */
 
   /* === Section Identification & client === */
   .identif-dates-row{display:grid;grid-template-columns:minmax(220px,1.4fr) 150px 130px 170px;gap:var(--gap-field);max-width:880px}
+  /* Prestation rapide : ni durée de validité ni date de prestation → 2 colonnes. */
+  .identif-dates-row.quick{grid-template-columns:minmax(220px,1.4fr) 150px;max-width:400px}
   .identif-dates-row .field{min-width:0;max-width:none}
   /* Petit label « (optionnel) » discret */
   .lbl-opt{font-size:10px;color:var(--text-dim);font-weight:400;font-style:italic;margin-left:var(--space-xs)}
@@ -4327,20 +4326,10 @@ function pickObject(k) {
 }
 window.pickObject = pickObject;
 
-function updMissionDeclare(val) {
-  S.mission.declare = !!val;
-  save();
-  render();
-}
-window.updMissionDeclare = updMissionDeclare;
-
-function updBlackMode(mode) {
-  if (mode !== "reduit" && mode !== "fixe") return;
-  S.mission.blackMode = mode;
-  save();
-  render();
-}
-window.updBlackMode = updBlackMode;
+// updMissionDeclare / updBlackMode supprimés avec le toggle « Déclaré / Au black »
+// du formulaire : un devis est toujours déclaré, une prestation rapide toujours
+// au noir (cf. missionIsDeclared). Les snapshots archivés gardent leur declare /
+// blackMode d'origine — lus, jamais réécrits.
 
 function updMissionMode(mode) {
   S.mission.deplacement.mode = mode;
@@ -4533,6 +4522,12 @@ async function missionNew(presetClient, mode) {
   else if (!Array.isArray(m.echeances) || !m.echeances.length || isQuickEcheancier(m.echeances)) {
     m.echeances = JSON.parse(JSON.stringify(dm.echeances));
   }
+  // Statut fiscal : un NOUVEAU devis est toujours déclaré (plus de toggle dans
+  // le formulaire). Sans ce reset, un `declare:false` hérité d'un ancien devis
+  // au black rouvert en édition rendrait tous les devis suivants au noir, en
+  // silence. Les prestations rapides, elles, sont au noir via missionIsDeclared
+  // (on ne touche pas à m.declare : cf. son commentaire).
+  if (!quick) m.declare = true;
   // Champs identification / prestation
   m.ref = "";
   m.dateEmission = new Date().toISOString().slice(0, 10);
@@ -4636,8 +4631,10 @@ async function missionCancel() {
   m.contratHorsEtab = false;
   m.tarifHOverride = "";
   // Retour au mode devis par défaut (+ échéancier standard si on portait celui
-  // du mode rapide) : le prochain brouillon repart d'une base normale.
+  // du mode rapide, + statut déclaré) : le prochain brouillon repart d'une base
+  // normale.
   m.mode = "devis";
+  m.declare = true;
   if (isQuickEcheancier(m.echeances)) m.echeances = JSON.parse(JSON.stringify(dm.echeances));
   // Markers transients
   delete m.revisesDevisId;
@@ -4722,8 +4719,9 @@ async function missionSetMode(mode) {
       m.deplacement.paiementType = "acompte";
     }
     m.echeances = JSON.parse(JSON.stringify(QUICK_ECHEANCES));
-  } else if (isQuickEcheancier(m.echeances)) {
-    m.echeances = JSON.parse(JSON.stringify(DEFAULT_S.mission.echeances));
+  } else {
+    if (isQuickEcheancier(m.echeances)) m.echeances = JSON.parse(JSON.stringify(DEFAULT_S.mission.echeances));
+    m.declare = true;   // un devis est toujours déclaré (cf. missionNew)
   }
   m.mode = target;
   recomputeRef();
@@ -9538,6 +9536,10 @@ const APP_CHANGELOG = [
         b: "La prestation passe par les mêmes étapes qu'un devis, moins les factures : envoyée, acceptée, réalisée, payée, photos livrées. Le rattachement au mois suit toujours la date d'encaissement."
       },
       {
+        h: "Plus de choix « Déclaré / Au black » dans Mission",
+        b: "Le toggle a disparu du formulaire : un devis est toujours déclaré, une prestation rapide toujours au noir. Plus de risque de laisser traîner un devis au black par inadvertance. Les devis déjà établis au black gardent leur statut d'origine — un bandeau te le rappelle si tu les rouvres, sans jamais te reproposer la bascule."
+      },
+      {
         h: "Références PRE-…, numérotées à part",
         b: "Une prestation rapide porte une référence PRE-202607-001, avec sa propre séquence : elle ne consomme pas de numéro de devis. Le tag « rapide » la distingue d'un devis dans l'Accueil et l'Historique."
       }
@@ -11720,7 +11722,7 @@ function rDevisSectionIdentification() {
   // Prestation rapide : pas de devis émis → « durée de validité » sans objet.
   const quick = isMissionQuick();
   return `
-    <div class="row identif-dates-row">
+    <div class="row identif-dates-row${quick ? " quick" : ""}">
       <div class="field"><label>Référence (auto)</label>
         <input type="text" value="${esc(d.ref || "")}" disabled
           onmouseenter="showInfo(event, 'ref')" onmouseleave="hideInfo()"
@@ -11829,29 +11831,18 @@ function rDevisSectionPrestations() {
       <div class="presta-tarif-hint">${overrideHint}</div>
     </div>
 
-    ${quick ? "" : `
-    <h5>Statut fiscal</h5>
-    <div class="presta-status-row">
-      <div class="seg seg-neon">
-        <button class="${declare?"on ok":""}" onclick="updMissionDeclare(true)">${ICO_SZ('check', 14)} Déclaré</button>
-        <button class="${!declare?"on warn":""}" onclick="updMissionDeclare(false)">${ICO_SZ('circleFilled', 12)} Au black</button>
-      </div>
-      ${!declare ? (() => {
-        const urssafPctVal = getUrssafPct(d);
-        return `<div class="presta-remise-noire" title="Remise non déclarée — restitue une part de l'URSSAF économisée">
-          <label>Remise non déclarée
-            <span class="catalog-remise-range">(0 à ${urssafPctVal.toString().replace(".", ",")} %)</span>
-            <button type="button" class="lg-info-icon" tabindex="0" aria-label="À quoi sert cette remise"
-              onmouseenter="showInfo(event, 'remiseNoire')" onmouseleave="hideInfo()" onfocus="showInfo(event, 'remiseNoire')" onblur="hideInfo()">i</button>
-          </label>
-          <div class="lock-field with-unit">
-            <input type="number" step="0.5" min="0" max="${urssafPctVal}" value="${esc(S.identite?.remiseNoirePct ?? "0")}" data-remise-noire oninput="updRemiseNoire(this.value)">
-            <span class="lock-unit">%</span>
-          </div>
-        </div>`;
-      })() : ""}
-    </div>
-    ${!declare ? `<div class="black-warning" role="alert"><strong>${ICO_SZ('alertTriangle', 14)} Mode au black</strong> — pas de débours, pas d'URSSAF, pas de marge sur avance applicable. Tous les matériels et déplacements sont au prix brut, payés via l'acompte.</div>` : ""}`}
+    ${
+      // Statut fiscal : plus de choix dans le formulaire. Un devis est TOUJOURS
+      // déclaré (missionNew / missionSetMode / missionCancel forcent declare=true),
+      // une prestation rapide TOUJOURS au noir (missionIsDeclared). Reste le cas
+      // d'un devis ARCHIVÉ au black rouvert en Éditer/Réviser : son snapshot porte
+      // declare=false et on le préserve (ses entries ont ca=0 — historique fiscal
+      // immutable). On l'affiche alors en lecture seule, sans jamais reproposer
+      // la bascule.
+      (!quick && !declare)
+        ? `<div class="black-warning" role="alert"><strong>${ICO_SZ('alertTriangle', 14)} Devis au black (non déclaré)</strong> — statut d'origine conservé : CA = 0, pas d'URSSAF, matériels et déplacements au prix brut. Les nouveaux devis sont toujours déclarés.</div>`
+        : ""
+    }
 
     <h5>Heures</h5>
     <div class="lg-list" id="lgListHeures">
