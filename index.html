@@ -308,6 +308,7 @@
   .suv-mark-relance:hover{background:rgba(34,197,94,.12)!important;border-color:rgba(34,197,94,.35)!important}
   /* Tag rev<N> à côté de la ref (rev active de la chaîne) */
   .suv-rev-tag{display:inline-block;margin-left:6px;font-size:10px;font-weight:600;color:var(--accent);background:rgba(99,102,241,.12);border:1px solid rgba(99,102,241,.30);border-radius:4px;padding:1px 5px;letter-spacing:.3px}
+  .suv-quick-tag{display:inline-block;margin-left:6px;font-size:10px;font-weight:600;color:var(--primary);background:rgba(74,158,255,.12);border:1px solid rgba(74,158,255,.30);border-radius:4px;padding:1px 5px;letter-spacing:.3px}
   /* Section Historique des versions (panneau étendu Suivi) */
   .suv-history{margin-top:var(--space-md);background:var(--surface);border:1px solid var(--border-soft);border-radius:var(--radius-lg);padding:0;overflow:hidden}
   .suv-history > summary{cursor:pointer;padding:10px 14px;font-size:13px;font-weight:600;color:var(--text);display:flex;align-items:center;gap:8px;list-style:none;user-select:none}
@@ -2858,6 +2859,9 @@
   /* Banners err/warn/dirty sous la toolbar Mission (refonte UX : actions en haut) */
   .devis-banners{display:flex;flex-direction:column;gap:8px;margin-bottom:14px;max-width:880px}
   .devis-banners:empty{display:none}
+  .mission-mode-bar{display:flex;gap:var(--space-md);align-items:center;flex-wrap:wrap;margin-bottom:var(--gap-row)}
+  .mission-mode-bar .hint{font-size:12px}
+  .mode-pill{display:inline-block;vertical-align:2px;font-size:11px;font-weight:600;color:var(--accent);background:rgba(99,102,241,.12);border:1px solid rgba(99,102,241,.30);border-radius:var(--radius-sm);padding:2px 8px;letter-spacing:.3px}
   .mission-toolbar{display:flex;gap:8px;align-items:center;margin-bottom:14px}
   .mission-toolbar .btn svg{width:14px;height:14px;vertical-align:-2px;margin-right:5px}
   .devis-banner{font-size:12px;line-height:1.45;padding:8px 10px;border-radius:6px;display:flex;gap:8px;align-items:flex-start}
@@ -3063,6 +3067,7 @@ const DEFAULT_S = {
     postprod:    { hours: "0", rate: "" },
     deplacement: { mode: "voiture", km: "0", peages: "0", tauxKm: "0.40", trajetH: "0", ticket: "0", devis: "principal", afficheMode: "afficher", paiementType: "acompte" },
     autres:      { desc: "", montant: "0" },
+    mode: "devis",
     declare: true,
     blackMode: "fixe",
     tarifHOverride: "",
@@ -4373,42 +4378,103 @@ window.updDeplDevis = updDeplDevis;
 // ou DEVIS-…-YYYY-MM-DD), pour éviter toute collision avec l'historique.
 // Refs déjà archivées = immutables (engagement commercial) — on ne renumérote
 // jamais l'historique, le nouveau format s'applique uniquement aux nouveaux.
-// ▼ recomputeRef — génère DEV-YYYYMM-NNN
+// ▼ isMissionQuick / isDevisQuick — mode « Prestation rapide » : pas de document
+// (ni devis, ni feuille débours, ni facture), pas d'acompte (échéance unique
+// 100 %), pas de cession de droits, pas de CGV. L'absence de `mode` vaut
+// "devis" → les devis existants sont inchangés, aucune migration nécessaire.
+// Le mode est figé dans snapshotMission.mode ET sur S.suivi.devis[id].mode au
+// moment de l'archivage (suiviAdd).
+function isMissionQuick() {
+  return ((S.mission && S.mission.mode) || "devis") === "quick";
+}
+function isDevisQuick(devisId) {
+  const dv = (S.suivi && S.suivi.devis && S.suivi.devis[devisId]) || null;
+  if (!dv) return false;
+  return dv.mode === "quick" || !!(dv.snapshotMission && dv.snapshotMission.mode === "quick");
+}
+window.isDevisQuick = isDevisQuick;
+
+// Tag « rapide » des listes (Accueil + Historique) : distingue d'un coup d'œil
+// une prestation rapide d'un devis, sans avoir à lire le préfixe de la ref.
+function quickTagHtml(devisId) {
+  return isDevisQuick(devisId)
+    ? `<span class="suv-quick-tag" title="Prestation rapide — aucun document produit (ni devis, ni facture).">rapide</span>`
+    : "";
+}
+
+// Échéancier du mode rapide : une seule ligne à 100 % → buildEcheanceLines
+// produit une entry unique (isSolde), donc aucune étape « acompte » dans le
+// parcours. Même id que le fallback de buildEcheanceLines (cohérence).
+const QUICK_ECHEANCES = [{ id: "ech-full", label: "Paiement", pct: "100" }];
+function isQuickEcheancier(echeances) {
+  const list = (echeances || []).filter(e => num(e.pct) > 0);
+  return list.length === 1 && list[0].id === "ech-full";
+}
+
+// ▼ DEVIS_DOC_BLOCKS — les blocs propres au DOCUMENT devis. Une prestation
+// rapide n'imprime rien : on les strippe de son snapshot (~10 KB de CGV par
+// prestation, sur un doc Firestore plafonné à 1 MB). Contrepartie : charger un
+// tel snapshot dans Mission (Éditer / Réviser) doit les RESTAURER depuis la
+// mission courante — ils y vivent comme config partagée entre tous les devis —
+// sinon ils disparaîtraient silencieusement du prochain devis rédigé.
+const DEVIS_DOC_BLOCKS = ["cgv", "cgvPreambule", "cgvSections", "signatureBlock", "conditionsPaiement"];
+function devisBlocksStrip(snap) {
+  for (const k of DEVIS_DOC_BLOCKS) delete snap[k];
+  return snap;
+}
+function devisBlocksPick(m) {
+  const out = {};
+  for (const k of DEVIS_DOC_BLOCKS) if (m && m[k] != null) out[k] = JSON.parse(JSON.stringify(m[k]));
+  return out;
+}
+function devisBlocksRestore(m, saved) {
+  for (const k of DEVIS_DOC_BLOCKS) {
+    if (m[k] != null) continue;
+    m[k] = (saved && saved[k] != null) ? saved[k] : JSON.parse(JSON.stringify(DEFAULT_S.mission[k]));
+  }
+}
+
+// ▼ recomputeRef — génère DEV-YYYYMM-NNN (devis) ou PRE-YYYYMM-NNN (prestation
+// rapide). Les deux séquences sont indépendantes : une presta rapide ne
+// consomme pas de numéro de devis, et réciproquement.
 function recomputeRef() {
   const date = S.mission.dateEmission || "";
   if (!date || date.length < 7) {
     S.mission.ref = "";
     return;
   }
+  const quick = isMissionQuick();
+  const pfx = quick ? "PRE" : "DEV";
   const currentRef = S.mission.ref || "";
   const existing = (S.suivi && S.suivi.devis && typeof S.suivi.devis === "object") ? S.suivi.devis : {};
   // Protection : si la ref de la mission correspond à un devis déjà archivé,
   // on ne la régénère pas — quel que soit son format (legacy ou nouveau).
   const isInSuivi = !!currentRef && Object.values(existing).some(d => d && d.ref === currentRef);
   if (isInSuivi) return;
-  // Si la ref courante est déjà au nouveau format pour le bon mois, on garde.
+  // Si la ref courante est déjà au bon format pour le bon mois ET le bon mode,
+  // on garde. Changer de mode invalide donc la ref (préfixe différent).
   const ym = date.slice(0, 7); // "YYYY-MM"
   const ymCompact = ym.replace("-", ""); // "YYYYMM"
-  if (currentRef && new RegExp(`^DEV-${ymCompact}-\\d+$`).test(currentRef)) return;
+  if (currentRef && new RegExp(`^${pfx}-${ymCompact}-\\d+$`).test(currentRef)) return;
   // Calcul du max séquence pour ce mois, tous formats confondus.
-  // - DEV-YYYYMM-NNN (nouveau)
+  // - DEV-YYYYMM-NNN (nouveau) / PRE-YYYYMM-NNN (prestation rapide)
   // - DEVIS-NUM-YYYY-MM-NNN (legacy avec num client)
   // - DEVIS-YYYY-MM-NNN (legacy sans num client)
   // - DEVIS-NUM-YYYY-MM-DD (legacy historique avec date complète, ignoré pour la séquence
   //   car DD chevauche le NNN — collision résolue par l'unicité du devisId)
-  const reNew = new RegExp(`^DEV-${ymCompact}-(\\d+)$`);
-  const reLegacy = new RegExp(`^DEVIS-(?:\\d+-)?${ym}-(\\d+)$`);
+  const reNew = new RegExp(`^${pfx}-${ymCompact}-(\\d+)$`);
+  const reLegacy = quick ? null : new RegExp(`^DEVIS-(?:\\d+-)?${ym}-(\\d+)$`);
   let maxN = 0;
   for (const k of Object.keys(existing)) {
     const r = (existing[k] && existing[k].ref) || "";
-    let m = r.match(reNew) || r.match(reLegacy);
+    let m = r.match(reNew) || (reLegacy && r.match(reLegacy));
     if (m) {
       const n = parseInt(m[1], 10);
       if (n > maxN) maxN = n;
     }
   }
   const seq = String(maxN + 1).padStart(3, "0");
-  S.mission.ref = `DEV-${ymCompact}-${seq}`;
+  S.mission.ref = `${pfx}-${ymCompact}-${seq}`;
 }
 
 // ▼ missionHasDraft — détecte si le brouillon Mission contient quelque chose
@@ -4429,20 +4495,31 @@ function missionHasDraft() {
   return false;
 }
 
-// ▼ missionNew — démarre un nouveau devis. Clear les champs spécifiques au
-// devis, garde la config (taux, paiement, CGV, urssaf, etc.). Si presetClient
-// est fourni (ex. depuis « Nouveau devis pour ce client »), pré-remplit avec.
+// ▼ missionNew — démarre un nouveau devis (mode "devis") ou une prestation
+// rapide (mode "quick"). Clear les champs spécifiques au devis, garde la config
+// (taux, paiement, CGV, urssaf, etc.). Si presetClient est fourni (ex. depuis
+// « Nouveau devis pour ce client »), pré-remplit avec.
 // Retourne false si l'utilisateur annule la confirmation.
-async function missionNew(presetClient) {
+async function missionNew(presetClient, mode) {
+  const quick = mode === "quick";
   if (missionHasDraft()) {
     if (!await uiConfirm(
       "Tu as un brouillon en cours dans Mission qui n'a pas été enregistré dans Suivi.\n\n"
-      + "Démarrer un nouveau devis va effacer le contenu actuel (heures, lignes, client, etc.).",
+      + `Démarrer ${quick ? "une nouvelle prestation rapide" : "un nouveau devis"} va effacer le contenu actuel (heures, lignes, client, etc.).`,
       { title: "Brouillon en cours", confirmLabel: "Effacer et continuer", kind: "warn" }
     )) return false;
   }
   const m = S.mission;
   const dm = DEFAULT_S.mission;
+  // Mode + échéancier associé. En rapide : une seule échéance à 100 %. En devis :
+  // on garde la config utilisateur, sauf si elle porte encore l'échéance unique
+  // héritée d'une presta rapide précédente (sinon l'acompte disparaîtrait
+  // silencieusement du prochain devis).
+  m.mode = quick ? "quick" : "devis";
+  if (quick) m.echeances = JSON.parse(JSON.stringify(QUICK_ECHEANCES));
+  else if (!Array.isArray(m.echeances) || !m.echeances.length || isQuickEcheancier(m.echeances)) {
+    m.echeances = JSON.parse(JSON.stringify(dm.echeances));
+  }
   // Champs identification / prestation
   m.ref = "";
   m.dateEmission = new Date().toISOString().slice(0, 10);
@@ -4491,8 +4568,8 @@ async function missionNew(presetClient) {
 window.missionNew = missionNew;
 
 // Bouton « Nouveau devis » dans l'onglet Mission
-async function missionNewClick() {
-  if (await missionNew()) render();
+async function missionNewClick(mode) {
+  if (await missionNew(undefined, mode)) render();
 }
 window.missionNewClick = missionNewClick;
 
@@ -4545,6 +4622,10 @@ async function missionCancel() {
   m.remisePct = "0";
   m.contratHorsEtab = false;
   m.tarifHOverride = "";
+  // Retour au mode devis par défaut (+ échéancier standard si on portait celui
+  // du mode rapide) : le prochain brouillon repart d'une base normale.
+  m.mode = "devis";
+  if (isQuickEcheancier(m.echeances)) m.echeances = JSON.parse(JSON.stringify(dm.echeances));
   // Markers transients
   delete m.revisesDevisId;
   delete m.majTrameDevisId;
@@ -4582,11 +4663,59 @@ async function missionTerminer() {
 }
 window.missionTerminer = missionTerminer;
 
-// Bouton « + Nouveau devis » sur l'Accueil (clear + switch tab)
-async function missionNewFromAccueil() {
-  if (await missionNew()) setTab("mission");
+// Boutons « + Nouveau devis » / « + Prestation rapide » sur l'Accueil (clear + switch tab)
+async function missionNewFromAccueil(mode) {
+  if (await missionNew(undefined, mode)) setTab("mission");
 }
 window.missionNewFromAccueil = missionNewFromAccueil;
+
+// ▼ missionSetMode — bascule Devis ⇄ Prestation rapide sur le brouillon en
+// cours. Vers "quick" : purge ce que le mode rapide ne sait pas porter (cessions
+// de droits, lignes en débours, échéancier multiple) après confirmation. Vers
+// "devis" : restaure l'échéancier par défaut si on portait celui du mode rapide.
+// La ref est régénérée (préfixe DEV- ⇄ PRE-).
+async function missionSetMode(mode) {
+  const m = S.mission;
+  const target = mode === "quick" ? "quick" : "devis";
+  if ((m.mode || "devis") === target) return;
+  if (typeof devisCurrentSuiviEntry === "function" && devisCurrentSuiviEntry()) {
+    await uiAlert("Ce devis est déjà archivé dans Historique — son mode ne peut plus changer.", { title: "Mode verrouillé", kind: "warn" });
+    return;
+  }
+  if (target === "quick") {
+    const cessions   = (m.lignes || []).filter(l => l.type === "cession");
+    const deboursLig = (m.lignes || []).filter(l => l.type === "materiel" && l.devis === "debours");
+    const deboursDep = !!(m.deplacement && m.deplacement.devis === "debours");
+    const multiEch   = (m.echeances || []).filter(e => num(e.pct) > 0).length > 1;
+    const impacts = [];
+    if (cessions.length) impacts.push(`${cessions.length} cession${cessions.length > 1 ? "s" : ""} de droits supprimée${cessions.length > 1 ? "s" : ""}`);
+    if (deboursLig.length || deboursDep) impacts.push("les lignes en débours repassent dans le total à encaisser");
+    if (multiEch) impacts.push("l'échéancier est remplacé par un paiement unique");
+    if (impacts.length && !await uiConfirm(
+      "Une prestation rapide ne produit aucun document (ni devis, ni facture) et n'a ni acompte ni cession de droits.\n\n"
+      + "Conséquences sur le brouillon en cours :\n" + impacts.map(s => "• " + s).join("\n"),
+      { title: "Passer en prestation rapide", confirmLabel: "Convertir", kind: "warn" }
+    )) return;
+    m.lignes = (m.lignes || []).filter(l => l.type !== "cession");
+    m.lignes.forEach(l => {
+      if (l.type !== "materiel") return;
+      l.devis = "principal";
+      if (l.paiementType === "fact-direct") l.paiementType = "acompte";
+    });
+    if (m.deplacement) {
+      m.deplacement.devis = "principal";
+      if (m.deplacement.paiementType === "fact-direct") m.deplacement.paiementType = "acompte";
+    }
+    m.echeances = JSON.parse(JSON.stringify(QUICK_ECHEANCES));
+  } else if (isQuickEcheancier(m.echeances)) {
+    m.echeances = JSON.parse(JSON.stringify(DEFAULT_S.mission.echeances));
+  }
+  m.mode = target;
+  recomputeRef();
+  save();
+  render();
+}
+window.missionSetMode = missionSetMode;
 
 let urssafUnlocked = false;
 function urssafToggleMenu() {
@@ -5120,10 +5249,10 @@ window.facturePrintDirect = async function(devisId, echId) {
 window.devisPrintDirect = function(devisId, view) {
   if (view === "debours") {
     viewDeboursOpen(devisId);
-    if (!viewDevisModal) return;         // pas de feuille débours
   } else {
     viewDevisOpen(devisId);
   }
+  if (!viewDevisModal) return;           // pas de feuille débours, ou prestation rapide (aucun document)
   _printDirect();
 };
 
@@ -7634,7 +7763,15 @@ function rLigne(l) {
     </div>`;
   } else {
     const pmt = l.paiementType || "acompte";
-    const isDebours = l.devis === "debours";
+    // Prestation rapide : aucun document, donc pas de feuille débours → toute
+    // ligne matériel est dans le total à encaisser (toggle Principal/Débours
+    // masqué, `devis` forcé à "principal" par missionSetMode).
+    const quick = isMissionQuick();
+    const isDebours = !quick && l.devis === "debours";
+    const devisToggleHtml = quick ? "" : `<div class="seg seg-neon violet lg-toggle">
+          <button class="${(l.devis||'principal')==='principal'?'on':''}" onclick="ligneSetDevis('${l.id}','principal')">Principal</button>
+          <button class="${l.devis==='debours'?'on warn':''}" onclick="ligneSetDevis('${l.id}','debours')">Débours</button>
+        </div>`;
     // Paiement mode UI:
     //   - Principal → toggle [Acompte | Avance]
     //   - Débours   → static "Fact. Direct" pill (only valid combo, no Débours+Acompte anymore)
@@ -7644,8 +7781,8 @@ function rLigne(l) {
           <button class="${pmt==='fact-direct'?'on':''}" onclick="ligneSetPaiement('${l.id}','fact-direct')" title="Le client règle directement le fournisseur. Hors devis fiscal, mais listé sur la feuille débours pour info.">Direct</button>
         </div>`
       : `<div class="seg seg-neon violet lg-toggle lg-toggle-pmt" title="Mode de paiement (obligatoire)">
-          <button class="${pmt==='acompte'?'on':''}" onclick="ligneSetPaiement('${l.id}','acompte')" title="Inclus dans l'acompte à la commande">Acompte</button>
-          <button class="${pmt==='avance'?'on':''}" onclick="ligneSetPaiement('${l.id}','avance')" title="Tu avances la dépense, marge appliquée">Avance</button>
+          <button class="${pmt==='acompte'?'on':''}" onclick="ligneSetPaiement('${l.id}','acompte')" title="${quick ? "Facturé au prix coûtant, sans marge." : "Inclus dans l'acompte à la commande"}">${quick ? "Au coût" : "Acompte"}</button>
+          <button class="${pmt==='avance'?'on':''}" onclick="ligneSetPaiement('${l.id}','avance')" title="Tu avances la dépense, marge appliquée">${quick ? "Avancé" : "Avance"}</button>
         </div>`;
     const justifBtn = isDebours
       ? `<button class="lg-justif ${l.justificatifJoint?'on':''}" onclick="ligneUpd('${l.id}','justificatifJoint',!${!!l.justificatifJoint});render()" title="${l.justificatifJoint?'Justificatif joint (cliquer pour retirer)':'Justificatif non encore joint (cliquer pour cocher)'}">${l.justificatifJoint?ICO_SZ('check',14):ICO_SZ('circle',14)} Justif.</button>`
@@ -7657,10 +7794,7 @@ function rLigne(l) {
           <input type="number" step="0.01" placeholder="0,00" value="${esc(l.prix)}" oninput="ligneUpd('${l.id}','prix',this.value)">
           <span class="unit">€</span>
         </div>
-        <div class="seg seg-neon violet lg-toggle">
-          <button class="${(l.devis||'principal')==='principal'?'on':''}" onclick="ligneSetDevis('${l.id}','principal')">Principal</button>
-          <button class="${l.devis==='debours'?'on warn':''}" onclick="ligneSetDevis('${l.id}','debours')">Débours</button>
-        </div>
+        ${devisToggleHtml}
         ${paiementModeHtml}
         ${justifBtn}
         <button class="lg-info-icon" onmouseenter="showPaiementInfo(event, 'ligne', '${l.id}')" onmouseleave="hidePaiementInfo()" onfocus="showPaiementInfo(event, 'ligne', '${l.id}')" onblur="hidePaiementInfo()" tabindex="0" aria-label="Voir les conséquences fiscales de ce choix">i</button>
@@ -7679,11 +7813,11 @@ function r2(v) { return Math.round((+v + Number.EPSILON) * 100) / 100; }
 // ("Devis n° 12-2026-04-26" / "Débours n° ..." / "Facture n° ...").
 // Storage keeps the raw form for backward compat, display always uses this.
 function formatRef(ref, type) {
-  const labels = { devis: "Devis", debours: "Débours", facture: "Facture" };
+  const labels = { devis: "Devis", debours: "Débours", facture: "Facture", presta: "Prestation" };
   const label = labels[type] || "Devis";
-  if (!ref || ref === "DEVIS-…-…" || ref === "DEV-…-…") return `${label} n° …`;
+  if (!ref || ref === "DEVIS-…-…" || ref === "DEV-…-…" || ref === "PRE-…-…") return `${label} n° …`;
   // DEVIS doit précéder DEV dans l'alternance (ordre = priorité de match).
-  const stripped = ref.replace(/^(DEVIS|DEBOURS|FACTURE|FACT|DEV)-/i, "");
+  const stripped = ref.replace(/^(DEVIS|DEBOURS|FACTURE|FACT|DEV|PRE)-/i, "");
   return `${label} n° ${stripped}`;
 }
 
@@ -7764,6 +7898,16 @@ function isDevisAuNoir(devisId) {
   return totalMontant > 0 && totalCa === 0;
 }
 
+// ▼ isDevisSansFacture — ce devis n'émettra JAMAIS de facture : soit il est au
+// noir (une facture constate du CA déclaré — incohérence fiscale), soit c'est
+// une prestation rapide (aucun document produit). SOURCE UNIQUE de cette
+// condition : le parcours saute les étapes facture (devisParcoursSteps) et les
+// gardes d'ordre doivent la respecter — sans quoi le solde exige une facture
+// de solde qui ne peut pas exister, et l'encaissement devient impossible.
+function isDevisSansFacture(devisId) {
+  return isDevisAuNoir(devisId) || isDevisQuick(devisId);
+}
+
 // ▼ isFactureApplicable — peut-on émettre la facture d'une échéance ? (modèle
 // légal, 1 facture par échéance)
 // - Échéance d'ACOMPTE (non-solde) : émissible quand SON échéance est encaissée
@@ -7775,7 +7919,7 @@ function isDevisAuNoir(devisId) {
 //   peut pas exister avant elles (chaîne amont complète, pas juste les paiements).
 // Bloque l'émission si le devis est au noir (cf isDevisAuNoir).
 function isFactureApplicable(devisId, ech) {
-  if (isDevisAuNoir(devisId)) return false;
+  if (isDevisSansFacture(devisId)) return false;
   const list = devisEcheances(devisId);
   if (!list.length || !ech) return false;
   if (ech.isSolde) {
@@ -8009,6 +8153,7 @@ function ensureLegacySnapshot(devisId) {
   // Ref rétroactive si manquante / format non conforme (nouveau ou legacy).
   const refOk = dv.ref && (
     /^DEV-\d{6}-\d+$/.test(dv.ref) ||
+    /^PRE-\d{6}-\d+$/.test(dv.ref) ||
     /^DEVIS-(?:\d+-)?\d{4}-\d{2}-\d+$/.test(dv.ref) ||
     /^DEVIS-\d+-\d{4}-\d{2}-\d{2}$/.test(dv.ref)
   );
@@ -8297,11 +8442,15 @@ window.reviseDevisStart = async function(devisId) {
   }
   let recovered = [];
   const isLegacy = !dv.snapshotMission || dv.legacyReconstructed === true;
+  // CGV / signature / conditions : absents des snapshots de prestation rapide.
+  // On les met de côté AVANT d'écraser S.mission pour les réinjecter après.
+  const savedBlocks = devisBlocksPick(S.mission);
   if (dv.snapshotMission && !dv.legacyReconstructed) {
     // Cas standard : clone profond du snapshot structuré (devis archivé
     // proprement avec snapshotMission posé par suiviAdd / suiviUpdateSnapshot).
     // tarifHOverride conservé tel quel (champ utilisateur explicite).
     S.mission = JSON.parse(JSON.stringify(dv.snapshotMission));
+    devisBlocksRestore(S.mission, savedBlocks);
   } else {
     // Cas legacy : reconstruction best-effort via le helper partagé en
     // mode "edit" (ligne heures, plus naturel pour la révision).
@@ -8372,8 +8521,12 @@ window.editDevisStart = async function(devisId) {
     if (!ok) return;
   }
   let recovered = [];
+  // cf. reviseDevisStart : les blocs document sont strippés des snapshots de
+  // prestation rapide, on les réinjecte depuis la mission courante.
+  const savedBlocks = devisBlocksPick(S.mission);
   if (dv.snapshotMission && !dv.legacyReconstructed) {
     S.mission = JSON.parse(JSON.stringify(dv.snapshotMission));
+    devisBlocksRestore(S.mission, savedBlocks);
   } else {
     const r = reconstructMissionFromSuivi(devisId, { mode: "edit" });
     S.mission = r.mission;
@@ -9346,6 +9499,25 @@ function rBinModal() {
 // Format des items : { h: titre court, b: explication 1-3 phrases }.
 const APP_CHANGELOG = [
   {
+    id: "2026-07-prestation-rapide",
+    date: "2026-07-14",
+    title: "Nouveau mode « Prestation rapide »",
+    items: [
+      {
+        h: "Une mission sans devis, sans facture, sans CGV",
+        b: "Depuis l'Accueil, le bouton « Prestation rapide » ouvre Mission en mode allégé : client, catalogue, heures, matériel, déplacement et remise — c'est tout. Aucun document n'est produit, pas d'échéancier, pas d'acompte, pas de cession de droits, pas de CGV. Un bouton en haut de Mission permet de basculer entre les deux modes tant que le brouillon n'est pas enregistré."
+      },
+      {
+        h: "Le même suivi, en plus court",
+        b: "La prestation passe par les mêmes étapes qu'un devis, moins les factures : envoyée, acceptée, réalisée, payée, photos livrées. Elle compte normalement dans le chiffre d'affaires, l'URSSAF et le bilan — le rattachement au mois suit toujours la date d'encaissement."
+      },
+      {
+        h: "Références PRE-…, numérotées à part",
+        b: "Une prestation rapide porte une référence PRE-202607-001, avec sa propre séquence : elle ne consomme pas de numéro de devis. Le tag « rapide » la distingue d'un devis dans l'Accueil et l'Historique."
+      }
+    ]
+  },
+  {
     id: "2026-07-objet-et-prestation",
     date: "2026-07-14",
     title: "L'objet ET la prestation catalogue sur le devis imprimé",
@@ -10213,6 +10385,11 @@ function renderLockedTextarea(field, value, label, placeholder) {
 // ===== View-devis modal state (open from Suivi 👁 button) =====
 let viewDevisModal = null; // { devisId, view: "devis"|"debours" }
 window.viewDevisOpen = function(devisId) {
+  // Prestation rapide : par définition aucun devis n'a été produit.
+  if (isDevisQuick(devisId)) {
+    uiAlert("Cette mission a été saisie en prestation rapide : aucun devis n'a été émis, il n'y a donc pas de document à afficher.", { title: "Pas de document", kind: "info" });
+    return;
+  }
   // Reconstitution paresseuse pour les devis legacy (pas de snapshot).
   ensureLegacySnapshot(devisId);
   viewDevisModal = { devisId, view: "devis" };
@@ -11021,11 +11198,18 @@ function devisSectionSummaries() {
     : `<span class="warn">CGV vides</span>`;
 
   // Section fusionnée « Majorations & paiements » : combine les éléments
-  // marquants de remise/URSSAF + état des échéances + IBAN.
+  // marquants de remise/URSSAF + état des échéances + IBAN. En prestation
+  // rapide, la section se réduit à la remise + URSSAF (ni échéancier ni IBAN
+  // affichés) → le résumé suit.
   const majSummaryBits = [];
   if (remisePct > 0) majSummaryBits.push(`<span class="${remiseClass}">${remisePct.toString().replace(".",",")}% remise</span>`);
-  majSummaryBits.push(echBit);
-  majSummaryBits.push(ibanBit);
+  if (isMissionQuick()) {
+    if (d.declare !== false) majSummaryBits.push(`<span>URSSAF ${getUrssafPct(d).toString().replace(".",",")}%</span>`);
+    if (!majSummaryBits.length) majSummaryBits.push(`<span>Par défaut</span>`);
+  } else {
+    majSummaryBits.push(echBit);
+    majSummaryBits.push(ibanBit);
+  }
   const majorationsSummary = majSummaryBits.join('<span class="dot"></span>');
 
   return {
@@ -11085,7 +11269,8 @@ function validateDevis() {
   if (num(d.remisePct) > ri.remiseMaxPct) {
     warnings.push(`Remise ${num(d.remisePct)}% > marge max recommandée (${ri.remiseMaxPct}%)`);
   }
-  if (!(S.identite && S.identite.bank && S.identite.bank.iban)) warnings.push("IBAN non renseigné dans Profil");
+  // IBAN : sans objet en prestation rapide (aucun document où l'imprimer).
+  if (!isMissionQuick() && !(S.identite && S.identite.bank && S.identite.bank.iban)) warnings.push("IBAN non renseigné dans Profil");
 
   return { errors, warnings, ok: errors.length === 0 };
 }
@@ -11239,6 +11424,13 @@ window.suiviUpdateSnapshot = async function() {
   delete snapMission.revisesDevisId;
   delete snapMission.majTrameDevisId;
   delete snapMission.editDevisId;
+  // Mode : figé à la création, jamais modifiable en édition (le mode bar est
+  // masqué sur un devis archivé). On repart donc du snapshot existant, et on
+  // ne retombe sur la mission courante que pour un devis legacy sans mode.
+  const wasQuick = isDevisQuick(e.id) || isMissionQuick();
+  snapMission.mode = wasQuick ? "quick" : "devis";
+  if (wasQuick) devisBlocksStrip(snapMission);
+  e.snap.mode = snapMission.mode;
   e.snap.snapshotMission = snapMission;
 
   // 3. Réapplique les nouveaux montants aux entries Suivi (échéances + débours).
@@ -11382,14 +11574,32 @@ function rMS() {
   const noneTouched = v2Keys.every(k => _editSectionOpen[k] === undefined);
   if (noneTouched) _editSectionOpen.identification = true;
 
+  const quick = isMissionQuick();
   return `
-    <h1 class="page-title">${esc(pageTitle("mission"))} <span id="savedFlash" class="saved"></span></h1>
+    <h1 class="page-title">${esc(pageTitle("mission"))}${quick ? ` <span class="mode-pill">Prestation rapide</span>` : ""} <span id="savedFlash" class="saved"></span></h1>
+    ${rMissionModeBar()}
     <div class="mission-toolbar" id="missionToolbar">${rMissionToolbarInner()}</div>
     <div class="devis-banners" id="devisBanners">${rDevisBanners()}</div>
     ${rDevisAccordion()}
-    ${rPreviewTabs()}
+    ${quick ? "" : rPreviewTabs()}
     ${rContactPickerModal()}
   `;
+}
+
+// ▼ rMissionModeBar — bascule Devis ⇄ Prestation rapide. Masquée sur un devis
+// déjà archivé (édition/révision) : le mode est figé dans son snapshot.
+function rMissionModeBar() {
+  if (typeof devisCurrentSuiviEntry === "function" && devisCurrentSuiviEntry()) return "";
+  const quick = isMissionQuick();
+  return `<div class="mission-mode-bar">
+    <div class="seg seg-neon violet">
+      <button class="${quick ? "" : "on"}" onclick="missionSetMode('devis')" title="Devis complet : document, CGV, acomptes, échéancier et factures.">Devis</button>
+      <button class="${quick ? "on" : ""}" onclick="missionSetMode('quick')" title="Prestation rapide : aucun document, paiement unique, ni acompte ni CGV.">Prestation rapide</button>
+    </div>
+    <span class="hint" style="margin:0">${quick
+      ? "Aucun document produit — la prestation part directement dans l'Historique et la compta."
+      : "Devis complet : document imprimable, CGV, échéancier et factures."}</span>
+  </div>`;
 }
 
 function rDV() { return ""; }
@@ -11408,12 +11618,16 @@ function rDevisAccordion() {
   // CGV » ci-dessous — indispensable : la preview ne se rend qu'avec un client
   // + une ligne, et son bouton « ＋ section CGV » vit DANS le bloc CGV, donc
   // invisible tant qu'aucune CGV n'existe (impasse : rien pour créer la 1ʳᵉ).
+  // Prestation rapide : ni CGV, ni modalités de paiement (échéancier, délai,
+  // IBAN) — aucun document n'est produit. La section « Majorations » se réduit
+  // à la remise + URSSAF.
+  const quick = isMissionQuick();
   return `<div class="edit-accordion-list">
     ${rEditSectionRaw("identification", "Identification & client",     sums.identification, rDevisSectionIdentification())}
     ${rEditSectionRaw("prestations",    "Prestations",                 sums.prestations,    rDevisSectionPrestations())}
     ${rEditSectionRaw("deplacement",    "Déplacements",                sums.deplacement,    rDevisSectionDeplacement())}
-    ${rEditSectionRaw("majorations",    "Majorations & paiements",     sums.majorations,    rDevisSectionMajorations())}
-    ${rEditSectionRaw("conditions",     "Conditions & CGV",            sums.conditions,     rDevisSectionCgv())}
+    ${rEditSectionRaw("majorations",    quick ? "Remise & URSSAF" : "Majorations & paiements", sums.majorations, rDevisSectionMajorations())}
+    ${quick ? "" : rEditSectionRaw("conditions", "Conditions & CGV",   sums.conditions,     rDevisSectionCgv())}
   </div>`;
 }
 
@@ -11448,6 +11662,7 @@ function rDevisSectionCgv() {
 // Ajustements) + échéances/délai/IBAN (ex Modalités de paiement). Un
 // séparateur visuel et des h5 distincts pour garder la hiérarchie.
 function rDevisSectionMajorations() {
+  if (isMissionQuick()) return rDevisSectionAjustements();
   return `
     ${rDevisSectionAjustements()}
     <hr class="section-merge-sep">
@@ -11476,6 +11691,8 @@ function rDevisSectionIdentification() {
   const d = S.mission;
   const duree = (typeof d.dureeValidite === "number" && d.dureeValidite > 0) ? d.dureeValidite : 30;
   const eff = (d.client.type || (S.identite || {}).clienteleType || "mixte");
+  // Prestation rapide : pas de devis émis → « durée de validité » sans objet.
+  const quick = isMissionQuick();
   return `
     <div class="row identif-dates-row">
       <div class="field"><label>Référence (auto)</label>
@@ -11486,9 +11703,9 @@ function rDevisSectionIdentification() {
       <div class="field"><label>Date d'émission</label>
         <input type="date" value="${esc(d.dateEmission)}" oninput="upd('mission.dateEmission', this.value)">
       </div>
-      <div class="field"><label>Durée (jours)</label>
+      ${quick ? "" : `<div class="field"><label>Durée (jours)</label>
         <input type="number" min="1" max="365" step="1" value="${esc(String(duree))}" oninput="upd('mission.dureeValidite', Math.max(1, parseInt(this.value)||30))">
-      </div>
+      </div>`}
       <div class="field"><label title="Optionnel — date de réalisation / livraison de la prestation. Affichée sur la facture (art. 289-I CGI).">Date de prestation</label>
         <input type="date" value="${esc(d.datePrestation || "")}" oninput="upd('mission.datePrestation', this.value)">
       </div>
@@ -11528,6 +11745,7 @@ function rDevisSectionIdentification() {
 function rDevisSectionPrestations() {
   const d = S.mission;
   const declare = d.declare !== false;
+  const quick = isMissionQuick();
   const heures   = (d.lignes || []).filter(l => l.type === "heures");
   const materiel = (d.lignes || []).filter(l => l.type === "materiel");
   const cessions = (d.lignes || []).filter(l => l.type === "cession");
@@ -11619,11 +11837,12 @@ function rDevisSectionPrestations() {
     </div>
     <div class="lg-add"><button class="btn-add-neon" type="button" onclick="ligneAdd('materiel')">${ICO_SZ('plus', 14)} Matériel</button></div>
 
+    ${quick ? "" : `
     <h5>Cession de droits <button type="button" class="lg-info-icon" tabindex="0" aria-label="Étendue, durée, territoire, supports (CPI L131-3)" title="Étendue, durée, territoire, supports — Conformément au CPI L131-3">i</button></h5>
     <div class="lg-list" id="lgListCessions">
       ${cessions.length ? cessions.map(l => rLigneDraggable(l)).join("") : `<div class="lg-empty">Aucune cession de droits — recommandé pour formaliser l'usage des photos par le client</div>`}
     </div>
-    <div class="lg-add"><button class="btn-add-neon" type="button" onclick="ligneAdd('cession')">${ICO_SZ('plus', 14)} Cession de droits</button></div>
+    <div class="lg-add"><button class="btn-add-neon" type="button" onclick="ligneAdd('cession')">${ICO_SZ('plus', 14)} Cession de droits</button></div>`}
   `;
 }
 
@@ -11634,19 +11853,26 @@ function rDevisSectionPrestations() {
 function rDevisSectionDeplacement() {
   const d = S.mission;
   const mode = d.deplacement.mode || "voiture";
-  const devis = d.deplacement.devis || "principal";
+  // Prestation rapide : ni feuille débours ni document imprimé → le déplacement
+  // est toujours dans le total à encaisser, et le bloc « Affichage sur le
+  // devis » (ligne séparée / lissé dans le tarif) est sans objet.
+  const quick = isMissionQuick();
+  const devis = quick ? "principal" : (d.deplacement.devis || "principal");
   const isDebours = devis === "debours";
   const pmt = d.deplacement.paiementType || "acompte";
   const afficheMode = d.deplacement.afficheMode || "afficher";
 
+  // Acompte/Avance reste un levier de PRIX (la marge d'avance s'applique), pas
+  // un levier d'échéancier — donc conservé en mode rapide, avec des libellés
+  // qui ne parlent pas d'acompte (il n'y en a pas).
   const paiementToggle = isDebours
     ? `<div class="seg seg-neon violet" title="Mode de refacturation des débours">
         <button class="${pmt==='acompte'?'on':''}" onclick="updDeplPaiementType('acompte')" title="Tu avances le déplacement, le client te rembourse au centime près.">Refacturé</button>
         <button class="${pmt==='fact-direct'?'on':''}" onclick="updDeplPaiementType('fact-direct')" title="Le client règle directement le transporteur. Hors devis fiscal.">Direct</button>
       </div>`
     : `<div class="seg seg-neon violet" title="Mode de paiement">
-        <button class="${pmt==='acompte'?'on':''}" onclick="updDeplPaiementType('acompte')">Acompte</button>
-        <button class="${pmt==='avance'?'on':''}" onclick="updDeplPaiementType('avance')">Avance</button>
+        <button class="${pmt==='acompte'?'on':''}" onclick="updDeplPaiementType('acompte')" title="${quick ? "Facturé au prix coûtant, sans marge." : "Inclus dans l'acompte à la commande"}">${quick ? "Au coût" : "Acompte"}</button>
+        <button class="${pmt==='avance'?'on':''}" onclick="updDeplPaiementType('avance')" title="Tu avances la dépense, marge appliquée">${quick ? "Avancé" : "Avance"}</button>
       </div>`;
 
   // Champs trajet selon le mode (voiture / transports en commun)
@@ -11676,7 +11902,7 @@ function rDevisSectionDeplacement() {
   // Bloc affichage : visible uniquement si « Principal » (pas applicable
   // aux débours qui apparaissent toujours sur la feuille débours).
   let affichageBlock = "";
-  if (devis === "principal") {
+  if (devis === "principal" && !quick) {
     const t = totals();
     const b = afficheMode === "lisser" ? tarifBreakdown(true) : null;
     const infoBtn = (afficheMode === "lisser" && b)
@@ -11709,12 +11935,12 @@ function rDevisSectionDeplacement() {
     <h5>Trajet</h5>
     ${trajetFields}
 
-    <h5>Facturation</h5>
+    <h5>${quick ? "Paiement" : "Facturation"}</h5>
     <div class="depl-toggle-row">
-      <div class="seg seg-neon violet">
+      ${quick ? "" : `<div class="seg seg-neon violet">
         <button class="${devis==='principal'?'on':''}" onclick="updDeplDevis('principal')">Principal</button>
         <button class="${devis==='debours'?'on warn':''}" onclick="updDeplDevis('debours')">Débours</button>
-      </div>
+      </div>`}
       ${paiementToggle}
       <button class="lg-info-icon" onmouseenter="showPaiementInfo(event, 'depl')" onmouseleave="hidePaiementInfo()" tabindex="0" aria-label="Voir les conséquences fiscales">i</button>
     </div>
@@ -11881,13 +12107,17 @@ function rMissionToolbarInner() {
   //   « Terminer la mise à jour » → suiviUpdateSnapshot, désactivé si !dirty
   // En mode création (nouveau brouillon) :
   //   « Terminer » → suiviAdd, désactivé si validation KO
+  const quick = isMissionQuick();
   const canTerminer = inSuivi ? dirty : v.ok;
   const terminerLabel = inSuivi
     ? (dirty ? "Terminer la mise à jour" : "Aucune modification")
-    : "Terminer";
+    : (quick ? "Enregistrer la prestation" : "Terminer");
   const terminerTitle = inSuivi
     ? (dirty ? "Met à jour les snapshots dans Suivi puis revient à l'onglet Suivi." : "Aucune modification à enregistrer.")
-    : (v.ok ? "Archive ce devis dans Suivi puis revient à l'onglet Suivi." : "Corrige les erreurs ci-dessous avant de terminer.");
+    : (v.ok
+        ? (quick ? "Enregistre la prestation dans l'Historique (aucun document produit) puis y bascule."
+                 : "Archive ce devis dans Suivi puis revient à l'onglet Suivi.")
+        : "Corrige les erreurs ci-dessous avant de terminer.");
   return `
     <button class="btn-neon" onclick="missionTerminer()" ${!canTerminer ? "disabled" : ""} title="${esc(terminerTitle)}">${ICONS.check}${terminerLabel}</button>
     <button class="btn-neon btn-neon-warn" onclick="missionCancel()" title="Quitte la vue Mission et efface le brouillon en cours. Les paramètres verrouillés (URSSAF, Indemnité km, Marge avancés) restent en place pour le prochain devis.">${ICONS.x}Annuler</button>
@@ -12171,11 +12401,12 @@ async function confirmRemoveFactures(list, actionLabel) {
 // qui vient APRÈS le paiement du solde. Champ additif, pas de migration.
 window.suiviMarkLivree = function(devisId) {
   // Garde-fou d'ordre : la réalisation vient après l'encaissement (et la
-  // facturation, sauf devis au noir) de tous les acomptes. La fonction est
+  // facturation, sauf devis sans facture) de tous les acomptes. La fonction est
   // exposée window → elle valide elle-même, pas seulement l'UI qui l'appelle.
-  const noir = isDevisAuNoir(devisId);
+  // (Prestation rapide : aucun acompte, la garde passe donc toujours.)
+  const sansFacture = isDevisSansFacture(devisId);
   const acomptes = devisEcheances(devisId).filter(e => !e.isSolde);
-  const ready = acomptes.every(e => e.statut === "termine" && (noir || findFactureForEch(devisId, e)));
+  const ready = acomptes.every(e => e.statut === "termine" && (sansFacture || findFactureForEch(devisId, e)));
   if (!ready) {
     uiAlert("Encaisse et facture d'abord tous les acomptes — marquer la prestation réalisée vient ensuite dans le parcours.",
       { title: "Pas encore l'étape « prestation réalisée »", kind: "warn" });
@@ -12465,31 +12696,36 @@ function suiviRecomputeRefs() {
     if (!byDevisId.has(e.devisId)) byDevisId.set(e.devisId, []);
     byDevisId.get(e.devisId).push(e);
   }
-  // Patterns valides : nouveau DEV-YYYYMM-NNN, ou legacy DEVIS-… (avec ou
-  // sans num client, terminé par séquence NNN ou date DD).
+  // Patterns valides : nouveau DEV-YYYYMM-NNN, prestation rapide
+  // PRE-YYYYMM-NNN, ou legacy DEVIS-… (avec ou sans num client, terminé par
+  // séquence NNN ou date DD). ⚠ Sans le motif PRE-, cette passe (qui tourne au
+  // boot) réécrirait chaque prestation rapide en DEV-… au prochain démarrage.
   const validRefPatterns = [
     /^DEV-\d{6}-\d+$/i,                      // nouveau format
+    /^PRE-\d{6}-\d+$/i,                      // prestation rapide
     /^DEVIS-\d+-\d{4}-\d{2}-\d{2}$/i,        // legacy avec num + date
     /^DEVIS-(?:\d+-)?\d{4}-\d{2}-\d+$/i      // legacy avec/sans num + séquence
   ];
   // Cache de la séquence par mois — alimenté au fur et à mesure pour éviter
   // les collisions si plusieurs devis sans ref tombent dans le même mois.
+  // Séquences indépendantes par préfixe (DEV / PRE) et par mois.
   const seqByMonth = {};
-  const computeNextSeq = (ymCompact) => {
-    if (seqByMonth[ymCompact] === undefined) {
+  const computeNextSeq = (pfx, ymCompact) => {
+    const key = `${pfx}-${ymCompact}`;
+    if (seqByMonth[key] === undefined) {
       let max = 0;
-      const reNew = new RegExp(`^DEV-${ymCompact}-(\\d+)$`);
+      const reNew = new RegExp(`^${pfx}-${ymCompact}-(\\d+)$`);
       const ym = `${ymCompact.slice(0, 4)}-${ymCompact.slice(4, 6)}`;
-      const reLegacy = new RegExp(`^DEVIS-(?:\\d+-)?${ym}-(\\d+)$`);
+      const reLegacy = pfx === "DEV" ? new RegExp(`^DEVIS-(?:\\d+-)?${ym}-(\\d+)$`) : null;
       for (const k of Object.keys(S.suivi.devis)) {
         const r = (S.suivi.devis[k] && S.suivi.devis[k].ref) || "";
-        const m = r.match(reNew) || r.match(reLegacy);
+        const m = r.match(reNew) || (reLegacy && r.match(reLegacy));
         if (m) { const n = parseInt(m[1], 10); if (n > max) max = n; }
       }
-      seqByMonth[ymCompact] = max;
+      seqByMonth[key] = max;
     }
-    seqByMonth[ymCompact] += 1;
-    return seqByMonth[ymCompact];
+    seqByMonth[key] += 1;
+    return seqByMonth[key];
   };
   for (const [devisId, lignes] of byDevisId.entries()) {
     if (!S.suivi.devis[devisId]) S.suivi.devis[devisId] = { ref: "" };
@@ -12498,9 +12734,10 @@ function suiviRecomputeRefs() {
     const dates = lignes.map(l => l.date).filter(Boolean).sort();
     const date = dates[0] || "";
     if (!date) continue;
+    const pfx = isDevisQuick(devisId) ? "PRE" : "DEV";
     const ymCompact = date.slice(0, 7).replace("-", "");
-    const seq = String(computeNextSeq(ymCompact)).padStart(3, "0");
-    S.suivi.devis[devisId].ref = `DEV-${ymCompact}-${seq}`;
+    const seq = String(computeNextSeq(pfx, ymCompact)).padStart(3, "0");
+    S.suivi.devis[devisId].ref = `${pfx}-${ymCompact}-${seq}`;
   }
 }
 
@@ -12656,11 +12893,19 @@ async function suiviAdd() {
   // On retire les marqueurs transient (drapeaux de flow, pas de contenu).
   delete snapshotMission.revisesDevisId;
   delete snapshotMission.majTrameDevisId;
+  // Mode figé (immutable historique) + strip des blocs document en prestation
+  // rapide : aucun document n'est produit, les CGV pèseraient ~10 KB pour rien.
+  const quick = isMissionQuick();
+  snapshotMission.mode = quick ? "quick" : "devis";
+  if (quick) devisBlocksStrip(snapshotMission);
   // tarifHOverride : conservé. C'est un champ piloté par l'utilisateur via
   // l'input dédié dans la section Prestations. S'il est posé, il reflète une
   // décision manuelle qu'on doit préserver pour les futures révisions.
   S.suivi.devis[devisId] = {
     ref: m.ref || "",
+    // Mode de la mission — dupliqué hors snapshot pour un accès direct
+    // (isDevisQuick est appelé à chaque rendu de ligne/panneau).
+    mode: quick ? "quick" : "devis",
     snapshotAt: new Date().toISOString(),
     snapshotTotal: t.total,
     snapshotDebours: t.debours || 0,
@@ -13385,13 +13630,20 @@ async function suiviLigneTogglePaiement(id) {
           { title: "Ordre des encaissements", kind: "warn" });
         return;
       }
-      if (ech.isSolde && !isDevisAuNoir(e.devisId)) {
+      // Le solde s'encaisse après la prestation réalisée — et après l'émission
+      // de sa facture, sauf quand le devis n'en émet aucune (au noir ou
+      // prestation rapide : exiger une facture impossible bloquerait
+      // définitivement l'encaissement).
+      if (ech.isSolde) {
         const dv = S.suivi.devis && S.suivi.devis[e.devisId];
         const livree = !!(dv && dv.livreeTs);
-        const fsEmise = !!findFactureForEch(e.devisId, ech);
+        const sansFacture = isDevisSansFacture(e.devisId);
+        const fsEmise = sansFacture || !!findFactureForEch(e.devisId, ech);
         if (!livree || !fsEmise) {
-          uiAlert("La facture de solde s'émet une fois la prestation réalisée, avant l'encaissement du solde.\n\nSuis la bande d'action : marque la prestation réalisée, émets la facture de solde, puis pointe le solde comme reçu.",
-            { title: "Le solde se facture d'abord", kind: "warn" });
+          uiAlert(sansFacture
+            ? "Le solde s'encaisse une fois la prestation réalisée.\n\nSuis la bande d'action : marque la prestation réalisée, puis pointe le solde comme reçu."
+            : "La facture de solde s'émet une fois la prestation réalisée, avant l'encaissement du solde.\n\nSuis la bande d'action : marque la prestation réalisée, émets la facture de solde, puis pointe le solde comme reçu.",
+            { title: sansFacture ? "La prestation se réalise d'abord" : "Le solde se facture d'abord", kind: "warn" });
           return;
         }
       }
@@ -13621,7 +13873,12 @@ window.suiviSetDatePaiement = function(id, val) {
 function devisParcoursSteps(devisId) {
   const dv = (S.suivi.devis && S.suivi.devis[devisId]) || {};
   const statutPrin = devisPrincipal(suiviGroupLigne(devisId));
-  const noir = isDevisAuNoir(devisId);
+  const quick = isDevisQuick(devisId);
+  // Étapes facture sautées : au noir (incohérence fiscale) OU prestation rapide
+  // (aucun document) — cf. isDevisSansFacture. Combiné à l'échéance unique du
+  // mode rapide, la séquence se réduit à : envoyé → accepté → réalisée → payée
+  // → livrée.
+  const noir = isDevisSansFacture(devisId);
   const isRefused = statutPrin === "refuse";
   const isAnnule = statutPrin === "annule";
   const accepted = statutPrin === "attente" || statutPrin === "en_cours" || statutPrin === "termine" || isAnnule;
@@ -13660,7 +13917,7 @@ function devisParcoursSteps(devisId) {
   else if (activeIdx === -1 && steps.length) backIdx = steps.length - 1; // soldé : ↺ sur la dernière
   else backIdx = -1;                                            // rien à défaire (envoi à faire)
 
-  return { steps, activeIdx, backIdx, statutPrin, isRefused, isAnnule, dv, noir, echList, acomptes, solde };
+  return { steps, activeIdx, backIdx, statutPrin, isRefused, isAnnule, dv, noir, quick, echList, acomptes, solde };
 }
 
 // ▼ suiviParcoursHtml — corps du panneau devis (refonte 1b) : frise horizontale
@@ -13673,7 +13930,7 @@ function suiviParcoursHtml(g) {
   const stop = "event.stopPropagation();";
   const devisId = g.devisId;
   const P = devisParcoursSteps(devisId);
-  const { steps, activeIdx, backIdx, isRefused, isAnnule, dv } = P;
+  const { steps, activeIdx, backIdx, isRefused, isAnnule, dv, quick } = P;
   const dateOf = (ts) => dateFR(new Date(ts).toISOString().slice(0, 10));
   const activeStep = activeIdx >= 0 ? steps[activeIdx] : null;
 
@@ -13693,9 +13950,15 @@ function suiviParcoursHtml(g) {
     if (k === "fs" || k === "pay:solde") return "solde";
     return "acompte"; // pay:<acompte>, fa:<acompte>
   };
+  // La phase « Acompte » n'existe que si le devis a une échéance autre que le
+  // solde. Sur un paiement unique (toute prestation rapide, et les devis à
+  // échéance unique), le nœud est retiré : sinon il s'allumait « done » dès
+  // l'acceptation alors qu'aucun acompte n'a jamais existé (grp vide →
+  // nodeStatus retombait sur acceptedDone).
   const phaseNodes = [
     { key: "envoye", label: "Envoyé" }, { key: "accepte", label: "Accepté" },
-    { key: "acompte", label: "Acompte" }, { key: "realise", label: "Réalisé" },
+    ...(P.acomptes.length ? [{ key: "acompte", label: "Acompte" }] : []),
+    { key: "realise", label: "Réalisé" },
     { key: "solde", label: "Soldé" }, { key: "photos", label: "Livré" },
   ];
   const acceptedDone = steps.find(s => s.key === "accepted").done;
@@ -13727,12 +13990,12 @@ function suiviParcoursHtml(g) {
   const activeActions = (s) => {
     if (s.key === "sent") return [
       `<button type="button" class="mk-btn subtle" title="Ouvrir Gmail pré-rempli (rien d'autre : ni impression, ni marquage)." onclick="${stop}devisEnvoyerCompose('${devisId}')">${ICO_SZ('mail', 13)} Envoyer</button>`,
-      `<button type="button" class="mk-btn green" title="Marquer le devis comme envoyé au client (fait avancer le parcours)." onclick="${stop}devisMarkEnvoi('${devisId}')">${ICO_SZ('check', 13)} Valider l'envoi</button>`,
+      `<button type="button" class="mk-btn green" title="${quick ? "Marquer la proposition comme transmise au client (fait avancer le parcours)." : "Marquer le devis comme envoyé au client (fait avancer le parcours)."}" onclick="${stop}devisMarkEnvoi('${devisId}')">${ICO_SZ('check', 13)} Valider l'envoi</button>`,
     ];
     if (s.key === "accepted") return [
       relanceBtn("devis"),
       `<button type="button" class="mk-btn green" title="Le client a accepté — toutes les échéances passent en attente de paiement." onclick="${stop}suiviDevisAccepter('${devisId}')">${ICO_SZ('check', 13)} Accepté</button>`,
-      `<button type="button" class="mk-btn ghost" title="Le client a refusé le devis (avant acceptation)." onclick="${stop}suiviDevisRefuser('${devisId}')">${ICO_SZ('x', 13)} Refusé</button>`,
+      `<button type="button" class="mk-btn ghost" title="${quick ? "Le client a renoncé (avant acceptation)." : "Le client a refusé le devis (avant acceptation)."}" onclick="${stop}suiviDevisRefuser('${devisId}')">${ICO_SZ('x', 13)} Refusé</button>`,
     ];
     if (s.kind === "payment") return [
       relanceBtn("paiement"),
@@ -13763,7 +14026,7 @@ function suiviParcoursHtml(g) {
   } else {
     const s = activeStep;
     let variant = "info", ico = "info", txt = "";
-    if (s.key === "sent") { txt = "Prêt à envoyer le devis au client."; }
+    if (s.key === "sent") { txt = quick ? "Prêt à transmettre la proposition au client (aucun document n'est produit)." : "Prêt à envoyer le devis au client."; }
     else if (s.key === "accepted") { txt = "En attente de la réponse du client."; }
     else if (s.kind === "payment") { variant = "warn"; ico = "euro"; txt = `En attente de l'encaissement ${s.ech.isSolde ? "du solde" : `de « ${s.ech.label} »`} (${fmt(s.ech.entry.montant)}).`; }
     else if (s.kind === "invoice") { txt = s.ech.isSolde ? "Prestation réalisée — émets la facture de solde." : "Acompte encaissé — émets la facture d'acompte."; }
@@ -13902,11 +14165,14 @@ function suiviExpandedPanelHtml(g) {
   if (!lignes.length) return "";
 
   // — Rangée documents + menu ⋮ (dropdown inline). —
+  // Prestation rapide : aucun document imprimable (ni devis, ni feuille débours).
+  const quick = isDevisQuick(g.devisId);
   const totalDebours = lignes.reduce((s, e) => s + num(e.frais), 0);
   const menuOpen = suiviMoreMenuOpen === g.devisId;
   const footer = `<div class="suv-expanded-print">
+    ${quick ? `<span class="hint" style="margin:0">Prestation rapide — aucun document (ni devis, ni facture).</span>` : `
     <button class="mk-btn subtle" title="Imprimer le devis (aperçu avant impression)" onclick="${stop}devisPrintDirect('${g.devisId}','devis')">${ICO_SZ('fileText',13)} Devis PDF</button>
-    ${totalDebours > 0 ? `<button class="mk-btn subtle" title="Imprimer la feuille de débours (aperçu avant impression)" onclick="${stop}devisPrintDirect('${g.devisId}','debours')">${ICO_SZ('euro',13)} Débours</button>` : ""}
+    ${totalDebours > 0 ? `<button class="mk-btn subtle" title="Imprimer la feuille de débours (aperçu avant impression)" onclick="${stop}devisPrintDirect('${g.devisId}','debours')">${ICO_SZ('euro',13)} Débours</button>` : ""}`}
     <span style="flex:1"></span>
     <div class="dv-more">
       <button class="mk-iconbtn md" title="Plus d'actions — éditer, réviser, annuler la mission, supprimer" onclick="${stop}suiviMoreMenuToggle('${g.devisId}')">${ICO_SZ('moreVertical',15)}</button>
@@ -13937,7 +14203,7 @@ function suiviMoreMenuHtml(devisId) {
   const item = (action, ico, label, danger) =>
     `<button type="button" class="dv-menu-item${danger ? ' danger' : ''}" onclick="${stop}suiviMoreMenuPick('${devisId}','${action}')"><span class="dv-menu-ico">${ICO_SZ(ico, 15)}</span>${esc(label)}</button>`;
   const items = [];
-  items.push(item("gmail", "mail", "Ouvrir Gmail (devis)"));
+  items.push(item("gmail", "mail", isDevisQuick(devisId) ? "Ouvrir Gmail" : "Ouvrir Gmail (devis)"));
   if (dv && dv.envoiTs) items.push(item("unsend", "rotateCcw", "Annuler la marque d'envoi"));
   if (check.ok) {
     items.push(item("edit", "edit", "Éditer"));
@@ -14161,6 +14427,11 @@ const SUIVI_NUMERIC = new Set(["montant","heures","paiement","ca","salaire","urs
 // Facture viewer modal state — type ∈ "acompte" | "solde"
 let viewFactureModal = null; // { devisId, echId }
 window.viewFactureOpen = async function(devisId, echId) {
+  // Blocage prestation rapide : aucun document, donc aucune facture.
+  if (isDevisQuick(devisId)) {
+    uiAlert("Cette mission a été saisie en prestation rapide : elle ne produit aucune facture.\n\nSi tu as besoin d'un document, révise-la en devis complet.", { title: "Pas de facture", kind: "info" });
+    return;
+  }
   // Blocage devis au noir : pas de facture pour de l'au noir (incohérence fiscale).
   if (isDevisAuNoir(devisId)) {
     uiAlert("Cette prestation n'a pas été déclarée (CA = 0).\n\n" +
@@ -14575,7 +14846,7 @@ function rSV() {
       <div class="ac-row${isExpanded ? ' ac-row-active' : ''}" onclick="suiviExpandedToggle('${g.devisId}')">
         <div class="ac-row-date">${esc(dateFR(g.dateMin || g.dateMax))}</div>
         <div class="ac-row-client"><span class="client-link" onclick="${stop}clientInfoModalOpen('${g.devisId}')" title="Voir les infos client">${esc(cleanClientLabel(g.client)) || "—"}</span></div>
-        <div class="ac-row-ref">${esc(g.ref) || "—"} <span class="suv-rev-tag" title="Numéro de révision active dans la chaîne. Versions précédentes accessibles via l'historique du panneau étendu.">rev${computeRevisionNumber(g.devisId)}</span></div>
+        <div class="ac-row-ref">${esc(g.ref) || "—"} <span class="suv-rev-tag" title="Numéro de révision active dans la chaîne. Versions précédentes accessibles via l'historique du panneau étendu.">rev${computeRevisionNumber(g.devisId)}</span>${quickTagHtml(g.devisId)}</div>
         <div class="ac-row-amt">${fmt(g.total)}</div>
       </div>
       ${panel}
@@ -14654,6 +14925,11 @@ function rSuiviBinView() {
 // Ouvre la modal devis sur l'onglet Débours (rendu à la volée depuis
 // snapshotMission, fallback snapshotDeboursHtml pour les vieilles archives).
 window.viewDeboursOpen = function(devisId) {
+  // Prestation rapide : pas de débours (tout est dans le total) → pas de feuille.
+  if (isDevisQuick(devisId)) {
+    uiAlert("Une prestation rapide ne produit aucun document : le matériel et le déplacement sont inclus dans le total à encaisser.", { title: "Pas de feuille débours", kind: "info" });
+    return;
+  }
   // Reconstitution paresseuse pour les devis legacy.
   ensureLegacySnapshot(devisId);
   const dv = S.suivi.devis && S.suivi.devis[devisId];
@@ -16442,7 +16718,7 @@ function rAC() {
       <div class="ac-row ${late ? 'ac-late' : ''}${isExpanded ? ' ac-row-active' : ''}" onclick="accueilOpenDevis('${g.devisId}')">
         <div class="ac-row-date">${esc(dateFR(g.dateMin || g.dateMax))}</div>
         <div class="ac-row-client"><span class="client-link" onclick="${stop}clientInfoModalOpen('${g.devisId}')" title="Voir les infos client">${esc(cleanClientLabel(g.client)) || "—"}</span></div>
-        <div class="ac-row-ref">${esc(g.ref) || "—"} <span class="suv-rev-tag">rev${computeRevisionNumber(g.devisId)}</span></div>
+        <div class="ac-row-ref">${esc(g.ref) || "—"} <span class="suv-rev-tag">rev${computeRevisionNumber(g.devisId)}</span>${quickTagHtml(g.devisId)}</div>
         <div class="ac-row-amt">${fmt(amount)}</div>
         <button class="ac-row-gmail" onclick="${stop}gmailRelanceForDevis('${g.devisId}','${gmailKind}')" title="${gmailTitle}">${ICONS.send}</button>
       </div>
@@ -16460,7 +16736,8 @@ function rAC() {
     </div>
 
     <div class="ac-cta">
-      <button class="btn-neon" onclick="missionNewFromAccueil()" title="Crée un nouveau devis dans Mission. Garde la configuration (taux, URSSAF, paiement, CGV) et démarre vierge sur le client/heures/lignes/déplacement.">${ICONS.plus}Nouveau devis</button>
+      <button class="btn-neon" onclick="missionNewFromAccueil('devis')" title="Crée un nouveau devis dans Mission. Garde la configuration (taux, URSSAF, paiement, CGV) et démarre vierge sur le client/heures/lignes/déplacement.">${ICONS.plus}Nouveau devis</button>
+      <button class="btn-neon" onclick="missionNewFromAccueil('quick')" title="Prestation rapide : client, catalogue, heures, matériel, déplacement et remise. Aucun document (ni devis, ni facture), aucun acompte, aucune CGV.">${ICONS.camera}Prestation rapide</button>
     </div>
 
     <div class="ac-section">

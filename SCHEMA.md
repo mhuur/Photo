@@ -47,6 +47,7 @@ Source : `index.html` (bloc `const DEFAULT_S = { ... };`).
   - **autres** _(object)_
     - **desc**: string _(default `""`)_
     - **montant**: string _(default `"0"`)_
+  - **mode**: string _(default `"devis"`)_
   - **declare**: boolean _(default `true`)_
   - **blackMode**: string _(default `"fixe"`)_
   - **tarifHOverride**: string _(default `""`)_
