@@ -84,11 +84,11 @@
     --btn-h-md: 30px;        /* boutons compacts (+ Ajouter, chips) */
     --btn-h-lg: 34px;        /* boutons standards (alignés sur input-h) */
     --btn-h-xl: 38px;        /* boutons d'action principale (rare) */
-    /* Rayons */
-    --radius-sm: 4px;        /* éléments inline (pills, badges) */
-    --radius-md: 6px;        /* inputs, boutons */
-    --radius-lg: 8px;        /* cards, sections, modals */
-    --radius-xl: 12px;       /* gros conteneurs */
+    /* Rayons — alignés maquette V2 (arbitrage 2026-07-14) : contrôles 4, cartes 6 */
+    --radius-sm: 4px;        /* pills, badges, contrôles, boutons */
+    --radius-md: 4px;        /* inputs, boutons (= maquette) */
+    --radius-lg: 6px;        /* cards, sections, modals (= maquette) */
+    --radius-xl: 8px;        /* gros conteneurs */
     /* Espacements verticaux entre éléments (utiliser dans .row, .field, etc.) */
     --gap-field: 12px;       /* entre champs d'une row */
     --gap-row: 14px;         /* entre rows successives */
@@ -214,8 +214,9 @@
   .cpt-id-name{font-size:15px;font-weight:700;color:#fff}
   .cpt-id-mail{font-size:12px;color:var(--text-dim);word-break:break-all;margin-top:2px}
   .cpt-id-role{display:flex;flex-direction:column;gap:4px;align-items:flex-end}
-  .cpt-role-pill{display:inline-block;padding:2px 9px;border-radius:var(--radius-sm);font-family:var(--font-mono);font-size:9.5px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;background:rgba(255,255,255,.07);border:1px solid var(--border-soft);color:var(--text-soft)}
-  .cpt-role-pill.owner{background:var(--primary-soft);border-color:rgba(69,193,253,.4);color:var(--primary)}
+  .cpt-role-pill{display:inline-block;padding:2px 9px;border-radius:999px;font-family:var(--font-mono);font-size:8.5px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;background:transparent;border:1px solid var(--border);color:var(--text-soft)}
+  /* Owner en jade (maquette Mon Compte : badge « Propriétaire » jade). */
+  .cpt-role-pill.owner{border-color:rgba(2,220,185,.35);color:var(--success)}
   /* Sélecteur de photo de fond */
   .cpt-bg-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:var(--space-md)}
   .cpt-bg-card{display:flex;flex-direction:column;gap:7px;padding:6px;background:var(--surface-sunken);border:1px solid var(--border-soft);border-radius:var(--radius-md);cursor:pointer;font:inherit;transition:border-color .14s}
@@ -311,15 +312,15 @@
   .edit-section-body[hidden]{display:none}
   .edit-section-body > h4:first-child{margin-top:var(--space-sm)}
   /* Sous-titres dans une section accordion (h5) */
-  .edit-section-body h5{margin:var(--space-lg) 0 var(--space-sm);font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;border:0;padding:0}
+  .edit-section-body h5{margin:var(--space-lg) 0 var(--space-sm);font-family:var(--font-mono);font-size:10px;font-weight:700;color:var(--ink-400);text-transform:uppercase;letter-spacing:.16em;border:0;padding:0}
   .edit-section-body h5:first-child{margin-top:var(--space-xs)}
   .field{display:flex;flex-direction:column;flex:1;min-width:160px}
   .field.sm{max-width:140px}
-  .field label{font-size:13px;color:var(--text-muted);margin-bottom:var(--space-xs)}
+  .field label{font-size:11px;color:var(--text-muted);margin-bottom:var(--space-xs)}
   .field input:not([type="checkbox"]):not([type="radio"]),.field select{height:var(--input-h)}
   .field input,.field textarea,.field select{padding:var(--space-sm) var(--space-md);border:1px solid var(--border-soft);border-radius:var(--radius-md);font:inherit;background:var(--field-bg);color:var(--text);transition:border-color .15s,box-shadow .15s,background .15s;font-variant-numeric:tabular-nums}
-  .field input:hover:not(:disabled),.field textarea:hover:not(:disabled),.field select:hover:not(:disabled){border-color:rgba(69,193,253,.4);box-shadow:0 0 8px rgba(69,193,253,.1)}
-  .field input:focus,.field textarea:focus,.field select:focus{outline:none;border-color:var(--primary);background:rgba(69,193,253,.08);box-shadow:inset 0 0 0 1px rgba(69,193,253,.22),0 0 12px rgba(69,193,253,.35),0 0 24px rgba(69,193,253,.12)}
+  .field input:hover:not(:disabled),.field textarea:hover:not(:disabled),.field select:hover:not(:disabled){border-color:rgba(69,193,253,.4)}
+  .field input:focus,.field textarea:focus,.field select:focus{outline:none;border-color:var(--primary);background:rgba(69,193,253,.08);box-shadow:inset 0 0 0 1px rgba(69,193,253,.22)}
   .field textarea{min-height:60px;resize:vertical}
   .btn{background:var(--azure-fill);color:#fff;border:0;padding:10px 16px;border-radius:6px;cursor:pointer;font:inherit;font-weight:500;transition:all .15s}
   .btn:hover{background:var(--azure-fill-hi);box-shadow:0 2px 8px rgba(69,193,253,.3)}
@@ -495,7 +496,7 @@
   /* ===== Boutons du mock (refonte timeline devis) — fills pleins assumés,
      remplacent la charte néon pour les boutons d'action. Palette = tokens
      :root (l'app est déjà la navy du mock) + 2 accents propres au mock. ===== */
-  .mk-btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;border-radius:9px;padding:8px 14px;font-family:inherit;font-size:12.5px;font-weight:600;line-height:1;white-space:nowrap;cursor:pointer;border:1px solid transparent;transition:filter .15s,transform .05s,background .15s,border-color .15s,color .15s}
+  .mk-btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;border-radius:var(--radius-sm);padding:8px 14px;font-family:inherit;font-size:12.5px;font-weight:600;line-height:1;white-space:nowrap;cursor:pointer;border:1px solid transparent;transition:filter .15s,transform .05s,background .15s,border-color .15s,color .15s}
   .mk-btn:hover{filter:brightness(1.09)}
   .mk-btn:active{transform:translateY(1px)}
   .mk-btn:disabled{opacity:.45;cursor:default;filter:none;transform:none}
@@ -544,7 +545,7 @@
   .v2-kpi-value{font-size:18px;font-weight:700;color:#fff;font-variant-numeric:tabular-nums;white-space:nowrap}
   .v2-kpi.jade .v2-kpi-value{color:var(--success)}
   /* Boutons icône carrés (↺ reculer d'un cran, ⋮ plus d'actions) */
-  .mk-iconbtn{display:inline-flex;align-items:center;justify-content:center;flex:0 0 auto;background:transparent;border:1px solid var(--border);border-radius:8px;cursor:pointer;color:var(--text-muted);transition:filter .15s,transform .05s,color .15s,border-color .15s,background .15s}
+  .mk-iconbtn{display:inline-flex;align-items:center;justify-content:center;flex:0 0 auto;background:transparent;border:1px solid var(--border);border-radius:var(--radius-sm);cursor:pointer;color:var(--text-muted);transition:filter .15s,transform .05s,color .15s,border-color .15s,background .15s}
   .mk-iconbtn:hover{color:var(--text);border-color:var(--border-light);background:rgba(69,193,253,.06)}
   .mk-iconbtn:active{transform:translateY(1px)}
   .mk-iconbtn svg{display:block}
@@ -844,11 +845,12 @@
   .ac-row-wrap.expanded .ac-row-chev{transform:rotate(90deg)}
   .ac-row.ac-late .ac-row-date{color:var(--warning);font-weight:600}
   /* Pastille « où en est ce devis » (devisStageLabel) */
-  .dv-stage{justify-self:start;font-family:var(--font-mono);font-size:9.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;border-radius:999px;padding:3px 9px;white-space:nowrap}
-  .dv-stage.info{color:var(--primary);background:rgba(69,193,253,.12)}
-  .dv-stage.warn{color:var(--ember-300);background:rgba(232,117,28,.14)}
-  .dv-stage.done{color:var(--success);background:rgba(2,220,185,.12)}
-  .dv-stage.refused{color:var(--ember-200);background:rgba(240,140,75,.12)}
+  /* Status pill V2 (maquette §0) : mono 8.5px, fond transparent, bordure couleur à ~33 %. */
+  .dv-stage{justify-self:start;font-family:var(--font-mono);font-size:8.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;border-radius:999px;padding:3px 9px;white-space:nowrap;background:transparent;border:1px solid}
+  .dv-stage.info{color:var(--primary);border-color:rgba(69,193,253,.33)}
+  .dv-stage.warn{color:var(--ember-300);border-color:rgba(245,148,60,.33)}
+  .dv-stage.done{color:var(--success);border-color:rgba(2,220,185,.33)}
+  .dv-stage.refused{color:var(--ember-200);border-color:rgba(240,140,75,.33)}
   .ac-empty{padding:12px 14px;color:var(--text-dim);font-size:12px;background:transparent;border:1px dashed var(--border-soft);border-radius:var(--radius-sm);max-width:980px}
 
   /* Bande de KPI (Compta, Achats) — charte V2 : panneau glass, label mono,
@@ -984,8 +986,8 @@
   .cli-search-wrap{position:relative;flex:1;min-width:280px;max-width:520px}
   .cli-search-wrap > svg{position:absolute;left:14px;top:50%;transform:translateY(-50%);width:16px;height:16px;color:var(--text-dim);pointer-events:none}
   .cli-search-wrap > input{width:100%;padding:11px 14px 11px 40px;border:1px solid var(--border-soft);border-radius:8px;font:inherit;font-size:14px;background:var(--field-bg);color:var(--text);transition:border-color .15s,box-shadow .15s,background .15s;box-sizing:border-box}
-  .cli-search-wrap > input:hover{border-color:rgba(69,193,253,.4);box-shadow:0 0 8px rgba(69,193,253,.1)}
-  .cli-search-wrap > input:focus{outline:none;border-color:var(--primary);background:rgba(69,193,253,.08);box-shadow:inset 0 0 0 1px rgba(69,193,253,.22),0 0 12px rgba(69,193,253,.35),0 0 24px rgba(69,193,253,.12)}
+  .cli-search-wrap > input:hover{border-color:rgba(69,193,253,.4)}
+  .cli-search-wrap > input:focus{outline:none;border-color:var(--primary);background:rgba(69,193,253,.08);box-shadow:inset 0 0 0 1px rgba(69,193,253,.22)}
   /* Table épurée — pas de bordures de cellules, juste un séparateur fin entre lignes */
   table.cli-table{width:100%;border-collapse:collapse}
   table.cli-table thead th{text-align:left;padding:10px 14px;font-family:var(--font-mono);font-size:9px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.1em;font-weight:700;border-bottom:1px solid var(--border);user-select:none}
@@ -1091,7 +1093,7 @@
   .stats{display:flex;gap:8px;flex-wrap:wrap;margin:14px 0 4px}
   .stat{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:10px 14px;font-size:13px;color:var(--text-muted);min-width:120px;box-shadow:var(--shadow-sm)}
   .stat strong{display:block;font-size:15px;color:var(--text);font-weight:600;margin-top:2px;font-variant-numeric:tabular-nums}
-  .seg{display:inline-flex;align-items:center;background:var(--surface-2);border:1px solid transparent;border-radius:8px;padding:3px;gap:2px;align-self:flex-start;height:var(--input-h);box-sizing:border-box;transition:border-color .12s}
+  .seg{display:inline-flex;align-items:center;background:var(--surface-2);border:1px solid transparent;border-radius:5px;padding:3px;gap:2px;align-self:flex-start;height:var(--input-h);box-sizing:border-box;transition:border-color .12s}
   .seg:hover{border-color:var(--border-light)}
   .seg button{background:transparent;border:0;padding:0 14px;height:100%;border-radius:5px;color:var(--text-muted);cursor:pointer;font:inherit;font-size:13px;font-weight:500;transition:all .15s;display:inline-flex;align-items:center;gap:6px}
   .seg button:hover{color:var(--text)}
@@ -1100,7 +1102,7 @@
 
   /* Smaller, capped fields */
   .field input,.field textarea,.field select{font-size:13px;padding:7px 10px}
-  .field label{font-size:13px;letter-spacing:.02em}
+  .field label{font-size:11px;letter-spacing:.02em}
   main h2{font-size:15px;font-weight:600;margin:0 0 4px;color:var(--text)}
   main h3{font-size:15px;font-weight:700;margin:32px 0 14px 0;color:var(--text);padding-bottom:4px;border-bottom:1px solid var(--border)}
   main h3:first-of-type{margin-top:6px}
@@ -1153,7 +1155,7 @@
   /* Client picker */
   .cli-pick{position:relative;max-width:320px}
   .cli-pick .selected{display:flex;align-items:center;gap:10px;height:var(--input-h);padding:0 12px;background:var(--field-bg);border:1px solid var(--border-soft);border-radius:6px;font-size:13px;transition:border-color .15s,box-shadow .15s,background .15s}
-  .cli-pick .selected:hover{border-color:rgba(69,193,253,.4);box-shadow:0 0 8px rgba(69,193,253,.1)}
+  .cli-pick .selected:hover{border-color:rgba(69,193,253,.4)}
   .cli-pick .selected .name{flex:1;color:var(--text);font-weight:500}
   .cli-pick .selected .num{color:var(--text-muted);font-size:13px;font-variant-numeric:tabular-nums}
   .cli-pick .selected .change{background:transparent;border:0;color:var(--primary);font-size:13px;cursor:pointer;padding:2px 6px;border-radius:4px}
@@ -1414,8 +1416,8 @@
   /* Locked field with ⋮ menu (URSSAF) */
   .lock-field{display:flex;align-items:stretch;gap:0;width:100%;max-width:120px;position:relative;height:var(--input-h)}
   .lock-field input{flex:1;width:50px;height:var(--input-h);text-align:center;font-variant-numeric:tabular-nums;background:var(--field-bg);color:var(--text);border:1px solid var(--border-soft);transition:background .15s,border-color .15s,box-shadow .15s}
-  .lock-field input:not(:disabled):hover{border-color:rgba(69,193,253,.4);box-shadow:0 0 8px rgba(69,193,253,.1)}
-  .lock-field input:focus{outline:none;border-color:var(--primary);background:rgba(69,193,253,.08);box-shadow:inset 0 0 0 1px rgba(69,193,253,.22),0 0 12px rgba(69,193,253,.35),0 0 24px rgba(69,193,253,.12)}
+  .lock-field input:not(:disabled):hover{border-color:rgba(69,193,253,.4)}
+  .lock-field input:focus{outline:none;border-color:var(--primary);background:rgba(69,193,253,.08);box-shadow:inset 0 0 0 1px rgba(69,193,253,.22)}
   .lock-field input:disabled{opacity:0.85;cursor:not-allowed;background:var(--field-bg);color:var(--text);position:relative}
   .lock-field:has(input:disabled){position:relative}
   .lock-field:has(input:disabled)::after{content:"";position:absolute;inset:0;background:rgba(255,255,255,.06);border-radius:6px;pointer-events:none}
@@ -1590,8 +1592,8 @@
   .catalog-table td.cible-cell{border-left:1px solid rgba(69,193,253,.20);border-right:1px solid rgba(69,193,253,.20);background:rgba(69,193,253,.04)}
   .catalog-table td.cible-cell{text-align:right;padding:6px 10px}
   .catalog-table td.cible-cell .tr-tarif-input{font-size:14px;font-weight:700;color:#45C1FD;width:80px;background:var(--field-bg);border:1px solid rgba(69,193,253,.45);border-radius:6px;padding:4px 10px}
-  .catalog-table td.cible-cell .tr-tarif-input:hover{border-color:var(--primary);background:rgba(69,193,253,.10);box-shadow:0 0 8px rgba(69,193,253,.18)}
-  .catalog-table td.cible-cell .tr-tarif-input:focus{outline:none;border-color:var(--primary);background:rgba(69,193,253,.12);box-shadow:inset 0 0 0 1px rgba(69,193,253,.30),0 0 12px rgba(69,193,253,.40),0 0 24px rgba(69,193,253,.15)}
+  .catalog-table td.cible-cell .tr-tarif-input:hover{border-color:var(--primary);background:rgba(69,193,253,.10)}
+  .catalog-table td.cible-cell .tr-tarif-input:focus{outline:none;border-color:var(--primary);background:rgba(69,193,253,.12);box-shadow:inset 0 0 0 1px rgba(69,193,253,.30)}
   .catalog-table td.cible-cell .tarif-input-wrap{gap:6px}
   .catalog-table td.cible-cell .tarif-input-wrap .unit{color:#45C1FD;font-weight:600;font-size:12px}
   /* Colonne Tarif final (déclaré ou au black, dynamique) */
@@ -1620,10 +1622,10 @@
   .catalog-th-final-black .catalog-th-title{color:var(--warning)}
   .catalog-th-net .catalog-th-title{color:var(--success)}
   /* Status badges in Tarifs view (Investissements) */
-  .tr-badge{padding:3px 8px;border-radius:10px;font-size:13px;font-weight:600;text-transform:uppercase;display:inline-block;line-height:1.4}
-  .tr-badge.ok{background:var(--success-soft);color:var(--success)}
-  .tr-badge.partial{background:var(--warning-soft);color:var(--warning)}
-  .tr-badge.none{background:var(--danger-soft);color:var(--danger)}
+  .tr-badge{padding:3px 9px;border-radius:999px;font-family:var(--font-mono);font-size:8.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;display:inline-flex;align-items:center;gap:4px;line-height:1.4;background:transparent;border:1px solid}
+  .tr-badge.ok{color:var(--success);border-color:rgba(2,220,185,.33)}
+  .tr-badge.partial{color:var(--warning);border-color:rgba(245,148,60,.33)}
+  .tr-badge.none{color:var(--danger);border-color:rgba(232,69,28,.33)}
 
   /* Doc title (DÉBOURS / FACTURE) inside the preview */
   .devis-preview .dp-doc-title{font-size:24px;font-weight:800;letter-spacing:-.01em;margin:18px 0 4px;text-transform:uppercase}
@@ -2705,14 +2707,14 @@
   .ech-list{display:flex;flex-direction:column;gap:var(--space-sm);max-width:480px}
   /* Label simple (même typo que .field label) — utilisé hors d'un .field
      pour étiqueter une zone (ex. « Échéances » au-dessus de la liste). */
-  .field-label-only{font-size:13px;color:var(--text-muted);margin-bottom:var(--space-xs);margin-top:var(--space-md)}
+  .field-label-only{font-size:11px;color:var(--text-muted);margin-bottom:var(--space-xs);margin-top:var(--space-md)}
   .ech-row{display:flex;align-items:center;gap:10px;background:transparent;border:0;border-radius:0;padding:2px 0}
   .ech-row input.lbl{flex:1;height:var(--input-h);border:1px solid var(--border-soft);background:var(--field-bg);color:var(--text);font:inherit;font-size:13px;padding:0 10px;border-radius:6px;min-width:0;transition:border-color .15s,box-shadow .15s,background .15s}
-  .ech-row input.lbl:hover{border-color:rgba(69,193,253,.4);box-shadow:0 0 8px rgba(69,193,253,.1)}
-  .ech-row input.lbl:focus{outline:none;border-color:var(--primary);background:rgba(69,193,253,.08);box-shadow:inset 0 0 0 1px rgba(69,193,253,.22),0 0 12px rgba(69,193,253,.35),0 0 24px rgba(69,193,253,.12)}
+  .ech-row input.lbl:hover{border-color:rgba(69,193,253,.4)}
+  .ech-row input.lbl:focus{outline:none;border-color:var(--primary);background:rgba(69,193,253,.08);box-shadow:inset 0 0 0 1px rgba(69,193,253,.22)}
   .ech-row .pct-wrap{display:flex;align-items:center;gap:3px;height:var(--input-h);background:var(--field-bg);border:1px solid var(--border-soft);border-radius:6px;padding:0 8px;width:90px;transition:border-color .15s,box-shadow .15s,background .15s;flex-shrink:0;box-sizing:border-box}
-  .ech-row .pct-wrap:hover{border-color:rgba(69,193,253,.4);box-shadow:0 0 8px rgba(69,193,253,.1)}
-  .ech-row .pct-wrap:focus-within{border-color:var(--primary);background:rgba(69,193,253,.08);box-shadow:inset 0 0 0 1px rgba(69,193,253,.22),0 0 12px rgba(69,193,253,.35),0 0 24px rgba(69,193,253,.12)}
+  .ech-row .pct-wrap:hover{border-color:rgba(69,193,253,.4)}
+  .ech-row .pct-wrap:focus-within{border-color:var(--primary);background:rgba(69,193,253,.08);box-shadow:inset 0 0 0 1px rgba(69,193,253,.22)}
   .ech-row .pct-wrap input{width:50px;height:100%;border:0;background:transparent;text-align:right;color:var(--text);font:inherit;font-size:13px;font-variant-numeric:tabular-nums;padding:0}
   .ech-row .pct-wrap input:focus{outline:none}
   .ech-row .pct-wrap .unit{color:var(--text-dim);font-size:13px}
@@ -2768,7 +2770,7 @@
   .client-line-contact{flex:1 1 320px;min-width:280px;max-width:480px;display:flex;align-items:center}
   /* Match cli-pick .selected exactly so client + contact boxes line up perfectly */
   .contact-inline{display:flex;align-items:center;gap:10px;height:var(--input-h);background:var(--field-bg);border:1px solid var(--border-soft);border-radius:6px;padding:0 12px;font-size:13px;color:var(--text);width:100%;box-sizing:border-box;transition:border-color .15s,box-shadow .15s,background .15s}
-  .contact-inline:hover{border-color:rgba(69,193,253,.4);box-shadow:0 0 8px rgba(69,193,253,.1)}
+  .contact-inline:hover{border-color:rgba(69,193,253,.4)}
   .contact-inline-lbl{color:var(--text-muted);font-size:13px;font-variant-numeric:tabular-nums;flex-shrink:0}
   .contact-inline-val{flex:1;color:var(--text);font-size:13px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
   .contact-inline-change{background:transparent;border:0;color:var(--primary);font-size:13px;cursor:pointer;padding:2px 8px;border-radius:4px;flex-shrink:0}
@@ -3008,25 +3010,25 @@
   .lg-row-wrap{display:flex;flex-direction:column;gap:6px}
   .lg-row{display:flex;align-items:center;gap:10px}
   .lg-justif{display:inline-flex;align-items:center;gap:4px;height:var(--input-h);padding:0 12px;border:1px solid var(--border-soft);background:var(--field-bg);color:var(--text-muted);border-radius:6px;font-size:13px;font-weight:500;cursor:pointer;flex-shrink:0;font-variant-numeric:tabular-nums;transition:background .15s,color .15s,border-color .15s,box-shadow .15s}
-  .lg-justif:hover{border-color:rgba(69,193,253,.4);color:var(--text);box-shadow:0 0 8px rgba(69,193,253,.1)}
+  .lg-justif:hover{border-color:rgba(69,193,253,.4);color:var(--text)}
   .lg-justif.on{background:rgba(2,220,185,.08);color:var(--success);border-color:var(--success);font-weight:600;box-shadow:inset 0 0 0 1px rgba(2,220,185,.25)}
   .lg-justif.on:hover{background:rgba(2,220,185,.14);box-shadow:inset 0 0 0 1px rgba(2,220,185,.3)}
   .lg-cession-detail{padding:10px 14px;background:rgba(0,0,0,.18);border:1px solid var(--border-soft);border-radius:6px;display:flex;flex-direction:column;gap:8px;margin-left:0;margin-top:2px}
   .lg-cession-detail .row{margin:0;gap:10px}
   .lg-cession-detail .field label{font-size:11px;color:var(--text-muted);margin-bottom:2px}
   .lg-cession-detail input[type="text"]{height:var(--input-h);padding:0 10px;border:1px solid var(--border-soft);border-radius:6px;background:var(--field-bg);color:var(--text);font:inherit;font-size:13px;transition:border-color .15s,box-shadow .15s,background .15s}
-  .lg-cession-detail input[type="text"]:hover{border-color:rgba(69,193,253,.4);box-shadow:0 0 8px rgba(69,193,253,.1)}
-  .lg-cession-detail input[type="text"]:focus{outline:none;border-color:var(--primary);background:rgba(69,193,253,.08);box-shadow:inset 0 0 0 1px rgba(69,193,253,.22),0 0 12px rgba(69,193,253,.35),0 0 24px rgba(69,193,253,.12)}
+  .lg-cession-detail input[type="text"]:hover{border-color:rgba(69,193,253,.4)}
+  .lg-cession-detail input[type="text"]:focus{outline:none;border-color:var(--primary);background:rgba(69,193,253,.08);box-shadow:inset 0 0 0 1px rgba(69,193,253,.22)}
   .lg-cession-detail .lg-desc{margin:0;min-height:32px}
   .lg-title{flex:1;min-width:160px;height:var(--input-h);padding:0 10px;border:1px solid var(--border-soft);border-radius:6px;background:var(--field-bg);color:var(--text);font:inherit;font-size:13px;font-weight:500;transition:border-color .15s,box-shadow .15s,background .15s}
-  .lg-title:hover{border-color:rgba(69,193,253,.4);box-shadow:0 0 8px rgba(69,193,253,.1)}
-  .lg-title:focus{outline:none;border-color:var(--primary);background:rgba(69,193,253,.08);box-shadow:inset 0 0 0 1px rgba(69,193,253,.22),0 0 12px rgba(69,193,253,.35),0 0 24px rgba(69,193,253,.12)}
+  .lg-title:hover{border-color:rgba(69,193,253,.4)}
+  .lg-title:focus{outline:none;border-color:var(--primary);background:rgba(69,193,253,.08);box-shadow:inset 0 0 0 1px rgba(69,193,253,.22)}
   .lg-num{width:80px;height:var(--input-h);padding:0 10px;border:1px solid var(--border-soft);border-radius:6px;background:var(--field-bg);color:var(--text);font:inherit;font-size:13px;text-align:right;font-variant-numeric:tabular-nums;transition:border-color .15s,box-shadow .15s,background .15s;flex-shrink:0}
-  .lg-num:hover{border-color:rgba(69,193,253,.4);box-shadow:0 0 8px rgba(69,193,253,.1)}
-  .lg-num:focus{outline:none;border-color:var(--primary);background:rgba(69,193,253,.08);box-shadow:inset 0 0 0 1px rgba(69,193,253,.22),0 0 12px rgba(69,193,253,.35),0 0 24px rgba(69,193,253,.12)}
+  .lg-num:hover{border-color:rgba(69,193,253,.4)}
+  .lg-num:focus{outline:none;border-color:var(--primary);background:rgba(69,193,253,.08);box-shadow:inset 0 0 0 1px rgba(69,193,253,.22)}
   .lg-prix{display:flex;align-items:center;gap:4px;width:90px;height:var(--input-h);background:var(--field-bg);border:1px solid var(--border-soft);border-radius:6px;padding:0 10px;transition:border-color .15s,box-shadow .15s,background .15s;flex-shrink:0;box-sizing:border-box}
-  .lg-prix:hover{border-color:rgba(69,193,253,.4);box-shadow:0 0 8px rgba(69,193,253,.1)}
-  .lg-prix:focus-within{border-color:var(--primary);background:rgba(69,193,253,.08);box-shadow:inset 0 0 0 1px rgba(69,193,253,.22),0 0 12px rgba(69,193,253,.35),0 0 24px rgba(69,193,253,.12)}
+  .lg-prix:hover{border-color:rgba(69,193,253,.4)}
+  .lg-prix:focus-within{border-color:var(--primary);background:rgba(69,193,253,.08);box-shadow:inset 0 0 0 1px rgba(69,193,253,.22)}
   .lg-prix input{flex:1;width:100%;height:100%;border:0;background:transparent;color:var(--text);font:inherit;font-size:13px;font-variant-numeric:tabular-nums;text-align:right;padding:0;min-width:0}
   .lg-prix input:focus{outline:none}
   .lg-prix .unit{color:var(--text-dim);font-size:13px;flex-shrink:0}
@@ -3075,8 +3077,8 @@
   .lg-del{background:transparent;border:0;color:var(--text-dim);font-size:18px;line-height:1;cursor:pointer;height:var(--input-h);width:30px;display:flex;align-items:center;justify-content:center;padding:0;border-radius:4px;flex-shrink:0}
   .lg-del:hover{background:var(--danger-soft);color:var(--danger)}
   .lg-desc{width:100%;padding:8px 10px;border:1px solid var(--border-soft);border-radius:6px;background:var(--field-bg);color:var(--text-muted);font:inherit;font-size:13px;resize:vertical;min-height:60px;transition:border-color .15s,box-shadow .15s,background .15s,color .15s;box-sizing:border-box}
-  .lg-desc:hover{border-color:rgba(69,193,253,.4);box-shadow:0 0 8px rgba(69,193,253,.1)}
-  .lg-desc:focus{outline:none;border-color:var(--primary);background:rgba(69,193,253,.08);box-shadow:inset 0 0 0 1px rgba(69,193,253,.22),0 0 12px rgba(69,193,253,.35),0 0 24px rgba(69,193,253,.12);color:var(--text)}
+  .lg-desc:hover{border-color:rgba(69,193,253,.4)}
+  .lg-desc:focus{outline:none;border-color:var(--primary);background:rgba(69,193,253,.08);box-shadow:inset 0 0 0 1px rgba(69,193,253,.22);color:var(--text)}
 
   /* ============================================================================
      DEVIS v2 — Accordéon vertical, preview pleine largeur en dessous
@@ -6094,14 +6096,14 @@ function rDevisPreview() {
           ${b.iban ? `<div class="dp-bank-line iban"><span class="lbl">IBAN</span><span class="val">${esc(b.iban)}</span></div>` : ""}
           ${b.bic ? `<div class="dp-bank-line"><span class="lbl">BIC</span><span class="val">${esc(b.bic)}</span></div>` : ""}
         </div>` : ""}
-        ${legacy && !hasBank ? `<div class="dp-payment-text dp-rich-zone" data-rich-field="conditionsPaiement"><button class="dp-rich-menu-btn" type="button" onclick="event.stopPropagation();textEditorOpen('conditionsPaiement')" title="Modifier ce texte">⋮</button>${richDisplayHtml(legacy)}</div>` : ""}
+        ${legacy && !hasBank ? `<div class="dp-payment-text dp-rich-zone" data-rich-field="conditionsPaiement"><button class="dp-rich-menu-btn" type="button" onclick="event.stopPropagation();textEditorOpen('conditionsPaiement')" title="Modifier ce texte">${ICO_SZ('moreVertical', 14)}</button>${richDisplayHtml(legacy)}</div>` : ""}
       </div>`;
     })()}
 
     <div class="dp-spacer"></div>
 
     <div class="dp-signature-row dp-rich-zone" data-rich-field="signatureBlock">
-      <button class="dp-rich-menu-btn" type="button" onclick="event.stopPropagation();textEditorOpen('signatureBlock')" title="Modifier le bloc signature">⋮</button>
+      <button class="dp-rich-menu-btn" type="button" onclick="event.stopPropagation();textEditorOpen('signatureBlock')" title="Modifier le bloc signature">${ICO_SZ('moreVertical', 14)}</button>
       ${(d.signatureBlock || "").trim()
         ? richDisplayHtml(d.signatureBlock)
         : `<div class="dp-sig-default">
@@ -9564,7 +9566,7 @@ function renderCgvSections(preambule, sections) {
     // Préambule éditable in-place (wrapper .dp-rich-zone + bouton ⋮).
     // richDisplayHtml gère le contenu rich-text (issu du textEditor) ou
     // le texte plain (legacy / saisie simple) sans double-escape.
-    html += `<div class="dp-rich-zone" data-rich-field="cgvPreambule"><button class="dp-rich-menu-btn" type="button" onclick="event.stopPropagation();textEditorOpen('cgvPreambule')" title="Modifier le préambule CGV">⋮</button><p class="cgv-paragraph">${richDisplayHtml(safePreamb)}</p></div>`;
+    html += `<div class="dp-rich-zone" data-rich-field="cgvPreambule"><button class="dp-rich-menu-btn" type="button" onclick="event.stopPropagation();textEditorOpen('cgvPreambule')" title="Modifier le préambule CGV">${ICO_SZ('moreVertical', 14)}</button><p class="cgv-paragraph">${richDisplayHtml(safePreamb)}</p></div>`;
   }
   validSections.forEach((s, i) => {
     const title = (s.title || "").trim();
@@ -9575,7 +9577,7 @@ function renderCgvSections(preambule, sections) {
       ? `<strong class="cgv-section-title">${i + 1}. ${esc(titleDisplay)}</strong> `
       : `<strong class="cgv-section-title">${i + 1}.</strong> `;
     // Wrap pour édition in-place : bouton ⋮ ouvre cgvSectionEditOpen.
-    html += `<div class="dp-rich-zone" data-rich-field="cgvSection-${esc(s.id || i)}"><button class="dp-rich-menu-btn" type="button" onclick="event.stopPropagation();cgvSectionEditOpen('${esc(s.id)}')" title="Modifier cette section CGV">⋮</button><p class="cgv-section">${titlePart}${esc(body)}</p></div>`;
+    html += `<div class="dp-rich-zone" data-rich-field="cgvSection-${esc(s.id || i)}"><button class="dp-rich-menu-btn" type="button" onclick="event.stopPropagation();cgvSectionEditOpen('${esc(s.id)}')" title="Modifier cette section CGV">${ICO_SZ('moreVertical', 14)}</button><p class="cgv-section">${titlePart}${esc(body)}</p></div>`;
   });
   return html;
 }
@@ -9846,6 +9848,19 @@ function rBinModal() {
 // l'utilisateur. Plus récent en premier. id = clé stable, sert au "lu/non-lu".
 // Format des items : { h: titre court, b: explication 1-3 phrases }.
 const APP_CHANGELOG = [
+  {
+    id: "2026-07-arbitrages-v2",
+    date: "2026-07-14",
+    title: "Finitions charte — rayons, focus, étiquettes",
+    items: [
+      { h: "Des angles plus nets",
+        b: "Tous les rayons de bordure descendent d'un cran pour coller à la maquette : boutons et champs à 4 px, cartes et sections à 6 px. L'app entière suit, c'était un seul réglage central." },
+      { h: "Le focus des champs s'assagit",
+        b: "Cliquer dans un champ n'allume plus un triple halo lumineux : une bordure azur et un léger fond teinté suffisent. Dernière famille de résidus « néon » éliminée." },
+      { h: "Étiquettes de statut redessinées",
+        b: "Soldé, Refusé, À encaisser, Amorti, Propriétaire… passent au motif de la maquette : fond transparent, fine bordure colorée, coins pleinement arrondis. Les libellés de formulaire se densifient aussi (11 px) et les derniers ⋮ tapés au clavier deviennent de vraies icônes." }
+    ]
+  },
   {
     id: "2026-07-socle-v2",
     date: "2026-07-14",
@@ -10875,7 +10890,7 @@ function rCgvEditor() {
     <div class="cgv-summary-row" data-id="${s.id}">
       <span class="cgv-summary-num">${i + 1}.</span>
       <span class="cgv-summary-title">${esc(s.title || "(sans titre)")}</span>
-      <button class="btn-icon cgv-summary-edit" onclick="cgvSectionEditOpen('${s.id}')" title="Modifier">⋮</button>
+      <button class="btn-icon cgv-summary-edit" onclick="cgvSectionEditOpen('${s.id}')" title="Modifier">${ICO_SZ('moreVertical', 14)}</button>
     </div>
   `).join("");
 
@@ -12143,7 +12158,7 @@ function rLigneDraggable(l) {
       ondragend="devisDragEnd(event)"
       ondragover="devisDragOver(event)"
       ondrop="devisDrop(event,'${l.id}')">
-      <span class="lg-drag" title="Glisser pour réordonner">⋮⋮</span>`
+      <span class="lg-drag" title="Glisser pour réordonner">${ICO_SZ('gripVertical', 14)}</span>`
   );
 }
 
@@ -12581,7 +12596,7 @@ function rDevisSectionDeplacement() {
           <div class="lock-field with-unit">
             <input id="tauxKmInput" type="number" step="0.01" min="0" value="${esc(d.deplacement.tauxKm ?? "0.40")}" ${tauxKmUnlocked ? `oninput="upd('mission.deplacement.tauxKm', this.value)"` : "disabled"}>
             <span class="lock-unit">€/km</span>
-            <button class="lock-menu-btn" onclick="tauxKmToggleMenu()" title="Options">⋮</button>
+            <button class="lock-menu-btn" onclick="tauxKmToggleMenu()" title="Options">${ICO_SZ('moreVertical', 14)}</button>
             <div class="lock-popup" id="tauxKmMenu">
               ${tauxKmUnlocked
                 ? `<button onclick="tauxKmResetDefault()">${ICO_SZ('rotateCcw', 14)} Rétablir 0,40 €/km</button>`
@@ -12757,7 +12772,7 @@ function rDevisSectionAjustements() {
         <div class="lock-field with-unit">
           <input id="urssafInput" type="number" step="0.1" value="${esc(S.identite?.urssafPct ?? "22")}" ${urssafUnlocked ? `oninput="upd('identite.urssafPct', this.value)"` : "disabled"}>
           <span class="lock-unit">%</span>
-          <button class="lock-menu-btn" onclick="urssafToggleMenu()" title="Options">⋮</button>
+          <button class="lock-menu-btn" onclick="urssafToggleMenu()" title="Options">${ICO_SZ('moreVertical', 14)}</button>
           <div class="lock-popup" id="urssafMenu">
             ${urssafUnlocked
               ? `<button onclick="urssafResetDefault()">${ICO_SZ('rotateCcw', 14)} Rétablir 22 %</button>`
@@ -12772,7 +12787,7 @@ function rDevisSectionAjustements() {
         <div class="lock-field with-unit">
           <input id="margeAvanceInput" type="number" step="0.1" min="0" value="${esc((d.paiement || {}).margeAvance ?? "0")}" ${margeAvanceUnlocked ? `oninput="upd('mission.paiement.margeAvance', this.value)"` : "disabled"} placeholder="0">
           <span class="lock-unit">%</span>
-          <button class="lock-menu-btn" onclick="margeAvanceToggleMenu()" title="Options">⋮</button>
+          <button class="lock-menu-btn" onclick="margeAvanceToggleMenu()" title="Options">${ICO_SZ('moreVertical', 14)}</button>
           <div class="lock-popup" id="margeAvanceMenu">
             ${margeAvanceUnlocked
               ? `<button onclick="margeAvanceResetDefault()">${ICO_SZ('rotateCcw', 14)} Rétablir 0 %</button>`
