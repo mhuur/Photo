@@ -34,9 +34,27 @@ cocher ici → push.
 
 ---
 
-## QUESTIONS OUVERTES — arbitrages utilisateur avant de corriger
+## QUESTIONS OUVERTES — ✅ TOUTES ARBITRÉES (2026-07-14)
 
-*(réponses à consigner ici, puis reporter les « assumés » dans refonte-v2/README.md)*
+**Décisions :**
+1. Mission : **accordéon conservé** (écart assumé → README).
+2. Toggles : **fill azure sur les toggles de 1ᵉʳ niveau**, secondaires restent en creux.
+3. Rayons : **aligner sur la maquette** (tokens : contrôles 4px, cartes 6px).
+4. Labels de champ : **densifier** (11px, labels de zone en mono).
+5. Halos focus/hover des champs : **supprimer partout** (bordure + fond teinté).
+6. Lignes de devis : **conteneur unique** à séparateurs (maquette).
+7. Onglet Bugs : **refonte complète** (grille 2 col + champs `type` et statut ternaire dans
+   `S.bugs.items[]`, migration `validated` → Résolu, quick-add préservé).
+8. Profil : **ajouter les cartes CGV & mentions + URSSAF**.
+9. Badge type client : **abandonné** (écart assumé → README).
+10. KPI Bilan : **composition actuelle conservée + couleurs** (Salaire jade, Trésorerie/Marge azure).
+11. `⋮` : **Lucide `moreVertical` partout** + corriger la convention dans CLAUDE.md.
+12. Encaissé fiche client : **net des remboursements**.
+13. Libellés NAV : **libellés actuels conservés** (« Missions / Devis en cours / Achats & Abonnements »)
+    → CLAUDE.md à mettre à jour.
+14. Purge ancienne table Suivi (~150 l.) : **tout supprimer** (filtre année recréable en chips si besoin).
+
+*(questions d'origine ci-dessous pour mémoire)*
 
 1. **Mission — accordéon vs sections ouvertes** : la maquette montre 5 cartes toutes ouvertes ;
    l'app a un accordéon (1 volet ouvert), validé en phase 3. Garder l'accordéon (= consigner

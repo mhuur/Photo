@@ -34,3 +34,17 @@ Les tokens vivent dans le 1ᵉʳ `:root` d'`index.html` — cf. § Charte V2 de
 - **Les barèmes cession / matériel de la maquette ne sont PAS implémentés.**
   C'est une feature à part entière, hors périmètre de la refonte. Le Catalogue
   garde sa piste « Grille » (drag & drop + groupes).
+
+## Écarts assumés — vague 2 (arbitrages du 2026-07-14, cf. REFONTE-SUIVI.md)
+
+- **Mission garde son accordéon** (1 section ouverte à la fois), pas les 5
+  sections empilées de la maquette : le formulaire est long, l'accordéon garde
+  le récap sticky en vue.
+- **Pas de badge type entreprise/particulier sur la fiche client** : le schéma
+  n'a pas de champ `type` et on ne veut ni le dériver du SIRET ni l'ajouter.
+- **Bandeau KPI du Bilan : composition conservée** (CA mois · CA cumulé ·
+  Salaire net · URSSAF · Marge nette, plus riche que la maquette) — seules les
+  couleurs de la spec sont reprises (jade / ambre / azure).
+- **Libellés de navigation renommés** : « Missions / Devis en cours /
+  Achats / Abonnements » au lieu de « Mission / Suivi devis / Achats » (choix
+  utilisateur, propagé aux h1 par construction).
