@@ -66,29 +66,29 @@
   .sb .tab-icon{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;flex-shrink:0;color:inherit}
   .sb .tab-icon svg{width:18px;height:18px}
   .sb button.tab.active .tab-icon{color:var(--primary)}
-  /* === Sidebar — groupes dépliables au SURVOL (NAV) ===
-     Repliés au repos, dépliés au hover (et refermés en sortant). `.open` n'est
-     qu'un filet posé au clic pour le tactile (pas de :hover sur un écran
-     tactile) et le clavier (:focus-within). Aucun état persisté → aucun
-     « Enregistré » qui clignote au dépliage. */
+  /* === Sidebar — groupes dépliables au CLIC (NAV) ===
+     Accordéon inline classique (VS Code / Notion / Linear) : un clic déplie, le
+     groupe RESTE ouvert jusqu'au clic suivant.
+     ⚠ Surtout PAS de dépliage au :hover — le contenu pousse les groupes du
+     dessous, donc quitter un groupe le referme, tout remonte, et la souris se
+     retrouve dans le vide (reflow). C'est précisément pour ça que les vraies
+     apps réservent le survol aux panneaux flottants (qui, eux, ne poussent rien).
+     Aucun état persisté → aucun « Enregistré » qui clignote au dépliage. */
   .sb-group{border-bottom:1px solid var(--border-soft)}
   .sb-group:last-of-type{border-bottom:0}
   .sb-group-head{display:flex;align-items:center;gap:11px;width:100%;background:none;border:0;color:#cfe3ff;padding:11px 16px;text-align:left;cursor:pointer;font:inherit;font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase}
-  .sb-group:hover .sb-group-head,.sb-group.open .sb-group-head{background:var(--surface)}
+  .sb-group-head:hover{background:var(--surface)}
   .sb-group-label{flex:1;min-width:0}
   .sb-group-chevron{display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--text-muted);transition:transform .15s ease}
-  .sb-group:hover .sb-group-chevron,.sb-group.open .sb-group-chevron,.sb-group:focus-within .sb-group-chevron{transform:rotate(90deg)}
-  /* Le corps du groupe : masqué au repos, révélé au survol / clic / focus. */
+  .sb-group.open .sb-group-chevron{transform:rotate(90deg)}
   .sb-group-body{display:none;flex-direction:column}
-  .sb-group:hover .sb-group-body,.sb-group.open .sb-group-body,.sb-group:focus-within .sb-group-body{display:flex}
+  .sb-group.open .sb-group-body{display:flex}
   /* Groupe replié contenant la page courante : on garde un repère visuel. */
   .sb-group.has-active .sb-group-head{color:#fff}
   .sb-group.has-active .sb-group-chevron{color:var(--primary)}
   /* Pastille « brouillon » remontée sur l'en-tête tant que le groupe est replié
      (sinon elle serait invisible) — masquée dès que les items réapparaissent. */
-  .sb-group:hover .sb-group-head .brouillon-tag,
-  .sb-group.open .sb-group-head .brouillon-tag,
-  .sb-group:focus-within .sb-group-head .brouillon-tag{display:none}
+  .sb-group.open .sb-group-head .brouillon-tag{display:none}
   /* Sous-onglets : légèrement indentés sous l'en-tête de groupe. */
   .sb-group-body button.tab{padding-left:28px;font-size:13px}
   /* Pastille « brouillon » à côté du label Mission quand un brouillon est en cours */
@@ -8987,7 +8987,7 @@ function render() {
         const hasDraft = typeof missionHasDraft === "function" && missionHasDraft();
         const activeGroup = navGroupOfTab(tab);
         return NAV.map(g => {
-          const pinned = navGroupIsPinned(g.id);
+          const open = navGroupIsOpen(g.id);
           const rows = g.items.map(([k, l, ico]) => {
             const labelHtml = (k === "mission" && hasDraft)
               ? `${esc(l)} <span class="brouillon-tag">brouillon</span>`
@@ -9001,8 +9001,8 @@ function render() {
           // masque au survol, quand la vraie pastille de l'item réapparaît.
           const headDraft = (hasDraft && g.items.some(([k]) => k === "mission"))
             ? ` <span class="brouillon-tag">brouillon</span>` : "";
-          return `<div class="sb-group${pinned ? " open" : ""}${g.id === activeGroup ? " has-active" : ""}">
-            <button type="button" class="sb-group-head" onclick="navGroupToggle('${g.id}')" aria-expanded="${pinned}">
+          return `<div class="sb-group${open ? " open" : ""}${g.id === activeGroup ? " has-active" : ""}">
+            <button type="button" class="sb-group-head" onclick="navGroupToggle('${g.id}')" aria-expanded="${open}">
               <span class="tab-icon">${ICONS[g.icon] || ""}</span>
               <span class="sb-group-label">${esc(g.label)}${headDraft}</span>
               <span class="sb-group-chevron" aria-hidden="true">${ICO_SZ('chevronRight', 14)}</span>
@@ -9587,8 +9587,8 @@ const APP_CHANGELOG = [
     title: "Menu réorganisé en deux groupes",
     items: [
       {
-        h: "Missions et Comptabilité, dépliables au survol",
-        b: "La barre latérale se replie en deux groupes qui s'ouvrent au passage de la souris et se referment ensuite. Missions : Devis en cours (l'ancien Accueil), Nouveau devis, Catalogue, Clients et Mon Profil (qui quitte le menu du compte). Comptabilité : Bilan comptable, Historique et Achats / Abonnements. Sur écran tactile, un appui sur le titre du groupe le déplie."
+        h: "Missions et Comptabilité, dépliables au clic",
+        b: "La barre latérale se replie en deux groupes. Un clic sur le titre déplie le groupe, qui reste ouvert jusqu'au clic suivant. Missions : Devis en cours (l'ancien Accueil), Nouveau devis, Catalogue, Clients et Mon Profil (qui quitte le menu du compte). Comptabilité : Bilan comptable, Historique et Achats / Abonnements."
       },
       {
         h: "« Nouveau devis » toujours accessible",
@@ -17598,17 +17598,27 @@ function rBG() {
   return h;
 }
 
-// ▼ navGroupToggle — les groupes de la sidebar se déplient au SURVOL (pur CSS,
-// cf. `.sb-group:hover`) et se replient quand la souris sort. Ce clic n'est
-// qu'un filet pour le tactile (pas de :hover sur un écran tactile → les
-// sous-onglets seraient inatteignables) et le clavier.
+// ▼ navGroupIsOpen / navGroupToggle — accordéon de la sidebar, déplié au CLIC
+// (le groupe reste ouvert jusqu'au clic suivant). Plusieurs groupes peuvent être
+// ouverts en même temps.
 // ⚠ État volontairement TRANSIENT (variable module, jamais dans S) : le passer
-// par S + save() faisait clignoter « Enregistré » à chaque dépliage, et polluait
-// le doc Firestore pour une préférence d'affichage.
-let navGroupPinned = {};
-function navGroupIsPinned(groupId) { return !!navGroupPinned[groupId]; }
+// par S + save() faisait clignoter « Enregistré » à chaque dépliage et polluait
+// le doc Firestore pour une préférence d'affichage. Il survit donc à la
+// navigation (contrairement à un état recalculé à chaque render) mais repart à
+// zéro au reload — acceptable pour un pli de menu.
+// Init paresseuse : au 1er rendu, seul le groupe de l'onglet courant est ouvert.
+let _navGroupOpen = null;
+function navGroupState() {
+  if (!_navGroupOpen) {
+    _navGroupOpen = {};
+    for (const g of NAV) _navGroupOpen[g.id] = (navGroupOfTab(tab) === g.id);
+  }
+  return _navGroupOpen;
+}
+function navGroupIsOpen(groupId) { return !!navGroupState()[groupId]; }
 window.navGroupToggle = function(groupId) {
-  navGroupPinned[groupId] = !navGroupPinned[groupId];
+  const st = navGroupState();
+  st[groupId] = !st[groupId];
   render();   // pas de save() : rien à persister
 };
 
@@ -17628,9 +17638,12 @@ window.setTab = k => {
   // Tracker le dernier onglet avant Notes/bugs pour pré-remplir
   // automatiquement le formulaire « Onglet concerné ».
   if (k === "bugs" && tab && tab !== "bugs") lastTabBeforeBugs = tab;
-  // Naviguer referme les groupes épinglés au clic (tactile) : on retombe sur le
-  // comportement « replié au repos, déplié au survol ».
-  navGroupPinned = {};
+  // Navigation (souvent programmatique : missionTerminer → Historique) vers un
+  // onglet dont le groupe est replié → on le déplie, sinon la page s'affiche
+  // mais son entrée de menu reste invisible. Les autres groupes gardent leur
+  // pli : un accordéon ne se referme pas dans le dos de l'utilisateur.
+  const g = navGroupOfTab(k);
+  if (g) navGroupState()[g] = true;
   tab = k;
   render();
 };
