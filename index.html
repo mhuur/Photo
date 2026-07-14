@@ -5323,6 +5323,24 @@ function validityText(dateEmission, dureeValidite) {
 }
 
 // ============ DEVIS PREVIEW (rendered at the bottom of Mission) ============
+// ▼ dpObjetHtml — bloc « Objet » des documents imprimés (devis + feuille débours).
+// Deux informations DISTINCTES et complémentaires, affichées ensemble :
+//   - l'objet libre (`d.objectText`) : ce que le client reconnaît, ex. « Shooting
+//     éditorial Collection AW26 » ;
+//   - la prestation du catalogue (`cat.l`) : la nature de la séance, ex.
+//     « SHOOT SOLO - STUDIO » — elle n'apparaît nulle part ailleurs sur le doc
+//     (les lignes portent `l.intitule`, pas le libellé catalogue).
+// Le catalogue n'était affiché qu'en REPLI de l'objet libre : dès que l'objet
+// était saisi, la prestation disparaissait du devis. Chaque ligne est omise si vide.
+function dpObjetHtml(d, cat) {
+  const objet  = ((d && d.objectText) || "").trim();
+  const presta = (cat && cat.l) ? String(cat.l).trim() : "";
+  const rows = [];
+  if (objet)  rows.push(`<div>Objet : <strong>${esc(objet)}</strong></div>`);
+  if (presta) rows.push(`<div>Prestation : <strong>${esc(presta)}</strong></div>`);
+  return rows.length ? `<div class="dp-objet">${rows.join("")}</div>` : "";
+}
+
 // ▼ rDevisPreview — preview imprimée du devis principal
 function rDevisPreview() {
   const d = S.mission;
@@ -5497,12 +5515,7 @@ function rDevisPreview() {
       </div>
     </div>
 
-    ${(() => {
-      // Priorité au texte libre saisi par l'utilisateur ; à défaut, libellé catalogue.
-      const txt = (d.objectText || "").trim();
-      const label = txt || (cat ? cat.l : "");
-      return label ? `<div class="dp-objet">Objet : <strong>${esc(label)}</strong></div>` : "";
-    })()}
+    ${dpObjetHtml(d, cat)}
 
     <div class="dp-section">
       ${linesHtml || `<div class="dp-empty" style="padding:14px">Aucune ligne pour l'instant.</div>`}
@@ -5760,7 +5773,7 @@ function rDeboursPreview() {
       </div>
     </div>
 
-    ${cat ? `<div class="dp-objet">Objet : <strong>${esc((d.objectText || "").trim() || cat.l)}</strong></div>` : ""}
+    ${dpObjetHtml(d, cat)}
 
     ${t.debours > 0 ? `<div class="dp-section">
       ${linesHtml}
@@ -9332,6 +9345,17 @@ function rBinModal() {
 // l'utilisateur. Plus récent en premier. id = clé stable, sert au "lu/non-lu".
 // Format des items : { h: titre court, b: explication 1-3 phrases }.
 const APP_CHANGELOG = [
+  {
+    id: "2026-07-objet-et-prestation",
+    date: "2026-07-14",
+    title: "L'objet ET la prestation catalogue sur le devis imprimé",
+    items: [
+      {
+        h: "Les deux s'affichent, plus l'un ou l'autre",
+        b: "La prestation du catalogue ne sortait qu'en remplacement de l'objet libre : dès que tu saisissais un objet, elle disparaissait du document. Le devis et la feuille de débours affichent maintenant les deux lignes — « Objet : Shooting éditorial Collection AW26 » et « Prestation : SHOOT SOLO - STUDIO ». Chacune est masquée si elle est vide."
+      }
+    ]
+  },
   {
     id: "2026-07-edition-preserve-encaissements",
     date: "2026-07-14",
