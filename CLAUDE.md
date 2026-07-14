@@ -104,7 +104,11 @@ Champs invisibles sur `e` : `pmtTs` (ts paiement, ciblé par `suiviDevisUndo`), 
 
 Le mode rapide = **aucun document** (ni devis, ni feuille débours, ni facture), pas d'acompte, pas de cession, pas de CGV. Il ne court-circuite RIEN d'autre : mêmes entries Suivi, même bilan, même compta de caisse.
 
-**Statut fiscal : une prestation rapide est TOUJOURS au noir** (décision produit — le formulaire n'a pas de toggle). `missionIsDeclared(m)` est la **source unique** : elle renvoie `false` dès que `mode === "quick"`, sans muter `m.declare` (config partagée entre missions — la muter effacerait le statut du devis suivant). ⚠ **Tout code qui teste `declare !== false` doit passer par `missionIsDeclared`** — sinon une prestation rapide se retrouverait déclarée dans une moitié de l'app (CA fantôme) et au noir dans l'autre.
+**Statut fiscal : plus AUCUN choix dans le formulaire.** Le toggle « Déclaré / Au black » a été supprimé (avec `updMissionDeclare` / `updBlackMode`). Règle : **devis ⇒ toujours déclaré**, **prestation rapide ⇒ toujours au noir**.
+
+- `missionIsDeclared(m)` est la **source unique** : renvoie `false` dès que `mode === "quick"`, sans muter `m.declare`. ⚠ **Tout code qui teste `declare !== false` doit passer par elle** — sinon une prestation rapide serait déclarée dans une moitié de l'app (CA fantôme) et au noir dans l'autre.
+- `m.declare = true` est **reforcé** dans `missionNew` / `missionSetMode(devis)` / `missionCancel`. Indispensable : `S.mission` conserve le `declare:false` d'un ancien devis au black rouvert en Éditer/Réviser, et sans ce reset **tous les devis suivants seraient au noir en silence** (plus aucun toggle pour s'en apercevoir).
+- **Les devis archivés au black gardent leur statut** (`snapshotMission.declare = false` ⇒ entries `ca=0`, historique fiscal immutable). Rouverts en édition, ils affichent un bandeau `.black-warning` en LECTURE SEULE — jamais de bascule proposée.
 
 **Prix = catalogue brut − remise, zéro majoration.** L'au-noir neutralise déjà `margeAvancePct`/`margeUrssafPct` (la « majoration URSSAF » = gonflement inverse `prix / (1 − 22 %)` appliqué au matériel/déplacement principal dans `ligneDisplayInfo`). Il restait 2 leviers qui auraient modifié le tarif horaire au noir : `blackMode === "reduit"` (× 0,78) et `remiseNoirePct` — **neutralisés pour `quick` dans `totals()`** (`_quick`). Un matériel à 100 € se facture donc 100 € en rapide, contre 128,21 € en devis déclaré.
 
