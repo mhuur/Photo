@@ -42,7 +42,10 @@ grep -nE "^function r[A-Z]" index.html    # liste tous les renderers (rXX)
 
 **Renderers par onglet** : `rMS` Mission, `rPF` Profil, `rCatalogue`/`rAchats` Catalogue/Achats, `rSV` Historique (ex-Suivi), `rCL` Clients, `rCP` Compta, `rAC` Accueil, `rBG` Notes, `rMAJ` Mises à jour, `rParametres`, `rTemplates`. Helpers : `esc() save() render() upd() num() fmt() r2() dateFR() uid()`.
 
-**Titres de page liés au menu** : tout h1 utilise `${esc(pageTitle("<tab>"))}` (helper qui lit `TABS` + `TABS_AUX_LABELS`). Single source : renommer un label dans la liste propage à la sidebar ET au h1, plus de drift possible. Pour ajouter un onglet secondaire (menu user, hors sidebar), l'enregistrer dans `TABS_AUX_LABELS`.
+**Navigation — `NAV` = source unique** : sidebar en 2 groupes dépliables (`Mission` : Suivi devis / Nouveau devis / Catalogue / Clients / Mon Profil — `Comptabilité` : Bilan comptable / Historique / Achats). `TABS` en est **dérivé** (`NAV.flatMap`), et `pageTitle()` en découle → renommer un label dans `NAV` propage à la sidebar, au h1 de la page ET au select « onglet concerné » des Notes (`BUG_TAB_OPTIONS`, dérivé lui aussi). ⚠ Les **clés** d'onglet (`accueil`, `mission`, `compta`, `suivi`…) ne changent JAMAIS : tous les `setTab('suivi')` du code en dépendent. Seuls les labels et le regroupement bougent. Les `id` de groupe sont préfixés `nav-` car le groupe « Mission » contient un onglet dont la clé est aussi `mission`. Onglet secondaire (menu user, hors sidebar) → `TABS_AUX_LABELS`.
+
+- **État plié/déplié** : `S.prefs.navGroups` (persisté + synchronisé). `setTab` déplie automatiquement le groupe de l'onglet ciblé — sinon une navigation programmatique (`missionTerminer` → Historique) afficherait une page dont l'entrée de menu est repliée hors de vue.
+- **« Nouveau devis » (`missionOpen`)** : l'onglet Mission est désormais TOUJOURS visible, alors qu'il était masqué hors brouillon. Le clic ne doit ni écraser un brouillon, ni rouvrir le DERNIER DEVIS ARCHIVÉ (qui reste chargé dans `S.mission` après `suiviAdd` → il serait rouvert en mode « mise à jour »). Règle : brouillon ou édition/révision en cours (`editDevisId`/`revisesDevisId`/`majTrameDevisId`) → on ouvre tel quel ; sinon → `missionNew()` (table rase).
 
 ## Conventions
 
