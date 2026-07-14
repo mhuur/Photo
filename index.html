@@ -497,6 +497,12 @@
 
   /* Panneau translucide V2 : la photo de fond respire au travers. */
   .v2-panel{background:var(--surface-glass);border:1px solid var(--border-soft);border-radius:var(--radius-md);padding:16px 18px 18px}
+  /* KPI inline dans l'en-tête de page (Accueil) — pas de card, juste un filet. */
+  .v2-kpis{display:flex;gap:var(--space-xl);flex-wrap:wrap}
+  .v2-kpi{display:flex;flex-direction:column;gap:2px;border-left:1px solid var(--border);padding-left:var(--space-lg)}
+  .v2-kpi-label{font-size:11px;color:var(--text-muted);white-space:nowrap}
+  .v2-kpi-value{font-size:18px;font-weight:700;color:#fff;font-variant-numeric:tabular-nums;white-space:nowrap}
+  .v2-kpi.jade .v2-kpi-value{color:var(--success)}
   /* Boutons icône carrés (↺ reculer d'un cran, ⋮ plus d'actions) */
   .mk-iconbtn{display:inline-flex;align-items:center;justify-content:center;flex:0 0 auto;background:transparent;border:1px solid var(--border);border-radius:8px;cursor:pointer;color:var(--text-muted);transition:filter .15s,transform .05s,color .15s,border-color .15s,background .15s}
   .mk-iconbtn:hover{color:var(--text);border-color:var(--border-light);background:rgba(69,193,253,.06)}
@@ -517,29 +523,45 @@
   .dv-dot svg{display:block}
   @keyframes dvpulse{0%,100%{box-shadow:0 0 0 0 rgba(69,193,253,.28)}50%{box-shadow:0 0 0 5px rgba(69,193,253,0)}}
 
-  /* Frise horizontale — 5 phases reliées (ligne verte = franchi) */
-  .dv-stepper{display:flex;padding:8px 4px 2px}
-  .dv-node{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;position:relative}
-  .dv-node-line{position:absolute;top:13px;right:50%;left:-50%;height:2px;background:var(--border);z-index:0}
-  .dv-node-line.done{background:var(--success)}
-  .dv-node-label{margin-top:9px;font-size:11px;font-weight:500;text-align:center;color:var(--text-dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
-  .dv-node.active .dv-node-label{font-weight:700;color:var(--text)}
-  .dv-node.done .dv-node-label{color:#8fbfa0}
-  .dv-node.refused .dv-node-label{font-weight:700;color:#F08C4B}
+  /* ===== Timeline VERTICALE du parcours (refonte V2, phase 2) =====
+     Remplace la frise horizontale + la bande d'action unique. Une ligne par
+     étape ; les boutons d'action n'apparaissent QUE sur l'étape active — c'est
+     ce qui préserve l'invariant « un seul point d'émission de facture ».
+     Le rail vertical est un ::before positionné sur le centre des pastilles :
+     .dv-step a 6px de padding + une pastille de 26px → centre à 6+13 = 19px. */
+  .dv-timeline{position:relative;display:flex;flex-direction:column;padding:6px 2px}
+  /* Rail : centre de la pastille = 2px (padding timeline) + 6px (padding step)
+     + 13px (demi-pastille) = 21px → le rail de 2px se cale à left:20px. */
+  .dv-timeline::before{content:"";position:absolute;left:20px;top:28px;bottom:28px;width:2px;background:var(--border);border-radius:2px}
+  .dv-step{position:relative;display:flex;align-items:center;gap:13px;padding:10px 6px;border-radius:var(--radius-lg)}
+  .dv-step.active{background:rgba(69,193,253,.06)}
+  .dv-step-main{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+  .dv-step-head{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .dv-step-label{font-size:14px;white-space:nowrap}
+  .dv-step.upcoming .dv-step-label{font-weight:500;color:var(--text-dim)}
+  .dv-step.done .dv-step-label{font-weight:600;color:var(--ink-200)}
+  .dv-step.active .dv-step-label{font-weight:700;color:var(--ink-000)}
+  .dv-step.refused .dv-step-label{font-weight:700;color:var(--ember-200)}
+  .dv-step-sub{font-size:11px;color:var(--text-dim);line-height:1.45}
+  .dv-step-amt{flex:0 0 auto;font-size:13.5px;font-weight:700;text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
+  .dv-step.done .dv-step-amt{color:var(--success)}
+  .dv-step.active .dv-step-amt{color:var(--ink-000)}
+  .dv-step.upcoming .dv-step-amt,.dv-step.refused .dv-step-amt{color:var(--text-dim)}
+  .dv-step-acts{display:flex;align-items:center;gap:7px;flex:0 0 auto}
 
-  /* Bande d'action unique — la prochaine chose à faire */
+  /* Bande — uniquement pour les états TERMINAUX (refusé, annulé, clôturé) :
+     ils n'ont pas d'étape active pour porter le message et le ↺. */
   .dv-band{display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:var(--radius-lg);border:1px solid transparent;flex-wrap:wrap}
   .dv-band-ico{flex:0 0 auto;display:inline-flex}
   .dv-band-txt{flex:1;min-width:150px;font-size:13.5px;font-weight:600;line-height:1.4}
   .dv-band-acts{display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end;margin-left:auto}
-  .dv-band.info{background:rgba(69,193,253,.08);border-color:rgba(69,193,253,.28);color:#C6C2D2}
-  .dv-band.info .dv-band-ico{color:var(--primary)}
-  .dv-band.warn{background:rgba(232,117,28,.08);border-color:rgba(232,117,28,.28);color:#f5d9a8}
-  .dv-band.warn .dv-band-ico{color:#F5943C}
+  /* Seules `done` et `danger` subsistent : depuis la timeline verticale, les
+     états EN COURS sont portés par l'étape active (sous-titre + boutons), plus
+     par une bande. Les variantes info/warn étaient devenues mortes. */
   .dv-band.done{background:rgba(2,220,185,.08);border-color:rgba(2,220,185,.3);color:#a7e8c0}
-  .dv-band.done .dv-band-ico{color:#4ade80}
-  .dv-band.danger{background:rgba(220,38,38,.09);border-color:rgba(240,140,75,.3);color:#f0b4c4}
-  .dv-band.danger .dv-band-ico{color:#F08C4B}
+  .dv-band.done .dv-band-ico{color:var(--success)}
+  .dv-band.danger{background:rgba(240,140,75,.08);border-color:rgba(240,140,75,.3);color:#f3c4a2}
+  .dv-band.danger .dv-band-ico{color:var(--ember-200)}
 
   /* Échéancier — lignes de paiement (cartes) */
   .dv-ech{display:flex;flex-direction:column;gap:7px}
@@ -568,12 +590,12 @@
   .dv-ech-amt{font-size:14px;font-weight:700;text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
   .dv-ech-row.done .dv-ech-amt{color:#4ade80}
   .dv-ech-row.upcoming .dv-ech-amt,.dv-ech-row.refused .dv-ech-amt{color:var(--text-dim)}
-  /* pastille d'état (droite, réutilisée) */
-  .dv-state{justify-self:end;font-size:11px;font-weight:600;padding:3px 9px;border-radius:6px;white-space:nowrap;text-align:right}
-  .dv-state.done{color:#4ade80;background:rgba(2,220,185,.12)}
-  .dv-state.active{color:#F5943C;background:rgba(232,117,28,.14)}
+  /* pastille d'état (droite) — réutilisée par la timeline ET l'échéancier frais */
+  .dv-state{flex:0 0 auto;justify-self:end;font-family:var(--font-mono);font-size:9.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:3px 9px;border-radius:999px;white-space:nowrap;text-align:right}
+  .dv-state.done{color:var(--success);background:rgba(2,220,185,.12)}
+  .dv-state.active{color:var(--ember-300);background:rgba(232,117,28,.14)}
   .dv-state.upcoming{color:var(--text-dim);background:transparent}
-  .dv-state.refused{color:#F08C4B;background:transparent}
+  .dv-state.refused{color:var(--ember-200);background:transparent}
 
   /* Dropdown ⋮ inline (actions de cycle de vie) — pied de panneau devis */
   .dv-more{position:relative;display:inline-flex}
@@ -744,10 +766,12 @@
   .tr-cost-row.tr-cost-row--marge .tr-cost-row-amt{color:var(--text-muted)}
 
   /* Accueil : listes "À relancer" et "À encaisser" */
-  .ac-section{margin:24px 0}
-  .ac-section h3{margin:0 0 10px;font-size:14px;font-weight:600;color:var(--text);display:flex;align-items:center;gap:8px}
-  .ac-section h3 .ac-count{font-size:11px;font-weight:600;color:var(--text-muted);background:var(--surface);border:1px solid var(--border-light);padding:2px 8px;border-radius:10px}
-  .ac-list{display:flex;flex-direction:column;gap:6px;max-width:880px}
+  /* Sections de l'Accueil — titre en mono technique (charte V2), le compteur
+     dans la même ligne, le hint poussé à droite. */
+  .ac-section{margin:26px 0}
+  .ac-section h3{margin:0 0 8px;border:0;padding:0;font-family:var(--font-mono);font-size:11px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--text-soft);display:flex;align-items:baseline;gap:10px}
+  .ac-section h3 .ac-count{font-family:var(--font-mono);font-size:11px;font-weight:400;letter-spacing:0;color:var(--text-dim);background:transparent;border:0;padding:0}
+  .ac-list{display:flex;flex-direction:column;gap:6px;max-width:980px}
   /* Séparateur d'année dans la vue Historique (entre groupes annuels) */
   .ac-year-sep{margin:14px 0 4px;padding:0 4px 4px;font-size:11px;font-weight:600;color:var(--text-dim);text-transform:uppercase;letter-spacing:.12em;border-bottom:1px solid var(--border-soft)}
   .ac-year-sep:first-child{margin-top:0}
@@ -760,18 +784,32 @@
   .ac-row-wrap.expanded .ac-row-panel{background:var(--bg-2);border-radius:0 0 var(--radius-xl) var(--radius-xl);padding:12px 20px 16px}
   @keyframes acPanelIn{from{opacity:0;transform:translateY(-3px)}to{opacity:1;transform:translateY(0)}}
   .ac-row-active{background:var(--surface)!important;border-color:var(--border-light)!important}
-  .ac-row{display:grid;grid-template-columns:80px 1fr 210px 100px 36px;gap:12px;align-items:center;padding:8px 14px;background:var(--surface);border:1px solid var(--border-light);border-radius:8px;cursor:pointer;transition:background .12s,border-color .12s;font-size:13px}
-  .ac-row-gmail{background:transparent;border:1px solid var(--border-soft);color:var(--text-dim);width:30px;height:30px;border-radius:6px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;transition:all .12s;padding:0}
+  /* Ligne de devis (V2) — dot | date | client + ref | étape | montant | ✉ | chevron.
+     Le client et sa référence sont EMPILÉS (une seule colonne) : ça libère la
+     place pour la pastille d'étape, qui est l'info la plus utile au quotidien. */
+  .ac-row{display:grid;grid-template-columns:6px 82px minmax(0,1fr) auto 104px 30px 22px;gap:12px;align-items:center;padding:11px 14px;background:var(--surface-glass);border:1px solid var(--border-soft);border-radius:var(--radius-md);cursor:pointer;transition:background .12s,border-color .12s;font-size:13px}
+  .ac-row:hover{background:rgba(46,134,240,.07);border-color:var(--border)}
+  .ac-row-dot{width:6px;height:6px;border-radius:50%;background:var(--ink-500)}
+  .ac-row.ac-late .ac-row-dot{background:var(--ember-400)}
+  .ac-row-gmail{background:transparent;border:1px solid var(--border-soft);color:var(--text-dim);width:30px;height:30px;border-radius:var(--radius-md);display:inline-flex;align-items:center;justify-content:center;cursor:pointer;transition:all .12s;padding:0}
   .ac-row-gmail svg{width:14px;height:14px}
   .ac-row-gmail:hover{background:var(--primary-soft);color:var(--primary);border-color:var(--primary)}
-  .ac-row:hover{background:var(--surface-hi);border-color:var(--text-muted)}
-  .ac-row-date{font-size:11px;color:var(--text-muted);font-variant-numeric:tabular-nums;white-space:nowrap}
-  .ac-row-client{font-weight:500;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px}
-  .ac-row-ref{font-size:11px;color:var(--text-muted);font-variant-numeric:tabular-nums;display:flex;align-items:center;justify-content:flex-end;gap:6px;white-space:nowrap;min-width:0}
+  .ac-row-date{font-size:12px;color:var(--text-muted);font-variant-numeric:tabular-nums;white-space:nowrap}
+  .ac-row-who{min-width:0;display:flex;flex-direction:column;gap:1px}
+  .ac-row-client{font-weight:600;color:var(--ink-000);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px}
+  .ac-row-ref{font-family:var(--font-mono);font-size:10px;color:var(--text-dim);font-variant-numeric:tabular-nums;display:flex;align-items:center;gap:6px;white-space:nowrap;min-width:0}
   .ac-row-ref .suv-rev-tag{margin-left:0;flex-shrink:0}
-  .ac-row-amt{font-weight:600;font-variant-numeric:tabular-nums;text-align:right;color:var(--text);font-size:13px;white-space:nowrap}
+  .ac-row-amt{font-weight:700;font-variant-numeric:tabular-nums;text-align:right;color:var(--ink-100);font-size:13px;white-space:nowrap}
+  .ac-row-chev{display:inline-flex;align-items:center;justify-content:center;color:var(--text-dim);transition:transform .2s}
+  .ac-row-wrap.expanded .ac-row-chev{transform:rotate(90deg)}
   .ac-row.ac-late .ac-row-date{color:var(--warning);font-weight:600}
-  .ac-empty{padding:14px;color:var(--text-muted);font-size:13px;background:var(--surface);border:1px dashed var(--border-light);border-radius:8px;max-width:880px}
+  /* Pastille « où en est ce devis » (devisStageLabel) */
+  .dv-stage{justify-self:start;font-family:var(--font-mono);font-size:9.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;border-radius:999px;padding:3px 9px;white-space:nowrap}
+  .dv-stage.info{color:var(--primary);background:rgba(69,193,253,.12)}
+  .dv-stage.warn{color:var(--ember-300);background:rgba(232,117,28,.14)}
+  .dv-stage.done{color:var(--success);background:rgba(2,220,185,.12)}
+  .dv-stage.refused{color:var(--ember-200);background:rgba(240,140,75,.12)}
+  .ac-empty{padding:12px 14px;color:var(--text-dim);font-size:12px;background:transparent;border:1px dashed var(--border-soft);border-radius:var(--radius-sm);max-width:980px}
   .ac-cta{display:inline-flex;align-items:center;gap:8px;margin:0 0 18px}
 
   /* Compta : KPI cards en haut de l'onglet */
@@ -9858,6 +9896,29 @@ function rBinModal() {
 // Format des items : { h: titre court, b: explication 1-3 phrases }.
 const APP_CHANGELOG = [
   {
+    id: "2026-07-refonte-v2-timeline",
+    date: "2026-07-14",
+    title: "Le parcours d'un devis devient une timeline (étape 3/7)",
+    items: [
+      {
+        h: "Une ligne par étape, de haut en bas",
+        b: "La frise horizontale et sa bande d'action unique sont remplacées par une timeline verticale : envoi, acceptation, chaque acompte, chaque facture, prestation réalisée, solde, envoi des photos. D'un coup d'œil tu vois où en est le devis, ce qui est fait, ce qui reste."
+      },
+      {
+        h: "Les boutons sont sur l'étape en cours, et nulle part ailleurs",
+        b: "Chaque étape porte son montant, sa date d'encaissement (modifiable) et sa facture. Les boutons d'action n'apparaissent que sur l'étape active — impossible d'émettre une facture ou d'encaisser dans le désordre. Le bouton ↺ pour reculer d'un cran reste au même endroit."
+      },
+      {
+        h: "L'état du devis se lit sans ouvrir",
+        b: "Chaque ligne de la liste affiche désormais une pastille : « Attente réponse », « Acompte à encaisser », « À réaliser », « Facture à émettre »… Elle est calculée à partir du même parcours que la timeline, donc les deux ne peuvent pas se contredire."
+      },
+      {
+        h: "Tableau de bord plus dense",
+        b: "Les chiffres du mois (CA, encaissé, salaire net) et les boutons de création remontent dans l'en-tête : la page s'ouvre directement sur tes devis."
+      }
+    ]
+  },
+  {
     id: "2026-07-refonte-v2-nav",
     date: "2026-07-14",
     title: "Nouvelle navigation (étape 2/7)",
@@ -14459,12 +14520,37 @@ function devisParcoursSteps(devisId) {
   return { steps, activeIdx, backIdx, statutPrin, isRefused, isAnnule, dv, noir, quick, echList, acomptes, solde };
 }
 
-// ▼ suiviParcoursHtml — corps du panneau devis (refonte 1b) : frise horizontale
-// de progression (6 phases : Envoyé/Accepté/Acompte/Réalisé/Soldé/Photos) →
-// bande d'action unique (la prochaine chose à faire) → échéancier détaillé
-// (lignes de paiement + frais/débours). Réutilise
-// devisParcoursSteps (source des étapes/statuts) et suiviStepBack (↺). Factures
-// = chips sur la ligne de leur échéance ; l'émission se fait via la bande.
+// ▼ devisStageLabel — « où en est ce devis ? » en 2 mots, pour les LIGNES de
+// l'Accueil et de l'Historique. DÉRIVÉ de devisParcoursSteps (jamais un second
+// calcul parallèle) : la pastille de la ligne et la timeline du volet ne peuvent
+// donc pas se contredire.
+function devisStageLabel(devisId) {
+  const P = devisParcoursSteps(devisId);
+  if (P.isRefused) return { label: "Refusé", kind: "refused" };
+  if (P.isAnnule)  return { label: "Annulé", kind: "refused" };
+  const s = P.activeIdx >= 0 ? P.steps[P.activeIdx] : null;
+  if (!s) return { label: "Clôturé", kind: "done" };
+  if (s.key === "sent")     return { label: "À envoyer", kind: "info" };
+  if (s.key === "accepted") return { label: "Attente réponse", kind: "info" };
+  if (s.kind === "invoice") return { label: "Facture à émettre", kind: "info" };
+  if (s.kind === "payment") return { label: s.ech.isSolde ? "Solde à encaisser" : "Acompte à encaisser", kind: "warn" };
+  if (s.isLivraison)        return { label: "À réaliser", kind: "info" };
+  if (s.isPhotos)           return { label: "Photos à envoyer", kind: "info" };
+  return { label: "", kind: "info" };
+}
+function devisStageChipHtml(devisId) {
+  const st = devisStageLabel(devisId);
+  return st.label ? `<span class="dv-stage ${st.kind}">${esc(st.label)}</span>` : `<span></span>`;
+}
+
+// ▼ suiviParcoursHtml — corps du panneau devis (refonte V2, phase 2) : TIMELINE
+// VERTICALE (une ligne par étape) → bande terminale (refus / annulation /
+// clôture) → frais & débours → régularisation. Remplace la frise horizontale +
+// la bande d'action unique de la refonte 1b.
+// Reste bâti sur devisParcoursSteps (source des étapes/statuts) et suiviStepBack
+// (↺). ⚠ INVARIANT : les boutons d'action ne sont rendus QUE sur l'étape ACTIVE
+// — c'est ce qui garantit un seul point d'émission de facture et interdit de
+// court-circuiter une garde d'ordre. Le chip facture vit sur l'étape facture.
 function suiviParcoursHtml(g) {
   const stop = "event.stopPropagation();";
   const devisId = g.devisId;
@@ -14480,45 +14566,6 @@ function suiviParcoursHtml(g) {
     return `<span class="dv-dot upcoming"></span>`;
   };
 
-  // ---------- 1. Frise horizontale (6 phases coarse) ----------
-  const phaseOfKey = (k) => {
-    if (k === "sent") return "envoye";
-    if (k === "accepted") return "accepte";
-    if (k === "livraison") return "realise";
-    if (k === "photos") return "photos";
-    if (k === "fs" || k === "pay:solde") return "solde";
-    return "acompte"; // pay:<acompte>, fa:<acompte>
-  };
-  // La phase « Acompte » n'existe que si le devis a une échéance autre que le
-  // solde. Sur un paiement unique (toute prestation rapide, et les devis à
-  // échéance unique), le nœud est retiré : sinon il s'allumait « done » dès
-  // l'acceptation alors qu'aucun acompte n'a jamais existé (grp vide →
-  // nodeStatus retombait sur acceptedDone).
-  const phaseNodes = [
-    { key: "envoye", label: "Envoyé" }, { key: "accepte", label: "Accepté" },
-    ...(P.acomptes.length ? [{ key: "acompte", label: "Acompte" }] : []),
-    { key: "realise", label: "Réalisé" },
-    { key: "solde", label: "Soldé" }, { key: "photos", label: "Livré" },
-  ];
-  const acceptedDone = steps.find(s => s.key === "accepted").done;
-  const grp = { envoye: [], accepte: [], acompte: [], realise: [], solde: [], photos: [] };
-  steps.forEach(s => grp[phaseOfKey(s.key)].push(s));
-  const activePhase = activeStep ? phaseOfKey(activeStep.key) : null;
-  const nodeStatus = (pk) => {
-    if (isRefused) return pk === "envoye" ? "done" : pk === "accepte" ? "refused" : "upcoming";
-    const done = grp[pk].length ? grp[pk].every(s => s.done) : acceptedDone;
-    if (done) return "done";
-    if (pk === activePhase) return "active";
-    return "upcoming";
-  };
-  const nodes = phaseNodes.map(n => ({ ...n, status: nodeStatus(n.key) }));
-  const stepperHtml = `<div class="dv-stepper">${nodes.map((n, i) => `<div class="dv-node ${n.status}">
-      ${i > 0 ? `<div class="dv-node-line${nodes[i - 1].status === "done" ? " done" : ""}"></div>` : ""}
-      ${dotHtml(n.status)}
-      <span class="dv-node-label">${esc(n.label)}</span>
-    </div>`).join("")}</div>`;
-
-  // ---------- 2. Bande d'action unique ----------
   const backBtn = `<button type="button" class="mk-iconbtn sm" title="Revenir à l'étape précédente" onclick="${stop}suiviStepBack('${devisId}')">${ICO_SZ('rotateCcw', 14)}</button>`;
   const relanceBtn = (kind) => {
     const lastRel = dv.lastRelance;
@@ -14552,83 +14599,141 @@ function suiviParcoursHtml(g) {
     return [];
   };
 
-  let band;
-  if (isRefused) {
-    band = { variant: "danger", ico: "x", txt: "Devis refusé par le client.",
-      acts: [`<button type="button" class="mk-btn subtle" onclick="${stop}suiviStepBack('${devisId}')">${ICO_SZ('rotateCcw', 13)} Annuler le refus</button>`] };
-  } else if (isAnnule) {
-    band = { variant: "danger", ico: "x", txt: "Mission annulée.",
-      acts: [`<button type="button" class="mk-btn subtle" onclick="${stop}suiviStepBack('${devisId}')">${ICO_SZ('rotateCcw', 13)} Annuler l'annulation</button>`] };
-  } else if (!activeStep) {
-    band = { variant: "done", ico: "check", txt: "Dossier clôturé — payé et photos envoyées.",
-      acts: backIdx >= 0 ? [backBtn] : [] };
-  } else {
-    const s = activeStep;
-    let variant = "info", ico = "info", txt = "";
-    if (s.key === "sent") { txt = quick ? "Prêt à transmettre la proposition au client (aucun document n'est produit)." : "Prêt à envoyer le devis au client."; }
-    else if (s.key === "accepted") { txt = "En attente de la réponse du client."; }
-    else if (s.kind === "payment") { variant = "warn"; ico = "euro"; txt = `En attente de l'encaissement ${s.ech.isSolde ? "du solde" : `de « ${s.ech.label} »`} (${fmt(s.ech.entry.montant)}).`; }
-    else if (s.kind === "invoice") { txt = s.ech.isSolde ? "Prestation réalisée — émets la facture de solde." : "Acompte encaissé — émets la facture d'acompte."; }
-    else if (s.isLivraison) { txt = "Réalise la prestation (la séance), puis marque-la réalisée."; }
-    else if (s.isPhotos) { txt = "Solde encaissé — envoie les photos au client pour clôturer."; }
-    const acts = activeActions(s);
-    if (backIdx >= 0) acts.push(backBtn);
-    band = { variant, ico, txt, acts };
-  }
-  const bandHtml = `<div class="dv-band ${band.variant}">
-    <span class="dv-band-ico">${ICO_SZ(band.ico, 16)}</span>
-    <span class="dv-band-txt">${esc(band.txt)}</span>
-    ${band.acts.length ? `<div class="dv-band-acts">${band.acts.join("")}</div>` : ""}
-  </div>`;
-
-  // ---------- 3. Échéancier (lignes de paiement + frais/débours) ----------
-  const facBadge = (ech) => {
+  // ---------- 1. Timeline verticale ----------
+  // Chip facture, posé sur l'étape FACTURE elle-même (et non plus sur la ligne
+  // d'échéance) : clic = aperçu avant impression direct, aucune modale. Les
+  // actions rares (Gmail, marquer envoyée, supprimer) restent dans le ⋮.
+  const facChip = (ech) => {
     const fac = findFactureForEch(devisId, ech);
     if (!fac) return "";
     const sent = fac.envoiTs
       ? `<span class="suv-fac-sent" title="Envoyée le ${esc(dateOf(fac.envoiTs))}">${ICO_SZ('check', 11)}</span>`
       : "";
-    // Clic = aperçu avant impression du navigateur, directement. Aucune modale.
-    // Actions rares (Gmail, marquer envoyée, supprimer) → dropdown ⋮ du panneau.
     return `<button type="button" class="suv-fac-chip" title="Imprimer la facture ${ech.isSolde ? "de solde" : "d'acompte"} (aperçu avant impression)" onclick="${stop}facturePrintDirect('${devisId}','${ech.echId}')">${ICO_SZ('fileText', 11)} ${esc(formatRef(fac.ref, "facture"))}${sent}</button>`;
   };
-  const payLbl = (status) => status === "done" ? "Payé" : status === "active" ? "À encaisser" : "En attente";
-  // Date d'encaissement, éditable, sur les lignes réglées : c'est ELLE qui
-  // rattache la recette à un mois du bilan (compta de caisse). Pré-remplie au
-  // pointage, à corriger si l'argent est tombé un autre jour (relevé bancaire).
+  // Date d'encaissement, éditable, sur les étapes de paiement réglées : c'est
+  // ELLE qui rattache la recette à un mois du bilan (compta de caisse).
   const dateEnc = (e) => {
     if (!e || entryStatut(e) !== "termine") return "";
     const v = esc((entryEncaissementDate(e) || "").slice(0, 10));
     return `<input type="date" class="dv-ech-date" value="${v}" onclick="${stop}" onchange="${stop}suiviSetDatePaiement('${e.id}', this.value)"
       title="Date d'encaissement — c'est elle qui rattache la recette au mois du bilan (compta de caisse). Corrige-la si l'argent est arrivé un autre jour.">`;
   };
-  const echRows = [];
-  for (const s of steps.filter(x => x.kind === "payment")) {
-    const chip = facBadge(s.ech);
-    echRows.push(`<div class="dv-ech-row ${s.status}">
+
+  const stepLabel = (s) => {
+    if (s.key === "sent")     return quick ? "Proposition transmise" : "Devis envoyé";
+    if (s.key === "accepted") return "Accepté par le client";
+    if (s.kind === "payment") return s.ech.label || (s.isSolde ? "Solde" : "Acompte");
+    if (s.kind === "invoice") return s.ech.isSolde ? "Facture de solde" : "Facture d'acompte";
+    if (s.isLivraison)        return "Prestation réalisée";
+    if (s.isPhotos)           return "Photos envoyées";
+    return "";
+  };
+  // Le sous-titre remplace l'ancienne « bande d'action » : il porte, sur
+  // l'étape ACTIVE, la consigne de ce qu'il reste à faire ; sur les étapes
+  // franchies, la date à laquelle elles l'ont été.
+  const stepSub = (s) => {
+    if (s.key === "sent") {
+      if (s.status === "active") return quick ? "Prêt à transmettre la proposition (aucun document n'est produit)." : "Prêt à envoyer le devis au client.";
+      return dv.envoiTs ? `Envoyé le ${dateOf(dv.envoiTs)}` : "";
+    }
+    if (s.key === "accepted") {
+      if (s.status === "refused") return "Refusé par le client.";
+      if (s.status === "active")  return "En attente de la réponse du client.";
+      return "";
+    }
+    if (s.kind === "payment" && s.status === "active") return `En attente de l'encaissement ${s.ech.isSolde ? "du solde" : `de « ${s.ech.label} »`}.`;
+    if (s.kind === "invoice" && s.status === "active") return s.ech.isSolde ? "Prestation réalisée — émets la facture de solde." : "Acompte encaissé — émets la facture d'acompte.";
+    if (s.isLivraison) {
+      if (s.status === "active") return "Réalise la prestation (la séance), puis marque-la réalisée.";
+      return dv.livreeTs ? `Réalisée le ${dateOf(dv.livreeTs)}` : "";
+    }
+    if (s.isPhotos) {
+      if (s.status === "active") return "Solde encaissé — envoie les photos au client pour clôturer.";
+      return dv.photosTs ? `Envoyées le ${dateOf(dv.photosTs)}` : "";
+    }
+    return "";
+  };
+  // Pastille d'état. Rien sur l'étape active : ses BOUTONS prennent la place
+  // (et disent déjà ce qu'il faut faire).
+  const stepState = (s) => {
+    if (s.status === "active") return "";
+    if (s.kind === "payment") return `<span class="dv-state ${s.status}">${s.status === "done" ? "Payé" : "En attente"}</span>`;
+    if (s.kind === "invoice") return `<span class="dv-state ${s.status}">${s.status === "done" ? "Émise" : "À émettre"}</span>`;
+    return "";
+  };
+
+  const timelineHtml = `<div class="dv-timeline">${steps.map((s, i) => {
+    const sub = stepSub(s);
+    const chip = s.kind === "invoice" ? facChip(s.ech) : "";
+    const amt = s.kind === "payment" ? `<span class="dv-step-amt">${fmt(s.ech.entry.montant)}</span>` : "";
+    const date = s.kind === "payment" ? dateEnc(s.ech.entry) : "";
+    // Les actions ne vivent QUE sur l'étape active → un seul point d'émission
+    // de facture, et aucun raccourci qui sauterait une garde d'ordre.
+    const acts = s.status === "active" ? activeActions(s) : [];
+    // ↺ sur l'étape désignée par backIdx — SAUF en refus/annulation, où la bande
+    // terminale porte déjà un bouton explicite (« Annuler le refus ») : sinon on
+    // afficherait deux contrôles pour la même action.
+    if (!isRefused && !isAnnule && i === backIdx) acts.push(backBtn);
+    return `<div class="dv-step ${s.status}">
       ${dotHtml(s.status)}
-      <div class="dv-ech-label">${esc(s.ech.label)}${chip ? " " + chip : ""}${dateEnc(s.ech.entry)}</div>
-      <span class="dv-ech-amt">${fmt(s.ech.entry.montant)}</span>
-      <span class="dv-state ${s.status}">${payLbl(s.status)}</span>
-    </div>`);
+      <div class="dv-step-main">
+        <div class="dv-step-head">
+          <span class="dv-step-label">${esc(stepLabel(s))}</span>
+          ${chip}${date}
+        </div>
+        ${sub ? `<span class="dv-step-sub">${esc(sub)}</span>` : ""}
+      </div>
+      ${amt}
+      ${stepState(s)}
+      ${acts.length ? `<div class="dv-step-acts">${acts.join("")}</div>` : ""}
+    </div>`;
+  }).join("")}</div>`;
+
+  // ---------- 2. Bande — états TERMINAUX uniquement ----------
+  // Refus / annulation / dossier clôturé : aucune étape active ne peut porter
+  // le message ni le ↺, d'où une bande dédiée. Le refus, lui, s'affiche AUSSI
+  // sur l'étape « Accepté » (pastille ×) — la bande porte le retour arrière.
+  let bandHtml = "";
+  if (isRefused || isAnnule || !activeStep) {
+    const band = isRefused
+      ? { variant: "danger", ico: "x", txt: "Devis refusé par le client.", label: "Annuler le refus" }
+      : isAnnule
+        ? { variant: "danger", ico: "x", txt: "Mission annulée.", label: "Annuler l'annulation" }
+        : { variant: "done", ico: "check", txt: "Dossier clôturé — payé et photos envoyées.", label: "" };
+    // Dossier clôturé : le ↺ vit déjà sur la dernière étape (backIdx =
+    // steps.length - 1), la bande n'est qu'un message.
+    const acts = band.label
+      ? [`<button type="button" class="mk-btn subtle" onclick="${stop}suiviStepBack('${devisId}')">${ICO_SZ('rotateCcw', 13)} ${band.label}</button>`]
+      : [];
+    bandHtml = `<div class="dv-band ${band.variant}">
+      <span class="dv-band-ico">${ICO_SZ(band.ico, 16)}</span>
+      <span class="dv-band-txt">${esc(band.txt)}</span>
+      ${acts.length ? `<div class="dv-band-acts">${acts.join("")}</div>` : ""}
+    </div>`;
   }
+
+  // ---------- 3. Frais & débours ----------
+  // Ces entries ne sont PAS des étapes du parcours (elles ne conditionnent
+  // aucune garde d'ordre) : elles gardent donc leur bloc propre sous la
+  // timeline, cliquable pour basculer réglé / en attente.
   const fraisEntries = [...(g.lignes || [])]
     .filter(e => num(e.frais) !== 0)
     .sort((a, b) => (a.date || "").localeCompare(b.date || ""));
-  for (const e of fraisEntries) {
-    const st = entryStatut(e);
-    const status = st === "termine" ? "done" : (st === "refuse" || st === "annule") ? "refused" : "upcoming";
-    const clickable = st === "attente" || st === "termine";
-    echRows.push(`<div class="dv-ech-row ${status}${clickable ? " clickable" : ""}"${clickable ? ` onclick="${stop}suiviLigneTogglePaiement('${e.id}')" title="Cliquer pour basculer réglé / en attente"` : ""}>
-      ${dotHtml(status)}
-      <div class="dv-ech-label">${esc(e.echeance || "Frais / débours")}${dateEnc(e)}</div>
-      <span class="dv-ech-amt">${fmt(e.montant)}</span>
-      <span class="dv-state ${status}">${st === "termine" ? "Réglé" : "En attente"}</span>
-    </div>`);
-  }
-  const echHtml = echRows.length
-    ? `<div class="dv-ech"><div class="dv-ech-head">Échéancier</div>${echRows.join("")}</div>`
-    : "";
+  const echHtml = fraisEntries.length ? `<div class="dv-ech">
+    <div class="dv-ech-head">Frais &amp; débours</div>
+    ${fraisEntries.map(e => {
+      const st = entryStatut(e);
+      const status = st === "termine" ? "done" : (st === "refuse" || st === "annule") ? "refused" : "upcoming";
+      const clickable = st === "attente" || st === "termine";
+      return `<div class="dv-ech-row ${status}${clickable ? " clickable" : ""}"${clickable ? ` onclick="${stop}suiviLigneTogglePaiement('${e.id}')" title="Cliquer pour basculer réglé / en attente"` : ""}>
+        ${dotHtml(status)}
+        <div class="dv-ech-label">${esc(e.echeance || "Frais / débours")}${dateEnc(e)}</div>
+        <span class="dv-ech-amt">${fmt(e.montant)}</span>
+        <span class="dv-state ${status}">${st === "termine" ? "Réglé" : "En attente"}</span>
+      </div>`;
+    }).join("")}
+  </div>` : "";
 
   // ---------- 4. Régularisation (devis annulé avec des sommes encaissées) ----------
   // L'encaissement passé reste dans le CA de son mois (compta de caisse). Ici on
@@ -14664,7 +14769,7 @@ function suiviParcoursHtml(g) {
     </div>`;
   }
 
-  return `${stepperHtml}${bandHtml}${echHtml}${regulHtml}`;
+  return `${timelineHtml}${bandHtml}${echHtml}${regulHtml}`;
 }
 
 // ▼ suiviStepBack — retour arrière granulaire (↺ « reculer d'un cran »).
@@ -17255,29 +17360,34 @@ function rAC() {
     const panel = isExpanded ? `<div class="ac-row-panel" onclick="${stop}">${suiviExpandedPanelHtml(g)}</div>` : "";
     return `<div class="ac-row-wrap${isExpanded ? ' expanded' : ''}">
       <div class="ac-row ${late ? 'ac-late' : ''}${isExpanded ? ' ac-row-active' : ''}" onclick="accueilOpenDevis('${g.devisId}')">
+        <span class="ac-row-dot"></span>
         <div class="ac-row-date">${esc(dateFR(g.dateMin || g.dateMax))}</div>
-        <div class="ac-row-client"><span class="client-link" onclick="${stop}clientInfoModalOpen('${g.devisId}')" title="Voir les infos client">${esc(cleanClientLabel(g.client)) || "—"}</span></div>
-        <div class="ac-row-ref">${esc(g.ref) || "—"} <span class="suv-rev-tag">rev${computeRevisionNumber(g.devisId)}</span>${quickTagHtml(g.devisId)}</div>
+        <div class="ac-row-who">
+          <span class="ac-row-client"><span class="client-link" onclick="${stop}clientInfoModalOpen('${g.devisId}')" title="Voir les infos client">${esc(cleanClientLabel(g.client)) || "—"}</span></span>
+          <span class="ac-row-ref">${esc(g.ref) || "—"} <span class="suv-rev-tag">rev${computeRevisionNumber(g.devisId)}</span>${quickTagHtml(g.devisId)}</span>
+        </div>
+        ${devisStageChipHtml(g.devisId)}
         <div class="ac-row-amt">${fmt(amount)}</div>
         <button class="ac-row-gmail" onclick="${stop}gmailRelanceForDevis('${g.devisId}','${gmailKind}')" title="${gmailTitle}">${ICONS.send}</button>
+        <span class="ac-row-chev">${ICO_SZ('chevronRight', 16)}</span>
       </div>
       ${panel}
     </div>`;
   };
 
+  // KPI + CTA remontés dans l'en-tête de page (charte V2) : le tableau de bord
+  // s'ouvre directement sur les listes, sans bandeau intermédiaire.
+  const kpisHtml = `<div class="v2-kpis">
+    <div class="v2-kpi"><span class="v2-kpi-label">CA ${esc(MOIS_FR[today.getMonth()])} ${esc(currentYear)}</span><strong class="v2-kpi-value">${fmt(caMois)}</strong></div>
+    <div class="v2-kpi"><span class="v2-kpi-label">Encaissé</span><strong class="v2-kpi-value">${fmt(payeMois)}</strong></div>
+    <div class="v2-kpi jade"><span class="v2-kpi-label">Salaire net</span><strong class="v2-kpi-value">${fmt(salaireNetMois)}</strong></div>
+  </div>`;
+  const ctaHtml = `
+    <button class="mk-btn azure cta" onclick="missionNewFromAccueil('devis')" title="Crée un nouveau devis dans Mission. Garde la configuration (taux, URSSAF, paiement, CGV) et démarre vierge sur le client/heures/lignes/déplacement.">${ICO_SZ('plus', 14)} Nouveau devis</button>
+    <button class="mk-btn subtle cta" onclick="missionNewFromAccueil('quick')" title="Prestation rapide : client, catalogue, heures, matériel, déplacement et remise. Aucun document (ni devis, ni facture), aucun acompte, aucune CGV.">${ICO_SZ('camera', 14)} Prestation rapide</button>`;
+
   return `
-    ${v2PageHead("accueil")}
-
-    <div class="cp-kpi-grid">
-      <div class="cp-kpi"><span class="cp-kpi-label">CA mois (${esc(MOIS_FR[today.getMonth()])} ${esc(currentYear)})</span><strong class="cp-kpi-value">${fmt(caMois)}</strong></div>
-      <div class="cp-kpi"><span class="cp-kpi-label">Encaissé ${esc(MOIS_FR[today.getMonth()])}</span><strong class="cp-kpi-value">${fmt(payeMois)}</strong></div>
-      <div class="cp-kpi"><span class="cp-kpi-label">Salaire net ${esc(MOIS_FR[today.getMonth()])}</span><strong class="cp-kpi-value">${fmt(salaireNetMois)}</strong></div>
-    </div>
-
-    <div class="ac-cta">
-      <button class="btn-neon" onclick="missionNewFromAccueil('devis')" title="Crée un nouveau devis dans Mission. Garde la configuration (taux, URSSAF, paiement, CGV) et démarre vierge sur le client/heures/lignes/déplacement.">${ICONS.plus}Nouveau devis</button>
-      <button class="btn-neon" onclick="missionNewFromAccueil('quick')" title="Prestation rapide : client, catalogue, heures, matériel, déplacement et remise. Aucun document (ni devis, ni facture), aucun acompte, aucune CGV.">${ICONS.camera}Prestation rapide</button>
-    </div>
+    ${v2PageHead("accueil", { actions: kpisHtml + ctaHtml })}
 
     <div class="ac-section">
       <h3>À relancer <span class="ac-count">${aRelancer.length}</span></h3>
