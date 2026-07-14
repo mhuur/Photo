@@ -70,7 +70,7 @@
     --bg-photo:url('assets/jade-portrait.jpg');
     /* Défaut CSS ; la vraie valeur est posée en inline par applyBgPhoto()
        depuis S.prefs.bgScrim (réglable : setBgScrim(0.70) en console). */
-    --bg-scrim:.84;
+    --bg-scrim:.75;
     /* === Charte graphique — espacements & tailles === */
     /* Échelle d'espacement (multiples de 4) */
     --space-xs: 4px;
@@ -991,7 +991,10 @@
   table.cli-table thead th{text-align:left;padding:10px 14px;font-family:var(--font-mono);font-size:9px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.1em;font-weight:700;border-bottom:1px solid var(--border);user-select:none}
   table.cli-table thead th.cli-sortable{cursor:pointer;transition:color .12s}
   table.cli-table thead th.cli-sortable:hover{color:var(--text-muted)}
-  table.cli-table thead th .cli-sort-ind{display:inline-block;margin-left:4px;font-size:9px;opacity:.4;vertical-align:1px;letter-spacing:0}
+  table.cli-table thead th .cli-sort-ind{display:inline-flex;align-items:center;margin-left:4px;opacity:.55;vertical-align:-2px}
+  /* Colonne non triée : le chevron reste, à peine visible — il annonce que la
+     colonne EST triable, sans prétendre indiquer un sens. */
+  table.cli-table thead th .cli-sort-ind.idle{opacity:.25}
   table.cli-table thead th.sorted{color:var(--text)}
   table.cli-table thead th.sorted .cli-sort-ind{opacity:1;color:var(--primary)}
   table.cli-table tbody td{padding:14px;border-bottom:1px solid var(--border-soft);vertical-align:middle;font-size:14px}
@@ -2926,28 +2929,14 @@
   .undo-toast.undo-toast-out{animation:undoToastOut .25s ease forwards}
   @keyframes undoToastOut{to{opacity:0;transform:translateY(8px)}}
   .undo-toast-msg{flex:1}
-  .undo-toast-btn{background:transparent;color:var(--primary);border:1px solid var(--primary);border-radius:6px;padding:5px 12px;cursor:pointer;font:inherit;font-size:12px;font-weight:700;transition:all .12s;text-shadow:0 0 6px currentColor}
-  .undo-toast-btn:hover{background:rgba(69,193,253,.12);color:#45C1FD;box-shadow:inset 0 0 8px rgba(69,193,253,.2),0 0 12px rgba(69,193,253,.4)}
+  .undo-toast-btn{display:inline-flex;align-items:center;gap:5px;background:transparent;color:var(--primary);border:1px solid rgba(69,193,253,.45);border-radius:var(--radius-md);padding:5px 12px;cursor:pointer;font:inherit;font-size:12px;font-weight:700;transition:background .12s,border-color .12s}
+  .undo-toast-btn:hover{background:var(--primary-soft);border-color:var(--primary)}
 
   /* Séparateur entre 2 sous-blocs fusionnés dans une même section accordion */
   .section-merge-sep{border:0;border-top:1px solid var(--border-soft);margin:var(--space-xl) 0 var(--space-lg);height:0}
 
-  /* Bouton « + Ajouter » générique en style néon (compact, primary) */
-  .btn-add-neon,.ech-add-neon{display:inline-flex;align-items:center;gap:6px;height:30px;padding:0 14px;background:transparent;color:var(--primary);border:1px solid var(--primary);border-radius:6px;cursor:pointer;font:inherit;font-size:12px;font-weight:700;letter-spacing:.04em;transition:all .15s;box-shadow:inset 0 0 0 1px rgba(69,193,253,.18),0 0 8px rgba(69,193,253,.18);text-shadow:0 0 6px currentColor;font-family:inherit}
-  .btn-add-neon:hover,.ech-add-neon:hover{background:rgba(69,193,253,.10);color:#45C1FD;box-shadow:inset 0 0 10px rgba(69,193,253,.20),0 0 14px rgba(69,193,253,.45),0 0 24px rgba(69,193,253,.18)}
-  /* Variante ghost — discret au repos, allume au hover comme la version primary */
-  .btn-add-neon.ghost{color:var(--text-muted);border-color:var(--border-light);box-shadow:none;text-shadow:none;font-weight:600}
-  .btn-add-neon.ghost:hover{color:var(--primary);border-color:var(--primary);background:rgba(69,193,253,.06);box-shadow:inset 0 0 0 1px rgba(69,193,253,.18),0 0 8px rgba(69,193,253,.18);text-shadow:0 0 6px currentColor}
-  /* Variante danger — rouge néon */
-  .btn-add-neon.danger{color:#E8451C;border-color:#E8451C;box-shadow:inset 0 0 0 1px rgba(232,69,28,.18),0 0 8px rgba(232,69,28,.18);text-shadow:0 0 6px currentColor}
-  .btn-add-neon.danger:hover{color:#fca5a5;border-color:#f87171;background:rgba(232,69,28,.10);box-shadow:inset 0 0 10px rgba(232,69,28,.20),0 0 14px rgba(232,69,28,.45),0 0 24px rgba(232,69,28,.18)}
-  /* .btn-neon — action primary en style néon (Nouveau devis, Enregistrer dans Suivi…) — version "lourde" du btn-add-neon */
-  .btn-neon{display:inline-flex;align-items:center;gap:8px;background:transparent;color:var(--primary);border:1px solid var(--primary);padding:9px 16px;border-radius:6px;cursor:pointer;font:inherit;font-size:13px;font-weight:600;transition:all .15s;box-shadow:inset 0 0 0 1px rgba(69,193,253,.22),0 0 12px rgba(69,193,253,.35),0 0 24px rgba(69,193,253,.14);text-shadow:0 0 8px currentColor}
-  .btn-neon:hover:not(:disabled){background:rgba(69,193,253,.10);color:#45C1FD;box-shadow:inset 0 0 12px rgba(69,193,253,.22),0 0 18px rgba(69,193,253,.55),0 0 32px rgba(69,193,253,.22)}
-  .btn-neon:disabled{opacity:.45;cursor:not-allowed;box-shadow:inset 0 0 0 1px rgba(69,193,253,.12);text-shadow:none}
-  /* Variante warn — orange — pour actions destructives réversibles (Annuler brouillon, etc.) */
-  .btn-neon.btn-neon-warn{color:var(--warning);border-color:var(--warning);box-shadow:inset 0 0 0 1px rgba(232,117,28,.22),0 0 12px rgba(232,117,28,.35),0 0 24px rgba(232,117,28,.14)}
-  .btn-neon.btn-neon-warn:hover:not(:disabled){background:rgba(232,117,28,.10);color:#fcd34d;box-shadow:inset 0 0 12px rgba(232,117,28,.22),0 0 18px rgba(232,117,28,.55),0 0 32px rgba(232,117,28,.22)}
+  /* Le néon (.btn-neon / .btn-add-neon / .ech-add-neon) est MORT — phase 7.
+     Tous les boutons sont passés à la famille .mk-btn (cf. § charte V2). */
 
   /* === Corbeille modale === */
   .bin-list{display:flex;flex-direction:column;gap:6px;max-height:50vh;overflow-y:auto;padding:4px 0}
@@ -3004,7 +2993,7 @@
   .date-encours-display.is-encours{background:var(--success-soft);border-color:var(--success)}
   .date-encours-display.is-encours .dec-pill{color:var(--success);font-weight:600;font-size:13px;text-transform:uppercase;letter-spacing:.04em}
   .date-encours-display .dec-date{font-variant-numeric:tabular-nums;color:var(--text)}
-  .date-encours-display .dec-caret{margin-left:auto;color:var(--text-muted);font-size:13px}
+  .date-encours-display .dec-caret{margin-left:auto;color:var(--text-muted);display:inline-flex;align-items:center}
   .date-encours-popover{position:absolute;top:calc(100% + 4px);left:0;background:var(--bg-2);border:1px solid var(--border);border-radius:8px;padding:10px;min-width:240px;box-shadow:0 8px 24px rgba(0,0,0,.4);z-index:1000}
   .dec-encours-opt{width:100%;display:flex;flex-direction:column;align-items:flex-start;gap:3px;background:var(--success-soft);border:1px solid var(--success);color:var(--text);padding:10px 12px;border-radius:6px;cursor:pointer;font:inherit;text-align:left;margin-bottom:10px}
   .dec-encours-opt:hover{filter:brightness(1.05)}
@@ -3242,25 +3231,26 @@
   /* Le h5 « Type de clientèle » accepte un bouton ⓘ inline */
   .edit-section-body h5 .lg-info-icon{display:inline-flex;font-size:10px;width:18px;height:18px;line-height:1;text-transform:none;letter-spacing:0;font-weight:700}
 
-  /* === .seg.seg-neon — toggle néon PLEIN (recommandé) ===
-     Container transparent + border discrète. Bouton actif = couleur
-     PLEINE avec glow lumineux fort + text-shadow blanc. Inactif =
-     ghost discret qui s'éclaire au hover. */
+  /* === .seg.seg-neon — segmented control (phase 7 : le halo a sauté) ===
+     La classe garde son nom (14 usages), mais le néon est parti : l'option
+     active se lit à son FOND PLEIN, plus à un glow. Container transparent,
+     option inactive discrète qui s'éclaire au survol. */
   .seg.seg-neon{background:transparent;border:1px solid var(--border-light);padding:3px;height:var(--input-h);box-shadow:none}
-  .seg.seg-neon button{background:transparent;color:var(--text-muted);border:0;padding:0 14px;height:100%;border-radius:5px;font:inherit;font-size:13px;font-weight:600;cursor:pointer;transition:all .18s;display:inline-flex;align-items:center;gap:6px}
-  .seg.seg-neon button:hover{color:var(--text);background:rgba(255,255,255,.04)}
-  .seg.seg-neon button.on{background:var(--azure-fill);color:#fff;box-shadow:inset 0 0 0 1px rgba(255,255,255,.18),0 0 14px rgba(69,193,253,.55),0 0 28px rgba(69,193,253,.25);text-shadow:0 0 8px rgba(255,255,255,.5)}
+  .seg.seg-neon button{background:transparent;color:var(--text-muted);border:0;padding:0 14px;height:100%;border-radius:5px;font:inherit;font-size:13px;font-weight:600;cursor:pointer;transition:background .15s,color .15s;display:inline-flex;align-items:center;gap:6px}
+  .seg.seg-neon button:hover{color:var(--text);background:rgba(255,255,255,.05)}
+  .seg.seg-neon button.on{background:var(--azure-fill);color:#fff}
   .seg.seg-neon button.on:hover{background:var(--azure-fill-hi);color:#fff}
-  .seg.seg-neon button.on.warn{background:var(--warning);color:#fff;box-shadow:inset 0 0 0 1px rgba(255,255,255,.18),0 0 14px rgba(232,117,28,.55),0 0 28px rgba(232,117,28,.25);text-shadow:0 0 8px rgba(255,255,255,.5)}
+  .seg.seg-neon button.on.warn{background:var(--warning);color:#fff}
   .seg.seg-neon button.on.warn:hover{background:var(--warning-dark);color:#fff}
-  /* Variante succès (vert) — pour toggles porteurs d'un statut positif (ex. Déclaré) */
-  .seg.seg-neon button.on.ok{background:var(--success);color:#fff;box-shadow:inset 0 0 0 1px rgba(255,255,255,.18),0 0 14px rgba(2,220,185,.55),0 0 28px rgba(2,220,185,.25);text-shadow:0 0 8px rgba(255,255,255,.5)}
-  .seg.seg-neon button.on.ok:hover{background:var(--success-dark);color:#fff}
-  /* Variante container .violet — fuchsia/néon translucide pour toggles neutres (alternative au bleu primary).
-     Fond semi-transparent (pas de plein), bordure néon + double glow, texte fuchsia clair lumineux.
-     Les modificateurs .warn et .ok sur le bouton restent prioritaires (sémantique préservée). */
-  .seg.seg-neon.violet button.on:not(.warn):not(.ok){background:rgba(192,38,211,.18);color:#fdf4ff;box-shadow:inset 0 0 0 1px rgba(232,121,249,.5),0 0 14px rgba(192,38,211,.5);text-shadow:0 0 8px rgba(232,121,249,.7)}
-  .seg.seg-neon.violet button.on:not(.warn):not(.ok):hover{background:rgba(192,38,211,.28);color:#fff}
+  /* Variante succès — toggles porteurs d'un statut positif (ex. Déclaré) */
+  .seg.seg-neon button.on.ok{background:var(--success-dark);color:#fff}
+  .seg.seg-neon button.on.ok:hover{background:var(--success);color:#fff}
+  /* Variante .violet — un fuchsia #c026d3 hérité de l'ancien thème, hors palette
+     V2. Devenue le toggle SECONDAIRE (Refacturé/Direct, Acompte/Avance) : sélection
+     en creux (bordure + texte azure) au lieu d'un aplat, pour ne pas rivaliser
+     visuellement avec les toggles de 1er niveau posés juste au-dessus. */
+  .seg.seg-neon.violet button.on:not(.warn):not(.ok){background:var(--primary-soft);color:var(--primary);box-shadow:inset 0 0 0 1px rgba(69,193,253,.45)}
+  .seg.seg-neon.violet button.on:not(.warn):not(.ok):hover{background:rgba(69,193,253,.18);color:var(--primary)}
 </style>
 </head>
 <body>
@@ -3440,7 +3430,7 @@ const DEFAULT_S = {
     // Opacité du voile posé sur la photo. Plus c'est haut, plus la photo
     // s'efface. Borné [0.55, 0.98] par applyBgPhoto (au-dessous, le texte des
     // zones sans panneau devient illisible sur les hautes lumières).
-    bgScrim: 0.84,
+    bgScrim: 0.75,
     gmailTemplates: {
       devis: {
         subject: "Relance — Devis {ref}",
@@ -3897,12 +3887,12 @@ function _uiDialogOpen({ kind = "info", title = "", message = "", confirmLabel =
     _uiDialogResolve = resolve;
     _uiDialogCancelValue = isPrompt ? null : (cancelLabel ? false : undefined);
     const icon = kind === "danger" ? ICONS.alertOctagon : kind === "warn" ? ICONS.alertTriangle : ICONS.info;
-    const confirmCls = kind === "danger" ? "btn-add-neon danger" : "btn-add-neon";
+    const confirmCls = kind === "danger" ? "mk-btn ghost" : "mk-btn azure";
     const inputHtml = isPrompt
       ? `<input type="text" id="ui-dialog-input" class="ui-dialog-input" value="${esc(defaultValue)}" placeholder="${esc(placeholder)}" />`
       : "";
     const cancelHtml = cancelLabel
-      ? `<button class="btn-add-neon ghost" onclick="_uiDialogClose(${isPrompt ? "null" : "false"})">${esc(cancelLabel)}</button>`
+      ? `<button class="mk-btn subtle" onclick="_uiDialogClose(${isPrompt ? "null" : "false"})">${esc(cancelLabel)}</button>`
       : "";
     const confirmHandler = isPrompt
       ? `_uiDialogClose(document.getElementById('ui-dialog-input').value)`
@@ -3989,7 +3979,7 @@ window.uiChoice = function(message, opts = {}) {
     const choices = opts.choices || [];
     _uiChoiceMap = choices.map(c => c.value);
     const choicesHtml = choices.map((c, i) => {
-      const cls = c.kind === "danger" ? "btn-add-neon danger" : c.kind === "ghost" ? "btn-add-neon ghost" : "btn-add-neon";
+      const cls = c.kind === "danger" ? "mk-btn ghost" : c.kind === "ghost" ? "mk-btn subtle" : "mk-btn azure";
       const tip = c.tooltip ? ` title="${esc(c.tooltip)}"` : "";
       return `<button class="${cls}"${tip} onclick="_uiChoicePick(${i})">${esc(c.label)}</button>`;
     }).join("");
@@ -4003,7 +3993,7 @@ window.uiChoice = function(message, opts = {}) {
           </div>
         </div>
         <div class="modal-actions" style="flex-wrap:wrap;gap:8px">
-          <button class="btn-add-neon ghost" onclick="_uiDialogClose(null)">${esc(cancelLabel)}</button>
+          <button class="mk-btn subtle" onclick="_uiDialogClose(null)">${esc(cancelLabel)}</button>
           ${choicesHtml}
         </div>
       </div>
@@ -4287,6 +4277,7 @@ async function loadFromCloud(ownerUid) {
       const phonesFixed = migratePhoneLeadingZero();
       const livraisonFixed = migrateLivraisonOrpheline();
       const datePaiementFixed = migrateDatePaiement();
+      const scrimMigrated = migrateScrimDefault();
       // Migration snapshotHash (JSON mission entier → hash court). AVANT
       // autoCleanupDoc pour que le check de taille voie le doc allégé.
       const hashesMigrated = migrateSnapshotHashes();
@@ -4303,7 +4294,7 @@ async function loadFromCloud(ownerUid) {
       // migration re-tourne à chaque ouverture, et plus problématique : le
       // live sync subscribeWorkspaceData écraserait nos changements à la
       // première update Firestore — voir ce site pour le miroir).
-      if (chainsMigrated || phonesFixed || cleanedUp || livraisonFixed || hashesMigrated || datePaiementFixed) saveToCloud();
+      if (chainsMigrated || phonesFixed || cleanedUp || livraisonFixed || hashesMigrated || datePaiementFixed || scrimMigrated) saveToCloud();
       // Adopte le timestamp cloud comme nouveau référentiel local (sinon
       // notre prochain save aurait un localCts plus ancien que le cloud
       // alors qu'on vient de tout merger).
@@ -4558,11 +4549,14 @@ function subscribeWorkspaceData(ownerUid) {
     const hashesMigratedLive = migrateSnapshotHashes();
     // Migration datePaiement (idempotente) — même raison.
     const datePaiementFixedLive = migrateDatePaiement();
+    // Voile par défaut (idempotente) — même raison : sans elle, un snapshot
+    // cloud encore à .84 ré-imposerait l'ancien voile à chaque sync.
+    const scrimMigratedLive = migrateScrimDefault();
     // Adopte le timestamp cloud comme nouveau référentiel local (sinon
     // notre prochain save aurait un localCts plus ancien que le cloud).
     if (cloudCts > 0) S._localChangeTs = cloudCts;
     localStorage.setItem(SK, JSON.stringify(S));
-    if (chainsMigratedLive || phonesFixedLive || livraisonFixedLive || hashesMigratedLive || datePaiementFixedLive) saveToCloud();
+    if (chainsMigratedLive || phonesFixedLive || livraisonFixedLive || hashesMigratedLive || datePaiementFixedLive || scrimMigratedLive) saveToCloud();
     // Préserve le focus de l'input courant pendant le re-render
     const active = document.activeElement;
     const id = active && active.id;
@@ -5742,7 +5736,7 @@ window.updSiretWithCheck = function(raw) {
     status.textContent = "Le SIRET est obligatoire sur tout devis (R123-237 C. com.)";
     status.style.color = "var(--text-dim)";
   } else if (validSiret(cleaned)) {
-    status.textContent = "✓ SIRET valide (Luhn OK)";
+    status.innerHTML = `${ICO_SZ('check', 12)} SIRET valide (Luhn OK)`;
     status.style.color = "var(--success,#2e7d32)";
   } else if (cleaned.length < 14) {
     status.textContent = `${cleaned.length}/14 chiffres`;
@@ -6173,7 +6167,7 @@ function rDevisPreview() {
           <span class="dp-cgv-title">Conditions générales de vente</span><span class="dp-cgv-sep"> — </span><span class="dp-cgv-ref">Annexe au ${esc(formatRef(d.ref, "devis"))}</span>
         </div>
         <div class="dp-cgv-body">${renderCgvSections(d.cgvPreambule, d.cgvSections)}${penaltyArticle}</div>
-        <button class="dp-cgv-add-btn" type="button" onclick="cgvSectionAdd()" title="Ajouter une nouvelle section CGV">＋ Ajouter une section CGV</button>
+        <button class="dp-cgv-add-btn" type="button" onclick="cgvSectionAdd()" title="Ajouter une nouvelle section CGV">${ICO_SZ('plus', 13)} Ajouter une section CGV</button>
         ${(() => {
           const binCount = (S.bin && Array.isArray(S.bin.items) && S.bin.items.length) || 0;
           return binCount > 0 ? `<button class="dp-bin-link" type="button" onclick="binModalToggle()" title="Voir les sections supprimées et les restaurer">${ICO_SZ('trash', 12)} Corbeille (${binCount})</button>` : "";
@@ -9354,7 +9348,7 @@ function applyBgPhoto() {
   const want = BG_PHOTOS.includes(p.bgPhoto) ? p.bgPhoto : "jade-portrait";
   if (document.documentElement.dataset.bg !== want) document.documentElement.dataset.bg = want;
   const raw = parseFloat(p.bgScrim);
-  const scrim = isNaN(raw) ? 0.84 : Math.min(BG_SCRIM_MAX, Math.max(BG_SCRIM_MIN, raw));
+  const scrim = isNaN(raw) ? 0.75 : Math.min(BG_SCRIM_MAX, Math.max(BG_SCRIM_MIN, raw));
   document.documentElement.style.setProperty("--bg-scrim", String(scrim));
 }
 // Console F12 : setBgPhoto("azure-helmet" | "ember-parking" | "jade-portrait" | "none")
@@ -9379,7 +9373,7 @@ window.compteSetBgScrim = function(v) {
   // la main la seule chose visible qui en dépend (le pourcentage).
   setBgScrim(v);
   const el = document.querySelector(".cpt-scrim-val");
-  const n = Math.min(BG_SCRIM_MAX, Math.max(BG_SCRIM_MIN, parseFloat(v) || 0.84));
+  const n = Math.min(BG_SCRIM_MAX, Math.max(BG_SCRIM_MIN, parseFloat(v) || 0.75));
   if (el) el.textContent = Math.round(n * 100) + " %";
 };
 
@@ -9926,7 +9920,7 @@ window.showUndoToast = function(label, restoreFn) {
   toast.className = "undo-toast";
   toast.innerHTML = `
     <span class="undo-toast-msg">${esc(label)}</span>
-    <button class="undo-toast-btn" type="button">↶ Annuler</button>
+    <button class="undo-toast-btn" type="button">${ICO_SZ('cornerUpLeft', 13)} Annuler</button>
   `;
   document.body.appendChild(toast);
   toast.querySelector(".undo-toast-btn").onclick = () => {
@@ -10031,6 +10025,19 @@ function rBinModal() {
 // l'utilisateur. Plus récent en premier. id = clé stable, sert au "lu/non-lu".
 // Format des items : { h: titre court, b: explication 1-3 phrases }.
 const APP_CHANGELOG = [
+  {
+    id: "2026-07-refonte-v2-fin",
+    date: "2026-07-14",
+    title: "Refonte terminée — finitions",
+    items: [
+      { h: "Le style « néon » a disparu",
+        b: "Les boutons cerclés de bleu lumineux et les toggles auréolés dataient de l'ancien thème. Ils suivent maintenant la même famille de boutons que le reste de l'app : bleu plein pour l'action principale, gris pour le secondaire, orange pour ce qui supprime." },
+      { h: "La photo de fond respire",
+        b: "Le voile qui l'assombrissait passe de 84 % à 75 %. C'était un compromis tant que certaines pages affichaient du texte à nu sur l'image ; maintenant que tout est en panneaux, la photo peut ressortir. Réglable à ton goût dans Mon compte > Apparence." },
+      { h: "Plus un seul caractère bricolé dans l'interface",
+        b: "Les dernières flèches et coches tapées au clavier (↑ ↓ ▴▾ ✓ ＋) sont remplacées par de vraies icônes. Les documents imprimés, eux, gardent leurs coches : c'est de la typographie de facture, pas de l'interface." }
+    ]
+  },
   {
     id: "2026-07-refonte-v2-compte",
     date: "2026-07-14",
@@ -10695,10 +10702,10 @@ function rCgvSectionEditModal() {
         <textarea class="cgv-edit-modal-textarea" rows="8" placeholder="Contenu de la section…" oninput="cgvSectionUpdate('${esc(sec.id)}', 'body', this.value)">${esc(sec.body || "")}</textarea>
       </div>
       <div class="modal-actions">
-        <button class="btn-add-neon ghost cgv-edit-move" onclick="cgvSectionMoveUp('${esc(sec.id)}')" ${idx === 0 ? 'disabled' : ''} title="Monter cette section">↑ Monter</button>
-        <button class="btn-add-neon ghost cgv-edit-move" onclick="cgvSectionMoveDown('${esc(sec.id)}')" ${idx === total - 1 ? 'disabled' : ''} title="Descendre cette section">↓ Descendre</button>
-        <button class="btn-add-neon danger" style="margin-left:auto" onclick="cgvSectionRemoveAndClose('${esc(sec.id)}')" title="Supprimer cette section">${ICO_SZ('trash',13)} Supprimer</button>
-        <button class="btn-add-neon" onclick="cgvSectionEditClose()">Fermer</button>
+        <button class="mk-btn subtle cgv-edit-move" onclick="cgvSectionMoveUp('${esc(sec.id)}')" ${idx === 0 ? 'disabled' : ''} title="Monter cette section">${ICO_SZ('arrowUp', 13)} Monter</button>
+        <button class="mk-btn subtle cgv-edit-move" onclick="cgvSectionMoveDown('${esc(sec.id)}')" ${idx === total - 1 ? 'disabled' : ''} title="Descendre cette section">${ICO_SZ('arrowDown', 13)} Descendre</button>
+        <button class="mk-btn ghost" style="margin-left:auto" onclick="cgvSectionRemoveAndClose('${esc(sec.id)}')" title="Supprimer cette section">${ICO_SZ('trash',13)} Supprimer</button>
+        <button class="mk-btn subtle" onclick="cgvSectionEditClose()">Fermer</button>
       </div>
     </div>
   </div>`;
@@ -10884,8 +10891,8 @@ function rTextEditorModal() {
       </div>
       <div id="rich-editor" class="rich-editor" contenteditable="true" spellcheck="true">${initialHtml}</div>
       <div class="modal-actions">
-        <button class="btn-add-neon ghost" onclick="textEditorClose(false)">Annuler</button>
-        <button class="btn-add-neon" onclick="textEditorClose(true)">${ICO_SZ('check',13)} Enregistrer</button>
+        <button class="mk-btn subtle" onclick="textEditorClose(false)">Annuler</button>
+        <button class="mk-btn azure" onclick="textEditorClose(true)">${ICO_SZ('check',13)} Enregistrer</button>
       </div>
     </div>
   </div>`;
@@ -11280,8 +11287,8 @@ function rPrintTipModal() {
         </div>
       </div>
       <div class="modal-actions">
-        <button class="btn-add-neon ghost" onclick="printTipDismiss(false)">Annuler</button>
-        <button class="btn-add-neon" onclick="printTipDismiss(true)">Continuer vers l'impression</button>
+        <button class="mk-btn subtle" onclick="printTipDismiss(false)">Annuler</button>
+        <button class="mk-btn azure" onclick="printTipDismiss(true)">Continuer vers l'impression</button>
       </div>
     </div>
   </div>`;
@@ -11327,12 +11334,12 @@ function rViewDevisModal() {
             Aucun snapshot disponible pour ce devis.<br><span style="font-size:13px;color:var(--text-dim)">Les snapshots sont créés à partir de l'émission depuis l'onglet Mission « + Enregistrer dans Suivi ».</span>
            </div>`}
       <div class="modal-actions">
-        <button class="btn-add-neon ghost" title="Ouvrir Gmail pré-rempli. Le PDF doit être glissé manuellement dans le mail." onclick="openGmailComposeForDevis('${viewDevisModal.devisId}')">${ICO_SZ('mail',13)} Ouvrir Gmail</button>
+        <button class="mk-btn subtle" title="Ouvrir Gmail pré-rempli. Le PDF doit être glissé manuellement dans le mail." onclick="openGmailComposeForDevis('${viewDevisModal.devisId}')">${ICO_SZ('mail',13)} Ouvrir Gmail</button>
         ${dv.envoiTs
-          ? `<button class="btn-add-neon ghost" title="Retire « Envoyé le ${esc(dateFR(new Date(dv.envoiTs).toISOString().slice(0,10)))} »." onclick="devisEnvoiUndo('${viewDevisModal.devisId}')">${ICO_SZ('rotateCcw',13)} Annuler l'envoi</button>`
-          : `<button class="btn-add-neon ghost" title="Marquer le devis comme envoyé au client (fait avancer le parcours)." onclick="devisMarkEnvoi('${viewDevisModal.devisId}')">${ICO_SZ('check',13)} Marquer envoyé</button>`}
-        ${snapshot ? `<button class="btn-add-neon ghost" onclick="printWithTip()">${ICO_SZ('printer',13)} ${printLabel}</button>` : ""}
-        <button class="btn-add-neon" onclick="viewDevisClose()">Fermer</button>
+          ? `<button class="mk-btn subtle" title="Retire « Envoyé le ${esc(dateFR(new Date(dv.envoiTs).toISOString().slice(0,10)))} »." onclick="devisEnvoiUndo('${viewDevisModal.devisId}')">${ICO_SZ('rotateCcw',13)} Annuler l'envoi</button>`
+          : `<button class="mk-btn subtle" title="Marquer le devis comme envoyé au client (fait avancer le parcours)." onclick="devisMarkEnvoi('${viewDevisModal.devisId}')">${ICO_SZ('check',13)} Marquer envoyé</button>`}
+        ${snapshot ? `<button class="mk-btn subtle" onclick="printWithTip()">${ICO_SZ('printer',13)} ${printLabel}</button>` : ""}
+        <button class="mk-btn subtle" onclick="viewDevisClose()">Fermer</button>
       </div>
     </div>
   </div>`;
@@ -11508,7 +11515,7 @@ function rViewFactureModal() {
       <div class="modal-card">
         <div class="modal-title">Facture indisponible</div>
         <div class="empty" style="padding:30px;text-align:center">Aucun snapshot devis pour ce devis.<br><span style="font-size:13px;color:var(--text-dim)">Émets d'abord le devis (« + Enregistrer dans Suivi »).</span></div>
-        <div class="modal-actions"><button class="btn-add-neon" onclick="viewFactureClose()">Fermer</button></div>
+        <div class="modal-actions"><button class="mk-btn subtle" onclick="viewFactureClose()">Fermer</button></div>
       </div>
     </div>`;
   }
@@ -11529,7 +11536,7 @@ function rViewFactureModal() {
       <div class="modal-card">
         <div class="modal-title">${type === "acompte" ? "Facture d'acompte" : "Facture de solde"} — pas encore émissible</div>
         <div class="empty" style="padding:24px;line-height:1.5">${esc(reason)}</div>
-        <div class="modal-actions"><button class="btn-add-neon" onclick="viewFactureClose()">Fermer</button></div>
+        <div class="modal-actions"><button class="mk-btn subtle" onclick="viewFactureClose()">Fermer</button></div>
       </div>
     </div>`;
   }
@@ -11603,13 +11610,13 @@ function rViewFactureModal() {
         })()}
       </div>
       <div class="modal-actions">
-        <button class="btn-add-neon ghost" title="Supprimer définitivement cette facture (émise par erreur)." onclick="factureDelConfirm('${devisId}','${echId}')">${ICO_SZ('trash',13)} Supprimer</button>
-        <button class="btn-add-neon ghost" title="Ouvrir Gmail pré-rempli. Le PDF doit être glissé manuellement dans le mail." onclick="openGmailComposeForFacture('${devisId}','${echId}')">${ICO_SZ('mail',13)} Ouvrir Gmail</button>
+        <button class="mk-btn subtle" title="Supprimer définitivement cette facture (émise par erreur)." onclick="factureDelConfirm('${devisId}','${echId}')">${ICO_SZ('trash',13)} Supprimer</button>
+        <button class="mk-btn subtle" title="Ouvrir Gmail pré-rempli. Le PDF doit être glissé manuellement dans le mail." onclick="openGmailComposeForFacture('${devisId}','${echId}')">${ICO_SZ('mail',13)} Ouvrir Gmail</button>
         ${facture.envoiTs
-          ? `<button class="btn-add-neon ghost" title="Retire « Envoyée le ${esc(dateFR(new Date(facture.envoiTs).toISOString().slice(0,10)))} »." onclick="factureEnvoiUndo('${devisId}','${echId}')">${ICO_SZ('rotateCcw',13)} Annuler l'envoi</button>`
-          : `<button class="btn-add-neon ghost" title="Marquer la facture comme envoyée au client." onclick="factureMarkEnvoi('${devisId}','${echId}')">${ICO_SZ('check',13)} Marquer envoyée</button>`}
-        <button class="btn-add-neon ghost" onclick="printWithTip()">${ICO_SZ('printer',13)} Imprimer</button>
-        <button class="btn-add-neon" onclick="viewFactureClose()">Fermer</button>
+          ? `<button class="mk-btn subtle" title="Retire « Envoyée le ${esc(dateFR(new Date(facture.envoiTs).toISOString().slice(0,10)))} »." onclick="factureEnvoiUndo('${devisId}','${echId}')">${ICO_SZ('rotateCcw',13)} Annuler l'envoi</button>`
+          : `<button class="mk-btn subtle" title="Marquer la facture comme envoyée au client." onclick="factureMarkEnvoi('${devisId}','${echId}')">${ICO_SZ('check',13)} Marquer envoyée</button>`}
+        <button class="mk-btn subtle" onclick="printWithTip()">${ICO_SZ('printer',13)} Imprimer</button>
+        <button class="mk-btn subtle" onclick="viewFactureClose()">Fermer</button>
       </div>
     </div>
   </div>`;
@@ -11909,7 +11916,7 @@ function devisSectionSummaries() {
   const echBit = ok100
     ? `<span class="amt">${(d.echeances || []).length} échéance${(d.echeances || []).length > 1 ? "s" : ""}</span>`
     : `<span class="err">${pctSum.toString().replace(".",",")}% (≠100)</span>`;
-  const ibanBit = (S.identite && S.identite.bank && S.identite.bank.iban) ? `<span>IBAN ✓</span>` : `<span class="warn">IBAN manquant</span>`;
+  const ibanBit = (S.identite && S.identite.bank && S.identite.bank.iban) ? `<span>IBAN ${ICO_SZ('check', 12)}</span>` : `<span class="warn">IBAN manquant</span>`;
   const modSummary = `${echBit}<span class="dot"></span>${ibanBit}`;
 
   // 6. Conditions & signature — sections CGV
@@ -12666,20 +12673,20 @@ function rDevisSectionPrestations() {
     <div class="lg-list" id="lgListHeures">
       ${heures.length ? heures.map(l => rLigneDraggable(l)).join("") : `<div class="lg-empty">Aucune ligne — ajoute des heures pour démarrer le devis</div>`}
     </div>
-    <div class="lg-add"><button class="btn-add-neon" type="button" onclick="ligneAdd('heures')">${ICO_SZ('plus', 14)} Heures</button></div>
+    <div class="lg-add"><button class="mk-btn subtle" type="button" onclick="ligneAdd('heures')">${ICO_SZ('plus', 14)} Heures</button></div>
 
     <h5>Matériel</h5>
     <div class="lg-list" id="lgListMateriel">
       ${materiel.length ? materiel.map(l => rLigneDraggable(l)).join("") : `<div class="lg-empty">Aucun matériel</div>`}
     </div>
-    <div class="lg-add"><button class="btn-add-neon" type="button" onclick="ligneAdd('materiel')">${ICO_SZ('plus', 14)} Matériel</button></div>
+    <div class="lg-add"><button class="mk-btn subtle" type="button" onclick="ligneAdd('materiel')">${ICO_SZ('plus', 14)} Matériel</button></div>
 
     ${quick ? "" : `
     <h5>Cession de droits <button type="button" class="lg-info-icon" tabindex="0" aria-label="Étendue, durée, territoire, supports (CPI L131-3)" title="Étendue, durée, territoire, supports — Conformément au CPI L131-3">i</button></h5>
     <div class="lg-list" id="lgListCessions">
       ${cessions.length ? cessions.map(l => rLigneDraggable(l)).join("") : `<div class="lg-empty">Aucune cession de droits — recommandé pour formaliser l'usage des photos par le client</div>`}
     </div>
-    <div class="lg-add"><button class="btn-add-neon" type="button" onclick="ligneAdd('cession')">${ICO_SZ('plus', 14)} Cession de droits</button></div>`}
+    <div class="lg-add"><button class="mk-btn subtle" type="button" onclick="ligneAdd('cession')">${ICO_SZ('plus', 14)} Cession de droits</button></div>`}
   `;
 }
 
@@ -12971,7 +12978,7 @@ function rDevisSectionModalites() {
     </div>
     <div class="ech-warn" id="echWarn" style="display:${ok ? "none" : "flex"};align-items:center;gap:6px"><span style="flex-shrink:0">${ICO_SZ('alertTriangle', 14)}</span><span>Les pourcentages doivent totaliser 100 %.</span></div>
     <div class="ech-actions" style="margin-bottom:var(--space-xl)">
-      <button class="btn-add-neon" onclick="echeanceAdd()" type="button">${ICO_SZ('plus', 14)} Ajouter</button>
+      <button class="mk-btn subtle" onclick="echeanceAdd()" type="button">${ICO_SZ('plus', 14)} Ajouter</button>
     </div>
 
     ${rPaiementFields()}
@@ -13471,6 +13478,20 @@ window.markAsLegacy = function(devisId) {
 // Ex : "6 12 34 56 78" → "06 12 34 56 78", "6.12.34.56.78" → "0 6.12.34.56.78"
 // Conserve les phones internationaux (commence par +) ou déjà corrects (10
 // chiffres ou plus). Synchronise aussi le champ legacy c.phone.
+// ▼ migrateScrimDefault — one-shot : le voile par défaut descend de .84 à .75
+// (phase 7 : toutes les vues sont passées en panneaux, la photo peut respirer).
+// ⚠ La valeur est PERSISTÉE dans S.prefs : changer DEFAULT_S ne suffit pas, le
+// .84 posé au boot d'avant reste en base. On ne touche QUE l'ancien défaut exact
+// — un réglage volontaire à .84 est indiscernable, mais le curseur n'existait
+// pas avant cette même phase, donc aucun choix n'a pu être fait.
+const SCRIM_LEGACY_DEFAULT = 0.84;
+function migrateScrimDefault() {
+  if (!S.prefs) return false;
+  if (parseFloat(S.prefs.bgScrim) !== SCRIM_LEGACY_DEFAULT) return false;
+  S.prefs.bgScrim = DEFAULT_S.prefs.bgScrim;
+  return true;
+}
+
 function migratePhoneLeadingZero() {
   let changed = false;
   for (const c of (S.clients && S.clients.entries) || []) {
@@ -15547,8 +15568,8 @@ function rClientInfoModal() {
       ${bizHtml ? `<h4 class="ci-section-title">Identification</h4>${bizHtml}` : ""}
       ${rencontre}
       <div class="modal-actions">
-        <button class="btn-add-neon ghost" onclick="clientInfoModalClose()">Fermer</button>
-        <button class="btn-add-neon" onclick="clientInfoModalGoToFiche()">Voir la fiche complète →</button>
+        <button class="mk-btn subtle" onclick="clientInfoModalClose()">Fermer</button>
+        <button class="mk-btn azure" onclick="clientInfoModalGoToFiche()">Voir la fiche complète →</button>
       </div>
     </div>
   </div>`;
@@ -15633,12 +15654,12 @@ function suiviDateMenuHtml() {
       <button type="button" class="th-menu-item ${isAsc ? 'on' : ''}"
         onclick="${stop}suiviPickSort('date','asc')">
         <span class="th-menu-radio">${isAsc ? '●' : '○'}</span>
-        <span class="th-menu-label">↑ Plus ancien d'abord</span>
+        <span class="th-menu-label">${ICO_SZ('arrowUp', 12)} Plus ancien d'abord</span>
       </button>
       <button type="button" class="th-menu-item ${isDesc ? 'on' : ''}"
         onclick="${stop}suiviPickSort('date','desc')">
         <span class="th-menu-radio">${isDesc ? '●' : '○'}</span>
-        <span class="th-menu-label">↓ Plus récent d'abord</span>
+        <span class="th-menu-label">${ICO_SZ('arrowDown', 12)} Plus récent d'abord</span>
       </button>
       <div class="th-menu-divider"></div>
       <div class="th-menu-section">Filtrer par année</div>
@@ -16405,8 +16426,8 @@ function rCL() {
   const stats = clientsStats();
 
   const sortInd = key => {
-    if (clientsSort.key !== key) return `<span class="cli-sort-ind">▴▾</span>`;
-    return clientsSort.dir === "asc" ? `<span class="cli-sort-ind">▴</span>` : `<span class="cli-sort-ind">▾</span>`;
+    if (clientsSort.key !== key) return `<span class="cli-sort-ind idle">${ICO_SZ('chevronDown', 12)}</span>`;
+    return `<span class="cli-sort-ind">${ICO_SZ(clientsSort.dir === "asc" ? "arrowUp" : "arrowDown", 12)}</span>`;
   };
   const thCls = key => "cli-sortable" + (clientsSort.key === key ? " sorted" : "");
 
@@ -16748,7 +16769,7 @@ function rDateOrEnCoursCell(id, dateFin) {
       ${isEnCours
         ? `<span class="dec-pill">● En cours</span>`
         : `<span class="dec-date">📅 ${esc(dateFR)}</span>`}
-      <span class="dec-caret">▾</span>
+      <span class="dec-caret">${ICO_SZ('chevronDown', 13)}</span>
     </button>
     ${isOpen ? `<div class="date-encours-popover" onclick="event.stopPropagation()">
       <button class="dec-encours-opt ${isEnCours ? 'selected' : ''}" type="button" onclick="dateEnCoursPickEnCours('${id}')">
@@ -17499,8 +17520,8 @@ function rCatalogue() {
         <button class="${!isDecl?"on warn":""}" onclick="tarifViewMode('noir')">${ICO_SZ('circleFilled', 12)} Au black</button>
       </div>
       <div class="catalog-add-group">
-        <button type="button" class="btn-add-neon ghost" onclick="tarifAddGroup()" title="Ajouter un séparateur de groupe (ex : Photo, Vidéo, Mariage)">${ICO_SZ('plus', 14)} Groupe</button>
-        <button type="button" class="btn-add-neon" onclick="tarifAdd()">${ICO_SZ('plus', 14)} Nouvelle prestation</button>
+        <button type="button" class="mk-btn subtle" onclick="tarifAddGroup()" title="Ajouter un séparateur de groupe (ex : Photo, Vidéo, Mariage)">${ICO_SZ('plus', 14)} Groupe</button>
+        <button type="button" class="mk-btn subtle" onclick="tarifAdd()">${ICO_SZ('plus', 14)} Nouvelle prestation</button>
       </div>
     </div>
     ${blackSubToolbar}
@@ -18004,7 +18025,7 @@ function rPF() {
         })()}">${(() => {
           const s = (id.siret || "").replace(/\s/g, "");
           if (s.length === 0) return "Le SIRET est obligatoire sur tout devis (R123-237 C. com.)";
-          if (validSiret(s)) return "✓ SIRET valide (Luhn OK)";
+          if (validSiret(s)) return `${ICO_SZ('check', 12)} SIRET valide (Luhn OK)`;
           if (s.length < 14) return `${s.length}/14 chiffres`;
           return "✗ Clé Luhn invalide — vérifie le numéro";
         })()}</div>
@@ -18222,7 +18243,7 @@ function rCompteGeneral() {
 function rCompteApparence() {
   const p = S.prefs || {};
   const cur = BG_PHOTOS.includes(p.bgPhoto) ? p.bgPhoto : "jade-portrait";
-  const scrim = isNaN(parseFloat(p.bgScrim)) ? 0.84 : parseFloat(p.bgScrim);
+  const scrim = isNaN(parseFloat(p.bgScrim)) ? DEFAULT_S.prefs.bgScrim : parseFloat(p.bgScrim);
   const LBL = {
     "jade-portrait": "Portrait jade",
     "azure-helmet":  "Casque azur",
