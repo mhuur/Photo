@@ -248,16 +248,16 @@
   /* Edit accordion (Édition du devis section) — collapsible groups */
   .edit-accordion-list{display:flex;flex-direction:column;gap:var(--space-sm);margin-top:var(--space-xs);margin-bottom:var(--space-lg);max-width:880px}
   /* Accordéon Mission — style néon : transparent au repos, bordure primary qui s'éclaire au hover, glow marqué à l'ouverture */
-  .edit-section{background:transparent;border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden;transition:border-color .2s,box-shadow .2s,background .2s}
-  .edit-section:hover:not(.open){border-color:rgba(69,193,253,.4);box-shadow:0 0 10px rgba(69,193,253,.12)}
-  .edit-section.open{border-color:var(--primary);background:rgba(69,193,253,.04);box-shadow:inset 0 0 0 1px rgba(69,193,253,.18),0 0 14px rgba(69,193,253,.35),0 0 28px rgba(69,193,253,.12)}
+  .edit-section{background:var(--surface-glass);border:1px solid var(--border-soft);border-radius:var(--radius-lg);overflow:hidden;transition:border-color .2s,box-shadow .2s,background .2s}
+  .edit-section:hover:not(.open){border-color:var(--border-light)}
+  .edit-section.open{border-color:rgba(69,193,253,.45);background:rgba(69,193,253,.05)}
   .edit-section-header{width:100%;display:flex;align-items:center;gap:10px;padding:10px 14px;background:transparent;border:0;color:var(--text);font:inherit;font-size:13px;font-weight:600;cursor:pointer;text-align:left;transition:background .12s,color .12s}
   .edit-section-header:hover{background:rgba(69,193,253,.05)}
   .edit-section.open .edit-section-header:hover{background:rgba(69,193,253,.08)}
   .edit-section-header:focus{outline:none}
-  .edit-section.open .edit-section-title{color:#45C1FD;text-shadow:0 0 10px rgba(69,193,253,.7),0 0 20px rgba(69,193,253,.3)}
+  .edit-section.open .edit-section-title{color:var(--primary)}
   .edit-section-chevron{font-size:11px;color:var(--text-muted);transition:transform .2s ease,color .2s,filter .2s;flex-shrink:0;width:14px;display:inline-flex;align-items:center;justify-content:center}
-  .edit-section.open .edit-section-chevron{transform:rotate(90deg);color:var(--primary);filter:drop-shadow(0 0 4px rgba(69,193,253,.6))}
+  .edit-section.open .edit-section-chevron{transform:rotate(90deg);color:var(--primary)}
   .edit-section-title{flex:1;letter-spacing:.01em;transition:color .2s,text-shadow .2s}
   .edit-section-action{margin-left:auto;padding:5px 12px;font-size:11px;font-weight:500;letter-spacing:0;text-transform:none;flex-shrink:0}
   .edit-section-body{padding:var(--space-md) var(--space-lg) var(--space-lg);border-top:1px solid rgba(69,193,253,.2);background:rgba(69,193,253,.02)}
@@ -3049,11 +3049,51 @@
   /* Banners err/warn/dirty sous la toolbar Mission (refonte UX : actions en haut) */
   .devis-banners{display:flex;flex-direction:column;gap:8px;margin-bottom:14px;max-width:880px}
   .devis-banners:empty{display:none}
-  .mission-mode-bar{display:flex;gap:var(--space-md);align-items:center;flex-wrap:wrap;margin-bottom:var(--gap-row)}
-  .mission-mode-bar .hint{font-size:12px}
   .mode-pill{display:inline-block;vertical-align:2px;font-size:11px;font-weight:600;color:var(--accent);background:rgba(2,220,185,.12);border:1px solid rgba(2,220,185,.30);border-radius:var(--radius-sm);padding:2px 8px;letter-spacing:.3px}
-  .mission-toolbar{display:flex;gap:8px;align-items:center;margin-bottom:14px}
-  .mission-toolbar .btn svg{width:14px;height:14px;vertical-align:-2px;margin-right:5px}
+  /* ===== Mission V2 (phase 3) — mode cards + formulaire à gauche, récap
+     sticky à droite. La toolbar Terminer/Annuler est absorbée par le récap :
+     l'action de validation est ainsi TOUJOURS visible, au même endroit que le
+     total qu'elle va figer. ===== */
+  .ms-mode{display:flex;gap:var(--space-md);margin-bottom:22px;flex-wrap:wrap}
+  .ms-mode-card{flex:1;min-width:260px;display:flex;align-items:center;gap:14px;padding:15px 18px;border-radius:var(--radius-lg);cursor:pointer;font:inherit;text-align:left;background:var(--surface-glass);border:1px solid var(--border-soft);transition:background .18s,border-color .18s}
+  .ms-mode-card:hover{border-color:var(--border)}
+  .ms-mode-card.on{background:rgba(10,86,224,.14);border-color:rgba(69,193,253,.5)}
+  .ms-mode-ico{display:inline-flex;flex-shrink:0;color:var(--text-muted)}
+  .ms-mode-card.on .ms-mode-ico{color:var(--primary)}
+  .ms-mode-txt{display:flex;flex-direction:column;gap:2px;min-width:0}
+  .ms-mode-title{font-family:var(--font-display);font-weight:700;font-size:17px;text-transform:uppercase;line-height:1;color:var(--text-soft)}
+  .ms-mode-card.on .ms-mode-title{color:#fff}
+  .ms-mode-desc{font-size:11.5px;color:var(--text-dim);line-height:1.4}
+  .ms-mode-card.on .ms-mode-desc{color:#9FC6F5}
+  .ms-mode-check{margin-left:auto;display:inline-flex;flex-shrink:0;color:var(--primary)}
+
+  .ms-grid{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:var(--space-xxl);align-items:start}
+  @media (max-width:1100px){ .ms-grid{grid-template-columns:minmax(0,1fr)} .ms-aside{position:static!important} }
+  .ms-aside{position:sticky;top:var(--space-xl);display:flex;flex-direction:column;gap:10px}
+  .ms-recap{background:rgba(26,24,34,.92);border:1px solid rgba(46,134,240,.3);border-radius:var(--radius-md);padding:18px 20px}
+  .ms-recap-head{font-family:var(--font-mono);font-size:10px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:var(--primary);margin-bottom:14px}
+  .ms-line{display:flex;justify-content:space-between;gap:12px;padding:5px 0;font-size:12px;color:var(--text-soft)}
+  .ms-line span:last-child{font-variant-numeric:tabular-nums;white-space:nowrap}
+  .ms-line.muted{color:var(--text-dim)}
+  .ms-line.minus{color:var(--warning)}
+  .ms-line.total{margin-top:6px;padding-top:9px;border-top:1px solid var(--border);font-size:14px;font-weight:700;color:#fff}
+  .ms-line.net{font-size:13px;font-weight:700;color:var(--success)}
+  .ms-recap-actions{display:flex;flex-direction:column;gap:var(--space-sm);margin-top:var(--space-lg)}
+  .ms-recap-actions .mk-btn{width:100%;justify-content:center;padding:12px 0}
+  .ms-status{display:flex;align-items:center;gap:8px;justify-content:center;margin-top:var(--space-md);font-family:var(--font-mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase}
+  .ms-status::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor;flex-shrink:0}
+  .ms-status.ok{color:var(--success)}
+  .ms-status.ko{color:var(--warning)}
+  .ms-status.quick{color:var(--ember-300)}
+  .ms-ech{background:var(--surface-glass);border:1px solid var(--border-soft);border-radius:var(--radius-md);padding:16px 20px}
+  .ms-ech-head{font-family:var(--font-mono);font-size:10px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:var(--text-dim);margin-bottom:10px}
+  .ms-ech-line{display:flex;justify-content:space-between;gap:10px;font-size:12px;color:var(--text-soft);padding:4px 0}
+  .ms-ech-line span:last-child{font-variant-numeric:tabular-nums;white-space:nowrap}
+  .ms-preview-toggle{font-family:var(--font-mono);font-size:10px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;background:transparent;border:1px dashed var(--border-light);color:var(--text-muted);border-radius:var(--radius-md);padding:11px 0;cursor:pointer;width:100%;transition:color .15s,border-color .15s}
+  .ms-preview-toggle:hover{color:var(--ink-000);border-color:var(--border-strong,rgba(255,255,255,.44))}
+  /* Numéro de section « 01 » dans l'accordéon Mission */
+  .edit-section-num{font-family:var(--font-mono);font-size:10px;color:var(--ink-500);flex-shrink:0}
+  .edit-section.open .edit-section-num{color:var(--primary)}
   .devis-banner{font-size:12px;line-height:1.45;padding:8px 10px;border-radius:6px;display:flex;gap:8px;align-items:flex-start}
   .devis-banner.err{background:var(--danger-soft);border:1px solid var(--danger);color:var(--danger)}
   .devis-banner.warn{background:var(--warning-soft);border:1px solid var(--warning);color:var(--warning)}
@@ -9204,21 +9244,8 @@ function refreshTotals() {
   if (tab === "mission" && typeof refreshDevisHeaders === "function") refreshDevisHeaders();
 }
 
-function totalsHtml(t) {
-  return `
-    <div class="line muted"><span>Prestations (${t.totalHeures.toFixed(2).replace(".",",")} h × ${num(t.tarifH).toFixed(2).replace(".",",")} €/h)</span><span>${fmt(t.lignes)}</span></div>
-    <div class="line muted"><span>Frais de déplacement</span><span>${fmt(t.depl)}</span></div>
-    <div class="line muted"><span>Autres</span><span>${fmt(t.autres)}</span></div>
-    <div class="line"><span>Sous-total</span><span>${fmt(t.subtotal)}</span></div>
-    <div class="line muted"><span>Remise (${num(S.mission.remisePct).toString().replace(".",",")} %)</span><span>−${fmt(t.remise)}</span></div>
-    <div class="line total"><span>Total HT</span><span>${fmt(t.total)}</span></div>
-    <div class="line muted"><span>Acompte 30 %</span><span>${fmt(t.acompte)}</span></div>
-    <div class="line muted"><span>Reste 70 %</span><span>${fmt(t.reste)}</span></div>
-    ${t.debours > 0 ? `<div class="line muted" style="margin-top:6px;color:var(--accent)"><span>+ Frais de débours (à rembourser)</span><span>${fmt(t.debours)}</span></div>` : ""}
-    ${t.totalFactDirect > 0 ? `<div class="line muted" style="color:var(--accent)"><span>+ Facturation directe au client</span><span>${fmt(t.totalFactDirect)}</span></div>` : ""}
-    <div class="line muted" style="font-size:13px;color:#9ca3af;margin-top:6px">TVA non applicable, art. 293 B du CGI</div>
-  `;
-}
+// totalsHtml supprimé (phase 3) : sans caller depuis longtemps, et remplacé par
+// le récap sticky (rMissionAsideInner), qui lit les mêmes valeurs de totals().
 
 // ▼ applyBgPhoto — pose html[data-bg] + --bg-scrim selon S.prefs (charte V2 :
 // photo de marque sous voile). Le CSS fait le reste. Appelé depuis render() :
@@ -9895,6 +9922,29 @@ function rBinModal() {
 // l'utilisateur. Plus récent en premier. id = clé stable, sert au "lu/non-lu".
 // Format des items : { h: titre court, b: explication 1-3 phrases }.
 const APP_CHANGELOG = [
+  {
+    id: "2026-07-refonte-v2-mission",
+    date: "2026-07-14",
+    title: "Le formulaire de devis se réorganise (étape 4/7)",
+    items: [
+      {
+        h: "Un récapitulatif toujours sous les yeux",
+        b: "Le total, l'URSSAF, ton net et l'échéancier s'affichent en permanence dans une colonne à droite, qui suit le défilement. Les boutons « Terminer » et « Annuler » y sont désormais collés : l'action de validation est juste à côté du montant qu'elle va figer, et un voyant t'indique si le devis est prêt à émettre."
+      },
+      {
+        h: "Devis ou prestation rapide : deux cartes",
+        b: "Le petit interrupteur est remplacé par deux cartes qui expliquent ce que chaque mode implique. En prestation rapide, le récap parle d'« encaissé » et de « net au noir », sans URSSAF."
+      },
+      {
+        h: "L'aperçu du devis à la demande",
+        b: "Il ne s'affiche plus en permanence sous le formulaire : un bouton sous le récapitulatif l'ouvre quand tu en as besoin. La page de saisie est d'autant plus lisible."
+      },
+      {
+        h: "Correction : la première section s'ouvre enfin",
+        b: "Le formulaire arrivait entièrement replié, alors qu'il devait ouvrir « Identification & client » à l'arrivée. C'était un bug silencieux, corrigé."
+      }
+    ]
+  },
   {
     id: "2026-07-refonte-v2-timeline",
     date: "2026-07-14",
@@ -11739,10 +11789,11 @@ function refreshDevisHeaders() {
     const el = document.querySelector(`.edit-section[data-edit-section="${key}"] .edit-section-summary`);
     if (el) el.innerHTML = sums[key];
   }
-  // Met à jour la toolbar (état dirty/validation → enable/disable Terminer)
-  const toolbar = document.getElementById("missionToolbar");
-  if (toolbar) toolbar.innerHTML = rMissionToolbarInner();
-  // Met à jour les banners err/warn/dirty sous la toolbar
+  // Récap sticky : montants, échéancier, statut, enable/disable de « Terminer ».
+  // Sans <input> à l'intérieur → réécrire son innerHTML ne coûte aucun focus.
+  const aside = document.getElementById("missionAside");
+  if (aside) aside.innerHTML = rMissionAsideInner();
+  // Banners err/warn/dirty, en tête de colonne formulaire.
   const banners = document.getElementById("devisBanners");
   if (banners) banners.innerHTML = rDevisBanners();
 }
@@ -12084,36 +12135,147 @@ function rMS() {
   // Au premier rendu après un load, on ouvre la 1re section. Ensuite, on
   // respecte le choix de l'user (1 seul volet ouvert à la fois — voir
   // editSectionToggle + listener click hors zone).
-  const v2Keys = ["identification","prestations","deplacement","ajustements","modalites","conditions"];
-  const noneTouched = v2Keys.every(k => _editSectionOpen[k] === undefined);
+  // ⚠ Ces clés doivent être EXACTEMENT celles rendues par rDevisAccordion.
+  // Elles listaient encore « ajustements » et « modalites » (sections disparues
+  // d'une refonte précédente) ; or `modalites` est pré-initialisée à false dans
+  // _editSectionOpen → `=== undefined` était faux → noneTouched TOUJOURS faux →
+  // la 1re section ne s'ouvrait jamais. Bug silencieux, attrapé au smoke test.
+  const sectionKeys = ["identification", "prestations", "deplacement", "majorations", "conditions"];
+  const noneTouched = sectionKeys.every(k => _editSectionOpen[k] === undefined);
   if (noneTouched) _editSectionOpen.identification = true;
 
   const quick = isMissionQuick();
+  const d = S.mission;
+  const refMeta = [d.ref, d.dateEmission ? `émis le ${dateFR(d.dateEmission)}` : ""].filter(Boolean).join(" · ");
   return `
-    ${v2PageHead("mission", { titleHtml: quick ? ` <span class="mode-pill">Prestation rapide</span>` : "" })}
-    ${rMissionModeBar()}
-    <div class="mission-toolbar" id="missionToolbar">${rMissionToolbarInner()}</div>
-    <div class="devis-banners" id="devisBanners">${rDevisBanners()}</div>
-    ${rDevisAccordion()}
-    ${quick ? "" : rPreviewTabs()}
+    ${v2PageHead("mission", {
+      titleHtml: quick ? ` <span class="mode-pill">Prestation rapide</span>` : "",
+      actions: refMeta ? `<span class="v2-meta">${esc(refMeta)}</span>` : ""
+    })}
+    ${rMissionModeCards()}
+    <div class="ms-grid">
+      <div class="ms-form">
+        <div class="devis-banners" id="devisBanners">${rDevisBanners()}</div>
+        ${rDevisAccordion()}
+      </div>
+      <aside class="ms-aside" id="missionAside">${rMissionAsideInner()}</aside>
+    </div>
+    ${(!quick && missionShowPreview) ? rPreviewTabs() : ""}
     ${rContactPickerModal()}
   `;
 }
 
-// ▼ rMissionModeBar — bascule Devis ⇄ Prestation rapide. Masquée sur un devis
-// déjà archivé (édition/révision) : le mode est figé dans son snapshot.
-function rMissionModeBar() {
+// ▼ rMissionModeCards — bascule Devis ⇄ Prestation rapide (charte V2 : deux
+// cartes, plus un segmented control). Masquée sur un devis déjà archivé
+// (édition/révision) : le mode est figé dans son snapshot.
+function rMissionModeCards() {
   if (typeof devisCurrentSuiviEntry === "function" && devisCurrentSuiviEntry()) return "";
   const quick = isMissionQuick();
-  return `<div class="mission-mode-bar">
-    <div class="seg seg-neon violet">
-      <button class="${quick ? "" : "on"}" onclick="missionSetMode('devis')" title="Devis complet : document, CGV, acomptes, échéancier et factures.">Devis</button>
-      <button class="${quick ? "on" : ""}" onclick="missionSetMode('quick')" title="Prestation rapide : aucun document, paiement unique, ni acompte ni CGV.">Prestation rapide</button>
-    </div>
-    <span class="hint" style="margin:0">${quick
-      ? "Aucun document produit, prix catalogue moins la remise. Prestation NON déclarée (CA = 0, pas d'URSSAF)."
-      : "Devis complet : document imprimable, CGV, échéancier et factures."}</span>
+  const card = (on, mode, ico, title, desc, tip) => `
+    <button type="button" class="ms-mode-card ${on ? "on" : ""}" onclick="missionSetMode('${mode}')" title="${esc(tip)}">
+      <span class="ms-mode-ico">${ICO_SZ(ico, 22)}</span>
+      <span class="ms-mode-txt">
+        <span class="ms-mode-title">${esc(title)}</span>
+        <span class="ms-mode-desc">${esc(desc)}</span>
+      </span>
+      ${on ? `<span class="ms-mode-check">${ICO_SZ('check', 18)}</span>` : ""}
+    </button>`;
+  return `<div class="ms-mode">
+    ${card(!quick, "devis", "fileText", "Devis", "Document complet · déclaré · échéancier & CGV",
+      "Devis complet : document imprimable, CGV, acomptes, échéancier et factures.")}
+    ${card(quick, "quick", "camera", "Prestation rapide", "Aucun document · au noir · encaissement direct",
+      "Prestation rapide : aucun document, paiement unique, ni acompte ni CGV. Recette NON déclarée (CA = 0, pas d'URSSAF).")}
   </div>`;
+}
+
+// Aperçu du devis : affiché À LA DEMANDE (il n'est plus rendu en permanence
+// sous le formulaire). État purement visuel ⇒ variable module, JAMAIS dans S
+// (le persister ferait clignoter « Enregistré » et polluerait le doc Firestore).
+let missionShowPreview = false;
+window.missionTogglePreview = function() {
+  missionShowPreview = !missionShowPreview;
+  render();
+  if (missionShowPreview) {
+    const el = document.querySelector(".preview-tabs-wrap");
+    if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+};
+
+// ▼ rMissionAsideInner — récap sticky (charte V2). Absorbe la toolbar
+// Terminer/Annuler : l'action de validation est désormais collée au total
+// qu'elle va figer, et reste visible quel que soit le scroll du formulaire.
+// Ré-rendu live par refreshDevisHeaders() → les montants suivent la saisie.
+// ⚠ Ne DOIT contenir aucun <input> : le bloc est réécrit à chaque frappe
+// (innerHTML) → le focus serait perdu.
+function rMissionAsideInner() {
+  const d = S.mission;
+  const t = totals();
+  const quick = isMissionQuick();
+  const v = validateDevis();
+  const dirty = devisIsDirty();
+  const inSuivi = !!devisCurrentSuiviEntry();
+  const urssafPct = num(getUrssafPct(d));
+  const declared = missionIsDeclared(d);
+  const urssafAmt = declared ? r2(t.total * urssafPct / 100) : 0;
+  const net = r2(t.total - urssafAmt);
+
+  const line = (label, value, cls = "") => `<div class="ms-line ${cls}"><span>${label}</span><span>${value}</span></div>`;
+  const comp = [];
+  if (t.totalHeures > 0) comp.push(line(`Heures (${esc(t.totalHeures.toFixed(2).replace(".", ","))} h)`, fmt(t.lignes), "muted"));
+  else if (t.lignes > 0) comp.push(line("Prestations", fmt(t.lignes), "muted"));
+  if (t.depl > 0)    comp.push(line("Déplacement", fmt(t.depl), "muted"));
+  if (t.autres > 0)  comp.push(line("Autres", fmt(t.autres), "muted"));
+  if (t.remise > 0)  comp.push(line(`Remise (${esc(String(num(d.remisePct)).replace(".", ","))} %)`, "− " + fmt(t.remise), "minus"));
+  if (t.arrondi !== 0) comp.push(line("Arrondi", (t.arrondi > 0 ? "+ " : "− ") + fmt(Math.abs(t.arrondi)), "minus"));
+  if (t.debours > 0) comp.push(line("Débours (remboursés)", fmt(t.debours), "muted"));
+
+  // Total HT / Total encaissé selon le statut fiscal (missionIsDeclared est la
+  // source unique : une prestation rapide est TOUJOURS au noir).
+  const totalLine = line(declared ? "Total HT" : "Total encaissé", fmt(t.total), "total");
+  const netBlock = declared
+    ? line(`URSSAF ${esc(String(urssafPct).replace(".", ","))} %`, "− " + fmt(urssafAmt), "muted") + line("Net photographe", fmt(net), "net")
+    : line("Net photographe (au noir)", fmt(t.total), "net");
+
+  // Statut : réutilise validateDevis (source unique) — pas de règle parallèle.
+  const status = quick
+    ? `<div class="ms-status quick">Au noir · non déclaré</div>`
+    : v.ok
+      ? `<div class="ms-status ok">Prêt à émettre</div>`
+      : `<div class="ms-status ko">${esc(v.errors[0] || "Incomplet")}</div>`;
+
+  const canTerminer = inSuivi ? dirty : v.ok;
+  const terminerLabel = inSuivi
+    ? (dirty ? "Terminer la mise à jour" : "Aucune modification")
+    : (quick ? "Enregistrer la prestation" : "Terminer");
+  const terminerTitle = inSuivi
+    ? (dirty ? "Met à jour les snapshots dans Suivi puis revient à l'onglet Suivi." : "Aucune modification à enregistrer.")
+    : (v.ok
+        ? (quick ? "Enregistre la prestation dans l'Historique (aucun document produit) puis y bascule."
+                 : "Archive ce devis dans Suivi puis revient à l'onglet Suivi.")
+        : "Corrige les erreurs affichées dans le formulaire avant de terminer.");
+
+  const echLines = (t.echeances || []).map(e =>
+    `<div class="ms-ech-line"><span>${esc(e.label)}</span><span>${esc(String(e.pct).replace(".", ","))} % · ${fmt(e.amount)}</span></div>`
+  ).join("");
+
+  return `
+    <div class="ms-recap">
+      <div class="ms-recap-head">— Récapitulatif</div>
+      ${comp.join("") || `<div class="ms-line muted"><span>Rien à facturer pour l'instant.</span><span></span></div>`}
+      ${totalLine}
+      ${netBlock}
+      <div class="ms-recap-actions">
+        <button class="mk-btn azure cta" onclick="missionTerminer()" ${!canTerminer ? "disabled" : ""} title="${esc(terminerTitle)}">${ICO_SZ('check', 14)} ${esc(terminerLabel)}</button>
+        <button class="mk-btn subtle cta" onclick="missionCancel()" title="Quitte la vue Mission et efface le brouillon en cours. Les paramètres verrouillés (URSSAF, Indemnité km, Marge avancés) restent en place pour le prochain devis.">${ICO_SZ('x', 14)} Annuler</button>
+      </div>
+      ${status}
+    </div>
+    ${echLines ? `<div class="ms-ech">
+      <div class="ms-ech-head">— ${quick ? "Encaissement" : "Échéancier"}</div>
+      ${echLines}
+    </div>` : ""}
+    ${quick ? "" : `<button type="button" class="ms-preview-toggle" onclick="missionTogglePreview()">${missionShowPreview ? "Masquer l'aperçu du devis" : "Afficher l'aperçu du devis"}</button>`}
+  `;
 }
 
 function rDV() { return ""; }
@@ -12136,12 +12298,16 @@ function rDevisAccordion() {
   // IBAN) — aucun document n'est produit. La section « Majorations » se réduit
   // à la remise + URSSAF.
   const quick = isMissionQuick();
+  // Numérotation « 01 · 02 · … » calculée sur les sections RÉELLEMENT rendues :
+  // en mode rapide la section CGV disparaît, la numérotation ne doit pas sauter.
+  let n = 0;
+  const no = () => String(++n).padStart(2, "0");
   return `<div class="edit-accordion-list">
-    ${rEditSectionRaw("identification", "Identification & client",     sums.identification, rDevisSectionIdentification())}
-    ${rEditSectionRaw("prestations",    "Prestations",                 sums.prestations,    rDevisSectionPrestations())}
-    ${rEditSectionRaw("deplacement",    "Déplacements",                sums.deplacement,    rDevisSectionDeplacement())}
-    ${rEditSectionRaw("majorations",    quick ? "Remise" : "Majorations & paiements", sums.majorations, rDevisSectionMajorations())}
-    ${quick ? "" : rEditSectionRaw("conditions", "Conditions & CGV",   sums.conditions,     rDevisSectionCgv())}
+    ${rEditSectionRaw("identification", "Identification & client",     sums.identification, rDevisSectionIdentification(), "", no())}
+    ${rEditSectionRaw("prestations",    "Prestations",                 sums.prestations,    rDevisSectionPrestations(), "", no())}
+    ${rEditSectionRaw("deplacement",    "Déplacements",                sums.deplacement,    rDevisSectionDeplacement(), "", no())}
+    ${rEditSectionRaw("majorations",    quick ? "Remise" : "Majorations & paiements", sums.majorations, rDevisSectionMajorations(), "", no())}
+    ${quick ? "" : rEditSectionRaw("conditions", "Conditions & CGV",   sums.conditions,     rDevisSectionCgv(), "", no())}
   </div>`;
 }
 
@@ -12184,11 +12350,14 @@ function rDevisSectionMajorations() {
   `;
 }
 
-function rEditSectionRaw(key, title, summaryHtml, bodyHtml, headerActionHtml = "") {
+// `num` : index affiché (« 01 », « 02 »…) à gauche du titre, charte V2. Optionnel
+// — les accordéons hors Mission (Profil, etc.) n'en passent pas.
+function rEditSectionRaw(key, title, summaryHtml, bodyHtml, headerActionHtml = "", numLabel = "") {
   const open = !!_editSectionOpen[key];
   return `<div class="edit-section ${open ? 'open' : ''}" data-edit-section="${key}">
     <button type="button" class="edit-section-header" onclick="editSectionToggle('${key}')" aria-expanded="${open}">
       <span class="edit-section-chevron" aria-hidden="true">${ICO_SZ('chevronRight', 14)}</span>
+      ${numLabel ? `<span class="edit-section-num">${esc(numLabel)}</span>` : ""}
       <span class="edit-section-title">${esc(title)}</span>
       <span class="edit-section-summary" data-summary="${key}">${summaryHtml}</span>
       ${headerActionHtml}
@@ -12685,32 +12854,8 @@ function rDevisBanners() {
   return `${bannerErr}${bannerWarn}${bannerDirty}`;
 }
 
-// ▼ rMissionToolbarInner — boutons Terminer + Annuler de la toolbar Mission.
-// Ré-rendu live par refreshDevisHeaders() pour refléter l'état dirty/validation.
-function rMissionToolbarInner() {
-  const v = validateDevis();
-  const dirty = devisIsDirty();
-  const inSuivi = !!devisCurrentSuiviEntry();
-  // En mode édition (revise/majTrame d'un devis archivé) :
-  //   « Terminer la mise à jour » → suiviUpdateSnapshot, désactivé si !dirty
-  // En mode création (nouveau brouillon) :
-  //   « Terminer » → suiviAdd, désactivé si validation KO
-  const quick = isMissionQuick();
-  const canTerminer = inSuivi ? dirty : v.ok;
-  const terminerLabel = inSuivi
-    ? (dirty ? "Terminer la mise à jour" : "Aucune modification")
-    : (quick ? "Enregistrer la prestation" : "Terminer");
-  const terminerTitle = inSuivi
-    ? (dirty ? "Met à jour les snapshots dans Suivi puis revient à l'onglet Suivi." : "Aucune modification à enregistrer.")
-    : (v.ok
-        ? (quick ? "Enregistre la prestation dans l'Historique (aucun document produit) puis y bascule."
-                 : "Archive ce devis dans Suivi puis revient à l'onglet Suivi.")
-        : "Corrige les erreurs ci-dessous avant de terminer.");
-  return `
-    <button class="btn-neon" onclick="missionTerminer()" ${!canTerminer ? "disabled" : ""} title="${esc(terminerTitle)}">${ICONS.check}${terminerLabel}</button>
-    <button class="btn-neon btn-neon-warn" onclick="missionCancel()" title="Quitte la vue Mission et efface le brouillon en cours. Les paramètres verrouillés (URSSAF, Indemnité km, Marge avancés) restent en place pour le prochain devis.">${ICONS.x}Annuler</button>
-  `;
-}
+// rMissionToolbarInner supprimé (phase 3) : les boutons Terminer / Annuler
+// vivent désormais dans le récap sticky — cf. rMissionAsideInner.
 
 // ============================================================================
 // SUIVI v2 — Modèle de statuts

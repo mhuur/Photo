@@ -45,7 +45,7 @@ KEY_FUNCTIONS=(
   "function rFactureAcompteBody"
   "function rFactureSoldeBody"
   "function rDevisAccordion"
-  "function rMissionToolbarInner"
+  "function rMissionAsideInner"
   "function rDevisBanners"
   "function rSV"
   "function rCL"
