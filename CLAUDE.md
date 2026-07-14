@@ -162,6 +162,10 @@ Par entry : `e.montant` = encaissé total (toujours rempli). `e.ca` = part décl
 
 **Plage mois bilan** : `bilanCompute()` génère TOUS les mois entre 1ʳᵉ activité (entry/abo/matériel) et aujourd'hui, sinon les mois sans encaissement mais avec abos/amort actifs sont oubliés.
 
+**L'écart `paye − ca` EST la part au noir** — et il doit se VOIR, sinon un mois où `CA < Payé` se lit comme une erreur de saisie. Deux endroits l'exposent : `comptaChartHtml()` (barres **empilées** : déclaré en azure, noir en ember — le graphe ne montrait que le CA, donc sous-estimait visuellement ce qui était rentré) et le marqueur `.cp-noir-tag` dans la colonne CA du bilan (`cellCA`). ⚠ Ne jamais « corriger » cet écart en promouvant `paye` dans `ca` : ce serait une faute fiscale (cf. § Au noir vs déclaré).
+
+**Achats — `tauxMatos().materielAnnuel` est PROSPECTIF** : c'est la charge d'amortissement des **12 mois à venir** (un équipement qui finit de s'amortir dans 4 mois ne compte que 4 mensualités), pas un cumul annuel passé. Tout libellé doit le dire. Le KPI ne compte que les équipements **encore** en cours d'amortissement (`am.invStatus[].fullyAmorti`).
+
 ### Rattachement des recettes = date d'ENCAISSEMENT (compta de caisse)
 
 Micro-BNC = **comptabilité de caisse** (art. 93 CGI) : une recette est rattachée à la date où l'argent arrive, JAMAIS à celle de la prestation ni de la facture. `bilanCompute()` ne prend que les entries `termine` et les range via **`entryEncaissementDate(e)`** — cascade : `e.datePaiement` (saisie/corrigée par l'user, source de vérité) → `e.pmtTs` (horodatage du clic « payé », backfillé par `migrateDatePaiement`) → `e.date` (repli legacy : entries encaissées avant l'existence des 2 champs — garde leur rattachement historique, on ne re-attribue PAS des exercices déjà déclarés).
@@ -334,7 +338,7 @@ Maquette de référence : **`Refonte V2 - Compact.dc.html`** (racine). Refonte e
 - [x] **Phase 2 — Accueil** : KPI + CTA dans l'en-tête, lignes compactes à pastille d'étape, **timeline VERTICALE** du parcours.
 - [x] **Phase 3 — Mission** : mode cards Devis/Rapide, sections numérotées, **récap sticky** (absorbe la toolbar), aperçu à la demande.
 - [x] **Phase 4 — Historique + Clients** : ligne de devis factorisée (`devisRowHtml`), chips V2, volet conservé ; Clients = avatars + encaissé + devis du client.
-- [ ] **Phase 5 — Compta + Achats** : bandes de KPI, table reskinnée, toggle Tableau/Graphe.
+- [x] **Phase 5 — Compta + Achats** : bandes de KPI, tables reskinnées, graphe **empilé déclaré / au noir**, marqueur « noir » sur la colonne CA. (Le toggle Tableau/Graphe de la maquette n'a PAS été repris : les deux sont complémentaires — le graphe couvre 12 mois glissants, la table tout l'historique — et les masquer l'un l'autre coûterait un clic quotidien.)
 - [ ] **Phase 6 — Profil + Bugs + Mon Compte** : nouvel onglet `compte` qui absorbe `rMAJ` + `rParametres` + `binModal` + backup/partage (le menu user disparaît). Sélecteur de photo de fond ici. Templates Gmail → Profil.
 - [ ] **Phase 7 — Cleanup** : convergence des derniers boutons néon, styles morts, archivage de la maquette.
 
