@@ -15,7 +15,7 @@
 |---|-------|-------|---------|-------------|
 | 0 | Bugs fonctionnels (indépendants du style) | ✅ | ✅ 2026-07-14 | ☐ |
 | 1 | Arbitrages transverses (questions ci-dessous) | ✅ | ☐ décisions | ☐ |
-| 2 | Socle transverse (néon, couleurs hors palette, .btn→.mk-btn, typo labels) | ✅ | ☐ | ☐ |
+| 2 | Socle transverse (néon, couleurs hors palette, .btn→.mk-btn, typo labels) | ✅ | ✅ partie non ambiguë 2026-07-14 (reste : Q5 halos focus, Q4 typo, Q11 ⋮, motif pills, typo inter-onglets) | ☐ |
 | 3 | Mission (`rMS`) | ✅ | ☐ | ☐ |
 | 4 | Accueil / Suivi devis (`rAC`) | ✅ | ☐ | ☐ |
 | 5 | Catalogue (`rCatalogue`) | ✅ | ☐ | ☐ |
@@ -26,7 +26,7 @@
 | 10 | Achats (`rAchats`) | ✅ | ☐ | ☐ |
 | 11 | Bugs & suggestions (`rBG`) | ✅ | ☐ | ☐ |
 | 12 | Mon Compte (`rCompte`) | ✅ | ☐ | ☐ |
-| 13 | Sidebar + en-têtes + audit CSS global | ⚠ INCOMPLET (agent interrompu par limite session — à relancer) | ☐ | ☐ |
+| 13 | Sidebar + en-têtes + audit CSS global | ✅ (2ᵉ passe) | ✅ 2026-07-14 (reste : cosmétiques « à trancher » + Q13 libellés NAV) | ☐ |
 
 **Méthode par session** : 1 onglet = re-vérifier les lignes citées (elles dérivent) → corriger →
 `./check.sh` → vérif visuelle → APP_CHANGELOG si visible → commit `ux: refonte-suivi <onglet>` →
@@ -133,6 +133,15 @@ cocher ici → push.
   `id` mais les inputs de lignes n'en ont pas (16696-16710 vs 17374-17377).
 
 ## 2. SOCLE TRANSVERSE (une passe globale, avant les onglets)
+
+> **✅ PARTIE NON AMBIGUË FAITE (2026-07-14)** : couleurs hors palette → tokens (y compris §14),
+> halos décoratifs supprimés (hors focus inputs = Q5), `.btn`→`.mk-btn` partout sauf login
+> (`ws-google-btn`, volontaire), glyphes → Lucide (icônes `calendar` + `arrowRight` ajoutées à
+> `ICO_PATHS` ; restent les `⋮` = Q11), CSS mort certain purgé (`.ac-cta`, `.ws-row .btn`,
+> `.page-title`). **RESTE (arbitrages)** : Q5 halos focus/hover des champs, Q4 typo labels,
+> Q11 `⋮`, motif pills unifié, typo inter-onglets (§14 dernier bloc), h3 Inter vs mono,
+> grosse purge Q14. Le CSS `.btn`/`.btn-rouge`/`.btn-danger-ghost` reste vivant pour le login —
+> à purger quand le login sera reskinné.
 
 - [ ] **Couleurs littérales hors palette V2** (règle : aucun littéral hors `:root`) :
   `#fcd34d`, `#86efac` (Catalogue, 1617-1618 — aussi 2915) · `#8A63D2`/`#22d3ee`/`#ec4899`
@@ -296,9 +305,60 @@ labels de champs + radius 4px (18477-18486) · en-têtes de section mono. Refont
   de compte Google » forcé en dur, checkbox sans objet · structure chips vs grille = choix
   phase 6 à consigner au README.
 
-## 13. SIDEBAR + EN-TÊTES + CSS GLOBAL — AUDIT À REFAIRE
+## 13. SIDEBAR + EN-TÊTES — audit fait (2026-07-14, 2ᵉ passe)
 
-L'agent a été interrompu (limite session). Périmètre restant : `.sb` (132-…) vs maquette l.31-69
-(groupes, chevrons, item actif, pastille brouillon, pied), `v2PageHead`/`TAB_EYEBROW` vs maquette
-(déjà partiellement validés conformes par les autres agents), balayage systématique des hex hors
-`:root` et des `font-size` incohérents inter-onglets (partiellement couvert ci-dessus).
+> **✅ CORRIGÉ (2026-07-14)** : bug scroll (nav seule scrolle, pied épinglé), pied 12px +
+> colonne icône 24px + « Mon compte » en ink-100/600, pastille brouillon sortie du label
+> (alignée à droite), commentaire faux, eyebrow « Compte & workspace », `.page-title` purgé.
+> **RESTE** : cosmétiques « à trancher » ci-dessous + Q13 (libellés NAV).
+
+Conforme sur l'essentiel (largeur, wordmark, groupes, item actif, chevrons, dot brouillon,
+eyebrows mot pour mot). Restes :
+
+- [ ] **BUG scroll** : `.sb{overflow-y:auto}` fait scroller TOUTE la sidebar sur viewport bas
+  (pied Bugs/Mon compte hors écran). Fix : scroll sur `.sb-nav` seule (`flex:1;min-height:0`),
+  retirer l'overflow de `.sb`.
+- [ ] Pied de sidebar : hérite du style des enfants de groupe (13px, icône 16) — maquette :
+  12px, padding 7px 11px, icône 15 dans colonne 24px centrée (aligne les 2 labels), « Mon
+  compte » en `--ink-100` 600.
+- [ ] Pastille brouillon d'en-tête : la sortir du span label (droite, entre label et chevron).
+- [ ] Commentaire faux ~9241 (« masque au survol » → « quand le groupe est ouvert »).
+- [ ] Eyebrow Mon Compte « Réglages & workspace » → « Compte & workspace » (maquette).
+- [ ] Cosmétique à trancher : label groupe `--ink-400` vs #8A8698 maquette · `has-active`
+  éclaircit le label (maquette : icône seule) · chevron 14 vs 13px · filet en-têtes `--border`
+  .14 vs .12 maquette (token global, à acter).
+- [ ] CSS mort : `.page-title` + sous-règles (285-287).
+- Écart documenté (ne pas « corriger ») : badge « Brouillon » texte → point ember (CLAUDE.md).
+
+## 14. BALAYAGE GLOBAL (2ᵉ passe) — compléments au socle §2
+
+- [ ] **Survivances NAVY pré-V2** (les vraies) : `#cliPickPortal` rgba(15,34,64,.95) + glow (1172),
+  `.lock-popup` idem (1428), `.modal-overlay` rgba(8,15,28,.72) (2781).
+- [ ] **2ᵉ `:root` pirate** (445-449) : `--violet/--violet-dark/--violet-soft` doublonnent
+  `--neon-violet*` du 1ᵉʳ :root → fusionner ; `.pst[data-s="en_cours"]` violet à statuer.
+- [ ] Hors palette additionnels : teal #5EEAD4 (1178-1179), #E74C3C (3045, 3051), #062b27 (1508),
+  #fca5a5 (2878), #86efac 3ᵉ occ. (3014 `.lg-justif.on`), #9FC6F5 (3107), #C24E12 (16251),
+  #c0392b 2ᵉ occ. + fallbacks `var(--success,#2e7d32)` (5712, 5718), `.rich-editor a` #0066cc
+  (2951). Ne pas toucher : logo Google (9387), bandeaux d'erreur debug (#fee/#900/#c00).
+- [ ] **Halos néon décoratifs** (hors focus inputs = Q5) : `.sb-user-menu-dot`/`.cpt-chip-dot`
+  (186, 196), pastilles `.pst` (381-385, 449), `.undo-toast` (2899), `.cgv-edit-remove`
+  (2877-2878), `.dp-cgv-add-btn` triple halo (2893-2894), `.dp-rich-zone`/btn (2858-2859),
+  `.lg-justif.on` (3014-3015), `.placeholder-chip:hover` (261). Famille focus Q5 étendue :
+  `.ech-row`/`.pct-wrap` (2714-2718), `.contact-inline` (2774), `.cli-pick` (1159), `.lg-*`
+  (3020-3031, 3080-3081). À CONSERVER : `@keyframes dvpulse` (566, présent maquette).
+- [ ] Typo inter-onglets : date de devis fiche client mono 11px vs Inter 12px partagé (1023 vs
+  839) · réfs mono 9.5/10/10.5px → 10px partout · `cli-table td` 14px vs `table.hist` 13px ·
+  lexique Gmail th Inter 11px → motif mono. (KPI Accueil ≠ KPI Compta : conforme maquette,
+  ne pas unifier.)
+
+## QUESTIONS OUVERTES — complément (2ᵉ passe)
+
+13. **Libellés NAV** : le code dit « Missions / Devis en cours / Achats & Abonnements » là où
+    maquette + CLAUDE.md disent « Mission / Suivi devis / Achats ». Renommage volontaire
+    (→ mettre CLAUDE.md à jour) ou retour aux libellés maquette (pilote aussi les h1) ?
+    → **Réponse :**
+14. **Purge > 50 lignes** (validation requise par CLAUDE.md) : machinerie morte de l'ancienne
+    table Suivi (`arr()`, `suiviExpandedRowHtml`, `suiviDateMenuHtml`/`positionThMenu`/
+    `suiviHeaderMenu*` + CSS `.th-menu`, ~150 lignes, zéro point d'entrée UI) — et avec elle
+    le filtre année `suiviFilterYears` devenu inatteignable. Supprimer, ou re-brancher un
+    filtre année en chips d'abord ? → **Réponse :**
