@@ -48,6 +48,11 @@ Source : `index.html` (bloc `const DEFAULT_S = { ... };`).
     - **desc**: string _(default `""`)_
     - **montant**: string _(default `"0"`)_
   - **mode**: string _(default `"devis"`)_
+  - **arrondi** _(object)_
+    - **mode**: string _(default `"none"`)_
+    - **palier**: string _(default `"10"`)_
+    - **sens**: string _(default `"proche"`)_
+    - **cible**: string _(default `""`)_
   - **declare**: boolean _(default `true`)_
   - **blackMode**: string _(default `"fixe"`)_
   - **tarifHOverride**: string _(default `""`)_

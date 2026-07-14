@@ -2933,6 +2933,15 @@
      « Déclaré / Au black » du formulaire Mission. La remise non déclarée du
      Catalogue a ses propres classes (.catalog-remise-field). */
 
+  /* === Arrondi commercial (section Majorations) === */
+  .arrondi-block{display:flex;flex-direction:column;gap:var(--space-sm);max-width:780px}
+  .arrondi-row{display:flex;align-items:center;gap:var(--space-md);flex-wrap:wrap}
+  .arrondi-apercu{display:flex;align-items:center;gap:var(--space-md);flex-wrap:wrap;background:var(--surface);border:1px solid var(--border-soft);border-radius:var(--radius-md);padding:var(--space-sm) var(--space-md);font-size:13px;font-variant-numeric:tabular-nums;width:fit-content}
+  .arrondi-arrow{color:var(--text-muted);margin:0 2px}
+  .arrondi-delta{font-weight:600}
+  .arrondi-delta.down{color:var(--warning)}
+  .arrondi-delta.up{color:var(--success)}
+
   /* === Section Identification & client === */
   .identif-dates-row{display:grid;grid-template-columns:minmax(220px,1.4fr) 150px 130px 170px;gap:var(--gap-field);max-width:880px}
   /* Prestation rapide : ni durée de validité ni date de prestation → 2 colonnes. */
@@ -3092,6 +3101,9 @@ const DEFAULT_S = {
     deplacement: { mode: "voiture", km: "0", peages: "0", tauxKm: "0.40", trajetH: "0", ticket: "0", devis: "principal", afficheMode: "afficher", paiementType: "acompte" },
     autres:      { desc: "", montant: "0" },
     mode: "devis",
+    // Arrondi commercial appliqué AU TOTAL (jamais poste par poste, jamais aux
+    // débours). mode: "none" | "palier" | "cible". Voir computeArrondi.
+    arrondi: { mode: "none", palier: "10", sens: "proche", cible: "" },
     declare: true,
     blackMode: "fixe",
     tarifHOverride: "",
@@ -3925,7 +3937,8 @@ async function loadFromCloud(ownerUid) {
           prod:        { ...dm.prod,        ...(m.prod        || {}) },
           postprod:    { ...dm.postprod,    ...(m.postprod    || {}) },
           deplacement: { ...dm.deplacement, ...(m.deplacement || {}) },
-          autres:      { ...dm.autres,      ...(m.autres      || {}) }
+          autres:      { ...dm.autres,      ...(m.autres      || {}) },
+          arrondi:     { ...dm.arrondi,     ...(m.arrondi     || {}) }
         };
       }
       if (d.identite) {
@@ -4313,7 +4326,7 @@ function upd(path, val) {
     refreshRefDisplay();
   }
   save();
-  if (path.startsWith("mission.prep") || path.startsWith("mission.prod") || path.startsWith("mission.postprod") || path.startsWith("mission.deplacement") || path.startsWith("mission.autres") || path.startsWith("mission.lignes") || path === "mission.remisePct" || path === "mission.object" || path === "mission.objectText" || path === "mission.paiement.margeAvance" || path === "identite.urssafPct" || path === "identite.remiseNoirePct" || path === "mission.blackMode" || path === "mission.dureeValidite" || path === "mission.tarifHOverride") {
+  if (path.startsWith("mission.prep") || path.startsWith("mission.prod") || path.startsWith("mission.postprod") || path.startsWith("mission.deplacement") || path.startsWith("mission.autres") || path.startsWith("mission.lignes") || path.startsWith("mission.arrondi") || path === "mission.remisePct" || path === "mission.object" || path === "mission.objectText" || path === "mission.paiement.margeAvance" || path === "identite.urssafPct" || path === "identite.remiseNoirePct" || path === "mission.blackMode" || path === "mission.dureeValidite" || path === "mission.tarifHOverride") {
     refreshTotals();
   }
 }
@@ -4372,6 +4385,26 @@ function pickObject(k) {
   render();
 }
 window.pickObject = pickObject;
+
+// ▼ arrondiSetMode / arrondiSet — arrondi commercial (cf. computeArrondi).
+// `cible` passe par oninput sur un champ texte → surtout PAS de render() ici
+// (perte de focus garantie, cf. CLAUDE.md) : on rafraîchit juste les totaux.
+function arrondiSetMode(mode) {
+  if (!S.mission.arrondi) S.mission.arrondi = { ...DEFAULT_S.mission.arrondi };
+  S.mission.arrondi.mode = mode;
+  save();
+  render();
+}
+window.arrondiSetMode = arrondiSetMode;
+
+function arrondiSet(field, val) {
+  if (!S.mission.arrondi) S.mission.arrondi = { ...DEFAULT_S.mission.arrondi };
+  S.mission.arrondi[field] = val;
+  save();
+  if (field === "cible") refreshTotals();   // input texte → pas de render
+  else render();
+}
+window.arrondiSet = arrondiSet;
 
 // updMissionDeclare / updBlackMode supprimés avec le toggle « Déclaré / Au black »
 // du formulaire : un devis est toujours déclaré, une prestation rapide toujours
@@ -4606,8 +4639,10 @@ async function missionNew(presetClient, mode) {
   // Lignes vides. NB : on garde m.echeances (modalités de paiement gardées
   // intactes selon le réglage utilisateur — acompte/solde split, pourcentages).
   m.lignes = [];
-  // Ajustements
+  // Ajustements — l'arrondi est un choix commercial PROPRE À CE DEVIS (comme la
+  // remise), pas une config : on le remet à zéro.
   m.remisePct = "0";
+  m.arrondi = JSON.parse(JSON.stringify(dm.arrondi));
   m.contratHorsEtab = false;
   // Override tarif (legacy reconstruction) : spécifique au devis, pas config.
   m.tarifHOverride = "";
@@ -4675,6 +4710,7 @@ async function missionCancel() {
   m.lignes = [];
   // Ajustements
   m.remisePct = "0";
+  m.arrondi = JSON.parse(JSON.stringify(dm.arrondi));
   m.contratHorsEtab = false;
   m.tarifHOverride = "";
   // Retour au mode devis par défaut (+ échéancier standard si on portait celui
@@ -5725,9 +5761,12 @@ function rDevisPreview() {
           `<div class="dp-line dp-subtotal"><span class="lbl">${esc(label)}</span><span class="amt">${fmt(val)}</span></div>`
         ).join("");
       })()}
+      ${(t.remise > 0 || Math.abs(t.arrondi) >= 0.005) ? `
+      <div class="dp-line"><span class="lbl">Sous-total</span><span class="amt">${fmt(t.subtotal)}</span></div>` : ""}
       ${t.remise > 0 ? `
-      <div class="dp-line"><span class="lbl">Sous-total</span><span class="amt">${fmt(t.subtotal)}</span></div>
       <div class="dp-line"><span class="lbl">Remise (${num(d.remisePct).toString().replace(".",",")} %)</span><span class="amt">−${fmt(t.remise)}</span></div>` : ""}
+      ${Math.abs(t.arrondi) >= 0.005 ? `
+      <div class="dp-line"><span class="lbl">Arrondi</span><span class="amt">${t.arrondi < 0 ? "−" : "+"}${fmt(Math.abs(t.arrondi))}</span></div>` : ""}
       <div class="dp-line grand"><span class="lbl">Total HT</span><span class="amt">${fmt(t.total)}</span></div>
       <div class="dp-totals-tva">${esc(tvaMention(S.identite))}</div>
     </div>
@@ -8675,6 +8714,42 @@ function delaiPaiementLabel(k) {
   return d ? d.l : "";
 }
 
+// ▼ computeArrondi — arrondi commercial. Il porte sur le TOTAL (après remise),
+// JAMAIS poste par poste : arrondir chaque ligne ne produit pas un total rond
+// (412 + 388 + 387 = 1187), et le client demande un total rond. Il ne touche
+// pas non plus au tarif horaire — le tordre décalerait la répartition
+// salaire/trésorerie des entries (tresoRatio = tauxAvecSecurite / tarifH dans
+// suiviAdd) — ni aux DÉBOURS, qui se refacturent au centime près sur
+// justificatif (CGI 267-II) : les arrondir leur ferait perdre leur nature.
+// L'écart est matérialisé par une ligne « Arrondi » sur le devis.
+// Retourne { montant (± à ajouter au total), step (palier, sert aussi à
+// arrondir les acomptes), target }.
+function computeArrondi(m, totalAvant) {
+  const a = (m && m.arrondi) || {};
+  const mode = a.mode || "none";
+  const T = num(totalAvant);
+  const none = { montant: 0, step: 0, target: r2(T) };
+  if (mode === "none" || T <= 0) return none;
+  if (mode === "cible") {
+    const cible = num(a.cible);
+    if (cible <= 0) return none;
+    // Palier 1 € pour les acomptes : un % d'un total rond retombe souvent sur
+    // des centimes (35 % de 1 150 € = 402,50 €).
+    return { montant: r2(cible - T), step: 1, target: r2(cible) };
+  }
+  if (mode === "palier") {
+    const step = num(a.palier);
+    if (step <= 0) return none;
+    const sens = a.sens || "proche";
+    const q = T / step;
+    const k = sens === "inf" ? Math.floor(q) : sens === "sup" ? Math.ceil(q) : Math.round(q);
+    const target = r2(k * step);
+    if (target <= 0) return none;   // un arrondi inférieur qui tomberait à 0 : on n'arrondit pas
+    return { montant: r2(target - T), step, target };
+  }
+  return none;
+}
+
 // ▼ totals — calcul HT/TVA/TTC, brut/net, débours, marge avance
 function totals() {
   const d = S.mission;
@@ -8824,7 +8899,11 @@ function totals() {
   const effectiveDeplMode = deplShownAsLine ? "principal" : (deplLisser ? "lisser" : deplMode);
   const subtotal = r2(lignesAmount + (deplShownAsLine ? deplFinal : 0));
   const remise = r2(subtotal * num(d.remisePct) / 100);
-  const total = r2(subtotal - remise);
+  // Arrondi commercial : dernier ajustement, APRÈS la remise. Le total arrondi
+  // devient l'ancre de tout l'aval (échéances, entries, CA, seuils).
+  const totalAvantArrondi = r2(subtotal - remise);
+  const arr = computeArrondi(d, totalAvantArrondi);
+  const total = r2(totalAvantArrondi + arr.montant);
   // Acompte suggested % : pourcentage minimum à charger en acompte pour couvrir
   // les items marqués « acompte » (cession + matériel acompte + déplacement
   // acompte). Reflète la vraie composition du devis sans plancher arbitraire :
@@ -8834,14 +8913,22 @@ function totals() {
   const acompteSuggestedPct = total > 0
     ? Math.ceil(totalAcompteMateriel / total * 100)
     : 0;
-  // Échéances breakdown (% of total)
-  const echeances = (d.echeances || []).map(e => ({
-    id: e.id, label: e.label, pct: num(e.pct), amount: r2(total * num(e.pct) / 100)
-  }));
-  const echeancesTotal = r2(echeances.reduce((s, e) => s + num(e.pct), 0));
+  // Échéances : DÉRIVÉES de buildEcheanceLines, la même fonction que celle qui
+  // crée les entries Suivi (suiviAdd). ⚠ C'était auparavant un second calcul
+  // parallèle (total × pct / 100) : le devis imprimé et la compta pouvaient
+  // afficher des montants différents dès que l'acompte est arrondi.
+  const echLines = buildEcheanceLines(d.echeances, total, totalHeures, arr.step);
+  const echeances = echLines.map(l => ({ id: l.echId, label: l.label, pct: l.pct, amount: l.montant }));
+  // ⚠ Somme des % lue sur la CONFIG, pas sur les lignes : buildEcheanceLines
+  // retombe sur une ligne unique à 100 % quand aucune échéance n'a de %, ce qui
+  // ferait passer la validation « les échéances totalisent 100 % » à tort.
+  const echeancesTotal = r2((d.echeances || []).reduce((s, e) => s + num(e.pct), 0));
   return {
     lignes: lignesAmount, debours, depl, autres, totalFactDirect,
     subtotal, remise, total, totalHeures,
+    // Arrondi commercial : montant de l'ajustement (± 0 si désactivé), palier
+    // (sert aussi à arrondir les acomptes) et total avant arrondi.
+    totalAvantArrondi, arrondi: arr.montant, arrondiStep: arr.step,
     tarifH, tarifHEff, deplPerHour, deplMode, effectiveDeplMode,
     acompte: r2(total * 0.30), reste: r2(total * 0.70),
     echeances, echeancesTotal,
@@ -9581,6 +9668,25 @@ function rBinModal() {
 // l'utilisateur. Plus récent en premier. id = clé stable, sert au "lu/non-lu".
 // Format des items : { h: titre court, b: explication 1-3 phrases }.
 const APP_CHANGELOG = [
+  {
+    id: "2026-07-arrondi",
+    date: "2026-07-14",
+    title: "Arrondir un devis sur un chiffre rond",
+    items: [
+      {
+        h: "Au palier ou au total cible",
+        b: "En tête de « Majorations & paiements », tu peux arrondir le total : soit à un palier (1, 5, 10, 50 ou 100 €, au plus proche, vers le bas ou vers le haut), soit en saisissant directement le total voulu (« le client veut 1 200 € »). L'écart apparaît en ligne « Arrondi » sur le devis, et un aperçu te montre le calcul avant de valider."
+      },
+      {
+        h: "Les acomptes tombent ronds aussi",
+        b: "L'acompte est arrondi au même palier et le solde absorbe la différence : la somme des échéances reste rigoureusement égale au total, donc rien ne bouge côté chiffre d'affaires ni seuils. Ton tarif horaire, lui, n'est jamais bricolé — il reste celui du catalogue."
+      },
+      {
+        h: "Jamais sur les débours",
+        b: "Les débours sont refacturés au centime près sur justificatif : l'arrondi ne les touche pas. Un avertissement t'alerte aussi si l'arrondi te fait passer sous ton point mort."
+      }
+    ]
+  },
   {
     id: "2026-07-menu-groupes",
     date: "2026-07-14",
@@ -11308,6 +11414,7 @@ function devisSectionSummaries() {
   // rapide, la section se réduit à la remise + URSSAF (ni échéancier ni IBAN
   // affichés) → le résumé suit.
   const majSummaryBits = [];
+  if (Math.abs(t.arrondi) >= 0.005) majSummaryBits.push(`<span class="amt">arrondi ${fmt(t.total)}</span>`);
   if (remisePct > 0) majSummaryBits.push(`<span class="${remiseClass}">${remisePct.toString().replace(".",",")}% remise</span>`);
   if (isMissionQuick()) {
     // Ni URSSAF ni IBAN en prestation rapide : la section n'est plus que la remise.
@@ -11372,8 +11479,13 @@ function validateDevis() {
 
   // Warnings non-bloquants
   const ri = computeRemiseInfo();
-  if (num(d.remisePct) > ri.remiseMaxPct) {
-    warnings.push(`Remise ${num(d.remisePct)}% > marge max recommandée (${ri.remiseMaxPct}%)`);
+  // Remise EFFECTIVE = remise + arrondi (un arrondi vers le bas est une remise
+  // supplémentaire). C'est elle qu'on compare au point mort, pas le seul %.
+  const effRemisePct = t.subtotal > 0 ? r2((t.subtotal - t.total) / t.subtotal * 100) : 0;
+  if (effRemisePct > ri.remiseMaxPct) {
+    warnings.push(Math.abs(t.arrondi) >= 0.005
+      ? `Remise + arrondi = ${effRemisePct}% > marge max recommandée (${ri.remiseMaxPct}%)`
+      : `Remise ${num(d.remisePct)}% > marge max recommandée (${ri.remiseMaxPct}%)`);
   }
   // IBAN : sans objet en prestation rapide (aucun document où l'imprimer).
   if (!isMissionQuick() && !(S.identite && S.identite.bank && S.identite.bank.iban)) warnings.push("IBAN non renseigné dans Profil");
@@ -11466,7 +11578,7 @@ window.suiviUpdateSnapshot = async function() {
   const oldFrais = existingEntries.find(en => num(en.frais) !== 0) || null;
   const hoursTotal = (m.lignes || []).filter(l => l.type === "heures")
     .reduce((s, l) => s + num(l.duree) * (l.unit === "j" ? HOURS_PER_DAY : 1), 0);
-  const echLines = buildEcheanceLines(m.echeances, t.total, hoursTotal);
+  const echLines = buildEcheanceLines(m.echeances, t.total, hoursTotal, t.arrondiStep);
   const newEchIds = new Set(echLines.map(l => l.echId).filter(Boolean));
   const oldByEchId = {};
   for (const en of oldEch) if (en.echId && !oldByEchId[en.echId]) oldByEchId[en.echId] = en;
@@ -12050,6 +12162,86 @@ function rDevisSectionDeplacement() {
 // ----------------------------------------------------------------------------
 // SECTION 4 — Ajustements (remise + URSSAF + marge avance)
 // ----------------------------------------------------------------------------
+// ▼ rDevisArrondiBlock — arrondi commercial, en TÊTE de la section (§ 4).
+// Deux modes : palier (1/5/10/50/100 €, au plus proche / inférieur / supérieur)
+// ou total cible (montant libre). Le centime n'est pas proposé : tout passe déjà
+// par r2(). L'aperçu affiche le calcul exact, et un avertissement apparaît si
+// l'arrondi mange la marge (point mort de computeRemiseInfo).
+function rDevisArrondiBlock() {
+  const d = S.mission;
+  const a = d.arrondi || {};
+  const mode = a.mode || "none";
+  const t = totals();
+  const sens = a.sens || "proche";
+  const PALIERS = ["1", "5", "10", "50", "100"];
+
+  const seg = `<div class="seg seg-neon violet">
+    <button class="${mode === "none" ? "on" : ""}" onclick="arrondiSetMode('none')">Aucun</button>
+    <button class="${mode === "palier" ? "on" : ""}" onclick="arrondiSetMode('palier')" title="Arrondir le total au palier choisi.">Palier</button>
+    <button class="${mode === "cible" ? "on" : ""}" onclick="arrondiSetMode('cible')" title="Saisir le total exact voulu (ex. « le client veut 1 200 € »).">Total cible</button>
+  </div>`;
+
+  let controls = "";
+  if (mode === "palier") {
+    controls = `
+      <div class="arrondi-row">
+        <span class="field-label-only">Arrondir à</span>
+        <div class="seg seg-neon violet">
+          ${PALIERS.map(p => `<button class="${String(a.palier) === p ? "on" : ""}" onclick="arrondiSet('palier','${p}')">${p} €</button>`).join("")}
+        </div>
+      </div>
+      <div class="arrondi-row">
+        <span class="field-label-only">Sens</span>
+        <div class="seg seg-neon violet">
+          <button class="${sens === "proche" ? "on" : ""}" onclick="arrondiSet('sens','proche')">Au plus proche</button>
+          <button class="${sens === "inf" ? "on" : ""}" onclick="arrondiSet('sens','inf')" title="Toujours vers le bas — geste commercial.">Inférieur</button>
+          <button class="${sens === "sup" ? "on" : ""}" onclick="arrondiSet('sens','sup')" title="Toujours vers le haut.">Supérieur</button>
+        </div>
+      </div>`;
+  } else if (mode === "cible") {
+    controls = `
+      <div class="arrondi-row">
+        <div class="field" style="max-width:200px">
+          <label>Total cible</label>
+          <div class="lock-field with-unit">
+            <input type="number" step="0.01" min="0" placeholder="${esc(t.totalAvantArrondi.toFixed(2))}" value="${esc(a.cible || "")}"
+              oninput="arrondiSet('cible', this.value)" onchange="render()">
+            <span class="lock-unit">€</span>
+          </div>
+        </div>
+      </div>`;
+  }
+
+  // Aperçu du calcul + garde-fou marge. L'arrondi négatif est une remise
+  // supplémentaire : on le compare au point mort via la remise EFFECTIVE totale.
+  let apercu = "";
+  if (mode !== "none" && t.subtotal > 0) {
+    if (Math.abs(t.arrondi) < 0.005) {
+      apercu = `<div class="hint" style="margin:0">Le total tombe déjà juste — aucun ajustement nécessaire.</div>`;
+    } else {
+      const signe = t.arrondi > 0 ? "+" : "−";
+      const effRemisePct = r2((t.subtotal - t.total) / t.subtotal * 100);
+      const overMax = effRemisePct > ri.remiseMaxPct;
+      apercu = `<div class="arrondi-apercu">
+        <span>${fmt(t.totalAvantArrondi)} <span class="arrondi-arrow">→</span> <strong>${fmt(t.total)}</strong></span>
+        <span class="arrondi-delta ${t.arrondi > 0 ? "up" : "down"}">${signe} ${fmt(Math.abs(t.arrondi))}</span>
+      </div>
+      ${overMax ? `<div class="hint" style="margin:var(--space-xs) 0 0;color:var(--warning);display:flex;align-items:center;gap:6px"><span style="flex-shrink:0">${ICO_SZ('alertTriangle', 14)}</span><span>Remise + arrondi = ${effRemisePct.toString().replace(".", ",")} % — au-delà de ta marge max (${ri.remiseMaxPct} %). Tu passes sous ton point mort.</span></div>` : ""}`;
+    }
+  }
+
+  return `
+    <h5 style="margin-top:0">Arrondi du total</h5>
+    <div class="arrondi-block">
+      ${seg}
+      ${controls}
+      ${apercu}
+      ${mode !== "none" ? `<div class="hint" style="margin:var(--space-xs) 0 0">L'écart apparaît en ligne « Arrondi » sur le devis. Les acomptes sont arrondis au même palier, le solde absorbe la différence. Les débours ne sont jamais arrondis (refacturés au centime).</div>` : ""}
+    </div>
+    <hr class="section-merge-sep">
+  `;
+}
+
 // ▼ rDevisSectionAjustements — § 4/6 (remise, autres)
 function rDevisSectionAjustements() {
   const d = S.mission;
@@ -12057,6 +12249,7 @@ function rDevisSectionAjustements() {
   const ri = computeRemiseInfo();
 
   return `
+    ${rDevisArrondiBlock()}
     <div class="row">
       <div class="field" style="max-width:200px">
         <label>Remise</label>
@@ -12354,11 +12547,16 @@ function suiviClassifyEcheance(s) {
 // écart si Σ pct ≠ 100 → Σ montant = total exact (indispensable pour le CA et
 // les seuils micro-BNC). Fallback : aucune échéance à pct>0 → 1 ligne "Paiement"
 // 100 %. La dernière ligne = solde (isSolde), les précédentes = acomptes.
-function buildEcheanceLines(echeances, total, hoursTotal) {
+// `step` (optionnel) = palier d'arrondi commercial (cf. computeArrondi) : les
+// ACOMPTES sont alors arrondis à ce palier et le SOLDE absorbe l'écart, donc
+// Σ montants = total EXACT — invariant vital (CA, seuils micro-BNC). Sans lui,
+// un total rond à 1 150 € donnerait un acompte de 402,50 € à 35 %.
+function buildEcheanceLines(echeances, total, hoursTotal, step = 0) {
   const src = (echeances || []).filter(e => num(e.pct) > 0);
   const list = src.length ? src : [{ id: "ech-full", label: "Paiement", pct: 100 }];
   const n = list.length;
   const T = num(total), H = num(hoursTotal);
+  const st = num(step) > 0 ? num(step) : 0;
   let accM = 0, accH = 0;
   return list.map((e, i) => {
     const isSolde = i === n - 1;
@@ -12368,12 +12566,19 @@ function buildEcheanceLines(echeances, total, hoursTotal) {
       heures  = r2(H - accH);
     } else {
       montant = r2(T * num(e.pct) / 100);
+      if (st > 0) {
+        // Jamais plus que ce qui reste à répartir : un acompte arrondi au-dessus
+        // du total rendrait le solde négatif.
+        const arrondi = r2(Math.round(montant / st) * st);
+        montant = r2(Math.min(Math.max(arrondi, 0), r2(T - accM)));
+      }
+      // Les HEURES ne sont pas arrondies : elles suivent le %, seul l'argent est arrondi.
       heures  = r2(H * num(e.pct) / 100);
       accM = r2(accM + montant);
       accH = r2(accH + heures);
     }
     const label = (e.label && e.label.trim()) || (isSolde ? "Solde" : `Échéance ${i + 1}`);
-    return { echId: e.id, label, montant, heures, isSolde };
+    return { echId: e.id, label, pct: num(e.pct), montant, heures, isSolde };
   });
 }
 
@@ -13056,7 +13261,7 @@ async function suiviAdd() {
 
   // Une entry par échéance configurée (buildEcheanceLines : la dernière absorbe
   // l'arrondi → Σ montant = total). Remplace l'ancien split fixe 30 % / 70 %.
-  const echEntries = buildEcheanceLines(m.echeances, t.total, hoursTotal)
+  const echEntries = buildEcheanceLines(m.echeances, t.total, hoursTotal, t.arrondiStep)
     .map(l => mkLine(l.echId, l.label, l.montant, l.heures));
   S.suivi.entries.unshift(...echEntries);
 
