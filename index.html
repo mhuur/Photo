@@ -1295,9 +1295,6 @@
   .bug-form-title-quick{flex:1;height:36px;padding:0 12px;border:1px solid transparent;border-radius:6px;background:var(--bg-2);color:var(--text);font:inherit;font-size:13px;font-weight:600;min-width:0}
   .bug-form-title-quick::placeholder{color:var(--text-dim);font-weight:500}
   .bug-form-title-quick:focus{outline:none;border-color:var(--primary);background:var(--bg-3)}
-  .bug-form-attach{position:relative;display:inline-flex;align-items:center;justify-content:center;width:36px;height:36px;border:1px solid var(--border-light);border-radius:6px;background:var(--bg-2);color:var(--text-muted);cursor:pointer;font-size:15px;transition:all .12s;flex-shrink:0}
-  .bug-form-attach:hover{border-color:var(--primary);color:var(--primary);background:var(--primary-soft)}
-  .bug-form-attach-n{position:absolute;top:-5px;right:-5px;background:var(--azure-fill);color:#fff;font-size:10px;font-weight:700;min-width:16px;height:16px;border-radius:8px;display:flex;align-items:center;justify-content:center;padding:0 4px;border:2px solid var(--surface)}
   .bug-form-add-btn{width:36px;height:36px;border:0;border-radius:6px;background:var(--azure-fill);color:#fff;cursor:pointer;font-size:18px;font-weight:700;display:flex;align-items:center;justify-content:center;transition:background .12s;flex-shrink:0}
   .bug-form-add-btn:hover{background:var(--azure-fill-hi)}
 
@@ -1314,22 +1311,6 @@
   .bug-num-badge{font-size:11px;font-weight:700;padding:2px 8px;border-radius:10px;background:var(--bg-3);color:var(--accent);font-variant-numeric:tabular-nums;cursor:help}
 
   /* Anciennes classes laissées au cas où — non utilisées dans le formulaire compact */
-  .bug-shot-zone{border:1.5px dashed var(--border-light);border-radius:6px;padding:12px;background:var(--bg-2);transition:all .15s;display:flex;flex-direction:column;gap:10px}
-  .bug-shot-zone.drag-over{border-color:var(--primary);background:var(--primary-soft)}
-  .bug-shot-zone:focus-within{border-color:var(--primary)}
-  .bug-shot-grid{display:flex;gap:8px;flex-wrap:wrap}
-  .bug-shot-thumb,.bug-card-shot{position:relative;width:120px;height:80px;border-radius:6px;overflow:hidden;border:1px solid var(--border-light);background:var(--bg-3)}
-  .bug-form-thumbs .bug-shot-thumb{width:64px;height:48px}
-  .bug-shot-thumb img,.bug-card-shot img{width:100%;height:100%;object-fit:cover;display:block}
-  .bug-card-shot img{cursor:zoom-in}
-  .bug-shot-del{position:absolute;top:4px;right:4px;width:20px;height:20px;border-radius:50%;background:rgba(0,0,0,.65);color:#fff;border:0;cursor:pointer;font-size:10px;display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity .12s;padding:0}
-  .bug-shot-thumb:hover .bug-shot-del,.bug-card-shot:hover .bug-shot-del{opacity:1}
-  .bug-shot-del:hover{background:var(--danger)}
-  .bug-shot-hint{font-size:12px;color:var(--text-muted);line-height:1.5}
-  .bug-shot-hint strong{color:var(--text);font-weight:600}
-  .bug-shot-hint.bug-shot-full{color:var(--warning);font-style:italic}
-  .bug-shot-file-btn{color:var(--primary);cursor:pointer;text-decoration:underline;font-weight:600}
-  .bug-shot-meta{font-size:11px;color:var(--text-dim);margin-top:4px}
 
   /* Cartes enrichies (Phase 2) — layout compact */
   .fb-card.bug-card-v2{padding:8px 12px;animation:bugCardIn .25s ease}
@@ -1392,11 +1373,6 @@
   .bug-card-date{font-size:11px;color:var(--text-dim);margin-left:auto;font-style:italic;cursor:help}
 
   /* Cover image — bandeau gauche cliquable */
-  .bug-card-cover{position:relative;width:64px;height:48px;border-radius:6px;overflow:hidden;border:1px solid var(--border-light);background:var(--bg-3);flex-shrink:0;cursor:zoom-in;transition:transform .12s,border-color .12s}
-  .bug-card-cover:hover{transform:scale(1.04);border-color:var(--primary)}
-  .bug-card-cover img{width:100%;height:100%;object-fit:cover;display:block}
-  .bug-card-cover-count{position:absolute;bottom:2px;right:2px;background:rgba(0,0,0,.7);color:#fff;font-size:10px;font-weight:700;padding:1px 5px;border-radius:8px;line-height:1.4}
-  .fb-card.fb-done .bug-card-cover{opacity:.5}
 
   .bug-card-title{font-weight:700;font-size:13px}
   /* Description en mode lecture (compact, line-clamp 2 lignes) */
@@ -1423,18 +1399,8 @@
   .bug-empty-icon{display:flex;justify-content:center;color:var(--text-dim)}
   /* .fb-check garde `color:transparent` au repos : le stroke du SVG suit
      currentColor, la coche est donc invisible tant que la case n'est pas cochée. */
-  .bug-card-shots{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0 4px 102px}
 
   /* Lightbox bug screenshot */
-  .bug-lb-overlay{background:rgba(8,15,28,.92);cursor:zoom-out;align-items:center;justify-content:center}
-  .bug-lb-img{max-width:92vw;max-height:88vh;object-fit:contain;border-radius:6px;box-shadow:0 16px 48px rgba(0,0,0,.6);cursor:default}
-  .bug-lb-close{position:fixed;top:18px;right:18px;width:38px;height:38px;border-radius:50%;background:rgba(255,255,255,.1);color:#fff;border:0;cursor:pointer;font-size:18px;font-weight:600;display:flex;align-items:center;justify-content:center;transition:background .12s;z-index:10000;padding:0}
-  .bug-lb-close:hover{background:rgba(255,255,255,.2)}
-  .bug-lb-nav{position:fixed;top:50%;transform:translateY(-50%);width:48px;height:48px;border-radius:50%;background:rgba(255,255,255,.1);color:#fff;border:0;cursor:pointer;font-size:32px;font-weight:300;line-height:1;display:flex;align-items:center;justify-content:center;transition:background .12s;z-index:10000;padding:0}
-  .bug-lb-nav:hover{background:rgba(255,255,255,.2)}
-  .bug-lb-nav.prev{left:18px}
-  .bug-lb-nav.next{right:18px}
-  .bug-lb-counter{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);color:#fff;font-size:13px;font-weight:600;background:rgba(0,0,0,.5);padding:6px 14px;border-radius:14px;z-index:10000}
 
   /* Prestation row with rate beside */
   .presta-row{display:flex;gap:10px;align-items:stretch}
@@ -3667,12 +3633,12 @@ if (S.bugs.items.length === 0 && typeof S.bugs.html === "string" && S.bugs.html.
   }
   delete S.bugs.html;
 }
-// Migration schema enrichi : ajoute tab, title, screenshots aux items
-// existants. Le champ legacy `text` reste utilisé comme description.
+// Migration schema enrichi : ajoute tab + title aux items existants. Le champ
+// legacy `text` reste utilisé comme description. (Plus de `screenshots` : la
+// feature de captures inline est supprimée — cf. purgeAllBugScreenshots.)
 S.bugs.items.forEach(it => {
   if (typeof it.tab !== "string") it.tab = "";
   if (typeof it.title !== "string") it.title = "";
-  if (!Array.isArray(it.screenshots)) it.screenshots = [];
 });
 if (S.mission) {
   S.mission = { ...DEFAULT_S.mission, ...S.mission,
@@ -6816,11 +6782,11 @@ function bugQSet(v) { bugQ = v; }
 window.bugQSet = bugQSet;
 
 // ============ BUG REPORT — formulaire détaillé ============
-// Schéma item étendu : { id, createdAt, validated, tab, title, text,
-// screenshots: [{ id, dataUrl, addedAt }], steps: [] }
+// Schéma item : { id, num, createdAt, validated, tab, title, text, steps: [] }
 // State du formulaire de saisie (tout-en-un, persiste tant que pas submit).
-// Plus de screenshots inline (cause de doc Firestore > 1MB) : à la place,
-// un numéro auto-attribué + convention de nommage pour les captures externes.
+// PAS de captures inline (une image en data URL dans Firestore = doc > 1 MB =
+// sync gelée). À la place : un numéro auto-attribué + convention de nommage
+// `note-{N}.png` pour les captures envoyées par un canal externe.
 let bugDraft = { tab: "", title: "", text: "" };
 let lastTabBeforeBugs = null; // capté par setTab pour pré-remplir bugDraft.tab
 
@@ -6978,46 +6944,14 @@ function bugDraftSet(field, val) {
 }
 window.bugDraftSet = bugDraftSet;
 
-const BUG_SCREENSHOT_MAX = 3;
-const BUG_SCREENSHOT_MAX_DIM = 1024; // largeur max (réduite pour éviter doc Firestore > 1MB)
-const BUG_SCREENSHOT_QUALITY = 0.7;  // JPEG quality (réduite idem)
-const FIRESTORE_DOC_LIMIT = 950 * 1024; // marge sous la limite stricte 1 048 576 bytes
-
-// Compresse un File image en data URL JPEG, max BUG_SCREENSHOT_MAX_DIM de large.
-function bugCompressImage(file) {
-  return new Promise((resolve, reject) => {
-    const fr = new FileReader();
-    fr.onload = () => {
-      const img = new Image();
-      img.onload = () => {
-        let w = img.width, h = img.height;
-        if (w > BUG_SCREENSHOT_MAX_DIM) {
-          h = Math.round(h * BUG_SCREENSHOT_MAX_DIM / w);
-          w = BUG_SCREENSHOT_MAX_DIM;
-        }
-        const c = document.createElement("canvas");
-        c.width = w; c.height = h;
-        c.getContext("2d").drawImage(img, 0, 0, w, h);
-        try {
-          resolve(c.toDataURL("image/jpeg", BUG_SCREENSHOT_QUALITY));
-        } catch (e) { reject(e); }
-      };
-      img.onerror = reject;
-      img.src = fr.result;
-    };
-    fr.onerror = reject;
-    fr.readAsDataURL(file);
-  });
-}
-
 // Purge toutes les screenshots des items bugs (libère de la place dans le doc).
 function purgeAllBugScreenshots() {
   if (!S.bugs || !Array.isArray(S.bugs.items)) return 0;
   let purged = 0;
   for (const it of S.bugs.items) {
-    if (Array.isArray(it.screenshots) && it.screenshots.length > 0) {
+    if (Array.isArray(it.screenshots)) {
       purged += it.screenshots.length;
-      it.screenshots = [];
+      delete it.screenshots;
     }
   }
   return purged;
@@ -7375,79 +7309,6 @@ window.checkDocSize = function() {
   return total;
 };
 
-async function bugDraftAddImageFile(file) {
-  if (!file || !file.type || !file.type.startsWith("image/")) return;
-  if (bugDraft.screenshots.length >= BUG_SCREENSHOT_MAX) {
-    uiAlert(`Maximum ${BUG_SCREENSHOT_MAX} captures par remarque. Supprime-en une avant d'en ajouter une autre.`, { kind: "warn" });
-    return;
-  }
-  try {
-    const dataUrl = await bugCompressImage(file);
-    // Vérifier qu'on ne fait pas exploser le doc Firestore (limite 1 MB).
-    const imgSize = new Blob([dataUrl]).size;
-    const docSize = JSON.stringify(S).length;
-    if (docSize + imgSize > FIRESTORE_DOC_LIMIT) {
-      const docKB = Math.round(docSize / 1024);
-      const imgKB = Math.round(imgSize / 1024);
-      const limKB = Math.round(FIRESTORE_DOC_LIMIT / 1024);
-      uiAlert(
-        `Cette capture (${imgKB} KB) ferait dépasser la limite Firestore (${limKB} KB).\n\n` +
-        `Espace utilisé : ${docKB} KB.\n\n` +
-        `Supprime des captures existantes ou des notes pour libérer de l'espace.`,
-        { title: "Limite Firestore atteinte", kind: "danger" }
-      );
-      return;
-    }
-    bugDraft.screenshots.push({ id: uid(), dataUrl, addedAt: Date.now() });
-    render();
-  } catch (e) {
-    uiAlert("Impossible de lire cette image.", { kind: "danger" });
-  }
-}
-
-window.bugDraftPaste = function(event) {
-  const items = event.clipboardData && event.clipboardData.items;
-  if (!items) return;
-  for (const it of items) {
-    if (it.kind === "file" && it.type.startsWith("image/")) {
-      event.preventDefault();
-      const file = it.getAsFile();
-      if (file) bugDraftAddImageFile(file);
-    }
-  }
-};
-
-window.bugDraftDrop = function(event) {
-  event.preventDefault();
-  event.currentTarget.classList.remove("drag-over");
-  const files = event.dataTransfer && event.dataTransfer.files;
-  if (!files) return;
-  for (const f of files) {
-    if (f.type && f.type.startsWith("image/")) bugDraftAddImageFile(f);
-  }
-};
-
-window.bugDraftDragOver = function(event) {
-  event.preventDefault();
-  event.currentTarget.classList.add("drag-over");
-};
-
-window.bugDraftDragLeave = function(event) {
-  event.currentTarget.classList.remove("drag-over");
-};
-
-window.bugDraftFileInput = function(input) {
-  for (const f of input.files || []) {
-    if (f.type && f.type.startsWith("image/")) bugDraftAddImageFile(f);
-  }
-  input.value = "";
-};
-
-window.bugDraftRemoveImage = function(imgId) {
-  bugDraft.screenshots = bugDraft.screenshots.filter(s => s.id !== imgId);
-  render();
-};
-
 function bugAdd() {
   const title = (bugDraft.title || "").trim();
   const text = (bugDraft.text || "").trim();
@@ -7514,54 +7375,6 @@ function bugUpdateTab(id, v) {
   render();
 }
 window.bugUpdateTab = bugUpdateTab;
-
-function bugRemoveScreenshot(id, imgId) {
-  const it = (S.bugs.items || []).find(x => x.id === id);
-  if (!it || !Array.isArray(it.screenshots)) return;
-  it.screenshots = it.screenshots.filter(s => s.id !== imgId);
-  save();
-  render();
-}
-window.bugRemoveScreenshot = bugRemoveScreenshot;
-
-// Lightbox plein écran pour visualiser un screenshot
-let bugLightbox = null; // { itemId, imgIdx }
-
-window.bugLightboxOpen = function(itemId, imgIdx) {
-  bugLightbox = { itemId, imgIdx: parseInt(imgIdx, 10) || 0 };
-  render();
-};
-window.bugLightboxClose = function() {
-  bugLightbox = null;
-  render();
-};
-window.bugLightboxNav = function(delta) {
-  if (!bugLightbox) return;
-  const it = (S.bugs.items || []).find(x => x.id === bugLightbox.itemId);
-  if (!it || !it.screenshots || !it.screenshots.length) return;
-  const n = it.screenshots.length;
-  bugLightbox.imgIdx = ((bugLightbox.imgIdx + delta) % n + n) % n;
-  render();
-};
-
-function rBugLightbox() {
-  if (!bugLightbox) return "";
-  const it = (S.bugs.items || []).find(x => x.id === bugLightbox.itemId);
-  if (!it || !Array.isArray(it.screenshots) || !it.screenshots.length) return "";
-  const img = it.screenshots[bugLightbox.imgIdx];
-  if (!img) return "";
-  const total = it.screenshots.length;
-  const navHtml = total > 1
-    ? `<button class="bug-lb-nav prev" onclick="event.stopPropagation();bugLightboxNav(-1)" title="Précédent">‹</button>
-       <button class="bug-lb-nav next" onclick="event.stopPropagation();bugLightboxNav(1)" title="Suivant">›</button>
-       <div class="bug-lb-counter">${bugLightbox.imgIdx + 1} / ${total}</div>`
-    : "";
-  return `<div class="modal-overlay bug-lb-overlay" onclick="if(event.target===this)bugLightboxClose()">
-    <button class="bug-lb-close" onclick="bugLightboxClose()" title="Fermer (Échap)">${ICO_SZ('x', 18)}</button>
-    ${navHtml}
-    <img class="bug-lb-img" src="${esc(img.dataUrl)}" alt="capture">
-  </div>`;
-}
 
 function bugToggleValid(id) {
   const it = (S.bugs.items || []).find(x => x.id === id);
@@ -9476,7 +9289,6 @@ function render() {
     ${rViewDevisModal()}
     ${rViewFactureModal()}
     ${rClientInfoModal()}
-    ${rBugLightbox()}
     ${rCgvSectionEditModal()}
     ${rBinModal()}
     ${rPrintTipModal()}
@@ -18872,12 +18684,6 @@ window.signOut = () => auth.signOut();
 //   Alt+N → focus le champ Nom du formulaire (création remarque)
 //   Esc   → ferme le lightbox screenshot s'il est ouvert
 window.addEventListener("keydown", (ev) => {
-  // Esc lightbox : prioritaire, peu importe l'onglet ou le focus.
-  if (ev.key === "Escape" && bugLightbox) {
-    ev.preventDefault();
-    bugLightboxClose();
-    return;
-  }
   if (typeof tab === "undefined" || tab !== "bugs") return;
   // Ne pas voler le focus si on tape déjà dans un input/textarea
   // (sauf pour Alt+N qui est explicite).

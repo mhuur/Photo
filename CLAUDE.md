@@ -331,7 +331,7 @@ Dissociation explicite ouverture / marquage. Cliquer ✉ Relance (`gmailRelanceF
 - Firestore Security Rules (en console, pas dans le repo).
 - `DEFAULT_S` schéma → toute modif impose mise à jour `loadFromCloud` + `saveToCloud` + `gen-schema.py` régénéré.
 - Suppression de champs persistés sur entries Suivi historiques.
-- **Captures inline dans Firestore : INTERDIT** — pas de data URL d'image dans `S.bugs.items[].screenshots`, ni dans `S.mission.logoUrl` (utiliser `S.identite.logoUrl`). Cause confirmée d'un blocage total de sync (cf. commit `ca540d7`). Pour des captures sur un bug : convention de nommage `note-{N}.png` et envoi externe (mail/chat).
+- **Captures inline dans Firestore : INTERDIT** — pas de data URL d'image dans les notes, ni dans `S.mission.logoUrl` (utiliser `S.identite.logoUrl`). Cause confirmée d'un blocage total de sync (cf. commit `ca540d7`). Pour des captures sur un bug : convention de nommage `note-{N}.png` et envoi externe (mail/chat). **Toute la machinerie (collage, compression, lightbox) a été supprimée en phase 7 — ne pas la recréer.**
 
 ## Refonte V2 — état d'avancement
 
@@ -350,10 +350,11 @@ Refonte livrée en 7 phases (2026-07-13 → 2026-07-14), validation utilisateur 
 
 ⚠ **Le voile est PERSISTÉ** (`S.prefs.bgScrim`) : changer `DEFAULT_S` ne suffit jamais à le faire bouger chez un utilisateur existant, la valeur d'avant reste en base. D'où `migrateScrimDefault` (boot + live sync), qui ne touche QUE l'ancien défaut exact (`SCRIM_LEGACY_DEFAULT`) pour ne pas écraser un réglage volontaire. **Même piège pour toute future préférence à défaut modifié.**
 
+**Captures inline : la machinerie est SUPPRIMÉE** (phase 7, ~195 lignes). `bugDraftPaste`, `bugDraftAddImageFile`, `bugCompressImage`, le lightbox (`bugLightbox*`, `rBugLightbox`), `FIRESTORE_DOC_LIMIT` et leur CSS n'existent plus : le code était injoignable (zéro point d'appel — `bugDraft` n'avait même plus de champ `screenshots`, il aurait planté s'il avait été atteint) mais portait le pattern interdit data URL → Firestore. **Ne pas le réintroduire** (cf. § Hors-périmètre). Ce qui RESTE, volontairement : `purgeAllBugScreenshots()` (console) + la purge inconditionnelle dans `autoCleanupDoc` — c'est le filet qui nettoie les notes historiques qui traînent encore une image en base ; il fait désormais `delete it.screenshots` (au lieu de `= []`) pour que le champ disparaisse pour de bon.
+
 ### Dette identifiée, PAS traitée (attend un go)
 
-- **Machinerie de captures inline — morte mais toujours en base de code.** `bugDraftPaste`, `bugDraftAddImageFile`, `bugCompressImage`, tout le lightbox (`bugLightbox*`, `rBugLightbox`) et leur CSS : **zéro point d'appel** (vérifié au grep — plus aucun `onpaste`, plus aucune vignette rendue depuis le retrait de la feature). C'est du code injoignable qui contient le pattern **explicitement interdit** (data URL → Firestore, cause confirmée du blocage de sync, commit `ca540d7`). ~150 lignes. À supprimer, mais > 50 lignes ⇒ **audit + proposition obligatoires** avant exécution. Garder en revanche `purgeBugScreenshots` + la purge d'`autoCleanupDoc` : c'est le filet qui nettoie les items historiques.
-- **~145 classes CSS sans référence** (audit outillé). ⚠ **Liste NON exploitable telle quelle** : elle compte comme mortes les classes construites dynamiquement (`bug-tab-${tabKey}`, `bug-chip-${k}`…), qui sont bien vivantes. Tout nettoyage doit re-vérifier chaque classe à la main.
+- **~145 classes CSS sans référence** (audit outillé, script jetable). ⚠ **Liste NON exploitable telle quelle** : elle compte comme mortes les classes construites dynamiquement (`bug-tab-${tabKey}`, `bug-chip-${k}`…), qui sont bien vivantes. Tout nettoyage doit re-vérifier chaque classe à la main.
 
 ### Page « Mon compte » (`rCompte`, phase 6)
 
