@@ -32,6 +32,14 @@ while i < len(src):
     elif in_str:
         if c == '\\': escape = True
         elif c == str_ch: in_str = False
+    # Les commentaires `//` doivent être sautés ICI aussi, pas seulement à
+    # l'étape 2 : sans ça, une apostrophe française dans un commentaire de
+    # DEFAULT_S (« l'app ») ouvre une fausse chaîne, les accolades ne sont plus
+    # comptées et le bloc extrait s'arrête au mauvais endroit.
+    elif c == '/' and i + 1 < len(src) and src[i+1] == '/':
+        while i < len(src) and src[i] != '\n':
+            i += 1
+        continue
     elif c in '"\'':
         in_str = True; str_ch = c
     elif c == '{':
