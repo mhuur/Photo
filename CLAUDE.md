@@ -98,6 +98,18 @@ Champs invisibles sur `e` : `pmtTs` (ts paiement, ciblé par `suiviDevisUndo`), 
 - **`materiel`** : `{ prix, devis:"principal"|"debours", paiementType }`. Principal → `acompte|avance`. Débours → `acompte` (Refacturé) | `fact-direct` (Direct). **Jamais `avance` en débours.**
 - **`cession`** : forfait CPI L131-3 (territoire, supports, exclusivité, durée).
 
+### `S.mission.mode` — Devis vs Prestation rapide
+
+`"devis"` (défaut, absence = devis → aucune migration) | `"quick"`. Figé à l'archivage dans `snapshotMission.mode` ET `S.suivi.devis[id].mode`. Lu via `isMissionQuick()` (brouillon courant) / `isDevisQuick(devisId)` (archivé).
+
+Le mode rapide = **aucun document** (ni devis, ni feuille débours, ni facture), pas d'acompte, pas de cession, pas de CGV. Il ne court-circuite RIEN d'autre : mêmes entries Suivi, même bilan, même compta de caisse.
+
+- **Échéancier forcé** : `QUICK_ECHEANCES` = 1 ligne `ech-full` à 100 % ⇒ `buildEcheanceLines` produit une entry unique (`isSolde`) ⇒ **zéro étape acompte**, sans code dédié. `missionNew`/`missionSetMode`/`missionCancel` restaurent l'échéancier par défaut au retour en mode devis (`isQuickEcheancier` détecte l'héritage) — sinon l'acompte disparaît silencieusement du devis suivant.
+- **Parcours** : `isDevisSansFacture(devisId)` = `isDevisAuNoir || isDevisQuick` = **source unique** du saut des étapes facture. Combiné à l'échéance unique, `devisParcoursSteps` produit exactement envoyé → accepté → réalisée → payée → livrée. ⚠ **Cette condition doit être respectée par les gardes d'ordre** (`suiviLigneTogglePaiement`, `suiviMarkLivree`) : exiger une facture de solde qui ne peut pas exister rend l'encaissement **définitivement impossible** (bug attrapé en test).
+- **Refs `PRE-YYYYMM-NNN`**, séquence indépendante des `DEV-`. Tout code qui *valide* un format de ref doit connaître `PRE-` — sinon il la réécrit : `recomputeRef`, `formatRef(ref, "presta")`, **`suiviRecomputeRefs`** (tourne au boot : sans le motif `PRE-`, chaque prestation rapide était renommée en `DEV-` au démarrage suivant), `ensureLegacySnapshot`.
+- **`DEVIS_DOC_BLOCKS`** (`cgv, cgvPreambule, cgvSections, signatureBlock, conditionsPaiement`) sont **strippés du snapshot** en mode rapide (~10 KB/presta sur un doc Firestore plafonné à 1 MB). Contrepartie obligatoire : `editDevisStart`/`reviseDevisStart` les **restaurent** depuis la mission courante (`devisBlocksPick` avant écrasement → `devisBlocksRestore` après), sinon les CGV disparaissent de S.mission et du prochain devis rédigé.
+- Le mode est **immuable après archivage** (barre de mode masquée si `devisCurrentSuiviEntry()`).
+
 ### Au noir vs déclaré (CRITIQUE — faute fiscale possible)
 
 Par entry : `e.montant` = encaissé total (toujours rempli). `e.ca` = part déclarée (0 si au noir). `e.ursaf` = 0 si au noir. `e.salaire`/`e.tresorerie` = remplis quel que soit le statut.
@@ -263,6 +275,7 @@ Dissociation explicite ouverture / marquage. Cliquer ✉ Relance (`gmailRelanceF
 - **Audit + proposition obligatoires (même en auto mode)** pour : navigation/menu, schéma `S`, suppression > 50 lignes, `sed` ou Edit multi-zones.
 - **Challenger** bienvenu : propose alternatives/questions, sépare clairement de ce que je demande, indique : maintenant / plus tard / juste à noter.
 - **Demander plutôt que deviner** sur les points métier (statut fiscal, conventions, intentions produit).
+- **Smoke test hors navigateur (flux métier)** : `check.sh` ne valide que la syntaxe. Pour un flux à plusieurs étapes (archivage, parcours, gardes d'ordre, bilan), charger le `<script>` inline d'`index.html` dans un contexte `vm` Node avec DOM/Firebase/localStorage bouchonnés (Proxy permissif + `firebase.auth.Auth.Persistence`), puis piloter `S` directement. ⚠ Les `const`/`let` top-level vivent dans la portée **lexicale** du contexte, PAS sur l'objet sandbox → les récupérer par `vm.runInContext("({S, totals, ...})")`. Les `function` top-level, elles, sont des props du global → `save = () => {}` les neutralise. A attrapé un bug bloquant (solde inencaissable) qu'aucune relecture n'avait vu. Script jetable dans le scratchpad, pas dans le repo.
 - **Sanity check** : `./check.sh` après tout `sed` ou Edit multi-zones, **avant** `git commit`. Il inclut désormais un **parse JS réel** (node + `vm.Script` sur chaque `<script>` inline) : une erreur de syntaxe tue le script entier → **page blanche**, et le comptage d'accolades ne la voit pas. Cas typique attrapé : `const x` redéclaré dans la même portée (ex. réutiliser un nom déjà destructuré en tête de fonction — `isAnnule` dans `suiviParcoursHtml`). **Avant de déclarer une variable dans un renderer long, vérifier que le nom est libre** (`grep -n "const <nom>"`).
 - **Grep avant Edit sur `index.html`** : vérifier l'unicité de `old_string` (`grep -c`). Beaucoup de patterns courts collisionnent. Si non unique, élargir contexte ou cibler via ancre voisine.
 - **Reads serrés via ancres** : `grep -n "^// ▼ <nom>"` puis `Read offset=<L> limit=80`. Pas 200 lignes par sécurité.
