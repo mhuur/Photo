@@ -178,19 +178,64 @@
   /* === Pied de sidebar : Bugs & suggestions + Mon compte === */
   .sb-foot{margin-top:auto;padding:12px 10px;border-top:1px solid var(--border-soft)}
   .sb-foot .tab{margin-bottom:var(--space-xs)}
-  /* Sidebar — section user (avatar + menu inline aligné sur les tabs du haut) */
-  .sb-user-section{border-top:0}
-  /* Items du menu inline — mêmes proportions que .sb button.tab pour alignement parfait */
-  .sb-user-menu{display:none;flex-direction:column}
-  .sb-user-menu.open{display:flex}
-  .sb-user-menu-head{padding:8px 11px 10px;margin-bottom:var(--space-xs);border-bottom:1px solid var(--border-soft)}
-  .sb-user-menu-email{font-size:12px;font-weight:600;color:var(--ink-200);word-break:break-all;line-height:1.3}
-  .sb-user-menu-role{font-size:11px;color:var(--text-dim);margin-top:3px;line-height:1.3}
-  .sb-user-menu button{display:flex;align-items:center;gap:10px;width:100%;background:transparent;border:0;color:var(--text-muted);padding:7px 11px;text-align:left;cursor:pointer;font:inherit;font-size:12px;border-radius:var(--radius-sm);transition:background .12s,color .12s}
-  .sb-user-menu button:hover{background:rgba(255,255,255,.05);color:var(--ink-000)}
-  .sb-user-menu button svg{flex-shrink:0;width:16px;height:16px}
+  /* Sidebar — « Mon compte » : un onglet comme les autres (phase 6, le menu
+     déroulant a disparu), à ceci près qu'il porte l'avatar au lieu d'une icône. */
+  .sb-user-tab{align-items:center}
+  .sb-user-tab-label{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .sb-user-menu-count{display:inline-block;font-size:10px;font-weight:600;color:var(--accent);background:rgba(2,220,185,.12);border:1px solid rgba(2,220,185,.30);border-radius:var(--radius-sm);padding:1px 5px;margin-left:6px;letter-spacing:.3px}
   .sb-user-menu-dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--warning);box-shadow:0 0 6px rgba(232,117,28,.6);margin-left:6px;vertical-align:middle}
+
+  /* ===== Page « Mon compte » (rCompte) ===== */
+  .cpt-nav{display:flex;flex-wrap:wrap;gap:var(--space-sm);margin-bottom:var(--space-xl)}
+  .cpt-chip{display:inline-flex;align-items:center;gap:7px;height:var(--btn-h-lg);padding:0 13px;background:var(--surface-sunken);border:1px solid var(--border-soft);border-radius:var(--radius-md);color:var(--text-muted);font:inherit;font-size:12.5px;font-weight:600;cursor:pointer;transition:border-color .14s,color .14s,background .14s}
+  .cpt-chip:hover{border-color:var(--border-light);color:var(--ink-000)}
+  .cpt-chip.on{background:var(--primary-soft);border-color:rgba(69,193,253,.45);color:var(--primary)}
+  .cpt-chip-ico{display:inline-flex;flex-shrink:0}
+  .cpt-chip-badge{display:inline-flex;align-items:center;justify-content:center;min-width:17px;height:17px;padding:0 4px;border-radius:var(--radius-sm);background:rgba(255,255,255,.08);border:1px solid var(--border-soft);font-size:10px;font-weight:700;color:var(--text-soft);font-variant-numeric:tabular-nums;margin-left:2px}
+  .cpt-chip-badge.warn{background:rgba(232,117,28,.14);border-color:rgba(232,117,28,.4);color:var(--ember-300)}
+  .cpt-chip-dot{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--warning);box-shadow:0 0 6px rgba(232,117,28,.6);margin-left:3px}
+  .cpt-body{display:flex;flex-direction:column;gap:var(--space-lg);max-width:840px}
+  .cpt-panel{padding:16px 18px 18px}
+  .cpt-panel-label{display:flex;align-items:center;gap:6px}
+  .cpt-panel-head{display:flex;align-items:center;justify-content:space-between;gap:var(--space-md)}
+  /* Identité du compte connecté */
+  .cpt-identity{display:flex;align-items:center;gap:var(--space-lg);flex-wrap:wrap}
+  .cpt-id-avatar{width:46px;height:46px;border-radius:50%;overflow:hidden;flex-shrink:0;background:var(--ink-800);border:1px solid var(--border);display:inline-flex;align-items:center;justify-content:center}
+  .cpt-id-avatar img{width:100%;height:100%;object-fit:cover;display:block}
+  .cpt-id-initials{font-size:15px;font-weight:700;color:var(--ink-200)}
+  .cpt-id-txt{flex:1;min-width:160px}
+  .cpt-id-name{font-size:15px;font-weight:700;color:#fff}
+  .cpt-id-mail{font-size:12px;color:var(--text-dim);word-break:break-all;margin-top:2px}
+  .cpt-id-role{display:flex;flex-direction:column;gap:4px;align-items:flex-end}
+  .cpt-role-pill{display:inline-block;padding:2px 9px;border-radius:var(--radius-sm);font-family:var(--font-mono);font-size:9.5px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;background:rgba(255,255,255,.07);border:1px solid var(--border-soft);color:var(--text-soft)}
+  .cpt-role-pill.owner{background:var(--primary-soft);border-color:rgba(69,193,253,.4);color:var(--primary)}
+  /* Sélecteur de photo de fond */
+  .cpt-bg-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:var(--space-md)}
+  .cpt-bg-card{display:flex;flex-direction:column;gap:7px;padding:6px;background:var(--surface-sunken);border:1px solid var(--border-soft);border-radius:var(--radius-md);cursor:pointer;font:inherit;transition:border-color .14s}
+  .cpt-bg-card:hover{border-color:var(--border-light)}
+  .cpt-bg-card.on{border-color:var(--primary);box-shadow:inset 0 0 0 1px rgba(69,193,253,.35)}
+  .cpt-bg-thumb{display:block;height:74px;border-radius:var(--radius-sm);background-size:cover;background-position:center;background-color:var(--ink-900)}
+  .cpt-bg-thumb[data-none]{background:repeating-linear-gradient(45deg,var(--ink-850),var(--ink-850) 6px,var(--ink-900) 6px,var(--ink-900) 12px)}
+  .cpt-bg-name{font-size:11.5px;font-weight:600;color:var(--text-muted);text-align:center}
+  .cpt-bg-card.on .cpt-bg-name{color:var(--primary)}
+  /* ===== Page « Mon Profil » (rPF) ===== */
+  /* Deux colonnes là où ça aide (cartes courtes), pleine largeur là où les
+     champs ont besoin de place (.pf-wide force un saut de rangée). */
+  .pf-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(360px,1fr));gap:var(--space-lg);align-items:start;max-width:1180px}
+  .pf-card{display:flex;flex-direction:column}
+  .pf-wide{grid-column:1/-1}
+  .pf-card-label{display:flex;align-items:center;gap:8px;margin-bottom:var(--space-md);flex-wrap:wrap}
+  .pf-card-opt{font-family:'Inter',sans-serif;font-size:11px;font-weight:500;letter-spacing:0;text-transform:none;color:var(--text-dim)}
+  .pf-card-req{font-family:'Inter',sans-serif;font-size:11px;font-weight:600;letter-spacing:0;text-transform:none;color:var(--ember-300);background:rgba(232,117,28,.12);border:1px solid rgba(232,117,28,.35);border-radius:var(--radius-sm);padding:1px 6px}
+  .pf-card .row:last-of-type{margin-bottom:0}
+  .pf-card .hint{max-width:none}
+  .pf-card .gmail-tpl-lexique{max-width:none}
+
+  /* Curseur de voile */
+  .cpt-scrim-row{display:flex;align-items:center;gap:var(--space-md)}
+  .cpt-scrim{flex:1;min-width:120px;accent-color:var(--primary);cursor:pointer}
+  .cpt-scrim:disabled{opacity:.4;cursor:default}
+  .cpt-scrim-val{font-family:var(--font-mono);font-size:12px;font-weight:700;color:var(--primary);font-variant-numeric:tabular-nums;min-width:44px;text-align:right}
   /* Templates Gmail — lexique + toolbar d'insertion (pattern Mailchimp/HubSpot) */
   .gmail-tpl-lexique{max-width:780px;background:var(--surface);border:1px solid var(--border-soft);border-radius:var(--radius-lg);padding:0;margin-bottom:14px;overflow:hidden}
   .gmail-tpl-lexique > summary{cursor:pointer;padding:12px 16px;font-size:13px;font-weight:600;color:var(--text);display:flex;align-items:center;gap:8px;list-style:none;user-select:none}
@@ -224,14 +269,12 @@
   .maj-entry-items li strong{font-size:13px;font-weight:600;color:var(--text)}
   .maj-entry-items li p{margin:0;font-size:13px;line-height:1.55;color:var(--text-muted)}
   /* Trigger : avatar + label email à droite, full-width comme un tab */
-  .sb-user-trigger{display:flex;align-items:center;gap:10px;width:100%;background:transparent;border:0;color:var(--text-muted);padding:7px 11px;text-align:left;cursor:pointer;font:inherit;font-size:12px;border-radius:var(--radius-sm);transition:background .12s,color .12s}
-  .sb-user-trigger:hover{background:rgba(255,255,255,.05);color:var(--ink-000)}
-  .sb-user-trigger.open{background:rgba(255,255,255,.05);color:#fff}
+  /* Avatar de l'onglet « Mon compte » — occupe la place d'une .tab-icon (18px de
+     glyphe dans une boîte de 24), d'où l'alignement avec les onglets du dessus. */
   .sb-user-avatar{width:24px;height:24px;border-radius:50%;background:var(--ink-800);border:1px solid var(--border);padding:0;overflow:hidden;display:inline-flex;align-items:center;justify-content:center;color:var(--ink-200);font-family:'Inter',sans-serif;font-size:10px;font-weight:700;flex-shrink:0;pointer-events:none}
-  .sb-user-trigger:hover .sb-user-avatar{border-color:var(--border-light)}
+  .sb-user-tab:hover .sb-user-avatar{border-color:var(--border-light)}
   .sb-user-avatar img{width:100%;height:100%;object-fit:cover;display:block}
   .sb-user-initials{display:inline-flex;align-items:center;justify-content:center;width:100%;height:100%;color:var(--ink-200)}
-  .sb-user-trigger-label{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;color:var(--text);font-weight:600}
   main{flex:1;min-width:0;padding:28px 40px 60px;max-width:1180px;position:relative}
   h2{margin-top:0}
   /* === Titre de page — V2 (refonte 2026-07) ===
@@ -1153,8 +1196,8 @@
 
   /* Bug tab */
   /* Notes (todolist-style: items + sous-étapes) */
-  .fb-bar{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px;flex-wrap:wrap;max-width:720px}
-  .fb-title{color:var(--accent);font-size:13px;font-weight:700}
+  /* .fb-bar / .fb-title retirés en phase 6 : le titre doublait le h1 de la page
+     et le bouton « copier » est monté dans l'en-tête (v2PageHead). */
   .fb-subtitle{color:var(--text-dim);font-size:13px;margin-bottom:10px;max-width:720px}
   .fb-add-row{display:flex;gap:6px;align-items:center;margin-bottom:14px;max-width:720px}
   .fb-add-row input{flex:1;padding:9px 12px;border:1px solid var(--border-light);border-radius:6px;background:var(--surface);color:var(--text);font:inherit;font-size:13px}
@@ -1186,9 +1229,8 @@
   .fb-add-step{margin:4px 0 0 28px;border:0;background:transparent;color:var(--text-dim);font-family:inherit;font-size:11px;cursor:pointer;padding:2px 8px;border-radius:4px;font-weight:500;transition:all .12s;opacity:0}
   .fb-card:hover .fb-add-step{opacity:.6}
   .fb-add-step:hover{opacity:1!important;background:var(--primary-soft);color:var(--primary)}
-  .fb-copy-btn{display:inline-flex;align-items:center;gap:5px;padding:6px 14px;border-radius:6px;border:1px solid var(--border-light);background:var(--surface);color:var(--text-muted);font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;transition:all .15s}
-  .fb-copy-btn:hover{border-color:var(--primary);color:var(--primary);background:var(--primary-soft)}
-  .fb-copy-btn.copied{border-color:var(--success);color:var(--success);background:var(--success-soft)}
+  /* Retour « Copié ! » — le bouton est un .mk-btn depuis la phase 6. */
+  .mk-btn.copied{border-color:var(--success);color:var(--success);background:var(--success-soft)}
 
   /* === Bug report — barre de stats + filtres === */
   .bug-stats-bar{display:flex;align-items:center;gap:8px;max-width:720px;margin-bottom:14px;flex-wrap:wrap}
@@ -1368,6 +1410,16 @@
   .bug-card-copy{border:1px solid var(--border-light);background:var(--surface);color:var(--text-muted);cursor:pointer;font-size:13px;width:30px;height:28px;border-radius:5px;display:flex;align-items:center;justify-content:center;transition:all .15s;padding:0}
   .bug-card-copy:hover{border-color:var(--primary);color:var(--primary);background:var(--primary-soft)}
   .bug-card-copy.copied{border-color:var(--success);color:var(--success);background:var(--success-soft)}
+  /* Phase 6 — ces boutons portaient un glyphe texte (✓ ＋ ▸ ⋮ 📋). Passés au SVG
+     Lucide, ils ont besoin d'un alignement flex : sans lui, l'icône retombe sur
+     la ligne de base et décale le libellé qui l'accompagne. */
+  .fb-card.bug-card-v3 .bug-card-chevron{display:inline-flex;align-items:center;justify-content:center}
+  .fb-card.bug-card-v3 .bug-card-actions-row .fb-del-text{display:inline-flex;align-items:center;gap:4px}
+  .fb-step-bul,.fb-step-del{display:inline-flex;align-items:center;justify-content:center}
+  .fb-add-step{display:inline-flex;align-items:center;gap:4px}
+  .bug-empty-icon{display:flex;justify-content:center;color:var(--text-dim)}
+  /* .fb-check garde `color:transparent` au repos : le stroke du SVG suit
+     currentColor, la coche est donc invisible tant que la case n'est pas cochée. */
   .bug-card-shots{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0 4px 102px}
 
   /* Lightbox bug screenshot */
@@ -3795,7 +3847,13 @@ const ICO_PATHS = {
   tag:           '<path d="M12.586 2.586A2 2 0 0 0 11.172 2H4a2 2 0 0 0-2 2v7.172a2 2 0 0 0 .586 1.414l8.704 8.704a2.426 2.426 0 0 0 3.42 0l6.58-6.58a2.426 2.426 0 0 0 0-3.42Z"/><circle cx="7.5" cy="7.5" r="1.2"/>',
   pieChart:      '<path d="M21.21 15.89A10 10 0 1 1 8 2.83"/><path d="M22 12A10 10 0 0 0 12 2v10Z"/>',
   history:       '<path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/>',
-  cart:          '<circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/>'
+  cart:          '<circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/>',
+  eyeOff:        '<path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"/><path d="M6.61 6.61A13.5 13.5 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61"/><path d="M14.12 14.12a3 3 0 1 1-4.24-4.24"/><line x1="2" x2="22" y1="2" y2="22"/>',
+  upload:        '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/>',
+  image:         '<rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.09-3.09a2 2 0 0 0-2.82 0L6 21"/>',
+  cornerUpLeft:  '<polyline points="9 14 4 9 9 4"/><path d="M20 20v-7a4 4 0 0 0-4-4H4"/>',
+  arrowDown:     '<path d="M12 5v14"/><path d="m19 12-7 7-7-7"/>',
+  arrowUp:       '<path d="M12 19V5"/><path d="m5 12 7-7 7 7"/>'
 };
 const ICONS = Object.fromEntries(Object.entries(ICO_PATHS).map(([k, p]) => [k, _ICO(p)]));
 // Variante taille personnalisée — pour usage inline dans du texte ou boutons compacts.
@@ -3993,9 +4051,7 @@ const TAB_EYEBROW = {
   suivi:      "Archive des devis",
   achats:     "Dépenses & investissements",
   bugs:       "Retours",
-  majlog:     "Journal des versions",
-  parametres: "Configuration",
-  templates:  "Modèles d'e-mails"
+  compte:     "Réglages & workspace"
 };
 
 // ▼ v2PageHead — en-tête de page standard (charte V2) : eyebrow mono + h1
@@ -4024,14 +4080,23 @@ function navGroupOfTab(tabKey) {
   return g ? g.id : "";
 }
 
-// Labels des onglets accessibles via le menu utilisateur (pas dans la sidebar
-// principale). Centralisés ici pour que pageTitle() couvre TOUTE l'app.
-// Profil n'y est plus : il vit dans le groupe Mission de la sidebar.
+// Labels des onglets SECONDAIRES : pas dans la sidebar principale (ils vivent
+// dans le pied de sidebar). Centralisés ici pour que pageTitle() couvre TOUTE
+// l'app. Profil n'y est plus : il vit dans le groupe Mission de la sidebar.
 const TABS_AUX_LABELS = {
-  parametres: "Paramètres",
-  templates:  "Templates",
-  bugs:       "Notes",
-  majlog:     "Mises à jour"
+  bugs:   "Notes",
+  compte: "Mon compte"
+};
+
+// ▼ TABS_LEGACY — anciennes clés d'onglet dissoutes en phase 6 (Paramètres et
+// Mises à jour → sections de « Mon compte » ; Templates → Profil). Elles ne sont
+// plus proposées nulle part, mais SURVIVENT à 2 endroits : les notes déjà
+// classées (`S.bugs.items[].tab`) et les vieux liens `?tab=…`. Sans ce mapping,
+// leur libellé retomberait sur « — » et setTab ouvrirait une page vide.
+const TABS_LEGACY = {
+  parametres: { tab: "compte", section: "general" },
+  majlog:     { tab: "compte", section: "majlog" },
+  templates:  { tab: "profil" }
 };
 
 // ▼ pageTitle — retourne le label d'affichage du tab donné (ou tab courant
@@ -4041,7 +4106,9 @@ function pageTitle(tabKey) {
   const k = tabKey || (typeof tab !== "undefined" ? tab : "");
   const fromTabs = TABS.find(t => t[0] === k);
   if (fromTabs) return fromTabs[1];
-  return TABS_AUX_LABELS[k] || "";
+  if (TABS_AUX_LABELS[k]) return TABS_AUX_LABELS[k];
+  const legacy = TABS_LEGACY[k];
+  return legacy ? pageTitle(legacy.tab) : "";
 }
 
 const app = document.getElementById("app");
@@ -6109,7 +6176,7 @@ function rDevisPreview() {
         <button class="dp-cgv-add-btn" type="button" onclick="cgvSectionAdd()" title="Ajouter une nouvelle section CGV">＋ Ajouter une section CGV</button>
         ${(() => {
           const binCount = (S.bin && Array.isArray(S.bin.items) && S.bin.items.length) || 0;
-          return binCount > 0 ? `<button class="dp-bin-link" type="button" onclick="binModalToggle()" title="Voir les sections supprimées et les restaurer">🗑 Corbeille (${binCount})</button>` : "";
+          return binCount > 0 ? `<button class="dp-bin-link" type="button" onclick="binModalToggle()" title="Voir les sections supprimées et les restaurer">${ICO_SZ('trash', 12)} Corbeille (${binCount})</button>` : "";
         })()}
       </div>`;
     })()}
@@ -6887,7 +6954,10 @@ const BUG_TAB_OPTIONS = [
 
 function bugTabLabel(k) {
   const found = BUG_TAB_OPTIONS.find(o => o[0] === k);
-  return found ? found[1] : "—";
+  if (found) return found[1];
+  // Note classée sous un onglet dissous en phase 6 (Paramètres, Templates,
+  // Mises à jour) : on affiche le libellé de l'onglet qui l'a absorbé.
+  return TABS_LEGACY[k] ? pageTitle(TABS_LEGACY[k].tab) : "—";
 }
 
 // Date relative humaine : « à l'instant », « il y a 5 min », « hier »…
@@ -7493,7 +7563,7 @@ function rBugLightbox() {
        <div class="bug-lb-counter">${bugLightbox.imgIdx + 1} / ${total}</div>`
     : "";
   return `<div class="modal-overlay bug-lb-overlay" onclick="if(event.target===this)bugLightboxClose()">
-    <button class="bug-lb-close" onclick="bugLightboxClose()" title="Fermer (Échap)">✕</button>
+    <button class="bug-lb-close" onclick="bugLightboxClose()" title="Fermer (Échap)">${ICO_SZ('x', 18)}</button>
     ${navHtml}
     <img class="bug-lb-img" src="${esc(img.dataUrl)}" alt="capture">
   </div>`;
@@ -7585,12 +7655,13 @@ window.bugCopyOne = function(id) {
   if (!it) return;
   const txt = bugItemToText(it);
   const btn = document.querySelector(`[data-bug-copy="${id}"]`);
+  // innerHTML, pas textContent : le bouton porte une icône SVG (cf. bugCopy).
   const flash = () => {
     if (!btn) return;
-    const old = btn.textContent;
-    btn.textContent = "✓";
+    const old = btn.innerHTML;
+    btn.innerHTML = `${ICO_SZ('check', 13)} Copié`;
     btn.classList.add("copied");
-    setTimeout(() => { btn.textContent = old; btn.classList.remove("copied"); }, 1500);
+    setTimeout(() => { btn.innerHTML = old; btn.classList.remove("copied"); }, 1500);
   };
   if (navigator.clipboard && navigator.clipboard.writeText) {
     navigator.clipboard.writeText(txt).then(flash).catch(() => bugCopyFallback(txt, flash));
@@ -7602,22 +7673,21 @@ window.bugCopyOne = function(id) {
 function bugCopy() {
   const txt = bugBuildText();
   const btn = document.getElementById("bug-copy-btn");
+  // ⚠ innerHTML et PAS textContent : le bouton contient une icône SVG. Écrire
+  // dans textContent l'écraserait, et la restaurer ne rendrait que le texte —
+  // l'icône disparaîtrait pour de bon jusqu'au prochain render().
+  const flash = (html, ms, cls) => {
+    if (!btn) return;
+    const old = btn.innerHTML;
+    btn.innerHTML = html;
+    if (cls) btn.classList.add(cls);
+    setTimeout(() => { btn.innerHTML = old; if (cls) btn.classList.remove(cls); }, ms);
+  };
   if (!txt) {
-    if (btn) {
-      const old = btn.textContent;
-      btn.textContent = "Aucune action en cours";
-      setTimeout(() => { btn.textContent = old; }, 1500);
-    }
+    flash("Aucune action en cours", 1500);
     return;
   }
-  const done = () => {
-    if (btn) {
-      const old = btn.textContent;
-      btn.textContent = "✓ Copié !";
-      btn.classList.add("copied");
-      setTimeout(() => { btn.textContent = old; btn.classList.remove("copied"); }, 1800);
-    }
-  };
+  const done = () => flash(`${ICO_SZ('check', 14)} Copié !`, 1800, "copied");
   if (navigator.clipboard && navigator.clipboard.writeText) {
     navigator.clipboard.writeText(txt).then(done).catch(() => bugCopyFallback(txt, done));
   } else {
@@ -9300,6 +9370,18 @@ function setBgScrim(v) {
   upd("prefs.bgScrim", Math.min(BG_SCRIM_MAX, Math.max(BG_SCRIM_MIN, n)));
   applyBgPhoto();
 }
+// Les 2 ci-dessus sont les entrées CONSOLE : elles appliquent le fond mais ne
+// re-rendent pas. Les 2 ci-dessous sont les entrées UI (page Mon compte).
+window.compteSetBgPhoto = function(v) { setBgPhoto(v); render(); };
+window.compteSetBgScrim = function(v) {
+  // ⚠ Surtout PAS de render() ici : on est dans l'oninput d'un <input type="range">
+  // — re-rendre arracherait le curseur en plein glissement. On rafraîchit donc à
+  // la main la seule chose visible qui en dépend (le pourcentage).
+  setBgScrim(v);
+  const el = document.querySelector(".cpt-scrim-val");
+  const n = Math.min(BG_SCRIM_MAX, Math.max(BG_SCRIM_MIN, parseFloat(v) || 0.84));
+  if (el) el.textContent = Math.round(n * 100) + " %";
+};
 
 // ▼ render — DISPATCHER : recompose app.innerHTML par onglet
 function render() {
@@ -9325,13 +9407,8 @@ function render() {
     return;
   }
   // owner / member → app normale
-  const renderers = { accueil: rAC, mission: rMS, profil: rPF, suivi: rSV, clients: rCL, tarifs: rCatalogue, achats: rAchats, compta: rCP, bugs: rBG, parametres: rParametres, templates: rTemplates, majlog: rMAJ };
+  const renderers = { accueil: rAC, mission: rMS, profil: rPF, suivi: rSV, clients: rCL, tarifs: rCatalogue, achats: rAchats, compta: rCP, bugs: rBG, compte: rCompte };
   const view = (renderers[tab] || (() => ""))();
-  // Badge "owner" ou "membre" en bas de la sidebar
-  const pendingCount = Object.keys(workspaceState.pendingRequests || {}).length;
-  const roleLabel = workspaceState.role === "owner"
-    ? `Propriétaire${pendingCount ? ` · <span style="color:var(--warning);font-weight:600">${pendingCount} demande${pendingCount > 1 ? "s" : ""}</span>` : ""}`
-    : "Membre";
   app.innerHTML = `
     <aside class="sb">
       <h1>Saintilann</h1>
@@ -9377,32 +9454,26 @@ function render() {
         const avatarInner = photo
           ? `<img src="${esc(photo)}" alt="" referrerpolicy="no-referrer" onerror="this.replaceWith(Object.assign(document.createElement('span'),{className:'sb-user-initials',textContent:'${esc(initials)}'}))">`
           : `<span class="sb-user-initials">${esc(initials)}</span>`;
-        // « Bugs & suggestions » est PROMU hors du menu user : c'est un point
-        // d'entrée de premier niveau dans la maquette V2 (pied de sidebar).
-        // Il est donc retiré du menu (sinon doublon). Le reste du menu
-        // (Templates, Paramètres, Mises à jour, Corbeille, Déconnexion) sera
-        // absorbé par l'onglet « Mon Compte » en phase 6.
+        // Phase 6 : le menu déroulant a disparu. « Bugs & suggestions » et
+        // « Mon compte » sont deux onglets de premier niveau — tout ce que le
+        // menu contenait (Paramètres, Mises à jour, Corbeille, Partage,
+        // Sauvegarde, Déconnexion) vit maintenant DANS la page Compte.
+        // Le badge « N demandes en attente » vivait dans l'en-tête du menu
+        // supprimé : sans lui, l'owner n'a plus AUCUN signal qu'on attend son
+        // approbation. Il remonte donc sur l'onglet lui-même (il prime sur le
+        // dot « nouveautés », qui lui peut attendre).
+        const pendingCount = Object.keys(workspaceState.pendingRequests || {}).length;
+        const badge = pendingCount
+          ? ` <span class="sb-user-menu-count" title="${pendingCount} demande${pendingCount > 1 ? "s" : ""} d'accès en attente">${pendingCount}</span>`
+          : (majLogHasUnread() ? ` <span class="sb-user-menu-dot" title="Nouvelles mises à jour"></span>` : "");
         return `
           <button class="tab ${tab === "bugs" ? "active" : ""}" type="button" onclick="setTab('bugs')">
             <span class="tab-icon">${ICONS.bug}</span>Bugs & suggestions
           </button>
-          <div class="sb-user-section">
-            <div class="sb-user-menu" id="sbUserMenu" role="menu">
-              <div class="sb-user-menu-head">
-                <div class="sb-user-menu-email">${esc(user.email)}</div>
-                <div class="sb-user-menu-role">${roleLabel}</div>
-              </div>
-              <button type="button" role="menuitem" onclick="userMenuClose();setTab('templates')">${ICONS.mail}<span>Templates</span></button>
-              <button type="button" role="menuitem" onclick="userMenuClose();setTab('parametres')">${ICONS.settings}<span>Paramètres</span></button>
-              <button type="button" role="menuitem" onclick="userMenuClose();setTab('majlog')">${ICONS.lightbulb}<span>Mises à jour${majLogHasUnread() ? ` <span class="sb-user-menu-dot" title="Nouvelles mises à jour"></span>` : ""}</span></button>
-              <button type="button" role="menuitem" onclick="userMenuClose();binModalToggle()">${ICONS.trash}<span>Corbeille${(() => { const n = (S.bin && S.bin.items && S.bin.items.length) || 0; return n > 0 ? ` <span class="sb-user-menu-count">${n}</span>` : ""; })()}</span></button>
-              <button type="button" role="menuitem" onclick="userMenuClose();signOut()">${ICONS.logOut}<span>Se déconnecter</span></button>
-            </div>
-            <button class="sb-user-trigger" id="sbUserTrigger" type="button" onclick="userMenuToggle(event)" aria-label="Mon compte" title="${esc(user.email)}">
-              <span class="sb-user-avatar">${avatarInner}</span>
-              <span class="sb-user-trigger-label">Mon compte</span>
-            </button>
-          </div>`;
+          <button class="tab sb-user-tab ${tab === "compte" ? "active" : ""}" type="button" onclick="setTab('compte')" title="${esc(user.email)}">
+            <span class="sb-user-avatar">${avatarInner}</span>
+            <span class="sb-user-tab-label">Mon compte${badge}</span>
+          </button>`;
       })()}
       </div>
     </aside>
@@ -9913,7 +9984,28 @@ window.cgvSectionRemoveAndClose = async function(id) {
   }
 };
 
-// ▼ binModal — modale d'accès à la corbeille (sections CGV supprimées etc.)
+// ▼ binListHtml — SOURCE UNIQUE de la liste de la corbeille générale (S.bin).
+// Rendue à 2 endroits : la modale (ouverte depuis l'éditeur CGV, pour restaurer
+// une section sans quitter le devis en cours) et la section « Corbeille » de la
+// page Mon compte. Ne pas dupliquer le markup.
+const BIN_KIND_LBL = { cgvSection: "Section CGV" };
+function binListHtml() {
+  const items = (S.bin && S.bin.items) || [];
+  if (items.length === 0) return `<div class="bin-empty">Corbeille vide.</div>`;
+  return `<div class="bin-list">${items.map(it => `
+    <div class="bin-item">
+      <span class="bin-item-kind">${esc(BIN_KIND_LBL[it.kind] || it.kind)}</span>
+      <span class="bin-item-label">${esc(it.label || "(sans nom)")}</span>
+      <span class="bin-item-date">${esc(bugRelativeTime(it.deletedAt))}</span>
+      <button class="bin-item-restore" onclick="binRestore('${esc(it.id)}')" title="Restaurer">${ICO_SZ('cornerUpLeft', 13)} Restaurer</button>
+      <button class="bin-item-purge" onclick="binPurge('${esc(it.id)}')" title="Supprimer définitivement">${ICO_SZ('x', 13)}</button>
+    </div>`).join("")}</div>`;
+}
+
+// ▼ binModal — modale d'accès à la corbeille, conservée pour UN SEUL point
+// d'entrée : le lien « Corbeille » de l'éditeur CGV. Restaurer une section
+// depuis là ne doit pas éjecter l'utilisateur du devis qu'il rédige — d'où la
+// modale plutôt qu'un saut vers l'onglet Compte.
 let binModalOpen = false;
 window.binModalToggle = function() {
   binModalOpen = !binModalOpen;
@@ -9922,24 +10014,14 @@ window.binModalToggle = function() {
 function rBinModal() {
   if (!binModalOpen) return "";
   const items = (S.bin && S.bin.items) || [];
-  const KIND_LBL = { cgvSection: "Section CGV" };
   return `<div class="modal-overlay" onclick="if(event.target===this)binModalToggle()">
     <div class="modal-card" style="max-width:640px">
-      <div class="modal-title">🗑 Corbeille <span style="font-size:11px;color:var(--text-dim);font-weight:500;margin-left:6px">(${items.length} élément${items.length > 1 ? "s" : ""})</span></div>
+      <div class="modal-title">Corbeille <span style="font-size:11px;color:var(--text-dim);font-weight:500;margin-left:6px">(${items.length} élément${items.length > 1 ? "s" : ""})</span></div>
       <div class="modal-sub">Restaure ou supprime définitivement les éléments. Limite 30 récents.</div>
-      ${items.length === 0
-        ? `<div class="bin-empty">Corbeille vide.</div>`
-        : `<div class="bin-list">${items.map(it => `
-            <div class="bin-item">
-              <span class="bin-item-kind">${esc(KIND_LBL[it.kind] || it.kind)}</span>
-              <span class="bin-item-label">${esc(it.label || "(sans nom)")}</span>
-              <span class="bin-item-date">${esc(bugRelativeTime(it.deletedAt))}</span>
-              <button class="bin-item-restore" onclick="binRestore('${esc(it.id)}')" title="Restaurer">↶ Restaurer</button>
-              <button class="bin-item-purge" onclick="binPurge('${esc(it.id)}')" title="Supprimer définitivement">${ICO_SZ('x', 13)}</button>
-            </div>`).join("")}</div>`}
+      ${binListHtml()}
       <div class="modal-actions">
-        ${items.length > 0 ? `<button class="btn-add-neon danger" onclick="binClear()">Vider la corbeille</button>` : ""}
-        <button class="btn-add-neon" onclick="binModalToggle()">Fermer</button>
+        ${items.length > 0 ? `<button class="mk-btn ghost" onclick="binClear()">Vider la corbeille</button>` : ""}
+        <button class="mk-btn subtle" onclick="binModalToggle()">Fermer</button>
       </div>
     </div>
   </div>`;
@@ -9949,6 +10031,23 @@ function rBinModal() {
 // l'utilisateur. Plus récent en premier. id = clé stable, sert au "lu/non-lu".
 // Format des items : { h: titre court, b: explication 1-3 phrases }.
 const APP_CHANGELOG = [
+  {
+    id: "2026-07-refonte-v2-compte",
+    date: "2026-07-14",
+    title: "Mon compte, Profil et Notes (étape 7/7)",
+    items: [
+      { h: "Le menu du coin disparaît : « Mon compte » devient une vraie page",
+        b: "Paramètres, Mises à jour, Corbeille, Partage du workspace, Sauvegarde et Déconnexion étaient éparpillés dans un menu déroulant. Ils sont maintenant regroupés sur une seule page, avec des onglets en haut. Tes anciens liens et tes notes classées sous « Paramètres » continuent de fonctionner." },
+      { h: "Tu peux enfin choisir la photo de fond",
+        b: "Section « Apparence » : trois photos de la marque (ou aucune), et un curseur pour doser le voile qui les assombrit. Jusqu'ici ça ne se réglait qu'en tapant une commande dans la console." },
+      { h: "Une demande d'accès ne peut plus passer inaperçue",
+        b: "Quand quelqu'un demande à rejoindre ton workspace, un compteur orange s'affiche directement sur « Mon compte » dans le menu de gauche." },
+      { h: "Profil réorganisé en cartes",
+        b: "Coordonnées, statut juridique, TVA, banque, médiateur… chaque bloc a sa carte. Les modèles d'e-mails de relance rejoignent le Profil : ils partent en ton nom, ils vivent avec le reste de ton identité." },
+      { h: "Notes : les dernières icônes bricolées ont sauté",
+        b: "Les emojis restants sont remplacés par les icônes de l'app. Le message d'accueil ne promet plus de coller une capture avec Ctrl+V (ça ne marchait plus depuis longtemps) : il rappelle la bonne méthode, renommer la capture avec son numéro." }
+    ]
+  },
   {
     id: "2026-07-refonte-v2-compta",
     date: "2026-07-14",
@@ -10535,11 +10634,11 @@ const APP_CHANGELOG = [
   }
 ];
 
-// ▼ rMAJ — vue plein écran « Mises à jour » (changelog vulgarisé).
-// Accessible via le menu Mon compte (setTab('majlog')). Pas dans la sidebar
-// TABS — vue secondaire. À l'ouverture, on marque la dernière entrée comme
-// vue (S.prefs.lastSeenMajVersion) pour retirer le dot « nouveau » du menu.
-function rMAJ() {
+// ▼ rMajLogSection — changelog vulgarisé, section « Mises à jour » de la page
+// Mon compte (phase 6 : l'onglet plein écran `majlog` a été absorbé).
+// À l'affichage, on marque la dernière entrée comme vue
+// (S.prefs.lastSeenMajVersion) pour retirer le dot « nouveau » de la sidebar.
+function rMajLogSection() {
   if (APP_CHANGELOG.length > 0) {
     if (!S.prefs) S.prefs = {};
     const latest = APP_CHANGELOG[0].id;
@@ -10550,7 +10649,6 @@ function rMAJ() {
     }
   }
   return `
-    ${v2PageHead("majlog")}
     <div class="hint" style="margin-bottom:var(--space-lg)">Ce qui a évolué dans l'application, du plus récent au plus ancien.</div>
     <div class="maj-list">
       ${APP_CHANGELOG.map(entry => `
@@ -10950,13 +11048,13 @@ function rLogoField() {
     return `<div class="logo-field has-logo">
       <img src="${esc(url)}" alt="Logo" class="logo-preview">
       <div class="logo-actions">
-        <label class="btn-add-neon ghost">${ICO_SZ('camera',13)} Remplacer<input type="file" accept="image/*" onchange="logoUpload(this)" hidden></label>
-        <button class="btn-add-neon ghost" onclick="logoRemove()">${ICO_SZ('x',13)} Retirer</button>
+        <label class="mk-btn subtle">${ICO_SZ('camera',14)} Remplacer<input type="file" accept="image/*" onchange="logoUpload(this)" hidden></label>
+        <button class="mk-btn ghost" onclick="logoRemove()">${ICO_SZ('x',14)} Retirer</button>
       </div>
     </div>`;
   }
   return `<div class="logo-field">
-    <label class="btn ghost">📷 Choisir un logo<input type="file" accept="image/*" onchange="logoUpload(this)" hidden></label>
+    <label class="mk-btn subtle">${ICO_SZ('camera',14)} Choisir un logo<input type="file" accept="image/*" onchange="logoUpload(this)" hidden></label>
     <span class="hint" style="margin:0">PNG/JPG/SVG · transparent recommandé · max ~500 KB · réutilisé sur tous tes devis</span>
   </div>`;
 }
@@ -17829,14 +17927,14 @@ function rPF() {
 
   return `
     ${v2PageHead("profil")}
-    <div class="hint" style="max-width:780px;margin-bottom:20px">
+    <div class="hint" style="max-width:840px;margin-bottom:var(--space-xl)">
       Identité de l'émetteur. Ces informations alimentent automatiquement l'en-tête et les mentions légales de tous tes devis et factures. Mentions obligatoires : SIRET, forme juridique, mention « EI » si applicable, médiateur conso si tu vends à des particuliers (art. L612-1 C. conso. — sanction 3 000 € si oublié).
     </div>
 
-    <h3>Logo</h3>
-    ${rLogoField()}
+    <div class="pf-grid">
 
-    <h3 style="margin-top:24px">Coordonnées</h3>
+    <div class="v2-panel pf-card pf-wide">
+    <div class="v2-label pf-card-label">Coordonnées</div>
     <div class="row">
       <div class="field"><label>Prénom</label>
         <input type="text" value="${esc(id.prenom)}" oninput="upd('identite.prenom', this.value)" placeholder="Romain">
@@ -17880,15 +17978,17 @@ function rPF() {
         <input type="url" value="${esc(id.siteWeb)}" oninput="upd('identite.siteWeb', this.value)" placeholder="https://...">
       </div>
     </div>
+    </div>
 
-    <h3 style="margin-top:24px">Statut juridique</h3>
+    <div class="v2-panel pf-card pf-wide">
+    <div class="v2-label pf-card-label">Statut juridique</div>
     <div class="row">
       <div class="field"><label>Forme juridique</label>
         <select onchange="upd('identite.formeJuridique', this.value); render()">${formeOpts}</select>
       </div>
       ${isEI ? `
-      <div class="field narrow" style="justify-content:flex-end">
-        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:normal">
+      <div class="field lg" style="justify-content:flex-end">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:normal;white-space:nowrap">
           <input type="checkbox" ${id.mentionEI?"checked":""} onchange="upd('identite.mentionEI', this.checked)">
           Afficher la mention « EI » sur les documents
         </label>
@@ -17922,8 +18022,15 @@ function rPF() {
         <input type="number" step="0.01" value="${esc(id.capitalSocial)}" oninput="upd('identite.capitalSocial', this.value)" placeholder="1000">
       </div>
     </div>` : ""}
+    </div>
 
-    <h3 style="margin-top:24px">Régime TVA</h3>
+    <div class="v2-panel pf-card">
+    <div class="v2-label pf-card-label">Logo</div>
+    <div style="margin-top:var(--space-md)">${rLogoField()}</div>
+    </div>
+
+    <div class="v2-panel pf-card">
+    <div class="v2-label pf-card-label">Régime TVA</div>
     <div class="row">
       <div class="field"><label>Régime</label>
         <select onchange="upd('identite.regimeTVA', this.value); render()">${tvaOpts}</select>
@@ -17933,18 +18040,37 @@ function rPF() {
         <input type="text" value="${esc(id.numTvaIntra)}" oninput="upd('identite.numTvaIntra', this.value)" placeholder="FR12345678901">
       </div>` : ""}
     </div>
-    ${isFranchise ? `<div class="hint" style="max-width:600px">Mention auto sur les devis : « TVA non applicable, art. 293 B du CGI ». Seuils 2026 : 37 500 € (majoré 41 250 €).</div>` : ""}
+    ${isFranchise ? `<div class="hint">Mention auto sur les devis : « TVA non applicable, art. 293 B du CGI ». Seuils 2026 : 37 500 € (majoré 41 250 €).</div>` : ""}
+    </div>
 
-    <h3 style="margin-top:24px">Clientèle</h3>
+    <div class="v2-panel pf-card">
+    <div class="v2-label pf-card-label">Clientèle</div>
     <div class="row">
       <div class="field"><label>Type de clientèle</label>
-        <select onchange="upd('identite.clienteleType', this.value)">${clientOpts}</select>
+        <select onchange="upd('identite.clienteleType', this.value); render()">${clientOpts}</select>
       </div>
     </div>
-    <div class="hint" style="max-width:600px">Pilote l'affichage du bloc médiateur conso (obligatoire dès le 1er particulier).</div>
+    <div class="hint">Pilote l'affichage du bloc médiateur conso (obligatoire dès le 1ᵉʳ particulier).</div>
+    </div>
 
-    <h3 style="margin-top:24px">Médiateur de la consommation ${id.clienteleType !== "b2b" ? "<span style=\"color:#c0392b;font-size:12px;font-weight:normal\">(obligatoire pour B2C)</span>" : ""}</h3>
-    <div class="hint" style="max-width:780px;margin-bottom:8px">Adhésion à un médiateur agréé CECMC (ex : MEDICYS, AME-Conso, Médiation Litiges Consommation). Sanction si oublié sur le devis : 3 000 € PP / 15 000 € PM.</div>
+    <div class="v2-panel pf-card">
+    <div class="v2-label pf-card-label">Assurance RC professionnelle <span class="pf-card-opt">recommandée</span></div>
+    <div class="row">
+      <div class="field"><label>Assureur</label>
+        <input type="text" value="${esc(id.rcPro.assureur)}" oninput="upd('identite.rcPro.assureur', this.value)" placeholder="Ex : Hiscox">
+      </div>
+      <div class="field"><label>N° de contrat</label>
+        <input type="text" value="${esc(id.rcPro.numero)}" oninput="upd('identite.rcPro.numero', this.value)" placeholder="HARCP123456">
+      </div>
+      <div class="field narrow"><label>Zone</label>
+        <input type="text" value="${esc(id.rcPro.zone)}" oninput="upd('identite.rcPro.zone', this.value)" placeholder="France">
+      </div>
+    </div>
+    </div>
+
+    <div class="v2-panel pf-card pf-wide">
+    <div class="v2-label pf-card-label">Médiateur de la consommation ${id.clienteleType !== "b2b" ? `<span class="pf-card-req">obligatoire en B2C</span>` : ""}</div>
+    <div class="hint" style="margin:var(--space-sm) 0 var(--space-md)">Adhésion à un médiateur agréé CECMC (ex : MEDICYS, AME-Conso, Médiation Litiges Consommation). Sanction si oublié sur le devis : 3 000 € PP / 15 000 € PM.</div>
     <div class="row">
       <div class="field"><label>Nom du médiateur</label>
         <input type="text" value="${esc(id.mediateur.nom)}" oninput="upd('identite.mediateur.nom', this.value)" placeholder="Ex : MEDICYS">
@@ -17958,9 +18084,11 @@ function rPF() {
         <input type="url" value="${esc(id.mediateur.url)}" oninput="upd('identite.mediateur.url', this.value)" placeholder="https://www.medicys-consommation.fr">
       </div>
     </div>
+    </div>
 
-    <h3 style="margin-top:24px">Coordonnées bancaires</h3>
-    <div class="hint" style="max-width:780px;margin-bottom:8px">IBAN, BIC, banque et titulaire du compte. Apparaissent automatiquement sur tous les devis, factures et feuilles débours dans le bloc « Modalités de paiement ».</div>
+    <div class="v2-panel pf-card pf-wide">
+    <div class="v2-label pf-card-label">Coordonnées bancaires</div>
+    <div class="hint" style="margin:var(--space-sm) 0 var(--space-md)">IBAN, BIC, banque et titulaire du compte. Apparaissent automatiquement sur tous les devis, factures et feuilles débours dans le bloc « Modalités de paiement ».</div>
     <div class="row">
       <div class="field"><label>Banque</label>
         <input type="text" value="${esc((id.bank || {}).banque || "")}" oninput="upd('identite.bank.banque', this.value)" placeholder="Ex : Banque Populaire Grand Ouest">
@@ -17977,49 +18105,181 @@ function rPF() {
         <input type="text" value="${esc((id.bank || {}).bic || "")}" oninput="upd('identite.bank.bic', this.value)" placeholder="ABCDEFGH" style="font-variant-numeric:tabular-nums;text-transform:uppercase">
       </div>
     </div>
-
-    <h3 style="margin-top:24px">Assurance RC professionnelle <span style="color:var(--text-muted);font-size:12px;font-weight:normal">(recommandée)</span></h3>
-    <div class="row">
-      <div class="field"><label>Assureur</label>
-        <input type="text" value="${esc(id.rcPro.assureur)}" oninput="upd('identite.rcPro.assureur', this.value)" placeholder="Ex : Hiscox">
-      </div>
-      <div class="field"><label>N° de contrat</label>
-        <input type="text" value="${esc(id.rcPro.numero)}" oninput="upd('identite.rcPro.numero', this.value)" placeholder="HARCP123456">
-      </div>
-      <div class="field narrow"><label>Zone de couverture</label>
-        <input type="text" value="${esc(id.rcPro.zone)}" oninput="upd('identite.rcPro.zone', this.value)" placeholder="France">
-      </div>
     </div>
 
-  `;
-}
-
-// ▼ rParametres — vue Paramètres (accessible via le menu user). Configuration générale :
-// préférences, partage workspace, sauvegarde. Templates Gmail dans rTemplates (vue séparée).
-function rParametres() {
-  return `
-    ${v2PageHead("parametres")}
-
-    <h3>Préférences</h3>
-    <div class="row">
-      <div class="field narrow"><label>Seuil de relance (jours)</label>
-        <input type="number" min="1" step="1" value="${esc(((S.prefs||{}).relanceJours)||7)}" oninput="upd('prefs.relanceJours', Math.max(1, parseInt(this.value)||7))">
-        <div class="hint" style="margin-top:4px;font-size:11px">Un devis envoyé sans réponse depuis plus de N jours apparaît dans la liste « À relancer » de l'Accueil.</div>
-      </div>
-    </div>
-
-    ${workspaceState.role === "owner" ? rShareSection() : ""}
-
-    ${rBackupSection()}
-  `;
-}
-
-// ▼ rTemplates — vue Templates Gmail (relance devis + relance paiement). Accessible
-// via le menu user. Wrap le helper rGmailTemplatesSection existant.
-function rTemplates() {
-  return `
-    ${v2PageHead("templates")}
+    <div class="v2-panel pf-card pf-wide">
+    <div class="v2-label pf-card-label">Modèles d'e-mails</div>
+    <div class="hint" style="margin:var(--space-sm) 0 var(--space-md)">Les messages de relance envoyés depuis l'Accueil et l'Historique. Ils partent en ton nom : ils vivent donc ici, avec le reste de ton identité.</div>
     ${rGmailTemplatesSection()}
+    </div>
+
+    </div>
+  `;
+}
+
+// ▼ rCompte — page « Mon compte » (phase 6). ABSORBE l'ancien menu utilisateur :
+// Paramètres, Mises à jour, Corbeille, Partage, Sauvegarde, Déconnexion. Le menu
+// déroulant du pied de sidebar a disparu au profit de cet onglet.
+// Sous-navigation par chips ; la section courante est TRANSIENTE (`_compteSection`,
+// jamais dans S — cf. règle « toute interaction purement visuelle reste hors de S »).
+const COMPTE_SECTIONS = [
+  { k: "general",    label: "Général",      icon: "settings" },
+  { k: "apparence",  label: "Apparence",    icon: "image" },
+  { k: "partage",    label: "Partage",      icon: "users",  ownerOnly: true },
+  { k: "sauvegarde", label: "Sauvegarde",   icon: "download" },
+  { k: "corbeille",  label: "Corbeille",    icon: "trash" },
+  { k: "majlog",     label: "Mises à jour", icon: "lightbulb" }
+];
+let _compteSection = "general";
+window.compteSetSection = function(k) {
+  _compteSection = k;
+  render();
+};
+
+function rCompte() {
+  const isOwner = workspaceState.role === "owner";
+  const secs = COMPTE_SECTIONS.filter(s => !s.ownerOnly || isOwner);
+  // Section demandée devenue inaccessible (membre qui atterrit sur « Partage »
+  // via un lien legacy) → repli sur la première.
+  if (!secs.some(s => s.k === _compteSection)) _compteSection = secs[0].k;
+
+  const pendingCount = Object.keys(workspaceState.pendingRequests || {}).length;
+  const binCount = (S.bin && S.bin.items && S.bin.items.length) || 0;
+  const badgeFor = (k) => {
+    if (k === "partage" && pendingCount) return `<span class="cpt-chip-badge warn">${pendingCount}</span>`;
+    if (k === "corbeille" && binCount)   return `<span class="cpt-chip-badge">${binCount}</span>`;
+    if (k === "majlog" && majLogHasUnread()) return `<span class="cpt-chip-dot"></span>`;
+    return "";
+  };
+  const chips = secs.map(s => `
+    <button type="button" class="cpt-chip ${_compteSection === s.k ? "on" : ""}" onclick="compteSetSection('${s.k}')">
+      <span class="cpt-chip-ico">${ICO_SZ(s.icon, 14)}</span>${esc(s.label)}${badgeFor(s.k)}
+    </button>`).join("");
+
+  const bodies = {
+    general:    rCompteGeneral,
+    apparence:  rCompteApparence,
+    partage:    rShareSection,
+    sauvegarde: rBackupSection,
+    corbeille:  rCompteCorbeille,
+    majlog:     rMajLogSection
+  };
+  const body = (bodies[_compteSection] || (() => ""))();
+
+  return `
+    ${v2PageHead("compte")}
+    <div class="cpt-nav">${chips}</div>
+    <div class="cpt-body">${body}</div>
+  `;
+}
+
+// ▼ rCompteGeneral — identité du compte connecté + préférences applicatives.
+function rCompteGeneral() {
+  const isOwner = workspaceState.role === "owner";
+  const photo = (user && user.photoURL) || "";
+  const initials = (((user && (user.displayName || user.email)) || "?")
+    .split(/[\s@.]/).filter(Boolean).map(s => s[0]).join("").slice(0, 2) || "?").toUpperCase();
+  const avatar = photo
+    ? `<img src="${esc(photo)}" alt="" referrerpolicy="no-referrer">`
+    : `<span class="cpt-id-initials">${esc(initials)}</span>`;
+  const memberCount = Object.keys(workspaceState.members || {}).length;
+
+  return `
+    <div class="v2-panel cpt-panel">
+      <div class="cpt-identity">
+        <span class="cpt-id-avatar">${avatar}</span>
+        <div class="cpt-id-txt">
+          <div class="cpt-id-name">${esc((user && user.displayName) || "—")}</div>
+          <div class="cpt-id-mail">${esc((user && user.email) || "")}</div>
+        </div>
+        <div class="cpt-id-role">
+          <span class="cpt-role-pill ${isOwner ? "owner" : ""}">${isOwner ? "Propriétaire" : "Membre"}</span>
+          ${isOwner && memberCount ? `<span class="v2-meta">${memberCount} membre${memberCount > 1 ? "s" : ""}</span>` : ""}
+        </div>
+        <button class="mk-btn subtle" onclick="signOut()">${ICO_SZ('logOut', 14)} Se déconnecter</button>
+      </div>
+    </div>
+
+    <div class="v2-panel cpt-panel">
+      <div class="v2-label cpt-panel-label">Préférences</div>
+      <div class="row" style="margin-top:var(--space-md)">
+        <div class="field narrow">
+          <label>Seuil de relance</label>
+          <div class="lock-field with-unit">
+            <input type="number" min="1" step="1" value="${esc(((S.prefs || {}).relanceJours) || 7)}" oninput="upd('prefs.relanceJours', Math.max(1, parseInt(this.value) || 7))">
+            <span class="lock-unit">jours</span>
+          </div>
+        </div>
+      </div>
+      <div class="hint" style="margin-top:var(--space-sm)">Un devis envoyé sans réponse depuis plus longtemps apparaît dans « À relancer » sur l'Accueil.</div>
+    </div>
+  `;
+}
+
+// ▼ rCompteApparence — photo de fond + opacité du voile (charte V2).
+// Écrit dans S.prefs.bgPhoto / S.prefs.bgScrim ; applyBgPhoto() est rappelé par
+// render(). Les vignettes réutilisent les mêmes fichiers que le fond réel.
+function rCompteApparence() {
+  const p = S.prefs || {};
+  const cur = BG_PHOTOS.includes(p.bgPhoto) ? p.bgPhoto : "jade-portrait";
+  const scrim = isNaN(parseFloat(p.bgScrim)) ? 0.84 : parseFloat(p.bgScrim);
+  const LBL = {
+    "jade-portrait": "Portrait jade",
+    "azure-helmet":  "Casque azur",
+    "ember-parking": "Parking ember",
+    "none":          "Aucune"
+  };
+  const cards = BG_PHOTOS.map(k => `
+    <button type="button" class="cpt-bg-card ${cur === k ? "on" : ""}" onclick="compteSetBgPhoto('${k}')" title="${esc(LBL[k])}">
+      <span class="cpt-bg-thumb" ${k === "none" ? `data-none="1"` : `style="background-image:url('assets/${k}.jpg')"`}></span>
+      <span class="cpt-bg-name">${esc(LBL[k])}</span>
+    </button>`).join("");
+
+  return `
+    <div class="v2-panel cpt-panel">
+      <div class="v2-label cpt-panel-label">Photo de fond</div>
+      <div class="hint" style="margin:var(--space-sm) 0 var(--space-md)">L'image de marque posée derrière l'application. Le choix est partagé avec les membres du workspace.</div>
+      <div class="cpt-bg-grid">${cards}</div>
+    </div>
+
+    <div class="v2-panel cpt-panel">
+      <div class="v2-label cpt-panel-label">Voile</div>
+      <div class="hint" style="margin:var(--space-sm) 0 var(--space-md)">Assombrit la photo pour garder le texte lisible. Plus le voile est fort, plus la photo s'efface.</div>
+      <div class="cpt-scrim-row">
+        <span class="v2-meta">Photo</span>
+        <input type="range" class="cpt-scrim" min="${BG_SCRIM_MIN}" max="${BG_SCRIM_MAX}" step="0.01" value="${scrim}"
+               oninput="compteSetBgScrim(this.value)" ${cur === "none" ? "disabled" : ""}>
+        <span class="v2-meta">Texte</span>
+        <span class="cpt-scrim-val">${Math.round(scrim * 100)} %</span>
+      </div>
+      ${cur === "none" ? `<div class="hint" style="margin-top:var(--space-sm)">Sans photo de fond, le voile n'a rien à assombrir.</div>` : ""}
+    </div>
+  `;
+}
+
+// ▼ rCompteCorbeille — corbeille GÉNÉRALE (S.bin : sections CGV…). La corbeille
+// des DEVIS supprimés est distincte (S.suivi.bin) et vit dans l'Historique : on
+// pointe dessus plutôt que de la dupliquer ici.
+function rCompteCorbeille() {
+  const items = (S.bin && S.bin.items) || [];
+  const devisBin = ((S.suivi && S.suivi.bin && S.suivi.bin.items) || []).length;
+  return `
+    <div class="v2-panel cpt-panel">
+      <div class="cpt-panel-head">
+        <div class="v2-label cpt-panel-label">Éléments supprimés<span class="v2-meta" style="margin-left:8px;text-transform:none;letter-spacing:0">${items.length} élément${items.length > 1 ? "s" : ""}</span></div>
+        ${items.length ? `<button class="mk-btn ghost" onclick="binClear()">${ICO_SZ('trash', 14)} Vider</button>` : ""}
+      </div>
+      <div class="hint" style="margin:var(--space-sm) 0 var(--space-md)">Sections de CGV supprimées et autres éléments récupérables. Les 30 plus récents sont conservés.</div>
+      ${binListHtml()}
+    </div>
+
+    <div class="v2-panel cpt-panel">
+      <div class="v2-label cpt-panel-label">Devis supprimés</div>
+      <div class="hint" style="margin:var(--space-sm) 0 var(--space-md)">Les devis ont leur propre corbeille : chaîne de révisions, entries et factures y sont conservées ensemble.</div>
+      <button class="mk-btn subtle" onclick="suiviSetFilterPrincipal('corbeille');setTab('suivi')">
+        ${ICO_SZ('history', 14)} Ouvrir la corbeille des devis${devisBin ? ` (${devisBin})` : ""}
+      </button>
+    </div>
   `;
 }
 
@@ -18137,17 +18397,26 @@ window.gmailTemplatesReset = gmailTemplatesReset;
 function rBackupSection() {
   const isOwner = workspaceState.role === "owner";
   return `
-    <h3 style="margin-top:32px">Sauvegarde</h3>
-    <div class="hint" style="margin-bottom:14px;max-width:780px">
-      Exporte un fichier JSON contenant toutes les données du workspace (devis, clients, suivi, comptabilité, profil…). À archiver régulièrement sur Drive/Dropbox/clé USB. ${isOwner ? "L'import écrase tout pour tous les membres — réservé au propriétaire." : ""}
+    <div class="v2-panel cpt-panel">
+      <div class="v2-label cpt-panel-label">Exporter</div>
+      <div class="hint" style="margin:var(--space-sm) 0 var(--space-md)">
+        Un fichier JSON contenant toutes les données du workspace (devis, clients, suivi, comptabilité, profil…). À archiver régulièrement sur Drive, Dropbox ou une clé USB.
+      </div>
+      <button class="mk-btn subtle" onclick="backupExportAll()">${ICO_SZ('download', 14)} Exporter tout (JSON)</button>
     </div>
-    <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
-      <button class="btn" onclick="backupExportAll()">${ICONS.download}Exporter tout (JSON)</button>
-      ${isOwner ? `
-        <button class="btn ghost" onclick="document.getElementById('backupImportInput').click()">↑ Importer un backup</button>
-        <input id="backupImportInput" type="file" accept=".json,application/json" style="display:none" onchange="backupImport(this)">
-      ` : ""}
-    </div>
+
+    ${isOwner ? `
+    <div class="v2-panel cpt-panel">
+      <div class="v2-label cpt-panel-label">Importer</div>
+      <div class="hint" style="margin:var(--space-sm) 0 var(--space-md)">
+        <span style="display:flex;align-items:flex-start;gap:6px">
+          <span style="flex-shrink:0;color:var(--warning);margin-top:1px">${ICO_SZ('alertTriangle', 14)}</span>
+          <span>L'import <strong>écrase toutes les données actuelles</strong>, pour tous les membres du workspace. Irréversible.</span>
+        </span>
+      </div>
+      <button class="mk-btn ghost" onclick="document.getElementById('backupImportInput').click()">${ICO_SZ('upload', 14)} Importer un backup</button>
+      <input id="backupImportInput" type="file" accept=".json,application/json" style="display:none" onchange="backupImport(this)">
+    </div>` : ""}
   `;
 }
 
@@ -18276,14 +18545,14 @@ function rShareSection() {
     ? `<div class="ws-empty">Aucun membre pour l'instant.</div>`
     : memberKeys.map(uid => {
         const m = members[uid];
-        const added = m.addedAt ? m.addedAt.slice(0, 10) : "";
+        const added = m.addedAt ? dateFR(m.addedAt.slice(0, 10)) : "";
         return `<div class="ws-row">
           <div class="ws-row-info">
             <strong>${esc(m.name || "(sans nom)")}</strong>
             <span class="ws-mail">${esc(m.email || "")}</span>
             ${added ? `<span class="ws-date">ajouté le ${esc(added)}</span>` : ""}
           </div>
-          <button class="btn btn-danger-ghost" onclick="removeMember('${esc(uid)}')">${ICONS.trash}Retirer</button>
+          <button class="mk-btn ghost" onclick="removeMember('${esc(uid)}')">${ICO_SZ('trash', 14)} Retirer</button>
         </div>`;
       }).join("");
 
@@ -18291,7 +18560,7 @@ function rShareSection() {
     ? `<div class="ws-empty">Aucune demande en attente.</div>`
     : pendingKeys.map(uid => {
         const r = pending[uid];
-        const ts = r.requestedAt ? r.requestedAt.slice(0, 10) : "";
+        const ts = r.requestedAt ? dateFR(r.requestedAt.slice(0, 10)) : "";
         return `<div class="ws-row pending">
           <div class="ws-row-info">
             <strong>${esc(r.name || "(sans nom)")}</strong>
@@ -18299,27 +18568,25 @@ function rShareSection() {
             ${ts ? `<span class="ws-date">demandé le ${esc(ts)}</span>` : ""}
           </div>
           <div style="display:flex;gap:6px">
-            <button class="btn" onclick="approveRequest('${esc(uid)}')">Approuver</button>
-            <button class="btn ghost" onclick="rejectRequest('${esc(uid)}')">Refuser</button>
+            <button class="mk-btn green" onclick="approveRequest('${esc(uid)}')">${ICO_SZ('check', 14)} Approuver</button>
+            <button class="mk-btn ghost" onclick="rejectRequest('${esc(uid)}')">Refuser</button>
           </div>
         </div>`;
       }).join("");
 
   return `
-    <h3 style="margin-top:32px">Partage du workspace</h3>
-    <div class="hint" style="margin-bottom:14px;max-width:780px">
-      Les personnes invitées peuvent lire et modifier toutes les données (devis, suivi, clients, comptabilité). Tu seules valides les demandes d'accès.
+    <div class="v2-panel cpt-panel">
+      <div class="v2-label cpt-panel-label">Demandes en attente${pendingKeys.length ? ` <span class="cpt-chip-badge warn">${pendingKeys.length}</span>` : ""}</div>
+      <div class="hint" style="margin:var(--space-sm) 0 var(--space-md)">
+        Une personne approuvée peut lire et modifier <strong>toutes</strong> les données du workspace : devis, suivi, clients, comptabilité. Toi seul valides les demandes.
+      </div>
+      <div class="ws-list">${pendingRows}</div>
     </div>
 
-    <h4 style="margin:18px 0 10px;font-size:13px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;font-weight:600">
-      Demandes en attente${pendingKeys.length ? ` <span style="color:var(--warning)">· ${pendingKeys.length}</span>` : ""}
-    </h4>
-    <div class="ws-list">${pendingRows}</div>
-
-    <h4 style="margin:24px 0 10px;font-size:13px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;font-weight:600">
-      Membres actifs${memberKeys.length ? ` · ${memberKeys.length}` : ""}
-    </h4>
-    <div class="ws-list">${memberRows}</div>
+    <div class="v2-panel cpt-panel">
+      <div class="v2-label cpt-panel-label">Membres actifs${memberKeys.length ? ` <span class="cpt-chip-badge">${memberKeys.length}</span>` : ""}</div>
+      <div class="ws-list" style="margin-top:var(--space-md)">${memberRows}</div>
+    </div>
   `;
 }
 
@@ -18337,12 +18604,12 @@ function rBG() {
   const nOpen = allItems.filter(it => !it.validated).length;
   const nDone = allItems.filter(it => it.validated).length;
 
-  let h = `${v2PageHead("bugs")}`;
-  h += `<div class="fb-bar">
-    <div class="fb-title">Notes &amp; Remarques</div>
-    <button class="fb-copy-btn" onclick="bugCopy()" id="bug-copy-btn">📋 Copier toutes les actions en cours</button>
-  </div>`;
-  h += `<div class="fb-subtitle">Note ici les remarques ou bugs à transmettre à Claude. Chaque remarque peut être détaillée (onglet, captures), copiée individuellement, validée ou supprimée.</div>`;
+  // Le bouton « copier » monte dans l'en-tête : la barre .fb-bar portait un
+  // titre « Notes & Remarques » qui doublait le h1 de la page.
+  let h = `${v2PageHead("bugs", {
+    actions: nOpen ? `<button class="mk-btn subtle" onclick="bugCopy()" id="bug-copy-btn">${ICO_SZ('clipboard', 14)} Copier les actions en cours</button>` : ""
+  })}`;
+  h += `<div class="fb-subtitle">Note ici les remarques ou bugs à transmettre à Claude. Chaque remarque peut être détaillée, copiée individuellement, validée ou supprimée.</div>`;
 
   // ===== Barre de stats + progress bar + toggle validées =====
   const totalAll = nOpen + nDone;
@@ -18352,7 +18619,7 @@ function rBG() {
       <span class="bug-stat-num">${nOpen}</span> en cours
     </div>
     <button class="bug-stat-toggle ${bugFilters.showValidated ? "active" : ""}" onclick="bugFilterToggleValidated()" title="${bugFilters.showValidated ? "Masquer les validées" : "Afficher les validées"}">
-      <span class="bug-stat-num">${nDone}</span> validée${nDone > 1 ? "s" : ""} ${bugFilters.showValidated ? "👁" : "👁‍🗨"}
+      <span class="bug-stat-num">${nDone}</span> validée${nDone > 1 ? "s" : ""} ${ICO_SZ(bugFilters.showValidated ? "eye" : "eyeOff", 13)}
     </button>
     ${totalAll > 0 ? `<div class="bug-progress" title="${nDone} validée${nDone > 1 ? "s" : ""} sur ${totalAll}">
       <div class="bug-progress-bar"><div class="bug-progress-fill" style="width:${progressPct}%"></div></div>
@@ -18375,12 +18642,12 @@ function rBG() {
   h += `<div class="bug-form ${hasDraftContent ? "has-content" : ""}">
     <div class="bug-form-quick">
       <select class="bug-form-tab-quick" onchange="bugDraftSet('tab', this.value)" title="Onglet concerné">
-        <option value="" ${!draftTab ? "selected" : ""}>📂 —</option>
+        <option value="" ${!draftTab ? "selected" : ""}>Onglet…</option>
         ${tabOptions}
       </select>
       <input id="bugTitleInput" class="bug-form-title-quick" type="text" placeholder="Nouvelle remarque…  (Alt+N)" title="Raccourci : Alt+N" value="${esc(bugDraft.title || "")}" oninput="bugDraftSet('title', this.value)" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();bugAdd()}">
       <span class="bug-form-next-num" title="Numéro qui sera attribué">#${nextNum}</span>
-      <button class="bug-form-add-btn" onclick="bugAdd()" title="Ajouter (Entrée)" aria-label="Ajouter">＋</button>
+      <button class="bug-form-add-btn" onclick="bugAdd()" title="Ajouter (Entrée)" aria-label="Ajouter">${ICO_SZ('plus', 16)}</button>
     </div>
     <div class="bug-form-extra">
       <textarea class="bug-form-text-quick" rows="10" placeholder="Description (optionnelle) — étapes pour reproduire, ce qui s'est passé, ce que tu attendais…" oninput="bugDraftSet('text', this.value)">${esc(bugDraft.text || "")}</textarea>
@@ -18404,7 +18671,7 @@ function rBG() {
         `).join("")}
       </div>
       <input id="bugSearchInput" class="bug-search" type="text" placeholder="Rechercher…  (/)" title="Raccourci : /" value="${esc(bugFilters.q || "")}" oninput="bugFilterSetQ(this.value)">
-      <button class="bug-sort-btn" onclick="bugFilterToggleSort()" title="${bugFilters.sortDir === "desc" ? "Récent → Ancien (cliquer pour inverser)" : "Ancien → Récent (cliquer pour inverser)"}">${bugFilters.sortDir === "desc" ? "↓ récent" : "↑ ancien"}</button>
+      <button class="bug-sort-btn" onclick="bugFilterToggleSort()" title="${bugFilters.sortDir === "desc" ? "Récent → Ancien (cliquer pour inverser)" : "Ancien → Récent (cliquer pour inverser)"}">${ICO_SZ(bugFilters.sortDir === "desc" ? "arrowDown" : "arrowUp", 12)} ${bugFilters.sortDir === "desc" ? "récent" : "ancien"}</button>
     </div>`;
   }
 
@@ -18417,25 +18684,25 @@ function rBG() {
   if (!items.length) {
     if (allItems.length === 0) {
       h += `<div class="bug-empty">
-        <div class="bug-empty-icon">📝</div>
+        <div class="bug-empty-icon">${ICO_SZ('clipboard', 26)}</div>
         <div class="bug-empty-title">Aucune remarque pour l'instant</div>
-        <div class="bug-empty-hint">Utilise le formulaire ci-dessus pour signaler un bug ou noter une idée d'amélioration. Tu peux coller une capture d'écran avec Ctrl+V.</div>
+        <div class="bug-empty-hint">Utilise le formulaire ci-dessus pour signaler un bug ou noter une idée d'amélioration. Pour joindre une capture, renomme-la avec le numéro affiché (<code>note-1.png</code>) et envoie-la par mail.</div>
       </div>`;
     } else if (bugFilters.q) {
       h += `<div class="bug-empty">
-        <div class="bug-empty-icon">🔎</div>
+        <div class="bug-empty-icon">${ICO_SZ('search', 26)}</div>
         <div class="bug-empty-title">Aucun résultat pour « ${esc(bugFilters.q)} »</div>
         <div class="bug-empty-hint"><button class="bug-empty-action" onclick="bugFilterSetQ('')">Effacer la recherche</button></div>
       </div>`;
     } else if (bugFilters.tab !== "all") {
       h += `<div class="bug-empty">
-        <div class="bug-empty-icon">📂</div>
+        <div class="bug-empty-icon">${ICO_SZ('fileText', 26)}</div>
         <div class="bug-empty-title">Aucune remarque pour ${esc(bugTabLabel(bugFilters.tab))}</div>
         <div class="bug-empty-hint"><button class="bug-empty-action" onclick="bugFilterSetTab('all')">Voir toutes les remarques</button></div>
       </div>`;
     } else {
       h += `<div class="bug-empty">
-        <div class="bug-empty-icon">✓</div>
+        <div class="bug-empty-icon">${ICO_SZ('check', 26)}</div>
         <div class="bug-empty-title">Toutes les remarques sont validées</div>
         <div class="bug-empty-hint"><button class="bug-empty-action" onclick="bugFilterToggleValidated()">Afficher les validées</button></div>
       </div>`;
@@ -18450,7 +18717,7 @@ function rBG() {
     </select>`;
     const numBadge = it.num ? `<span class="bug-num-badge" title="Pour les captures associées : note-${it.num}.png">#${it.num}</span>` : "";
     const statusPill = it.validated
-      ? `<span class="bug-status-pill bug-status-done">✓ Validée</span>`
+      ? `<span class="bug-status-pill bug-status-done">${ICO_SZ('check', 11)} Validée</span>`
       : `<span class="bug-status-pill bug-status-open">À traiter</span>`;
     const dateRel = it.createdAt
       ? `<span class="bug-card-date" title="${esc(new Date(it.createdAt).toLocaleString("fr-FR"))}">${esc(bugRelativeTime(it.createdAt))}</span>`
@@ -18476,18 +18743,18 @@ function rBG() {
       descHtml = `<div class="bug-card-text-empty">Aucune description.</div>`;
     }
     const steps = (it.steps || []).filter(s => (s || "").trim());
-    const chevron = `<span class="bug-card-chevron">${expanded ? "▾" : "▸"}</span>`;
+    const chevron = `<span class="bug-card-chevron">${ICO_SZ(expanded ? "chevronDown" : "chevronRight", 14)}</span>`;
     // Bouton « modifier » (⋮) — visible uniquement en mode déplié.
     // En édition : devient « ✓ » pour terminer.
     const editBtn = expanded
       ? (editing
-          ? `<button class="bug-card-edit-btn editing" onclick="event.stopPropagation();bugCardEditEnd()" title="Terminer la modification">✓</button>`
-          : `<button class="bug-card-edit-btn" onclick="event.stopPropagation();bugCardEditStart('${it.id}')" title="Modifier">⋮</button>`)
+          ? `<button class="bug-card-edit-btn editing" onclick="event.stopPropagation();bugCardEditEnd()" title="Terminer la modification">${ICO_SZ('check', 14)}</button>`
+          : `<button class="bug-card-edit-btn" onclick="event.stopPropagation();bugCardEditStart('${it.id}')" title="Modifier">${ICO_SZ('moreVertical', 14)}</button>`)
       : "";
 
     h += `<div class="fb-card bug-card-v3 ${it.validated ? "fb-done" : ""} ${expanded ? "expanded" : ""} ${editing ? "editing" : ""}" data-bug-id="${esc(it.id)}">
       <div class="bug-card-head" onclick="bugCardToggleExpand('${it.id}')">
-        <button class="fb-check ${it.validated ? "on" : ""}" onclick="event.stopPropagation();bugToggleValid('${it.id}')" title="${it.validated ? "Marquer en cours" : "Valider"}">✓</button>
+        <button class="fb-check ${it.validated ? "on" : ""}" onclick="event.stopPropagation();bugToggleValid('${it.id}')" title="${it.validated ? "Marquer en cours" : "Valider"}">${ICO_SZ('check', 13)}</button>
         ${numBadge}
         ${tabBadgeFinal}
         ${titleHtml}
@@ -18502,16 +18769,16 @@ function rBG() {
         ${descHtml}
         ${steps.length ? steps.map((st, idx) => `
           <div class="fb-step">
-            <span class="fb-step-bul">↳</span>
+            <span class="fb-step-bul">${ICO_SZ('chevronRight', 12)}</span>
             ${editing
               ? `<input class="fb-step-text" data-bug-step="${it.id}-${idx}" value="${esc(st || "")}" placeholder="Étape complémentaire…" oninput="bugUpdateStep('${it.id}',${idx},this.value)" onkeydown="if(event.key==='Enter'){event.preventDefault();bugAddStep('${it.id}')}">
-                 <button class="fb-step-del" onclick="bugDelStep('${it.id}',${idx})" title="Supprimer étape">✕</button>`
+                 <button class="fb-step-del" onclick="bugDelStep('${it.id}',${idx})" title="Supprimer étape">${ICO_SZ('x', 12)}</button>`
               : `<span class="fb-step-text-readonly">${esc(st || "")}</span>`}
           </div>`).join("") : ""}
         <div class="bug-card-actions-row">
-          ${editing ? `<button class="fb-add-step" onclick="bugAddStep('${it.id}')" title="Ajouter une étape complémentaire">＋ étape</button>` : ""}
-          <button class="bug-card-copy" data-bug-copy="${it.id}" onclick="bugCopyOne('${it.id}')" title="Copier cette remarque">📋 Copier</button>
-          <button class="fb-del-text" onclick="bugDel('${it.id}')" title="Supprimer">× Supprimer</button>
+          ${editing ? `<button class="fb-add-step" onclick="bugAddStep('${it.id}')" title="Ajouter une étape complémentaire">${ICO_SZ('plus', 12)} étape</button>` : ""}
+          <button class="bug-card-copy" data-bug-copy="${it.id}" onclick="bugCopyOne('${it.id}')" title="Copier cette remarque">${ICO_SZ('clipboard', 13)} Copier</button>
+          <button class="fb-del-text" onclick="bugDel('${it.id}')" title="Supprimer">${ICO_SZ('trash', 13)} Supprimer</button>
         </div>
       </div>` : ""}
     </div>`;
@@ -18556,6 +18823,13 @@ window.missionOpen = async function() {
 };
 
 window.setTab = k => {
+  // Onglet dissous en phase 6 (vieux lien ?tab=majlog, note archivée…) → on
+  // route vers celui qui l'a absorbé, en ouvrant la bonne section.
+  const legacy = TABS_LEGACY[k];
+  if (legacy) {
+    if (legacy.section) _compteSection = legacy.section;
+    k = legacy.tab;
+  }
   // Tracker le dernier onglet avant Notes/bugs pour pré-remplir
   // automatiquement le formulaire « Onglet concerné ».
   if (k === "bugs" && tab && tab !== "bugs") lastTabBeforeBugs = tab;
@@ -18569,27 +18843,6 @@ window.setTab = k => {
   render();
 };
 
-// Menu compte (sidebar) — toggle inline aligné sur les tabs + listener click hors zone
-window.userMenuToggle = function(evt) {
-  if (evt) evt.stopPropagation();
-  const m = document.getElementById("sbUserMenu");
-  const t = document.getElementById("sbUserTrigger");
-  if (m) m.classList.toggle("open");
-  if (t) t.classList.toggle("open");
-};
-window.userMenuClose = function() {
-  const m = document.getElementById("sbUserMenu");
-  const t = document.getElementById("sbUserTrigger");
-  if (m) m.classList.remove("open");
-  if (t) t.classList.remove("open");
-};
-document.addEventListener("click", (e) => {
-  const menu = document.getElementById("sbUserMenu");
-  if (!menu || !menu.classList.contains("open")) return;
-  if (menu.contains(e.target)) return;
-  if (e.target.closest(".sb-user-trigger")) return;
-  window.userMenuClose();
-});
 window.signIn = () => auth.signInWithPopup(new firebase.auth.GoogleAuthProvider()).catch(err => uiAlert(err.message, { title: "Erreur de connexion", kind: "danger" }));
 window.signOut = () => auth.signOut();
 
