@@ -318,7 +318,7 @@
   .totals .line.muted{color:var(--text-muted);font-size:13px}
   .hint{font-size:13px;color:var(--text-dim);margin:-4px 0 8px}
   table.hist{width:100%;border-collapse:collapse;background:var(--surface);border:1px solid var(--border);border-radius:8px;overflow:hidden;margin-top:8px;font-size:13px;box-shadow:var(--shadow-sm)}
-  table.hist th{background:var(--surface-2);text-align:left;padding:10px 12px;font-size:13px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.04em;border-bottom:1px solid var(--border);font-weight:600}
+  table.hist th{background:transparent;text-align:left;padding:10px 12px;font-family:var(--font-mono);font-size:9px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.1em;border-bottom:1px solid var(--border);font-weight:700}
   table.hist td{padding:6px 8px;border-bottom:1px solid var(--border-soft);vertical-align:middle}
   table.hist tr:last-child td{border-bottom:0}
   table.hist input,table.hist select{width:100%;padding:6px 8px;border:1px solid transparent;border-radius:4px;font:inherit;font-size:13px;background:transparent;color:var(--text)}
@@ -811,27 +811,40 @@
   .ac-empty{padding:12px 14px;color:var(--text-dim);font-size:12px;background:transparent;border:1px dashed var(--border-soft);border-radius:var(--radius-sm);max-width:980px}
   .ac-cta{display:inline-flex;align-items:center;gap:8px;margin:0 0 18px}
 
-  /* Compta : KPI cards en haut de l'onglet */
-  .cp-kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:8px;margin:8px 0 16px}
-  .cp-kpi{display:flex;flex-direction:column;gap:3px;padding:8px 12px;background:var(--field-bg);border:1px solid rgba(69,193,253,.28);border-radius:6px;box-shadow:inset 0 0 0 1px rgba(69,193,253,.06),0 0 6px rgba(69,193,253,.08);transition:border-color .15s,box-shadow .15s}
-  .cp-kpi:hover{border-color:rgba(69,193,253,.5);box-shadow:inset 0 0 0 1px rgba(69,193,253,.14),0 0 12px rgba(69,193,253,.18)}
-  .cp-kpi-label{font-size:10px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em}
-  .cp-kpi-value{font-size:16px;font-weight:700;font-variant-numeric:tabular-nums;color:#C6C2D2;text-shadow:0 0 6px rgba(69,193,253,.4)}
-  .cp-kpi-value.cp-kpi-warn{color:#fcd34d;text-shadow:0 0 6px rgba(232,117,28,.45)}
-  .cp-kpi-value.cp-kpi-ok{color:#86efac;text-shadow:0 0 6px rgba(2,220,185,.45)}
-  .cp-kpi-value.cp-kpi-danger{color:#fca5a5;text-shadow:0 0 6px rgba(232,69,28,.45)}
+  /* Bande de KPI (Compta, Achats) — charte V2 : panneau glass, label mono,
+     valeur en gros chiffres tabulaires. Plus de glow. */
+  .cp-kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:var(--space-md);margin:0 0 var(--space-lg)}
+  .cp-kpi{display:flex;flex-direction:column;gap:2px;padding:13px 15px;background:var(--surface-glass);border:1px solid var(--border-soft);border-radius:var(--radius-md);transition:border-color .15s}
+  .cp-kpi:hover{border-color:var(--border)}
+  .cp-kpi-label{font-family:var(--font-mono);font-size:9.5px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.12em;margin-bottom:5px}
+  .cp-kpi-value{font-size:19px;font-weight:700;font-variant-numeric:tabular-nums;color:#fff}
+  .cp-kpi-sub{font-size:11px;color:var(--text-dim);margin-top:3px}
+  /* Marqueur « noir » dans la colonne CA du bilan : l'écart CA / Encaissé. */
+  .cp-noir-tag{font-family:var(--font-mono);font-size:8.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--ember-300);cursor:help}
+  .cp-kpi-value.cp-kpi-warn{color:var(--ember-300)}
+  .cp-kpi-value.cp-kpi-ok{color:var(--success)}
+  .cp-kpi-value.cp-kpi-danger{color:var(--danger)}
 
   /* Compta : graphique CA mensuel inline (12 derniers mois) */
-  .cp-chart-wrap{margin:0 0 22px;padding:14px 18px;background:var(--surface);border:1px solid var(--border-light);border-radius:8px}
-  .cp-chart-title{font-size:13px;font-weight:700;color:var(--text);text-transform:uppercase;letter-spacing:.04em;margin-bottom:10px}
+  .cp-chart-wrap{margin:0 0 22px;padding:16px 18px;background:var(--surface-glass);border:1px solid var(--border-soft);border-radius:var(--radius-md)}
+  .cp-chart-head{display:flex;align-items:baseline;gap:10px;margin-bottom:16px}
+  .cp-chart-title{font-family:var(--font-mono);font-size:11px;font-weight:700;color:var(--text-soft);text-transform:uppercase;letter-spacing:.16em}
+  .cp-chart-legend{display:flex;gap:16px;margin-left:auto}
+  .cp-legend-item{display:inline-flex;align-items:center;gap:6px;font-size:11px;color:var(--text-muted)}
+  .cp-legend-swatch{width:10px;height:10px;border-radius:2px;flex-shrink:0}
+  .cp-legend-swatch.decl{background:var(--azure-fill)}
+  .cp-legend-swatch.noir{background:rgba(245,148,60,.6)}
   .cp-chart-svg{width:100%;height:auto;display:block;max-height:260px}
-  .cp-chart-axis{stroke:var(--border-light);stroke-width:1}
-  .cp-chart-bar{fill:var(--primary);opacity:.75;transition:opacity .12s;cursor:default}
-  .cp-chart-bar:hover{opacity:1}
-  .cp-chart-bar.current{fill:var(--success);opacity:.95}
+  .cp-chart-axis{stroke:var(--border);stroke-width:1}
+  /* Barre empilée : part déclarée (azure) + part au noir (ember) */
+  .cp-chart-bar{fill:var(--azure-fill);transition:filter .12s;cursor:default}
+  .cp-chart-bar:hover{filter:brightness(1.2)}
+  .cp-chart-bar.current{fill:var(--azure-fill-hi)}
+  .cp-chart-bar-noir{fill:rgba(245,148,60,.6);transition:filter .12s;cursor:default}
+  .cp-chart-bar-noir:hover{filter:brightness(1.2)}
   .cp-chart-val{font-size:9px;text-anchor:middle;fill:var(--text-muted);font-variant-numeric:tabular-nums;pointer-events:none}
-  .cp-chart-mon{font-size:11px;text-anchor:middle;fill:var(--text);font-weight:600;text-transform:uppercase;letter-spacing:.04em}
-  .cp-chart-yr{font-size:9px;text-anchor:middle;fill:var(--text-dim)}
+  .cp-chart-mon{font-family:var(--font-mono);font-size:9px;text-anchor:middle;fill:var(--text-dim);font-weight:700;text-transform:uppercase;letter-spacing:.08em}
+  .cp-chart-yr{font-size:9px;text-anchor:middle;fill:var(--ink-500)}
 
   /* Compta : toolbar (chips + bouton export) */
   .cp-toolbar{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin-bottom:10px}
@@ -9922,7 +9935,7 @@ function rBinModal() {
               <span class="bin-item-label">${esc(it.label || "(sans nom)")}</span>
               <span class="bin-item-date">${esc(bugRelativeTime(it.deletedAt))}</span>
               <button class="bin-item-restore" onclick="binRestore('${esc(it.id)}')" title="Restaurer">↶ Restaurer</button>
-              <button class="bin-item-purge" onclick="binPurge('${esc(it.id)}')" title="Supprimer définitivement">×</button>
+              <button class="bin-item-purge" onclick="binPurge('${esc(it.id)}')" title="Supprimer définitivement">${ICO_SZ('x', 13)}</button>
             </div>`).join("")}</div>`}
       <div class="modal-actions">
         ${items.length > 0 ? `<button class="btn-add-neon danger" onclick="binClear()">Vider la corbeille</button>` : ""}
@@ -9936,6 +9949,25 @@ function rBinModal() {
 // l'utilisateur. Plus récent en premier. id = clé stable, sert au "lu/non-lu".
 // Format des items : { h: titre court, b: explication 1-3 phrases }.
 const APP_CHANGELOG = [
+  {
+    id: "2026-07-refonte-v2-compta",
+    date: "2026-07-14",
+    title: "Bilan et Achats (étape 6/7)",
+    items: [
+      {
+        h: "Le graphe montre enfin TOUT ce qui est rentré",
+        b: "Il n'affichait que le CA déclaré — on pouvait croire qu'on avait gagné moins. Chaque barre est désormais empilée : la part déclarée en bleu, la part au noir en orange. Le chiffre au-dessus, c'est le total encaissé."
+      },
+      {
+        h: "La colonne CA signale le noir",
+        b: "Quand l'encaissé dépasse le CA, un petit repère « noir » apparaît dans la colonne CA. C'est normal (le CA ne compte que le déclaré, pour les seuils micro-BNC et TVA) — mais autant que ça se voie plutôt que de ressembler à une erreur de saisie."
+      },
+      {
+        h: "Achats : ce que ça coûte à l'année",
+        b: "Trois chiffres en haut de l'onglet : abonnements sur un an, amortissements des 12 mois à venir, et le total des charges déduites de ta marge."
+      }
+    ]
+  },
   {
     id: "2026-07-refonte-v2-histo-clients",
     date: "2026-07-14",
@@ -16336,7 +16368,7 @@ function rCL() {
               <input type="tel" inputmode="tel" autocomplete="off" placeholder="Téléphone" value="${esc(c.phone || "")}" oninput="clientContactUpd('${e.id}','${c.id}','phone',this.value)">
               <input type="email" placeholder="Email" value="${esc(c.email || "")}" oninput="clientContactUpd('${e.id}','${c.id}','email',this.value)">
             </div>
-            <button class="cli-contact-edit-del" onclick="clientContactDel('${e.id}','${c.id}')" title="Supprimer ce contact">×</button>
+            <button class="cli-contact-edit-del" onclick="clientContactDel('${e.id}','${c.id}')" title="Supprimer ce contact">${ICO_SZ('x', 13)}</button>
           </div>
         `).join("")}
         <button class="cli-add-contact" onclick="clientContactAdd('${e.id}')">+ Ajouter un contact</button>
@@ -16809,37 +16841,58 @@ function comptaChartHtml() {
     const d = new Date(today.getFullYear(), today.getMonth() - i, 1);
     const ym = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
     const row = all.find(r => r.ym === ym);
+    // Barre EMPILÉE : la part déclarée (CA) + la part au noir (encaissé − CA).
+    // `paye` = tout l'argent rentré, `ca` = seulement la part déclarée. Leur
+    // écart EST le noir : l'afficher évite de croire que le graphe montre tout
+    // ce qu'on a gagné alors qu'il ne montrait que le déclaré.
+    const ca = row ? row.ca : 0;
+    const paye = row ? row.paye : 0;
     months.push({
       ym,
       mon: MOIS_FR[d.getMonth()].slice(0, 3),
       yr: String(d.getFullYear()),
-      ca: row ? row.ca : 0,
+      ca,
+      noir: Math.max(0, r2(paye - ca)),
+      total: Math.max(ca, r2(paye)),
       isCurrent: ym === currentYM
     });
   }
-  const maxCA = Math.max(...months.map(m => m.ca), 1);
-  const totalCA = months.reduce((s, m) => s + m.ca, 0);
-  if (totalCA === 0) return ""; // pas de données → pas de graph
+  const maxTotal = Math.max(...months.map(m => m.total), 1);
+  const grandTotal = months.reduce((s, m) => s + m.total, 0);
+  if (grandTotal === 0) return ""; // pas de données → pas de graph
+  const hasNoir = months.some(m => m.noir > 0);
   const W = 600, H = 220, BAR_W = 40, GAP = 10, BASELINE = 175, TOP_PAD = 15;
+  const SCALE = BASELINE - TOP_PAD;
   const stride = (W - GAP) / months.length; // largeur réservée par mois
   const bars = months.map((m, i) => {
     const x = i * stride + (stride - BAR_W) / 2;
-    const h = m.ca > 0 ? Math.max(2, (m.ca / maxCA) * (BASELINE - TOP_PAD)) : 0;
-    const y = BASELINE - h;
     const cx = x + BAR_W / 2;
+    const hCa   = m.ca   > 0 ? Math.max(2, (m.ca   / maxTotal) * SCALE) : 0;
+    const hNoir = m.noir > 0 ? Math.max(2, (m.noir / maxTotal) * SCALE) : 0;
+    const yCa   = BASELINE - hCa;                 // le déclaré part de la ligne de base
+    const yNoir = yCa - hNoir;                    // le noir s'empile par-dessus
+    const yTop  = m.noir > 0 ? yNoir : yCa;
+    const tip = `${m.mon} ${m.yr} — encaissé ${fmt(m.total)}${m.noir > 0 ? ` (déclaré ${fmt(m.ca)} · au noir ${fmt(m.noir)})` : ""}`;
     return `
-      <rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${BAR_W}" height="${h.toFixed(1)}"
-        class="cp-chart-bar${m.isCurrent ? ' current' : ''}" rx="3">
-        <title>${esc(m.mon)} ${esc(m.yr)} — ${fmt(m.ca)}</title>
-      </rect>
-      ${m.ca > 0 ? `<text x="${cx.toFixed(1)}" y="${(y - 4).toFixed(1)}" class="cp-chart-val">${esc(num(m.ca).toFixed(0))}</text>` : ""}
+      ${hCa > 0 ? `<rect x="${x.toFixed(1)}" y="${yCa.toFixed(1)}" width="${BAR_W}" height="${hCa.toFixed(1)}"
+        class="cp-chart-bar${m.isCurrent ? ' current' : ''}" rx="3"><title>${esc(tip)}</title></rect>` : ""}
+      ${hNoir > 0 ? `<rect x="${x.toFixed(1)}" y="${yNoir.toFixed(1)}" width="${BAR_W}" height="${hNoir.toFixed(1)}"
+        class="cp-chart-bar-noir" rx="3"><title>${esc(tip)}</title></rect>` : ""}
+      ${m.total > 0 ? `<text x="${cx.toFixed(1)}" y="${(yTop - 4).toFixed(1)}" class="cp-chart-val">${esc(num(m.total).toFixed(0))}</text>` : ""}
       <text x="${cx.toFixed(1)}" y="195" class="cp-chart-mon">${esc(m.mon)}</text>
       <text x="${cx.toFixed(1)}" y="210" class="cp-chart-yr">${esc(m.yr)}</text>`;
   }).join("");
+  const legend = hasNoir ? `<div class="cp-chart-legend">
+      <span class="cp-legend-item"><span class="cp-legend-swatch decl"></span>Déclaré</span>
+      <span class="cp-legend-item"><span class="cp-legend-swatch noir"></span>Au noir</span>
+    </div>` : "";
   return `
     <div class="cp-chart-wrap">
-      <div class="cp-chart-title">Évolution du CA sur les 12 derniers mois</div>
-      <svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet" class="cp-chart-svg" role="img" aria-label="Graphique CA mensuel">
+      <div class="cp-chart-head">
+        <span class="cp-chart-title">Encaissé sur les 12 derniers mois</span>
+        ${legend}
+      </div>
+      <svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet" class="cp-chart-svg" role="img" aria-label="Encaissé mensuel, part déclarée et part au noir">
         <line x1="0" y1="${BASELINE}" x2="${W}" y2="${BASELINE}" class="cp-chart-axis"/>
         ${bars}
       </svg>
@@ -17057,6 +17110,17 @@ function bilanRender() {
   const cellH = v => num(v) === 0 ? `<td class="cp-zero cp-grp-sep">${dash}</td>` : `<td class="cp-num cp-grp-sep">${num(v).toFixed(2).replace(".", ",")}</td>`;
   const cell  = (v, sep) => num(v) === 0 ? `<td class="cp-zero${sep ? ' cp-grp-sep' : ''}">${dash}</td>` : `<td class="cp-num${sep ? ' cp-grp-sep' : ''}">${fmt(v)}</td>`;
   const cellMarge = v => v === 0 ? `<td class="cp-zero">${dash}</td>` : `<td class="cp-marge ${v >= 0 ? 'pos' : 'neg'}">${fmt(v)}</td>`;
+  // Colonne CA : signale l'écart avec l'encaissé, qui EST la part au noir.
+  // Sans ce marqueur, un mois où CA < Payé se lit comme une anomalie de saisie
+  // alors que c'est le fonctionnement normal des prestations non déclarées.
+  const cellCA = r => {
+    const noir = r2(num(r.paye) - num(r.ca));
+    const tag = noir > 0.005
+      ? ` <span class="cp-noir-tag" title="Part encaissée mais NON déclarée : ${fmt(noir)}. Le CA ne compte que le déclaré (seuils micro-BNC / TVA).">noir</span>`
+      : "";
+    if (num(r.ca) === 0 && !tag) return `<td class="cp-zero">${dash}</td>`;
+    return `<td class="cp-num">${num(r.ca) === 0 ? dash : fmt(r.ca)}${tag}</td>`;
+  };
 
   const KEYS = ["heures","paye","ca","salaire","ursaf","tresorerie","frais","abos","amort","marge"];
   const empty = () => Object.fromEntries(KEYS.map(k => [k, 0]));
@@ -17073,7 +17137,7 @@ function bilanRender() {
   const rowCells = r => `
     ${cellH(r.heures)}
     ${cell(r.paye)}
-    ${cell(r.ca)}
+    ${cellCA(r)}
     ${cell(r.salaire, true)}
     ${cell(r.ursaf)}
     ${cell(r.tresorerie)}
@@ -17180,7 +17244,7 @@ function rCP() {
             onclick="comptaToggleYear('${esc(y)}')" aria-pressed="${on}">${esc(y)}</button>`;
         }).join("")}
       </div>
-      <button class="btn ghost" onclick="comptaExportCSV()" title="Télécharger le bilan filtré au format CSV (Excel-compatible)">⬇ Exporter CSV</button>
+      <button class="mk-btn subtle" onclick="comptaExportCSV()" title="Télécharger le bilan filtré au format CSV (Excel-compatible)">${ICO_SZ('download', 13)} Exporter CSV</button>
     </div>` : ""}
 
     ${bilan.body ? `<table class="hist">
@@ -17381,7 +17445,7 @@ function rAchats() {
       <td>${rDateOrEnCoursCell(e.id, e.dateFin)}</td>
       <td class="amount"><input type="number" step="0.01" value="${esc(e.annuel)}" oninput="editAbonnement('${e.id}','annuel',this.value); refreshAbonnementMensuel('${e.id}')" onchange="refreshTauxMatos()" class="tr-cell-input num"></td>
       <td class="amount muted-cell" id="ab-mens-${e.id}">${fmt(num(e.annuel) / 12)}</td>
-      <td class="actions"><button title="Supprimer" onclick="deleteAbonnementConfirm('${e.id}')">×</button></td>
+      <td class="actions"><button title="Supprimer" onclick="deleteAbonnementConfirm('${e.id}')">${ICO_SZ('trash', 13)}</button></td>
     </tr>`;
   }).join("");
 
@@ -17397,7 +17461,7 @@ function rAchats() {
     const annuel = duree > 0 ? r2(prix / duree) : 0;
     const am1 = amortMap[e.id] || { amorti: 0, reste: prix, fullyAmorti: false };
     const badge = am1.fullyAmorti
-      ? `<span class="tr-badge ok">✓ Amorti</span>`
+      ? `<span class="tr-badge ok">${ICO_SZ('check', 11)} Amorti</span>`
       : am1.amorti > 0
       ? `<span class="tr-badge partial">Partiel</span>`
       : `<span class="tr-badge none">Non</span>`;
@@ -17411,14 +17475,42 @@ function rAchats() {
       <td class="amount tr-amorti-cell">${fmt(am1.amorti)}</td>
       <td class="amount tr-reste-cell ${am1.reste > 0 ? 'pending' : 'done'}">${fmt(am1.reste)}</td>
       <td class="center">${badge}</td>
-      <td class="actions"><button title="Supprimer" onclick="deleteInvestissementConfirm('${e.id}')">×</button></td>
+      <td class="actions"><button title="Supprimer" onclick="deleteInvestissementConfirm('${e.id}')">${ICO_SZ('trash', 13)}</button></td>
     </tr>`;
   }).join("");
 
   const tm = tauxMatos();
 
+  // Bande de KPI (charte V2). ⚠ `tm.materielAnnuel` est PROSPECTIF : c'est la
+  // charge d'amortissement des 12 MOIS À VENIR (un équipement qui finit de
+  // s'amortir dans 4 mois ne compte que 4 mensualités). Le sous-titre le dit,
+  // et on ne compte que les équipements ENCORE en cours d'amortissement — pas
+  // ceux déjà soldés, qui ne coûtent plus rien.
+  const abosAn = r2(tm.mensuelActif * 12);
+  const amortAn = r2(tm.materielAnnuel);
+  const invEnCours = (am.invStatus || []).filter(it => !it.fullyAmorti).length;
+  const kpisHtml = `<div class="cp-kpi-grid" style="grid-template-columns:repeat(3,1fr);max-width:780px">
+    <div class="cp-kpi">
+      <span class="cp-kpi-label">Abonnements / an</span>
+      <strong class="cp-kpi-value">${fmt(abosAn)}</strong>
+      <span class="cp-kpi-sub">${fmt(tm.mensuelActif)} / mois · ${abActif.length} en cours</span>
+    </div>
+    <div class="cp-kpi">
+      <span class="cp-kpi-label">Amortissements</span>
+      <strong class="cp-kpi-value">${fmt(amortAn)}</strong>
+      <span class="cp-kpi-sub">12 mois à venir · ${invEnCours} équipement${invEnCours > 1 ? "s" : ""} en cours</span>
+    </div>
+    <div class="cp-kpi">
+      <span class="cp-kpi-label">Charges / an</span>
+      <strong class="cp-kpi-value cp-kpi-warn">${fmt(r2(abosAn + amortAn))}</strong>
+      <span class="cp-kpi-sub">déduites de la marge du bilan</span>
+    </div>
+  </div>`;
+
   return `
     ${v2PageHead("achats")}
+
+    ${kpisHtml}
 
     <h3>Synthèse coûts horaires</h3>
     <div class="hint" style="max-width:780px">Coût horaire à intégrer dans tes tarifs (Net = Tarif − URSSAF − ce coût). Heures : estimation prudente ≈ 900 h/an. Facteur sécurité : marge pour les imprévus (ex. 15 %).</div>
@@ -17468,7 +17560,10 @@ function rAchats() {
     <table class="hist">
       <thead>
         <tr>
-          <th>Libellé</th>
+          <!-- min-width explicite : les en-têtes passés en mono 9px (charte V2)
+               sont bien plus étroits, et le layout auto laissait la colonne se
+               comprimer jusqu'à tronquer le libellé saisi. -->
+          <th style="min-width:220px">Libellé</th>
           <th style="width:140px">Date début</th>
           <th style="width:160px">Date fin</th>
           <th style="width:150px;text-align:right">Coût annuel (€)</th>
@@ -17490,7 +17585,7 @@ function rAchats() {
       <thead>
         <tr>
           <th style="width:120px">Date</th>
-          <th>Descriptif</th>
+          <th style="min-width:220px">Descriptif</th>
           <th style="width:100px;text-align:right">Prix (€)</th>
           <th style="width:90px;text-align:center">Durée<br><span style="font-weight:400;font-size:13px">(années)</span></th>
           <th style="width:110px;text-align:right">Coût annuel</th>
