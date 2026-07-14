@@ -4387,6 +4387,19 @@ window.updDeplDevis = updDeplDevis;
 function isMissionQuick() {
   return ((S.mission && S.mission.mode) || "devis") === "quick";
 }
+
+// ▼ missionIsDeclared — SOURCE UNIQUE du statut fiscal d'une mission.
+// Une prestation rapide est TOUJOURS au noir (choix produit : le formulaire n'a
+// pas de toggle « statut fiscal ») ⇒ ca = 0, ursaf = 0, aucune majoration de
+// prix (ni URSSAF ni marge d'avance), tarif = prix catalogue brut.
+// On NE MUTE PAS `m.declare` (config partagée entre missions, un devis suivant
+// doit retrouver son propre statut) : on le neutralise à la LECTURE.
+// ⚠ Tout nouveau code qui teste `declare !== false` doit passer par ici.
+function missionIsDeclared(m) {
+  const mm = m || S.mission || {};
+  if ((mm.mode || "devis") === "quick") return false;
+  return mm.declare !== false;
+}
 function isDevisQuick(devisId) {
   const dv = (S.suivi && S.suivi.devis && S.suivi.devis[devisId]) || null;
   if (!dv) return false;
@@ -4691,8 +4704,10 @@ async function missionSetMode(mode) {
     if (cessions.length) impacts.push(`${cessions.length} cession${cessions.length > 1 ? "s" : ""} de droits supprimée${cessions.length > 1 ? "s" : ""}`);
     if (deboursLig.length || deboursDep) impacts.push("les lignes en débours repassent dans le total à encaisser");
     if (multiEch) impacts.push("l'échéancier est remplacé par un paiement unique");
-    if (impacts.length && !await uiConfirm(
-      "Une prestation rapide ne produit aucun document (ni devis, ni facture) et n'a ni acompte ni cession de droits.\n\n"
+    impacts.push("prestation NON DÉCLARÉE (CA = 0, pas d'URSSAF)");
+    impacts.push("plus aucune majoration : prix catalogue brut, moins la remise (le total baisse)");
+    if (!await uiConfirm(
+      "Une prestation rapide ne produit aucun document (ni devis, ni facture), n'a ni acompte ni cession de droits, et n'est pas déclarée.\n\n"
       + "Conséquences sur le brouillon en cours :\n" + impacts.map(s => "• " + s).join("\n"),
       { title: "Passer en prestation rapide", confirmLabel: "Convertir", kind: "warn" }
     )) return;
@@ -4700,11 +4715,11 @@ async function missionSetMode(mode) {
     m.lignes.forEach(l => {
       if (l.type !== "materiel") return;
       l.devis = "principal";
-      if (l.paiementType === "fact-direct") l.paiementType = "acompte";
+      l.paiementType = "acompte";   // au coût : ni débours, ni marge d'avance
     });
     if (m.deplacement) {
       m.deplacement.devis = "principal";
-      if (m.deplacement.paiementType === "fact-direct") m.deplacement.paiementType = "acompte";
+      m.deplacement.paiementType = "acompte";
     }
     m.echeances = JSON.parse(JSON.stringify(QUICK_ECHEANCES));
   } else if (isQuickEcheancier(m.echeances)) {
@@ -5490,7 +5505,7 @@ function rDevisPreview() {
 
   // Build line items HTML — with numbering (1., 2., 3., …)
   // Au black (declare === false) → no URSSAF compensation, no marge avance.
-  const _isDeclared = d.declare !== false;
+  const _isDeclared = missionIsDeclared(d);
   const ma = _isDeclared ? num((d.paiement || {}).margeAvance ?? 0) : 0;
   const mu = _isDeclared ? getUrssafPct(d) : 0;
   let linesHtml = "";
@@ -7537,7 +7552,7 @@ window.showPaiementInfo = function(evt, kind, id) {
   let info = null;
   const m = S.mission || {};
   const p = m.paiement || {};
-  const isDeclared = m.declare !== false;
+  const isDeclared = missionIsDeclared(m);
   const margeAvance = isDeclared ? num(p.margeAvance ?? 0) : 0;
   const margeUrssaf = isDeclared ? getUrssafPct(m) : 0;
   if (kind === "ligne") {
@@ -7763,9 +7778,9 @@ function rLigne(l) {
     </div>`;
   } else {
     const pmt = l.paiementType || "acompte";
-    // Prestation rapide : aucun document, donc pas de feuille débours → toute
-    // ligne matériel est dans le total à encaisser (toggle Principal/Débours
-    // masqué, `devis` forcé à "principal" par missionSetMode).
+    // Prestation rapide : aucun document (pas de feuille débours) et aucune
+    // majoration (au noir ⇒ ni URSSAF ni marge d'avance) → matériel au prix
+    // brut, dans le total. Les 2 toggles ne pilotent donc plus rien : masqués.
     const quick = isMissionQuick();
     const isDebours = !quick && l.devis === "debours";
     const devisToggleHtml = quick ? "" : `<div class="seg seg-neon violet lg-toggle">
@@ -7775,14 +7790,16 @@ function rLigne(l) {
     // Paiement mode UI:
     //   - Principal → toggle [Acompte | Avance]
     //   - Débours   → static "Fact. Direct" pill (only valid combo, no Débours+Acompte anymore)
-    const paiementModeHtml = isDebours
+    const paiementModeHtml = quick
+      ? ""
+      : isDebours
       ? `<div class="seg seg-neon violet lg-toggle lg-toggle-pmt" title="Mode de refacturation des débours">
           <button class="${pmt==='acompte'?'on':''}" onclick="ligneSetPaiement('${l.id}','acompte')" title="Tu avances le frais, le client te rembourse au centime près. Apparaît sur la feuille débours.">Refacturé</button>
           <button class="${pmt==='fact-direct'?'on':''}" onclick="ligneSetPaiement('${l.id}','fact-direct')" title="Le client règle directement le fournisseur. Hors devis fiscal, mais listé sur la feuille débours pour info.">Direct</button>
         </div>`
       : `<div class="seg seg-neon violet lg-toggle lg-toggle-pmt" title="Mode de paiement (obligatoire)">
-          <button class="${pmt==='acompte'?'on':''}" onclick="ligneSetPaiement('${l.id}','acompte')" title="${quick ? "Facturé au prix coûtant, sans marge." : "Inclus dans l'acompte à la commande"}">${quick ? "Au coût" : "Acompte"}</button>
-          <button class="${pmt==='avance'?'on':''}" onclick="ligneSetPaiement('${l.id}','avance')" title="Tu avances la dépense, marge appliquée">${quick ? "Avancé" : "Avance"}</button>
+          <button class="${pmt==='acompte'?'on':''}" onclick="ligneSetPaiement('${l.id}','acompte')" title="Inclus dans l'acompte à la commande">Acompte</button>
+          <button class="${pmt==='avance'?'on':''}" onclick="ligneSetPaiement('${l.id}','avance')" title="Tu avances la dépense, marge appliquée">Avance</button>
         </div>`;
     const justifBtn = isDebours
       ? `<button class="lg-justif ${l.justificatifJoint?'on':''}" onclick="ligneUpd('${l.id}','justificatifJoint',!${!!l.justificatifJoint});render()" title="${l.justificatifJoint?'Justificatif joint (cliquer pour retirer)':'Justificatif non encore joint (cliquer pour cocher)'}">${l.justificatifJoint?ICO_SZ('check',14):ICO_SZ('circle',14)} Justif.</button>`
@@ -7797,7 +7814,7 @@ function rLigne(l) {
         ${devisToggleHtml}
         ${paiementModeHtml}
         ${justifBtn}
-        <button class="lg-info-icon" onmouseenter="showPaiementInfo(event, 'ligne', '${l.id}')" onmouseleave="hidePaiementInfo()" onfocus="showPaiementInfo(event, 'ligne', '${l.id}')" onblur="hidePaiementInfo()" tabindex="0" aria-label="Voir les conséquences fiscales de ce choix">i</button>
+        ${quick ? "" : `<button class="lg-info-icon" onmouseenter="showPaiementInfo(event, 'ligne', '${l.id}')" onmouseleave="hidePaiementInfo()" onfocus="showPaiementInfo(event, 'ligne', '${l.id}')" onblur="hidePaiementInfo()" tabindex="0" aria-label="Voir les conséquences fiscales de ce choix">i</button>`}
         ${expandBtn}
         <button class="lg-del" onclick="ligneDel('${l.id}')" title="Supprimer">${ICO_SZ('x', 16)}</button>
       </div>
@@ -8637,7 +8654,12 @@ function totals() {
   // affiché. C'est juste une étiquette comptable.
   const _override = num(d.tarifHOverride);
   const _baseTotal = _override > 0 ? _override : (cat ? num(cat.p) : 0);
-  const _isDecTot = d.declare !== false;
+  // Prestation rapide : au noir par construction (missionIsDeclared) ET tarif =
+  // prix catalogue BRUT. On neutralise donc les 2 leviers qui modifieraient ce
+  // prix en mode au noir : blackMode "taux réduit" (× 0,78) et la remise non
+  // déclarée. Reste le prix catalogue, moins la remise commerciale.
+  const _quick = (d.mode || "devis") === "quick";
+  const _isDecTot = missionIsDeclared(d);
   const _urssafFactorTot = 1 - (getUrssafPct(d)) / 100; // e.g., 0.78 for 22%
   // Tarif horaire :
   //   - Déclaré : tarif catalogue tel quel (gross facturé)
@@ -8647,8 +8669,8 @@ function totals() {
   //   - Au black "taux réduit" (Prix compétitif) : tarif × (1 − URSSAF%) (le client
   //     économise l'URSSAF entière).
   // /!\ La remiseNoirePct ne s'applique qu'aux HEURES, pas matériel/cession/déplacement.
-  const _blackMode = d.blackMode || "fixe";
-  const _remiseNoirePct = (!_isDecTot && _blackMode === "fixe") ? getRemiseNoirePct(d) : 0;
+  const _blackMode = _quick ? "fixe" : (d.blackMode || "fixe");
+  const _remiseNoirePct = (!_isDecTot && !_quick && _blackMode === "fixe") ? getRemiseNoirePct(d) : 0;
   const _remiseNoireFactor = 1 - _remiseNoirePct / 100;
   // Si tarifHOverride est posé (reconstitution legacy), il est ABSOLU :
   // on bypasse l'ajustement declare/blackMode pour ne pas altérer le total.
@@ -9508,8 +9530,12 @@ const APP_CHANGELOG = [
         b: "Depuis l'Accueil, le bouton « Prestation rapide » ouvre Mission en mode allégé : client, catalogue, heures, matériel, déplacement et remise — c'est tout. Aucun document n'est produit, pas d'échéancier, pas d'acompte, pas de cession de droits, pas de CGV. Un bouton en haut de Mission permet de basculer entre les deux modes tant que le brouillon n'est pas enregistré."
       },
       {
+        h: "Non déclarée, au prix catalogue",
+        b: "Une prestation rapide est toujours au noir : elle n'entre ni dans le CA ni dans les seuils micro-BNC, et l'encaissé apparaît en « Payé » dans le bilan. Le prix est le tarif catalogue moins la remise éventuelle, sans aucune majoration — un matériel à 100 € se facture 100 €, là où un devis déclaré le facturerait 128,21 € pour absorber l'URSSAF."
+      },
+      {
         h: "Le même suivi, en plus court",
-        b: "La prestation passe par les mêmes étapes qu'un devis, moins les factures : envoyée, acceptée, réalisée, payée, photos livrées. Elle compte normalement dans le chiffre d'affaires, l'URSSAF et le bilan — le rattachement au mois suit toujours la date d'encaissement."
+        b: "La prestation passe par les mêmes étapes qu'un devis, moins les factures : envoyée, acceptée, réalisée, payée, photos livrées. Le rattachement au mois suit toujours la date d'encaissement."
       },
       {
         h: "Références PRE-…, numérotées à part",
@@ -10919,7 +10945,7 @@ window.factureDelConfirm = async function(devisId, echId) {
 function computeRemiseInfo() {
   const d = S.mission;
   const t = totals();
-  const declared = d.declare !== false;
+  const declared = missionIsDeclared(d);
   const urssafFactor = declared ? (1 - getUrssafPct(d) / 100) : 1; // au black: pas d'URSSAF
   // Coût matos horaire (depuis Frais & Tarifs) × heures totales
   let matosCost = 0;
@@ -11054,7 +11080,7 @@ function tarifBreakdown(includeDepl) {
   // Au black: the photographer can give a discount to the client equal to the URSSAF saved,
   //   so tarif au black = gross × (1 - X%).
   const d = S.mission;
-  const declared = d.declare !== false;
+  const declared = missionIsDeclared(d);
   const cat = (S.tarifs.catalog || DEFAULT_CATALOG).find(c => c.k === d.object);
   if (!cat || !d.object) return null;
   const tm = tauxMatos();
@@ -11179,7 +11205,7 @@ function devisSectionSummaries() {
   const remiseClass = remisePct > ri.remiseMaxPct ? "warn" : (remisePct > 0 ? "amt" : "");
   const adjBits = [];
   if (remisePct > 0) adjBits.push(`<span class="${remiseClass}">${remisePct.toString().replace(".",",")}% remise</span>`);
-  if (d.declare !== false) adjBits.push(`<span>URSSAF ${getUrssafPct(d).toString().replace(".",",")}%</span>`);
+  if (missionIsDeclared(d)) adjBits.push(`<span>URSSAF ${getUrssafPct(d).toString().replace(".",",")}%</span>`);
   const adjSummary = adjBits.length ? adjBits.join('<span class="dot"></span>') : `<span>Par défaut</span>`;
 
   // 5. Modalités — somme des % + IBAN
@@ -11204,8 +11230,8 @@ function devisSectionSummaries() {
   const majSummaryBits = [];
   if (remisePct > 0) majSummaryBits.push(`<span class="${remiseClass}">${remisePct.toString().replace(".",",")}% remise</span>`);
   if (isMissionQuick()) {
-    if (d.declare !== false) majSummaryBits.push(`<span>URSSAF ${getUrssafPct(d).toString().replace(".",",")}%</span>`);
-    if (!majSummaryBits.length) majSummaryBits.push(`<span>Par défaut</span>`);
+    // Ni URSSAF ni IBAN en prestation rapide : la section n'est plus que la remise.
+    if (!majSummaryBits.length) majSummaryBits.push(`<span>Aucune remise</span>`);
   } else {
     majSummaryBits.push(echBit);
     majSummaryBits.push(ibanBit);
@@ -11443,7 +11469,7 @@ window.suiviUpdateSnapshot = async function() {
   const date = m.objectDate || oldDate || new Date().toISOString().slice(0, 10);
   const client = m.client.name || "";
   const prestation = cat ? cat.l : "";
-  const isDeclared = m.declare !== false;
+  const isDeclared = missionIsDeclared(m);
   const urssafPct = getUrssafPct(m);
   const tm = tauxMatos();
   const tresoRatio = (t.tarifH > 0 && tm.tauxAvecSecurite > 0) ? (tm.tauxAvecSecurite / t.tarifH) : 0;
@@ -11597,7 +11623,7 @@ function rMissionModeBar() {
       <button class="${quick ? "on" : ""}" onclick="missionSetMode('quick')" title="Prestation rapide : aucun document, paiement unique, ni acompte ni CGV.">Prestation rapide</button>
     </div>
     <span class="hint" style="margin:0">${quick
-      ? "Aucun document produit — la prestation part directement dans l'Historique et la compta."
+      ? "Aucun document produit, prix catalogue moins la remise. Prestation NON déclarée (CA = 0, pas d'URSSAF)."
       : "Devis complet : document imprimable, CGV, échéancier et factures."}</span>
   </div>`;
 }
@@ -11626,7 +11652,7 @@ function rDevisAccordion() {
     ${rEditSectionRaw("identification", "Identification & client",     sums.identification, rDevisSectionIdentification())}
     ${rEditSectionRaw("prestations",    "Prestations",                 sums.prestations,    rDevisSectionPrestations())}
     ${rEditSectionRaw("deplacement",    "Déplacements",                sums.deplacement,    rDevisSectionDeplacement())}
-    ${rEditSectionRaw("majorations",    quick ? "Remise & URSSAF" : "Majorations & paiements", sums.majorations, rDevisSectionMajorations())}
+    ${rEditSectionRaw("majorations",    quick ? "Remise" : "Majorations & paiements", sums.majorations, rDevisSectionMajorations())}
     ${quick ? "" : rEditSectionRaw("conditions", "Conditions & CGV",   sums.conditions,     rDevisSectionCgv())}
   </div>`;
 }
@@ -11705,10 +11731,10 @@ function rDevisSectionIdentification() {
       </div>
       ${quick ? "" : `<div class="field"><label>Durée (jours)</label>
         <input type="number" min="1" max="365" step="1" value="${esc(String(duree))}" oninput="upd('mission.dureeValidite', Math.max(1, parseInt(this.value)||30))">
-      </div>`}
+      </div>
       <div class="field"><label title="Optionnel — date de réalisation / livraison de la prestation. Affichée sur la facture (art. 289-I CGI).">Date de prestation</label>
         <input type="date" value="${esc(d.datePrestation || "")}" oninput="upd('mission.datePrestation', this.value)">
-      </div>
+      </div>`}
     </div>
 
     <h5>Client</h5>
@@ -11717,6 +11743,7 @@ function rDevisSectionIdentification() {
       <div class="client-line-contact">${rContactInline()}</div>
     </div>
 
+    ${quick ? "" : `
     <h5 style="display:flex;align-items:center;gap:var(--space-xs)">
       Type de clientèle pour ce devis
       <button type="button" class="lg-info-icon" tabindex="0" aria-label="Impact du type de clientèle"
@@ -11734,7 +11761,7 @@ function rDevisSectionIdentification() {
         <button type="button" class="lg-info-icon" tabindex="0" aria-label="Impact de cette case"
           onmouseenter="showInfo(event, 'contratHorsEtab')" onmouseleave="hideInfo()" onfocus="showInfo(event, 'contratHorsEtab')" onblur="hideInfo()">i</button>
       </label>
-    </div>
+    </div>`}
   `;
 }
 
@@ -11744,7 +11771,7 @@ function rDevisSectionIdentification() {
 // ▼ rDevisSectionPrestations — § 2/6 (lignes heures/matériel/cession)
 function rDevisSectionPrestations() {
   const d = S.mission;
-  const declare = d.declare !== false;
+  const declare = missionIsDeclared(d);
   const quick = isMissionQuick();
   const heures   = (d.lignes || []).filter(l => l.type === "heures");
   const materiel = (d.lignes || []).filter(l => l.type === "materiel");
@@ -11802,6 +11829,7 @@ function rDevisSectionPrestations() {
       <div class="presta-tarif-hint">${overrideHint}</div>
     </div>
 
+    ${quick ? "" : `
     <h5>Statut fiscal</h5>
     <div class="presta-status-row">
       <div class="seg seg-neon">
@@ -11823,7 +11851,7 @@ function rDevisSectionPrestations() {
         </div>`;
       })() : ""}
     </div>
-    ${!declare ? `<div class="black-warning" role="alert"><strong>${ICO_SZ('alertTriangle', 14)} Mode au black</strong> — pas de débours, pas d'URSSAF, pas de marge sur avance applicable. Tous les matériels et déplacements sont au prix brut, payés via l'acompte.</div>` : ""}
+    ${!declare ? `<div class="black-warning" role="alert"><strong>${ICO_SZ('alertTriangle', 14)} Mode au black</strong> — pas de débours, pas d'URSSAF, pas de marge sur avance applicable. Tous les matériels et déplacements sont au prix brut, payés via l'acompte.</div>` : ""}`}
 
     <h5>Heures</h5>
     <div class="lg-list" id="lgListHeures">
@@ -11862,17 +11890,17 @@ function rDevisSectionDeplacement() {
   const pmt = d.deplacement.paiementType || "acompte";
   const afficheMode = d.deplacement.afficheMode || "afficher";
 
-  // Acompte/Avance reste un levier de PRIX (la marge d'avance s'applique), pas
-  // un levier d'échéancier — donc conservé en mode rapide, avec des libellés
-  // qui ne parlent pas d'acompte (il n'y en a pas).
+  // Prestation rapide : au noir ⇒ aucune majoration (ni URSSAF ni marge
+  // d'avance) et aucun débours ⇒ le déplacement est au coût réel dans le total.
+  // Les deux toggles ne pilotent plus rien : le bloc entier disparaît.
   const paiementToggle = isDebours
     ? `<div class="seg seg-neon violet" title="Mode de refacturation des débours">
         <button class="${pmt==='acompte'?'on':''}" onclick="updDeplPaiementType('acompte')" title="Tu avances le déplacement, le client te rembourse au centime près.">Refacturé</button>
         <button class="${pmt==='fact-direct'?'on':''}" onclick="updDeplPaiementType('fact-direct')" title="Le client règle directement le transporteur. Hors devis fiscal.">Direct</button>
       </div>`
     : `<div class="seg seg-neon violet" title="Mode de paiement">
-        <button class="${pmt==='acompte'?'on':''}" onclick="updDeplPaiementType('acompte')" title="${quick ? "Facturé au prix coûtant, sans marge." : "Inclus dans l'acompte à la commande"}">${quick ? "Au coût" : "Acompte"}</button>
-        <button class="${pmt==='avance'?'on':''}" onclick="updDeplPaiementType('avance')" title="Tu avances la dépense, marge appliquée">${quick ? "Avancé" : "Avance"}</button>
+        <button class="${pmt==='acompte'?'on':''}" onclick="updDeplPaiementType('acompte')" title="Inclus dans l'acompte à la commande">Acompte</button>
+        <button class="${pmt==='avance'?'on':''}" onclick="updDeplPaiementType('avance')" title="Tu avances la dépense, marge appliquée">Avance</button>
       </div>`;
 
   // Champs trajet selon le mode (voiture / transports en commun)
@@ -11935,15 +11963,16 @@ function rDevisSectionDeplacement() {
     <h5>Trajet</h5>
     ${trajetFields}
 
-    <h5>${quick ? "Paiement" : "Facturation"}</h5>
+    ${quick ? "" : `
+    <h5>Facturation</h5>
     <div class="depl-toggle-row">
-      ${quick ? "" : `<div class="seg seg-neon violet">
+      <div class="seg seg-neon violet">
         <button class="${devis==='principal'?'on':''}" onclick="updDeplDevis('principal')">Principal</button>
         <button class="${devis==='debours'?'on warn':''}" onclick="updDeplDevis('debours')">Débours</button>
-      </div>`}
+      </div>
       ${paiementToggle}
       <button class="lg-info-icon" onmouseenter="showPaiementInfo(event, 'depl')" onmouseleave="hidePaiementInfo()" tabindex="0" aria-label="Voir les conséquences fiscales">i</button>
-    </div>
+    </div>`}
 
     ${affichageBlock}
   `;
@@ -11955,7 +11984,7 @@ function rDevisSectionDeplacement() {
 // ▼ rDevisSectionAjustements — § 4/6 (remise, autres)
 function rDevisSectionAjustements() {
   const d = S.mission;
-  const declare = d.declare !== false;
+  const declare = missionIsDeclared(d);
   const ri = computeRemiseInfo();
 
   return `
@@ -11971,6 +12000,7 @@ function rDevisSectionAjustements() {
         </div>
       </div>
     </div>
+    ${isMissionQuick() ? "" : `
     <div class="row">
       <div class="field" style="max-width:200px"><label>Taux URSSAF</label>
         <div class="lock-field with-unit">
@@ -11984,7 +12014,7 @@ function rDevisSectionAjustements() {
           </div>
         </div>
       </div>
-    </div>
+    </div>`}
     ${declare ? `
     <div class="row">
       <div class="field" style="max-width:200px"><label>Marge sur frais avancés</label>
@@ -12931,7 +12961,7 @@ async function suiviAdd() {
   //   Trésorerie  = montant × (tauxAvecSecurite / tarifH) — fraction du tarif horaire
   //                qui finance matos+abos+sécurité (constant pour tout le devis)
   //   Salaire net = montant − URSSAF − Trésorerie
-  const isDeclared = m.declare !== false;
+  const isDeclared = missionIsDeclared(m);
   const urssafPct  = getUrssafPct(m);
   const tm         = tauxMatos();
   const tresoRatio = (t.tarifH > 0 && tm.tauxAvecSecurite > 0) ? (tm.tauxAvecSecurite / t.tarifH) : 0;
