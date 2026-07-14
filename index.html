@@ -347,19 +347,18 @@
   .legend-btn.on{background:var(--surface-hi);color:var(--text);border-color:var(--primary);box-shadow:0 0 0 2px var(--primary-soft)}
   .legend-btn .all-icon{color:var(--primary);font-size:13px}
   /* Suivi: filter chips bar (multi-select pastilles, persisted) */
-  .suv-chip-bar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:6px 0 14px}
-  .suv-chip{background:var(--surface-2);border:1px solid var(--border-soft);color:var(--text-muted);padding:5px 12px;border-radius:999px;cursor:pointer;font:inherit;font-size:12.5px;font-weight:500;transition:all .15s;display:inline-flex;align-items:center;gap:7px;line-height:1.2;letter-spacing:.01em}
-  .suv-chip:hover{border-color:var(--border-light);color:var(--text);background:var(--surface)}
-  .suv-chip.on{background:var(--primary-soft);border-color:var(--primary);color:var(--text);box-shadow:0 0 0 1px var(--primary) inset}
-  .suv-chip-all{padding-left:12px}
-  .suv-chip-all.on{background:var(--surface-hi);box-shadow:0 0 0 1px var(--text-muted) inset}
-  .suv-chip-icon{color:var(--primary);font-size:11px;line-height:1}
+  /* Chips de filtre de l'Historique (charte V2 : mono uppercase, pas de glow) */
+  .suv-chip-bar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:0 0 var(--space-lg)}
+  .suv-chip{background:transparent;border:1px solid var(--border-soft);color:var(--text-muted);padding:7px 13px;border-radius:var(--radius-sm);cursor:pointer;font-family:var(--font-mono);font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;transition:background .15s,border-color .15s,color .15s;display:inline-flex;align-items:center;gap:7px;line-height:1.2}
+  .suv-chip:hover{border-color:var(--border);color:var(--ink-000)}
+  .suv-chip.on{background:rgba(10,86,224,.16);border-color:rgba(69,193,253,.5);color:var(--ink-100)}
+  .suv-chip-dot{width:6px;height:6px;border-radius:50%;background:var(--text-dim);flex-shrink:0}
+  .suv-chip.on .suv-chip-dot{background:var(--primary)}
   .suv-chip .pst{flex-shrink:0}
-  .suv-chip-count{display:inline-block;margin-left:4px;padding:1px 7px;border-radius:9px;background:var(--surface-hi);color:var(--text);font-size:11px;font-weight:700;font-variant-numeric:tabular-nums;letter-spacing:0;line-height:1.4}
-  .suv-chip.on .suv-chip-count{background:var(--surface);color:var(--text)}
+  .suv-chip-count{color:var(--text-dim);font-weight:400;letter-spacing:0}
+  .suv-chip.on .suv-chip-count{color:var(--text-muted)}
   .suv-chip-sep{display:inline-block;width:1px;height:20px;background:var(--border-soft);margin:0 4px;align-self:center}
-  .suv-chip-bin svg{flex-shrink:0}
-  .suv-chip-bin.on{background:rgba(232,69,28,.10);border-color:var(--danger);box-shadow:0 0 0 1px var(--danger) inset;color:var(--text)}
+  .suv-chip svg{flex-shrink:0}
   .suv-bin-row td{padding:8px 10px;border-bottom:1px solid var(--border-soft);font-size:13px;color:var(--text-muted)}
   .suv-bin-row td:nth-child(2){color:var(--text);font-variant-numeric:tabular-nums}
   .suv-bin-row td.amt{color:var(--text);font-weight:600;font-variant-numeric:tabular-nums;text-align:right}
@@ -933,7 +932,7 @@
   .cli-search-wrap > input:focus{outline:none;border-color:var(--primary);background:rgba(69,193,253,.08);box-shadow:inset 0 0 0 1px rgba(69,193,253,.22),0 0 12px rgba(69,193,253,.35),0 0 24px rgba(69,193,253,.12)}
   /* Table épurée — pas de bordures de cellules, juste un séparateur fin entre lignes */
   table.cli-table{width:100%;border-collapse:collapse}
-  table.cli-table thead th{text-align:left;padding:10px 14px;font-size:11px;color:var(--text-dim);text-transform:uppercase;letter-spacing:.06em;font-weight:600;border-bottom:1px solid var(--border-soft);user-select:none}
+  table.cli-table thead th{text-align:left;padding:10px 14px;font-family:var(--font-mono);font-size:9px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.1em;font-weight:700;border-bottom:1px solid var(--border);user-select:none}
   table.cli-table thead th.cli-sortable{cursor:pointer;transition:color .12s}
   table.cli-table thead th.cli-sortable:hover{color:var(--text-muted)}
   table.cli-table thead th .cli-sort-ind{display:inline-block;margin-left:4px;font-size:9px;opacity:.4;vertical-align:1px;letter-spacing:0}
@@ -945,8 +944,23 @@
   table.cli-table tr.cli-row.expanded td{background:var(--primary-soft)}
   table.cli-table td.cli-num{font-variant-numeric:tabular-nums;color:var(--text-dim);font-size:13px;width:80px}
   table.cli-table td.cli-name{font-weight:600;color:var(--text)}
-  table.cli-table td.cli-city{color:var(--text-muted);font-size:13px;width:200px}
+  table.cli-table td.cli-city{color:var(--text-muted);font-size:13px;width:190px}
   table.cli-table td.cli-city.dim{color:var(--text-dim)}
+  /* Identité : avatar d'initiales + nom, n° et nb de devis en sous-titre */
+  .cli-ident{display:flex;align-items:center;gap:11px;min-width:0}
+  .cli-avatar{border-radius:var(--radius-sm);color:#fff;display:inline-flex;align-items:center;justify-content:center;font-weight:700;flex-shrink:0;letter-spacing:.02em}
+  .cli-ident-txt{display:flex;flex-direction:column;gap:1px;min-width:0}
+  .cli-ident-name{font-size:13px;font-weight:600;color:var(--ink-000);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .cli-ident-sub{font-family:var(--font-mono);font-size:9.5px;color:var(--text-dim);white-space:nowrap}
+  table.cli-table td.cli-enc{text-align:right;width:130px;font-size:13px;font-weight:700;color:var(--success);font-variant-numeric:tabular-nums;white-space:nowrap}
+  table.cli-table td.cli-enc.dim{color:var(--text-dim);font-weight:400}
+  .cli-enc-total{font-family:var(--font-mono);font-size:10px;font-weight:400;letter-spacing:0;text-transform:none;color:var(--success);margin-left:6px}
+  /* Historique des devis d'un client (panneau déplié) */
+  .cli-devis-row{display:grid;grid-template-columns:80px 130px auto minmax(0,1fr);gap:12px;align-items:center;padding:9px 2px;border-top:1px solid var(--border-soft);cursor:pointer;transition:background .12s}
+  .cli-devis-row:hover{background:rgba(46,134,240,.07)}
+  .cli-devis-date{font-family:var(--font-mono);font-size:11px;color:var(--text-muted);font-variant-numeric:tabular-nums}
+  .cli-devis-ref{font-family:var(--font-mono);font-size:10.5px;color:var(--text-dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .cli-devis-amt{font-size:13px;font-weight:700;color:var(--ink-100);text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
   /* Detail panel : pas d'encadrés, juste un fond surface-2 et de l'espace */
   table.cli-table tr.cli-detail td{padding:0;background:var(--surface-2);border-bottom:1px solid var(--border)}
   .cli-panel{padding:24px 28px}
@@ -9923,6 +9937,25 @@ function rBinModal() {
 // Format des items : { h: titre court, b: explication 1-3 phrases }.
 const APP_CHANGELOG = [
   {
+    id: "2026-07-refonte-v2-histo-clients",
+    date: "2026-07-14",
+    title: "Historique et Clients (étape 5/7)",
+    items: [
+      {
+        h: "Correction : les lignes de l'Historique étaient décalées",
+        b: "Depuis la refonte du tableau de bord, les colonnes de l'Historique ne s'alignaient plus. Les deux listes partagent maintenant exactement le même composant de ligne — elles ne peuvent plus se désynchroniser."
+      },
+      {
+        h: "L'Historique garde son volet",
+        b: "Cliquer un devis clos ouvre la même timeline que sur le tableau de bord. C'est indispensable : c'est le seul endroit d'où tu peux encore reculer un jalon, corriger une date d'encaissement ou gérer le remboursement d'un acompte."
+      },
+      {
+        h: "Fiche client : avatars, encaissé et devis",
+        b: "Chaque client affiche son avatar, le nombre de devis et le total réellement encaissé (au noir compris — ce n'est donc pas le CA déclaré). Sa fiche liste désormais tous ses devis avec leur étape ; un clic ouvre le devis dans l'Historique."
+      }
+    ]
+  },
+  {
     id: "2026-07-refonte-v2-mission",
     date: "2026-07-14",
     title: "Le formulaire de devis se réorganise (étape 4/7)",
@@ -12911,26 +12944,22 @@ function suiviLegendHtml() {
   const totalClosed = closed.length;
   const count = (predicate) => closed.filter(predicate).length;
   const binCount = (S.suivi && S.suivi.bin && Array.isArray(S.suivi.bin.items)) ? S.suivi.bin.items.length : 0;
-  const chips = [
-    ["all",     "Tous",     "●",  totalClosed],
-    ["termine", "Soldé",    null, count(g => g.statutPrin === "termine")]
-  ];
   const refusedCount = count(g => g.statutPrin === "refuse" || g.statutPrin === "annule");
-
+  // Charte : pas de glyphe unicode décoratif (le « ● » de « Tous » est parti).
+  // Chaque chip porte une pastille de couleur ou une icône Lucide.
+  const chip = (k, label, dotHtml, n, title = "") => {
+    const on = f === k;
+    return `<button type="button" class="suv-chip ${on ? "on" : ""}" onclick="suiviSetFilterPrincipal('${k}')"
+      aria-pressed="${on}"${title ? ` title="${esc(title)}"` : ""}>${dotHtml}${esc(label)} <span class="suv-chip-count">${n}</span></button>`;
+  };
   return `<div class="suv-chip-bar">
-    ${chips.map(([k, l, ico, n]) => {
-      const on = f === k;
-      const dot = ico ? `<span class="suv-chip-icon">${ico}</span>` : `<span class="pst" data-s="${k}"></span>`;
-      const cls = `suv-chip ${on ? 'on' : ''} ${k === 'all' ? 'suv-chip-all' : ''}`;
-      return `<button type="button" class="${cls}" onclick="suiviSetFilterPrincipal('${k}')" aria-pressed="${on}">${dot}${esc(l)} <span class="suv-chip-count">${n}</span></button>`;
-    }).join("")}
-    <button type="button" class="suv-chip ${f === 'refuse' ? 'on' : ''}"
-        onclick="suiviSetFilterPrincipal('refuse')" aria-pressed="${f === 'refuse'}"
-        title="Voir les devis refusés (avant acceptation) ou annulés (après acceptation)"><span class="pst" data-s="refuse"></span>Refusé / Annulé <span class="suv-chip-count">${refusedCount}</span></button>
+    ${chip("all", "Tous", `<span class="suv-chip-dot"></span>`, totalClosed)}
+    ${chip("termine", "Soldé", `<span class="pst" data-s="termine"></span>`, count(g => g.statutPrin === "termine"))}
+    ${chip("refuse", "Refusé / Annulé", `<span class="pst" data-s="refuse"></span>`, refusedCount,
+      "Voir les devis refusés (avant acceptation) ou annulés (après acceptation)")}
     <span class="suv-chip-sep" aria-hidden="true"></span>
-    <button type="button" class="suv-chip suv-chip-bin ${f === 'corbeille' ? 'on' : ''}"
-        onclick="suiviSetFilterPrincipal('corbeille')" aria-pressed="${f === 'corbeille'}"
-        title="Devis supprimés — restaurables ou suppression définitive">${ICO_SZ('trash', 13)}Corbeille <span class="suv-chip-count">${binCount}</span></button>
+    ${chip("corbeille", "Corbeille", ICO_SZ("trash", 13), binCount,
+      "Devis supprimés — restaurables ou suppression définitive")}
   </div>`;
 }
 
@@ -14688,6 +14717,45 @@ function devisStageChipHtml(devisId) {
   return st.label ? `<span class="dv-stage ${st.kind}">${esc(st.label)}</span>` : `<span></span>`;
 }
 
+// ▼ devisRowHtml — SOURCE UNIQUE de la ligne de devis, partagée par l'Accueil
+// (rAC) et l'Historique (rSV). Elles utilisaient toutes deux la classe `.ac-row`
+// mais chacune avec son propre markup : passer le grid à 7 colonnes (phase 2) a
+// silencieusement décalé l'Historique, qui n'en émettait que 4. D'où ce
+// renderer unique — le grid et le markup ne peuvent plus diverger.
+// opts : { late, amount, expanded, onclick, gmailKind, panelHtml }
+function devisRowHtml(g, opts = {}) {
+  const {
+    late = false,
+    amount = g.total,
+    expanded = false,
+    onclick = "",
+    gmailKind = "",   // "" → pas de bouton de relance (devis clos)
+    panelHtml = "",
+  } = opts;
+  const stop = "event.stopPropagation();";
+  const gmailTitle = gmailKind === "paiement" ? "Relancer le paiement par Gmail" : "Relancer ce devis par Gmail";
+  // ⚠ Le grid compte 7 colonnes : toute cellule sautée doit être un <span> vide,
+  // sinon les suivantes se décalent.
+  const gmailCell = gmailKind
+    ? `<button class="ac-row-gmail" onclick="${stop}gmailRelanceForDevis('${g.devisId}','${gmailKind}')" title="${gmailTitle}">${ICONS.send}</button>`
+    : `<span></span>`;
+  return `<div class="ac-row-wrap${expanded ? ' expanded' : ''}">
+    <div class="ac-row ${late ? 'ac-late' : ''}${expanded ? ' ac-row-active' : ''}" onclick="${onclick}">
+      <span class="ac-row-dot"></span>
+      <div class="ac-row-date">${esc(dateFR(g.dateMin || g.dateMax))}</div>
+      <div class="ac-row-who">
+        <span class="ac-row-client"><span class="client-link" onclick="${stop}clientInfoModalOpen('${g.devisId}')" title="Voir les infos client">${esc(cleanClientLabel(g.client)) || "—"}</span></span>
+        <span class="ac-row-ref">${esc(g.ref) || "—"} <span class="suv-rev-tag" title="Numéro de révision active dans la chaîne. Versions précédentes accessibles via l'historique du panneau étendu.">rev${computeRevisionNumber(g.devisId)}</span>${quickTagHtml(g.devisId)}</span>
+      </div>
+      ${devisStageChipHtml(g.devisId)}
+      <div class="ac-row-amt">${fmt(amount)}</div>
+      ${gmailCell}
+      <span class="ac-row-chev">${ICO_SZ('chevronRight', 16)}</span>
+    </div>
+    ${panelHtml}
+  </div>`;
+}
+
 // ▼ suiviParcoursHtml — corps du panneau devis (refonte V2, phase 2) : TIMELINE
 // VERTICALE (une ligne par étape) → bande terminale (refus / annulation /
 // clôture) → frais & débours → régularisation. Remplace la frise horizontale +
@@ -15502,6 +15570,26 @@ function _isActiveEntry(e) {
 }
 
 // Liste TOUS les groupes (sans filtre) — utile pour les compteurs des chips
+// ▼ _groupFromLignes — construit le descripteur d'un devis à partir de ses
+// entries. SOURCE UNIQUE de la forme d'un « groupe » : suiviGroupsAll() ne
+// renvoyait que { devisId, lignes, statutPrin }, si bien que tout appelant hors
+// Historique (fiche client…) se retrouvait avec ref / total / dates vides.
+function _groupFromLignes(devisId, lignes) {
+  lignes.sort((a, b) => (a.date || "").localeCompare(b.date || ""));
+  const dates = lignes.map(e => e.date || "").filter(Boolean);
+  const lead = lignes[0] || {};
+  return {
+    devisId, lignes,
+    ref: (S.suivi.devis && S.suivi.devis[devisId] && S.suivi.devis[devisId].ref) || "",
+    statutPrin: devisPrincipal(lignes),
+    total: lignes.reduce((s, e) => s + num(e.montant), 0),
+    dateMin: dates[0] || "",
+    dateMax: dates[dates.length - 1] || "",
+    client: lead.client || "",
+    prestation: lead.prestation || "",
+  };
+}
+
 function suiviGroupsAll() {
   const m = new Map();
   for (const e of S.suivi.entries) {
@@ -15510,10 +15598,7 @@ function suiviGroupsAll() {
     if (!m.has(did)) m.set(did, []);
     m.get(did).push(e);
   }
-  return [...m.entries()].map(([devisId, lignes]) => ({
-    devisId, lignes,
-    statutPrin: devisPrincipal(lignes)
-  }));
+  return [...m.entries()].map(([devisId, lignes]) => _groupFromLignes(devisId, lignes));
 }
 
 function suiviGroups() {
@@ -15524,24 +15609,7 @@ function suiviGroups() {
     if (!groups.has(did)) groups.set(did, []);
     groups.get(did).push(e);
   }
-  let list = [];
-  for (const [devisId, lignes] of groups) {
-    lignes.sort((a, b) => (a.date || "").localeCompare(b.date || ""));
-    const statutPrin = devisPrincipal(lignes);
-    const total = lignes.reduce((s, e) => s + num(e.montant), 0);
-    const dates = lignes.map(e => e.date || "").filter(Boolean);
-    const ref = (S.suivi.devis && S.suivi.devis[devisId] && S.suivi.devis[devisId].ref) || "";
-    const lead = lignes[0] || {};
-    list.push({
-      devisId, ref, lignes,
-      statutPrin,
-      total,
-      dateMin: dates[0] || "",
-      dateMax: dates[dates.length - 1] || "",
-      client: lead.client || "",
-      prestation: lead.prestation || ""
-    });
-  }
+  let list = [...groups.entries()].map(([devisId, lignes]) => _groupFromLignes(devisId, lignes));
   // Vue Historique : on ne montre QUE les devis clos (terminés / refusés /
   // annulés). Les devis vivants (envoye / attente / en_cours) sont gérés
   // depuis l'Accueil. Le sticky reste exempté pour éviter la disparition
@@ -15628,18 +15696,15 @@ function rSV() {
       lastYear = rowYear;
     }
     const isExpanded = suiviExpandedDevis === g.devisId;
-    const panel = isExpanded
-      ? `<div class="ac-row-panel" onclick="${stop}">${suiviExpandedPanelHtml(g)}</div>`
-      : "";
-    return yearSep + `<div class="ac-row-wrap${isExpanded ? ' expanded' : ''}">
-      <div class="ac-row${isExpanded ? ' ac-row-active' : ''}" onclick="suiviExpandedToggle('${g.devisId}')">
-        <div class="ac-row-date">${esc(dateFR(g.dateMin || g.dateMax))}</div>
-        <div class="ac-row-client"><span class="client-link" onclick="${stop}clientInfoModalOpen('${g.devisId}')" title="Voir les infos client">${esc(cleanClientLabel(g.client)) || "—"}</span></div>
-        <div class="ac-row-ref">${esc(g.ref) || "—"} <span class="suv-rev-tag" title="Numéro de révision active dans la chaîne. Versions précédentes accessibles via l'historique du panneau étendu.">rev${computeRevisionNumber(g.devisId)}</span>${quickTagHtml(g.devisId)}</div>
-        <div class="ac-row-amt">${fmt(g.total)}</div>
-      </div>
-      ${panel}
-    </div>`;
+    // Le VOLET est conservé dans l'Historique (choix explicite) : c'est le seul
+    // endroit d'où l'on peut encore reculer un jalon, corriger une date
+    // d'encaissement ou gérer le remboursement d'un acompte sur un devis clos.
+    // Pas de bouton de relance ici : un devis clos ne se relance pas.
+    return yearSep + devisRowHtml(g, {
+      expanded: isExpanded,
+      onclick: `suiviExpandedToggle('${g.devisId}')`,
+      panelHtml: isExpanded ? `<div class="ac-row-panel" onclick="${stop}">${suiviExpandedPanelHtml(g)}</div>` : "",
+    });
   }).join("");
 
   let emptyHtml = "";
@@ -15964,6 +16029,15 @@ function clientsApplyFilters() {
 }
 window.clientsApplyFilters = clientsApplyFilters;
 
+// ▼ clientsOpenDevis — depuis la fiche client, ouvre un devis dans l'Historique.
+// ⚠ Le sticky est posé AVANT setTab : l'Historique ne liste que les devis CLOS,
+// et c'est l'exemption sticky (`g.devisId === sticky`) qui rend visible un devis
+// encore en cours. Sans ça, cliquer un devis en cours menait à une page vide.
+window.clientsOpenDevis = function(devisId) {
+  suiviExpandedDevis = devisId;
+  setTab("suivi");
+};
+
 function clientsSortBy(key) {
   if (clientsSort.key === key) {
     clientsSort.dir = clientsSort.dir === "asc" ? "desc" : "asc";
@@ -16156,11 +16230,49 @@ function clientContactUpd(clientId, contactId, field, val) {
 }
 window.clientContactUpd = clientContactUpd;
 
+// ▼ clientsStats — pour CHAQUE client : ses devis (revs actives) et le total
+// réellement encaissé. Calculé UNE fois par rendu (une passe sur les groupes),
+// et non par ligne : sinon O(clients × devis) à chaque render.
+// ⚠ On somme l'ENCAISSÉ (entryEncaisse), pas `e.ca` : un devis au noir a ca=0
+// alors que l'argent est bien rentré. Le libellé dit donc « Encaissé », jamais
+// « CA » — qui, lui, a un sens fiscal précis (cf. bilanCompute).
+function clientsStats() {
+  const map = new Map();
+  const get = (id) => {
+    if (!map.has(id)) map.set(id, { encaisse: 0, groups: [] });
+    return map.get(id);
+  };
+  for (const g of suiviGroupsAll()) {
+    const c = findClientForDevis(g.devisId);
+    if (!c) continue;
+    const st = get(c.id);
+    st.groups.push(g);
+    st.encaisse += (g.lignes || []).filter(entryEncaisse).reduce((s, e) => s + num(e.montant), 0);
+  }
+  for (const st of map.values()) {
+    st.groups.sort((a, b) => (b.dateMax || b.dateMin || "").localeCompare(a.dateMax || a.dateMin || ""));
+  }
+  return map;
+}
+
+// Avatar d'initiales — couleur déterministe (même client ⇒ même couleur).
+const CLI_AVATAR_COLORS = ["#03665E", "#0A56E0", "#C24E12", "#06B89A", "#8A63D2", "#2E86F0"];
+function clientAvatarHtml(name, id, size) {
+  const initials = String(name || "?").trim().split(/\s+/).filter(Boolean)
+    .map(w => w[0]).join("").slice(0, 2).toUpperCase() || "?";
+  let h = 0;
+  for (const ch of String(id || name || "")) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+  const bg = CLI_AVATAR_COLORS[h % CLI_AVATAR_COLORS.length];
+  const px = size || 30;
+  return `<span class="cli-avatar" style="background:${bg};width:${px}px;height:${px}px;font-size:${Math.round(px * 0.37)}px">${esc(initials)}</span>`;
+}
+
 // ▼ rCL — RENDERER onglet Clients
 function rCL() {
   const entries = clientsSorted();
   const total = entries.length;
   const stop = "event.stopPropagation();";
+  const stats = clientsStats();
 
   const sortInd = key => {
     if (clientsSort.key !== key) return `<span class="cli-sort-ind">▴▾</span>`;
@@ -16183,18 +16295,31 @@ function rCL() {
       ? `<td class="cli-select-cell" onclick="event.stopPropagation();clientsToggleSelect('${e.id}')"><input type="checkbox" class="cli-select-cb" ${isSel ? "checked" : ""} onclick="event.stopPropagation();clientsToggleSelect('${e.id}', this.checked)"></td>`
       : "";
     const selClass = clientsSelectMode && isSel ? " cli-selected" : "";
+    const st = stats.get(e.id) || { encaisse: 0, groups: [] };
+    // Cellule identité : avatar + nom, avec le n° et le nb de devis en dessous.
+    const nameCell = (placeholder) => `<td class="cli-name">
+      <span class="cli-ident">
+        ${clientAvatarHtml(e.name, e.id, 30)}
+        <span class="cli-ident-txt">
+          <span class="cli-ident-name">${esc(e.name) || placeholder}</span>
+          <span class="cli-ident-sub">N° ${esc(e.num) || "—"}${st.groups.length ? ` · ${st.groups.length} devis` : ""}</span>
+        </span>
+      </span>
+    </td>`;
+    const encCell = `<td class="cli-enc${st.encaisse > 0 ? "" : " dim"}">${st.encaisse > 0 ? fmt(st.encaisse) : "—"}</td>`;
+
     const summary = editing ? `
       <tr class="cli-row expanded${selClass}" id="cli-row-${e.id}" data-search="${esc(search)}">
         ${cbCell}
-        <td class="cli-num">${esc(e.num) || "—"}</td>
-        <td class="cli-name">${esc(e.name) || `<span style="color:var(--text-dim);font-style:italic;font-weight:400">(à remplir)</span>`}</td>
+        ${nameCell(`<span style="color:var(--text-dim);font-style:italic;font-weight:400">(à remplir)</span>`)}
         <td class="cli-city${e.cityPostal ? "" : " dim"}">${esc(e.cityPostal) || "—"}</td>
+        ${encCell}
       </tr>` : `
       <tr class="cli-row clickable ${expanded ? "expanded" : ""}${selClass}" id="cli-row-${e.id}" data-search="${esc(search)}" onclick="clientsRowClick('${e.id}')">
         ${cbCell}
-        <td class="cli-num">${esc(e.num) || "—"}</td>
-        <td class="cli-name">${esc(e.name) || "—"}</td>
+        ${nameCell("—")}
         <td class="cli-city${e.cityPostal ? "" : " dim"}">${esc(e.cityPostal) || "—"}</td>
+        ${encCell}
       </tr>`;
 
     let detail = "";
@@ -16284,8 +16409,21 @@ function rCL() {
         <button class="btn btn-danger-ghost" onclick="${stop}clientsDelConfirm('${e.id}')">${ICONS.trash}Supprimer</button>
       `;
 
+      // Historique des devis DU CLIENT — nouveau (phase 4). Chaque ligne est
+      // cliquable et ouvre le devis dans l'onglet Historique. La pastille
+      // d'étape vient de devisStageLabel : même source que la timeline.
+      const devisHtml = st.groups.length
+        ? st.groups.map(g => `
+            <div class="cli-devis-row" onclick="clientsOpenDevis('${g.devisId}')" title="Ouvrir ce devis dans l'Historique">
+              <span class="cli-devis-date">${esc(dateFR(g.dateMin || g.dateMax))}</span>
+              <span class="cli-devis-ref">${esc(g.ref) || "—"}</span>
+              ${devisStageChipHtml(g.devisId)}
+              <span class="cli-devis-amt">${fmt(g.total)}</span>
+            </div>`).join("")
+        : `<div class="cli-dl"><dd class="dim">Aucun devis pour ce client.</dd></div>`;
+
       detail = `
-        <tr class="cli-detail"><td colspan="${clientsSelectMode ? 4 : 3}"><div class="cli-panel">
+        <tr class="cli-detail"><td colspan="${clientsSelectMode ? 5 : 4}"><div class="cli-panel">
           ${headerHtml}
           <div class="cli-panel-grid">
             <div class="cli-section">
@@ -16296,6 +16434,10 @@ function rCL() {
               <h4>Informations</h4>
               ${infosHtml}
             </div>
+          </div>
+          <div class="cli-section" style="margin-top:var(--space-lg)">
+            <h4>Devis${st.groups.length ? ` · ${st.groups.length}` : ""}${st.encaisse > 0 ? ` <span class="cli-enc-total">${fmt(st.encaisse)} encaissés</span>` : ""}</h4>
+            ${devisHtml}
           </div>
           <div class="cli-actions">${actions}</div>
         </div></td></tr>`;
@@ -16312,7 +16454,7 @@ function rCL() {
   setTimeout(() => clientsApplyFilters(), 0);
 
   return `
-    ${v2PageHead("clients", { actions: `<span class="v2-meta">${total}</span>` })}
+    ${v2PageHead("clients", { actions: `<span class="v2-meta">${total} client${total > 1 ? "s" : ""}</span>` })}
 
     <div class="cli-toolbar">
       <button class="btn" onclick="clientsAdd()">${ICONS.plus}Ajouter</button>
@@ -16351,9 +16493,9 @@ function rCL() {
       <thead>
         <tr>
           ${clientsSelectMode ? `<th class="cli-select-head" style="width:36px"><input type="checkbox" class="cli-select-all" onclick="clientsSelectAll(this.checked)" title="Tout sélectionner / désélectionner (lignes visibles)"></th>` : ""}
-          <th class="${thCls('num')}" style="width:80px" onclick="clientsSortBy('num')">N° ${sortInd('num')}</th>
-          <th class="${thCls('name')}" onclick="clientsSortBy('name')">Nom / Société ${sortInd('name')}</th>
-          <th class="${thCls('city')}" style="width:200px" onclick="clientsSortBy('city')">Ville ${sortInd('city')}</th>
+          <th class="${thCls('name')}" onclick="clientsSortBy('name')">Client ${sortInd('name')}</th>
+          <th class="${thCls('city')}" style="width:190px" onclick="clientsSortBy('city')">Ville ${sortInd('city')}</th>
+          <th style="width:130px;text-align:right" title="Total réellement encaissé sur les devis de ce client (au noir compris — ce n'est donc pas le CA déclaré).">Encaissé</th>
         </tr>
       </thead>
       <tbody>${rowsHtml}</tbody>
@@ -17030,7 +17172,7 @@ function rCP() {
       <div class="suv-chip-bar" style="margin:0">
         <button type="button" class="suv-chip ${allYearsActive ? 'on' : ''}"
           onclick="comptaClearYears()" aria-pressed="${allYearsActive}">
-          <span class="suv-chip-icon">●</span>Toutes les années
+          <span class="suv-chip-dot"></span>Toutes les années
         </button>
         ${yearsAvailable.map(y => {
           const on = comptaFilterYears.has(y);
@@ -17498,26 +17640,15 @@ function rAC() {
   // g.restant au lieu de g.total — utilisé uniquement par En attente de paiement) }
   const renderRow = (g, opts = {}) => {
     const { late = false, showRestant = false } = opts;
-    const amount = showRestant ? g.restant : g.total;
-    const gmailKind = showRestant ? "paiement" : "devis";
-    const gmailTitle = showRestant ? "Relancer le paiement par Gmail" : "Relancer ce devis par Gmail";
     const isExpanded = accueilExpandedDevis === g.devisId;
-    const panel = isExpanded ? `<div class="ac-row-panel" onclick="${stop}">${suiviExpandedPanelHtml(g)}</div>` : "";
-    return `<div class="ac-row-wrap${isExpanded ? ' expanded' : ''}">
-      <div class="ac-row ${late ? 'ac-late' : ''}${isExpanded ? ' ac-row-active' : ''}" onclick="accueilOpenDevis('${g.devisId}')">
-        <span class="ac-row-dot"></span>
-        <div class="ac-row-date">${esc(dateFR(g.dateMin || g.dateMax))}</div>
-        <div class="ac-row-who">
-          <span class="ac-row-client"><span class="client-link" onclick="${stop}clientInfoModalOpen('${g.devisId}')" title="Voir les infos client">${esc(cleanClientLabel(g.client)) || "—"}</span></span>
-          <span class="ac-row-ref">${esc(g.ref) || "—"} <span class="suv-rev-tag">rev${computeRevisionNumber(g.devisId)}</span>${quickTagHtml(g.devisId)}</span>
-        </div>
-        ${devisStageChipHtml(g.devisId)}
-        <div class="ac-row-amt">${fmt(amount)}</div>
-        <button class="ac-row-gmail" onclick="${stop}gmailRelanceForDevis('${g.devisId}','${gmailKind}')" title="${gmailTitle}">${ICONS.send}</button>
-        <span class="ac-row-chev">${ICO_SZ('chevronRight', 16)}</span>
-      </div>
-      ${panel}
-    </div>`;
+    return devisRowHtml(g, {
+      late,
+      amount: showRestant ? g.restant : g.total,
+      gmailKind: showRestant ? "paiement" : "devis",
+      expanded: isExpanded,
+      onclick: `accueilOpenDevis('${g.devisId}')`,
+      panelHtml: isExpanded ? `<div class="ac-row-panel" onclick="${stop}">${suiviExpandedPanelHtml(g)}</div>` : "",
+    });
   };
 
   // KPI + CTA remontés dans l'en-tête de page (charte V2) : le tableau de bord
