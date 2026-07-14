@@ -66,6 +66,19 @@
   .sb .tab-icon{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;flex-shrink:0;color:inherit}
   .sb .tab-icon svg{width:18px;height:18px}
   .sb button.tab.active .tab-icon{color:var(--primary)}
+  /* === Sidebar — groupes dépliables (NAV) === */
+  .sb-group{border-bottom:1px solid var(--border-soft)}
+  .sb-group:last-of-type{border-bottom:0}
+  .sb-group-head{display:flex;align-items:center;gap:11px;width:100%;background:none;border:0;color:#cfe3ff;padding:11px 16px;text-align:left;cursor:pointer;font:inherit;font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase}
+  .sb-group-head:hover{background:var(--surface)}
+  .sb-group-label{flex:1;min-width:0}
+  .sb-group-chevron{display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--text-muted);transition:transform .15s ease}
+  .sb-group.open .sb-group-chevron{transform:rotate(90deg)}
+  /* Groupe replié contenant la page courante : on garde un repère visuel. */
+  .sb-group.has-active:not(.open) .sb-group-head{color:#fff}
+  .sb-group.has-active:not(.open) .sb-group-chevron{color:var(--primary)}
+  /* Sous-onglets : légèrement indentés sous l'en-tête de groupe. */
+  .sb-group-body button.tab{padding-left:28px;font-size:13px}
   /* Pastille « brouillon » à côté du label Mission quand un brouillon est en cours */
   .sb .brouillon-tag{font-size:9px;color:var(--warning);background:rgba(245,158,11,.10);padding:2px 7px;border-radius:999px;margin-left:6px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;border:1px solid rgba(245,158,11,.4);text-shadow:0 0 4px rgba(245,158,11,.5);box-shadow:0 0 8px rgba(245,158,11,.25);animation:brouillon-pulse 2s ease-in-out infinite}
   @keyframes brouillon-pulse{0%,100%{opacity:.7;box-shadow:0 0 6px rgba(245,158,11,.2)}50%{opacity:1;box-shadow:0 0 12px rgba(245,158,11,.45)}}
@@ -3113,6 +3126,8 @@ const DEFAULT_S = {
   bugs: { items: [] },
   prefs: {
     relanceJours: 7,
+    // État plié/déplié des groupes de la sidebar (clés = NAV[].id).
+    navGroups: { "nav-mission": true, "nav-compta": true },
     gmailTemplates: {
       devis: {
         subject: "Relance — Devis {ref}",
@@ -3698,23 +3713,41 @@ window.uiChoice = function(message, opts = {}) {
   });
 };
 
-const TABS = [
-  ["accueil", "Accueil",                "dashboard"],
-  ["mission", "Mission",                "camera"],
-  ["tarifs",  "Catalogue",              "fileText"],
-  ["compta",  "Comptabilité",           "barChart"],
-  ["suivi",   "Historique",             "kanban"],
-  ["achats",  "Achats / Abonnements",   "wallet"],
-  ["clients", "Clients",                "users"]
-  // Profil, Templates, Paramètres, Signaler un bug → menu user (sidebar bottom).
-  // /!\ Les clés (accueil/tarifs/suivi/...) restent inchangées pour compat
-  // setTab('tarifs') / setTab('suivi') existants. Seuls les LABELS changent.
+// ▼ NAV — sidebar en 2 groupes dépliables. SOURCE UNIQUE de la navigation :
+// les labels d'ici alimentent la sidebar ET le h1 de chaque page (pageTitle).
+// /!\ Les CLÉS d'onglet (accueil/tarifs/suivi/compta/...) restent inchangées :
+// tous les setTab('tarifs') / setTab('suivi') du code continuent de marcher.
+// Seuls les LABELS et le regroupement changent.
+// `id` de groupe préfixé nav- pour ne PAS collisionner avec les clés d'onglet
+// (le groupe « Mission » contient un onglet dont la clé est aussi "mission").
+const NAV = [
+  { id: "nav-mission", label: "Mission", icon: "camera", items: [
+    ["accueil", "Suivi devis",          "dashboard"],
+    ["mission", "Nouveau devis",        "camera"],
+    ["tarifs",  "Catalogue",            "fileText"],
+    ["clients", "Clients",              "users"],
+    ["profil",  "Mon Profil",           "user"]
+  ]},
+  { id: "nav-compta", label: "Comptabilité", icon: "barChart", items: [
+    ["compta",  "Bilan comptable",      "barChart"],
+    ["suivi",   "Historique",           "kanban"],
+    ["achats",  "Achats / Abonnements", "wallet"]
+  ]}
 ];
+
+// Liste plate dérivée — conserve l'API historique (pageTitle, lookups).
+const TABS = NAV.flatMap(g => g.items);
+
+// Groupe portant un onglet donné (pour déplier automatiquement à la navigation).
+function navGroupOfTab(tabKey) {
+  const g = NAV.find(gr => gr.items.some(([k]) => k === tabKey));
+  return g ? g.id : "";
+}
 
 // Labels des onglets accessibles via le menu utilisateur (pas dans la sidebar
 // principale). Centralisés ici pour que pageTitle() couvre TOUTE l'app.
+// Profil n'y est plus : il vit dans le groupe Mission de la sidebar.
 const TABS_AUX_LABELS = {
-  profil:     "Profil",
   parametres: "Paramètres",
   templates:  "Templates",
   bugs:       "Notes",
@@ -6535,19 +6568,14 @@ function bugFilteredItems() {
 // bugs existants (it.tab persisté). Seuls les LABELS sont mis à jour pour refléter
 // les nouveaux noms du menu sidebar (Catalogue, Historique, Achats / Abonnements,
 // Templates, Paramètres). Achats est une nouvelle catégorie sans clé legacy.
+// Options « onglet concerné » du formulaire de bug. DÉRIVÉES de la navigation
+// (NAV → TABS) + les onglets du menu utilisateur : renommer un label dans NAV
+// le propage ici aussi. Avant, cette liste dupliquait les libellés à la main et
+// dérivait en silence dès qu'un onglet était renommé.
 const BUG_TAB_OPTIONS = [
-  ["accueil",    "Accueil"],
-  ["mission",    "Mission"],
-  ["tarifs",     "Catalogue"],
-  ["compta",     "Comptabilité"],
-  ["suivi",      "Historique"],
-  ["achats",     "Achats / Abonnements"],
-  ["clients",    "Clients"],
-  ["profil",     "Profil"],
-  ["templates",  "Templates"],
-  ["parametres", "Paramètres"],
-  ["bugs",       "Signaler un bug"],
-  ["autres",     "Autres"]
+  ...TABS.map(([k, l]) => [k, l]),
+  ...Object.entries(TABS_AUX_LABELS),
+  ["autres", "Autres"]
 ];
 
 function bugTabLabel(k) {
@@ -8938,13 +8966,29 @@ function render() {
     <aside class="sb">
       <h1>Menu</h1>
       ${(() => {
+        // Sidebar en 2 groupes dépliables (cf. NAV). « Nouveau devis » est
+        // désormais TOUJOURS visible (il n'apparaissait avant que s'il portait
+        // un brouillon) — c'est le point d'entrée d'un nouveau devis. La
+        // pastille « brouillon » reste, elle, conditionnelle.
         const hasDraft = typeof missionHasDraft === "function" && missionHasDraft();
-        const visible = TABS.filter(([k]) => k !== "mission" || hasDraft || tab === "mission");
-        return visible.map(([k,l,ico]) => {
-          const labelHtml = (k === "mission" && hasDraft)
-            ? `${esc(l)} <span class="brouillon-tag">brouillon</span>`
-            : esc(l);
-          return `<button class="tab ${tab===k?"active":""}" onclick="setTab('${k}')"><span class="tab-icon">${ICONS[ico]||""}</span>${labelHtml}</button>`;
+        const activeGroup = navGroupOfTab(tab);
+        return NAV.map(g => {
+          const open = navGroupIsOpen(g.id);
+          const rows = g.items.map(([k, l, ico]) => {
+            const labelHtml = (k === "mission" && hasDraft)
+              ? `${esc(l)} <span class="brouillon-tag">brouillon</span>`
+              : esc(l);
+            const onclick = k === "mission" ? "missionOpen()" : `setTab('${k}')`;
+            return `<button class="tab ${tab === k ? "active" : ""}" onclick="${onclick}"><span class="tab-icon">${ICONS[ico] || ""}</span>${labelHtml}</button>`;
+          }).join("");
+          return `<div class="sb-group ${open ? "open" : ""}${g.id === activeGroup ? " has-active" : ""}">
+            <button type="button" class="sb-group-head" onclick="navGroupToggle('${g.id}')" aria-expanded="${open}">
+              <span class="tab-icon">${ICONS[g.icon] || ""}</span>
+              <span class="sb-group-label">${esc(g.label)}</span>
+              <span class="sb-group-chevron" aria-hidden="true">${ICO_SZ('chevronRight', 14)}</span>
+            </button>
+            <div class="sb-group-body" ${open ? "" : "hidden"}>${rows}</div>
+          </div>`;
         }).join("");
       })()}
       ${(() => {
@@ -8961,7 +9005,6 @@ function render() {
               <div class="sb-user-menu-role">${roleLabel}</div>
             </div>
             <button type="button" role="menuitem" onclick="userMenuClose();setTab('bugs')">${ICONS.bug}<span>Signaler un bug</span></button>
-            <button type="button" role="menuitem" onclick="userMenuClose();setTab('profil')">${ICONS.user}<span>Profil</span></button>
             <button type="button" role="menuitem" onclick="userMenuClose();setTab('templates')">${ICONS.mail}<span>Templates</span></button>
             <button type="button" role="menuitem" onclick="userMenuClose();setTab('parametres')">${ICONS.settings}<span>Paramètres</span></button>
             <button type="button" role="menuitem" onclick="userMenuClose();setTab('majlog')">${ICONS.lightbulb}<span>Mises à jour${majLogHasUnread() ? ` <span class="sb-user-menu-dot" title="Nouvelles mises à jour"></span>` : ""}</span></button>
@@ -9518,6 +9561,21 @@ function rBinModal() {
 // l'utilisateur. Plus récent en premier. id = clé stable, sert au "lu/non-lu".
 // Format des items : { h: titre court, b: explication 1-3 phrases }.
 const APP_CHANGELOG = [
+  {
+    id: "2026-07-menu-groupes",
+    date: "2026-07-14",
+    title: "Menu réorganisé en deux groupes",
+    items: [
+      {
+        h: "Mission et Comptabilité, dépliables",
+        b: "La barre latérale se replie en deux groupes. Mission : Suivi devis (l'ancien Accueil), Nouveau devis, Catalogue, Clients et Mon Profil (qui quitte le menu du compte). Comptabilité : Bilan comptable, Historique et Achats / Abonnements. L'état plié ou déplié est mémorisé et te suit d'un appareil à l'autre."
+      },
+      {
+        h: "« Nouveau devis » toujours accessible",
+        b: "L'entrée n'apparaissait avant que si un brouillon existait. Elle est maintenant permanente : elle ouvre ton brouillon en cours s'il y en a un, sinon un formulaire vierge. Elle ne peut ni écraser un brouillon, ni te ramener par erreur sur ton dernier devis archivé. La prestation rapide reste accessible depuis ce même onglet."
+      }
+    ]
+  },
   {
     id: "2026-07-prestation-rapide",
     date: "2026-07-14",
@@ -17520,10 +17578,48 @@ function rBG() {
   return h;
 }
 
+// ▼ navGroupIsOpen / navGroupToggle / navGroupOpen — état plié/déplié des
+// groupes de la sidebar, persisté dans S.prefs.navGroups (donc synchronisé
+// entre appareils). Déplié par défaut. Un groupe replié qui contient la page
+// courante garde son en-tête surligné (.has-active) — on sait toujours où on est.
+function navGroupIsOpen(groupId) {
+  const st = (S.prefs && S.prefs.navGroups) || {};
+  return st[groupId] !== false;
+}
+function navGroupSet(groupId, open) {
+  if (!S.prefs) S.prefs = {};
+  if (!S.prefs.navGroups) S.prefs.navGroups = {};
+  if (S.prefs.navGroups[groupId] === open) return false;
+  S.prefs.navGroups[groupId] = open;
+  return true;
+}
+window.navGroupToggle = function(groupId) {
+  navGroupSet(groupId, !navGroupIsOpen(groupId));
+  save();
+  render();
+};
+
+// ▼ missionOpen — clic sur « Nouveau devis » dans la sidebar. JAMAIS destructeur :
+//   - brouillon en cours OU édition/révision d'un devis archivé → on l'ouvre tel quel
+//   - sinon → table rase (sans quoi on retomberait sur le DERNIER DEVIS ARCHIVÉ,
+//     encore présent dans S.mission, rouvert en mode « mise à jour »).
+window.missionOpen = async function() {
+  const m = S.mission || {};
+  const inEditFlow = !!(m.editDevisId || m.revisesDevisId || m.majTrameDevisId);
+  const hasDraft = typeof missionHasDraft === "function" && missionHasDraft();
+  if (hasDraft || inEditFlow) { setTab("mission"); return; }
+  if (await missionNew(undefined, "devis")) setTab("mission");
+};
+
 window.setTab = k => {
   // Tracker le dernier onglet avant Notes/bugs pour pré-remplir
   // automatiquement le formulaire « Onglet concerné ».
   if (k === "bugs" && tab && tab !== "bugs") lastTabBeforeBugs = tab;
+  // Navigation (souvent programmatique : missionTerminer → Historique) vers un
+  // onglet dont le groupe est replié → on déplie, sinon la page s'affiche mais
+  // son entrée de menu reste invisible.
+  const g = navGroupOfTab(k);
+  if (g && navGroupSet(g, true)) save();
   tab = k;
   render();
 };
