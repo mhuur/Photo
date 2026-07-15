@@ -7930,8 +7930,8 @@ window.hideRemiseInfo = function() {
 // handlers HTML propres (pas de HTML en attribut onmouseenter).
 const INFO_HTML = {
   remiseNoire: `
-    <div class="tt-title" style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:8px">Remise non déclarée — au black + Net maximisé</div>
-    <p style="margin:0 0 8px;font-size:12px;line-height:1.5">En mode <strong>au black + Net maximisé</strong>, tu factures au tarif catalogue normal et tu gardes la part qui aurait été versée à l'URSSAF (≈ 22 %). Cette remise te permet d'en <strong>restituer une partie au client</strong> à titre commercial, sans tomber dans le mode <em>Prix compétitif</em> qui rend l'intégralité de l'économie URSSAF.</p>
+    <div class="tt-title" style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:8px">Remise non déclarée — Net maximisé</div>
+    <p style="margin:0 0 8px;font-size:12px;line-height:1.5">En mode <strong>non déclaré + Net maximisé</strong>, tu factures au tarif catalogue normal et tu gardes la part qui aurait été versée à l'URSSAF (≈ 22 %). Cette remise te permet d'en <strong>restituer une partie au client</strong> à titre commercial, sans tomber dans le mode <em>Prix compétitif</em> qui rend l'intégralité de l'économie URSSAF.</p>
     <p style="margin:0 0 4px;font-size:12px;line-height:1.5;font-weight:600">Exemple à 22 % d'URSSAF</p>
     <ul style="margin:0 0 8px;padding-left:18px;font-size:12px;line-height:1.6">
       <li><strong>Net max + 0 %</strong> : tu encaisses 100 % du tarif (gain max).</li>
@@ -9941,6 +9941,15 @@ function rBinModal() {
 // Format des items : { h: titre court, b: explication 1-3 phrases }.
 const APP_CHANGELOG = [
   {
+    id: "2026-07-vocab-neutre",
+    date: "2026-07-15",
+    title: "Vocabulaire plus neutre",
+    items: [
+      { h: "Fini « au noir » / « au black »",
+        b: "Ces mentions sont remplacées partout dans l'app par « Prestation rapide » là où l'argent vient d'une prestation rapide (récap Mission, graphe et bilan Compta, fiche client) et par « Non déclaré » dans le Catalogue. Même sens, formulation plus sobre." }
+    ]
+  },
+  {
     id: "2026-07-quick-no-confirm",
     date: "2026-07-15",
     title: "Prestation rapide — bascule directe",
@@ -11776,7 +11785,7 @@ function buildRemiseTooltipHtml(ri) {
       <tr><td>Total HT (avant remise)</td><td>${fmt(ri.totalSansRemise)}</td></tr>
       ${ri.declared
         ? `<tr class="muted"><td>− URSSAF (${getUrssafPct(S.mission).toString().replace(".",",")} %)</td><td>−${fmt(ri.urssafActuelle)}</td></tr>`
-        : `<tr class="muted"><td>− URSSAF</td><td>au black</td></tr>`}
+        : `<tr class="muted"><td>− URSSAF</td><td>non déclaré</td></tr>`}
       <tr><td>= Net encaissé</td><td>${fmt(ri.netActuel)}</td></tr>
     </table>
     <table class="remise-tt-table">
@@ -12302,7 +12311,7 @@ function rMissionModeCards() {
   return `<div class="ms-mode">
     ${card(!quick, "devis", "fileText", "Devis", "Document complet · déclaré · échéancier & CGV",
       "Devis complet : document imprimable, CGV, acomptes, échéancier et factures.")}
-    ${card(quick, "quick", "zap", "Prestation rapide", "Aucun document · au noir · encaissement direct",
+    ${card(quick, "quick", "zap", "Prestation rapide", "Aucun document · non déclaré · encaissement direct",
       "Prestation rapide : aucun document, paiement unique, ni acompte ni CGV. Recette NON déclarée (CA = 0, pas d'URSSAF).")}
   </div>`;
 }
@@ -12353,11 +12362,11 @@ function rMissionAsideInner() {
   const totalLine = line(declared ? "Total HT" : "Total encaissé", fmt(t.total), "total");
   const netBlock = declared
     ? line(`URSSAF ${esc(String(urssafPct).replace(".", ","))} %`, "− " + fmt(urssafAmt), "muted") + line("Net photographe", fmt(net), "net")
-    : line("Net photographe (au noir)", fmt(t.total), "net");
+    : line("Net photographe (prestation rapide)", fmt(t.total), "net");
 
   // Statut : réutilise validateDevis (source unique) — pas de règle parallèle.
   const status = quick
-    ? `<div class="ms-status quick">Au noir · non déclaré</div>`
+    ? `<div class="ms-status quick">Non déclaré</div>`
     : v.ok
       ? `<div class="ms-status ok">Prêt à émettre</div>`
       : `<div class="ms-status ko">${esc(v.errors[0] || "Incomplet")}</div>`;
@@ -12612,7 +12621,7 @@ function rDevisSectionPrestations() {
       // immutable). On l'affiche alors en lecture seule, sans jamais reproposer
       // la bascule.
       (!quick && !declare)
-        ? `<div class="black-warning" role="alert"><strong>${ICO_SZ('alertTriangle', 14)} Devis au black (non déclaré)</strong> — statut d'origine conservé : CA = 0, pas d'URSSAF, matériels et déplacements au prix brut. Les nouveaux devis sont toujours déclarés.</div>`
+        ? `<div class="black-warning" role="alert"><strong>${ICO_SZ('alertTriangle', 14)} Devis non déclaré</strong> — statut d'origine conservé : CA = 0, pas d'URSSAF, matériels et déplacements au prix brut. Les nouveaux devis sont toujours déclarés.</div>`
         : ""
     }
 
@@ -12970,7 +12979,7 @@ function rDevisBanners() {
   // Prestation rapide : rappel permanent du régime — c'est la seule trace
   // visible de l'échéancier forcé QUICK_ECHEANCES pour l'utilisateur.
   const bannerQuick = isMissionQuick()
-    ? `<div class="devis-banner quick"><span class="devis-banner-ico">${ICO_SZ('alertTriangle', 16)}</span><div><strong>Prestation rapide — au noir.</strong> Aucun document émis, pas d'acompte ni de CGV : échéance unique de 100 % encaissée à réception.</div></div>`
+    ? `<div class="devis-banner quick"><span class="devis-banner-ico">${ICO_SZ('alertTriangle', 16)}</span><div><strong>Prestation rapide — non déclarée.</strong> Aucun document émis, pas d'acompte ni de CGV : échéance unique de 100 % encaissée à réception.</div></div>`
     : "";
   const bannerDirty = (inSuivi && dirty)
     ? `<div class="devis-banner info"><span class="devis-banner-ico">${ICO_SZ('circleFilled', 12)}</span><div>Modifications non enregistrées dans Suivi.</div></div>`
@@ -15403,7 +15412,7 @@ window.viewFactureOpen = async function(devisId, echId) {
     uiAlert("Cette prestation n'a pas été déclarée (CA = 0).\n\n" +
           "Émettre une facture créerait une incohérence fiscale : la facture est un document qui constate du CA déclaré.\n\n" +
           "Si tu veux la déclarer maintenant, ajuste le champ « CA » des lignes Suivi correspondantes avant de réessayer.",
-          { title: "Devis au noir", kind: "warn" });
+          { title: "Devis non déclaré", kind: "warn" });
     return;
   }
   // Reconstitution paresseuse pour les devis legacy (snapshot manquant).
@@ -16463,7 +16472,7 @@ function rCL() {
           ${clientsSelectMode ? `<th class="cli-select-head" style="width:36px"><input type="checkbox" class="cli-select-all" onclick="clientsSelectAll(this.checked)" title="Tout sélectionner / désélectionner (lignes visibles)"></th>` : ""}
           <th class="${thCls('name')}" onclick="clientsSortBy('name')">Client ${sortInd('name')}</th>
           <th class="${thCls('city')}" style="width:190px" onclick="clientsSortBy('city')">Ville ${sortInd('city')}</th>
-          <th style="width:130px;text-align:right" title="Total réellement encaissé sur les devis de ce client (au noir compris — ce n'est donc pas le CA déclaré).">Encaissé</th>
+          <th style="width:130px;text-align:right" title="Total réellement encaissé sur les devis de ce client (prestations rapides comprises — ce n'est donc pas le CA déclaré).">Encaissé</th>
         </tr>
       </thead>
       <tbody>${rowsHtml}</tbody>
@@ -16813,7 +16822,7 @@ function comptaChartHtml() {
     const yCa   = BASELINE - hCa;                 // le déclaré part de la ligne de base
     const yNoir = yCa - hNoir;                    // le noir s'empile par-dessus
     const yTop  = m.noir > 0 ? yNoir : yCa;
-    const tip = `${m.mon} ${m.yr} — encaissé ${fmt(m.total)}${m.noir > 0 ? ` (déclaré ${fmt(m.ca)} · au noir ${fmt(m.noir)})` : ""}`;
+    const tip = `${m.mon} ${m.yr} — encaissé ${fmt(m.total)}${m.noir > 0 ? ` (déclaré ${fmt(m.ca)} · prestation rapide ${fmt(m.noir)})` : ""}`;
     return `
       ${hCa > 0 ? `<rect x="${x.toFixed(1)}" y="${yCa.toFixed(1)}" width="${BAR_W}" height="${hCa.toFixed(1)}"
         class="cp-chart-bar${m.isCurrent ? ' current' : ''}" rx="3"><title>${esc(tip)}</title></rect>` : ""}
@@ -16825,7 +16834,7 @@ function comptaChartHtml() {
   }).join("");
   const legend = hasNoir ? `<div class="cp-chart-legend">
       <span class="cp-legend-item"><span class="cp-legend-swatch decl"></span>Déclaré</span>
-      <span class="cp-legend-item"><span class="cp-legend-swatch noir"></span>Au noir</span>
+      <span class="cp-legend-item"><span class="cp-legend-swatch noir"></span>Prestation rapide</span>
     </div>` : "";
   return `
     <div class="cp-chart-wrap">
@@ -16833,7 +16842,7 @@ function comptaChartHtml() {
         <span class="cp-chart-title">Encaissé sur les 12 derniers mois</span>
         ${legend}
       </div>
-      <svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet" class="cp-chart-svg" role="img" aria-label="Encaissé mensuel, part déclarée et part au noir">
+      <svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet" class="cp-chart-svg" role="img" aria-label="Encaissé mensuel, part déclarée et part en prestation rapide">
         <line x1="0" y1="${BASELINE}" x2="${W}" y2="${BASELINE}" class="cp-chart-axis"/>
         ${bars}
       </svg>
@@ -17059,7 +17068,7 @@ function bilanRender() {
   const cellCA = r => {
     const noir = r2(num(r.paye) - num(r.ca));
     const tag = noir > 0.005
-      ? ` <span class="cp-noir-tag" title="Part encaissée mais NON déclarée : ${fmt(noir)}. Le CA ne compte que le déclaré (seuils micro-BNC / TVA).">· noir</span>`
+      ? ` <span class="cp-noir-tag" title="Part encaissée en prestation rapide (non déclarée) : ${fmt(noir)}. Le CA ne compte que le déclaré (seuils micro-BNC / TVA).">· rapide</span>`
       : "";
     if (num(r.ca) === 0) return `<td class="cp-zero">${dash}${tag}</td>`;
     return `<td class="cp-num">${fmt(r.ca)}${tag}</td>`;
@@ -17200,7 +17209,7 @@ function rCP() {
         </tr>
         <tr>
           <th class="cp-grp-sep" style="text-align:right">Heures</th>
-          <th style="text-align:right" title="Total réellement encaissé (déclaré + au noir)">Payé</th>
+          <th style="text-align:right" title="Total réellement encaissé (déclaré + prestation rapide)">Payé</th>
           <th style="text-align:right" title="CA déclaré uniquement (utilisé pour les seuils micro-BNC / TVA)">CA</th>
           <th class="cp-grp-sep" style="text-align:right" title="Part qui rentre sur le compte perso">Salaire</th>
           <th style="text-align:right">URSSAF</th>
@@ -17315,13 +17324,13 @@ function rCatalogue() {
         </tr>`;
       }).join("");
   // Header dynamique colonne 2 : « Tarif final déclaré » ou « Tarif final au black »
-  const tarifFinalTitle = isDecl ? "Tarif final déclaré" : "Tarif final au black";
+  const tarifFinalTitle = isDecl ? "Tarif final déclaré" : "Tarif final non déclaré";
   const tarifFinalSubtitle = isDecl
     ? "URSSAF incluse"
     : (remiseNoirePct > 0 ? `−${remiseNoirePct.toString().replace(".", ",")} %` : "remise 0 %");
   const hint = isDecl
     ? `<strong>Cible TTC − URSSAF − Taux matériel = Salaire net</strong>`
-    : `<strong>Tarif au black − Taux matériel = Salaire net</strong> · URSSAF non payée`;
+    : `<strong>Tarif non déclaré − Taux matériel = Salaire net</strong> · URSSAF non payée`;
   // Sous-toolbar Au black : input remise non déclarée (curseur 0 → URSSAF%)
   const blackSubToolbar = !isDecl ? `
     <div class="catalog-subtoolbar" style="max-width:1080px">
@@ -17342,7 +17351,7 @@ function rCatalogue() {
     <div class="catalog-toolbar" style="max-width:1080px">
       <div class="seg seg-neon">
         <button class="${isDecl?"on ok":""}" onclick="tarifViewMode('declare')">${ICO_SZ('check', 14)} Déclaré</button>
-        <button class="${!isDecl?"on warn":""}" onclick="tarifViewMode('noir')">${ICO_SZ('circleFilled', 12)} Au black</button>
+        <button class="${!isDecl?"on warn":""}" onclick="tarifViewMode('noir')">${ICO_SZ('circleFilled', 12)} Non déclaré</button>
       </div>
       <div class="catalog-add-group">
         <button type="button" class="mk-btn subtle" onclick="tarifAddGroup()" title="Ajouter un séparateur de groupe (ex : Photo, Vidéo, Mariage)">${ICO_SZ('plus', 14)} Groupe</button>
