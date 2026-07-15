@@ -336,6 +336,14 @@
   .field input,.field textarea,.field select{padding:var(--space-sm) var(--space-md);border:1px solid var(--border);border-radius:var(--radius-md);font:inherit;background:var(--field-bg);color:var(--text);transition:border-color .15s,box-shadow .15s,background .15s;font-variant-numeric:tabular-nums}
   .field input:hover:not(:disabled),.field textarea:hover:not(:disabled),.field select:hover:not(:disabled){border-color:rgba(69,193,253,.4)}
   .field input:focus,.field textarea:focus,.field select:focus{outline:none;border-color:var(--primary);background:rgba(69,193,253,.08);box-shadow:inset 0 0 0 1px rgba(69,193,253,.22)}
+  /* Date « À convenir » : surimpression sur un input date vide (webkit/Chromium).
+     Visible tant que vide ET non focus ; le sélecteur natif réapparaît au focus
+     ou une fois une date choisie (classe .filled togglée en JS). */
+  .date-tbd{position:relative;width:100%}
+  .date-tbd input{width:100%}
+  .date-tbd-ph{position:absolute;left:11px;top:50%;transform:translateY(-50%);pointer-events:none;color:var(--text-muted);font-size:13px}
+  .date-tbd.filled .date-tbd-ph,.date-tbd input:focus~.date-tbd-ph{display:none}
+  .date-tbd:not(.filled) input:not(:focus)::-webkit-datetime-edit{color:transparent}
   .field textarea{min-height:60px;resize:vertical}
   .btn{background:var(--azure-fill);color:#fff;border:0;padding:10px 16px;border-radius:6px;cursor:pointer;font:inherit;font-weight:500;transition:all .15s}
   .btn:hover{background:var(--azure-fill-hi);box-shadow:0 2px 8px rgba(69,193,253,.3)}
@@ -9916,8 +9924,8 @@ const APP_CHANGELOG = [
     date: "2026-07-15",
     title: "Date de prestation « à convenir »",
     items: [
-      { h: "Affichée par défaut sur le devis et la facture",
-        b: "Tant que la date de prestation n'est pas renseignée, le devis et la facture affichent « À convenir » au lieu de ne rien montrer. Dès que tu saisis la date, elle remplace la mention." }
+      { h: "Affichée par défaut dans le formulaire, sur le devis et la facture",
+        b: "Tant que la date de prestation n'est pas renseignée, le champ de saisie, le devis et la facture affichent « À convenir » au lieu de rester vides. Dès que tu choisis une date, elle remplace la mention." }
     ]
   },
   {
@@ -12514,7 +12522,12 @@ function rDevisSectionIdentification() {
         <input type="number" min="1" max="365" step="1" value="${esc(String(duree))}" oninput="upd('mission.dureeValidite', Math.max(1, parseInt(this.value)||30))">
       </div>
       <div class="field"><label title="Optionnel — date de réalisation / livraison de la prestation. Affichée sur la facture (art. 289-I CGI).">Date de prestation</label>
-        <input type="date" value="${esc(d.datePrestation || "")}" oninput="upd('mission.datePrestation', this.value)">
+        <div class="date-tbd${d.datePrestation ? " filled" : ""}">
+          <input type="date" value="${esc(d.datePrestation || "")}"
+            oninput="upd('mission.datePrestation', this.value); this.parentNode.classList.toggle('filled', !!this.value)"
+            onchange="this.parentNode.classList.toggle('filled', !!this.value)">
+          <span class="date-tbd-ph" aria-hidden="true">À convenir</span>
+        </div>
       </div>`}
     </div>
 
