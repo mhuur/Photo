@@ -238,6 +238,10 @@ Taux URSSAF micro-BNC unifié dans toute l'app (ex. "22" par défaut, "23.1" ave
 
 **Toast Undo immédiat** : `showUndoToast(label, restoreFn)` apparaît 5 s en bas-droite — réutilisable pour toute suppression locale réversible.
 
+### Bugs & suggestions (`S.bugs.items[]`) — type + statut ternaire
+
+Chaque item porte `type: "bug"|"suggestion"` et `statut: "ouvert"|"encours"|"resolu"` (refonte 2026-07, remplace le booléen `validated`). **Lecture UNIQUE via `bugStatut(it)` / `bugType(it)` / `bugIsDone(it)`** — jamais `it.statut`/`it.validated` en direct : les helpers ont un fallback legacy (`validated:true → resolu`, absence de type → `bug`) pour tout item cloud pas encore migré. Transitions : `bugCycleStatut` (pastille cliquable, ouvert→encours→resolu→ouvert), `bugSetStatut`, `bugToggleType`. Migration `migrateBugSchema()` (idempotente, retire `validated`) câblée aux **3 points** habituels (boot + `loadFromCloud` + `subscribeWorkspaceData`, avec `saveToCloud` derrière — cf. piège « migration locale doit saveToCloud »). ⚠ `migrateBugSchema` n'utilise PAS les const du module (`BUG_STATUT_KEYS`) : appelée au boot AVANT leur déclaration (TDZ), elle inline la liste des statuts valides. Rendu en grille 2 col (`.bug-grid`) ; carte dépliée → `grid-column:1/-1`.
+
 ### Chaîne de révisions (`chainId / revNum / isActive`)
 
 Un devis = une chaîne de révisions partageant un `chainId` (= devisId du root). Chaque rev porte un `revNum` figé à la création (1-indexé en stockage, affiché 0-indexé via `computeRevisionNumber`). **Une seule rev `isActive=true` par chaîne** — c'est elle qui est exposée dans Suivi/Accueil (filtre `_isActiveEntry`). Les autres restent en base (snapshots immutables) mais cachées des listes principales.

@@ -24,7 +24,7 @@
 | 8 | Profil (`rPF`) | ✅ | ✅ 2026-07-15 | ☐ |
 | 9 | Historique (`rSV`) | ✅ | ✅ 2026-07-15 | ☐ |
 | 10 | Achats (`rAchats`) | ✅ | ✅ 2026-07-15 | ☐ |
-| 11 | Bugs & suggestions (`rBG`) | ✅ | ☐ | ☐ |
+| 11 | Bugs & suggestions (`rBG`) | ✅ | ✅ 2026-07-15 | ☐ |
 | 12 | Mon Compte (`rCompte`) | ✅ | ☐ | ☐ |
 | 13 | Sidebar + en-têtes + audit CSS global | ✅ (2ᵉ passe) | ✅ 2026-07-14 (reste : cosmétiques « à trancher » + Q13 libellés NAV) | ☐ |
 
@@ -366,11 +366,22 @@ cocher ici → push.
 
 ## 11. BUGS & SUGGESTIONS (`rBG`) — selon Q7
 
-Reskin minimal (sans schéma) : panneaux `--surface-glass` (1287, 1211, 1269) · pills motif V2
-(1351, 1368) · couleurs hors palette remappées (1254-1258) · dates mono non-italique (1373) ·
-labels de champs + radius 4px (18477-18486) · en-têtes de section mono. Refonte complète (grille
-360/1fr + type + statut ternaire) = décision produit Q7. ⚠ Le quick-add actuel (Entrée, Alt+N,
-#numéro auto) est plus riche que la maquette — ne pas le perdre.
+> **✅ SESSION FAITE (2026-07-15) — REFONTE COMPLÈTE** (Q7). Vérifiée par **smoke test vm
+> (22 assertions, a attrapé un `nOpen is not defined`)** + 2 captures (grille + carte dépliée).
+> **Schéma** : `S.bugs.items[]` gagne `type` (bug|suggestion) et `statut` ternaire
+> (ouvert|encours|resolu) ; **`validated` migré (true→resolu) puis SUPPRIMÉ** (choix user).
+> `migrateBugSchema()` idempotente câblée boot + loadFromCloud + subscribe (saveToCloud derrière).
+> Lecture unique via `bugStatut`/`bugType`/`bugIsDone` (fallback legacy). Transitions :
+> `bugCycleStatut` (pastille cliquable), `bugSetStatut`, `bugToggleType`. Quick-add **conservé**
+> (Alt+N, Entrée, #num) + toggle Bug/Suggestion (`bugDraftSetType`). Filtres : `showValidated` →
+> `showResolved`. **UI** : grille 2 col (`.bug-grid`, carte dépliée `grid-column:1/-1`), pastille de
+> statut (motif V2 outline : ouvert neutre / en cours azure / résolu jade), badge type (fond teinté
+> ember/jade), sous-ligne méta, panneaux verre, dates mono. Détail dans CLAUDE.md § Bugs.
+
+- [x] Schéma type + statut ternaire, migration `validated`→statut (retiré).
+- [x] Grille 2 colonnes ; carte dépliée pleine largeur.
+- [x] Pastille statut (clic = avance) + badge type (clic = bascule) au motif V2.
+- [x] Panneaux verre, dates mono, quick-add riche conservé + toggle Bug/Suggestion.
 
 ## 12. MON COMPTE (`rCompte`)
 
