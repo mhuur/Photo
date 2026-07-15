@@ -5127,21 +5127,6 @@ async function missionSetMode(mode) {
     return;
   }
   if (target === "quick") {
-    const cessions   = (m.lignes || []).filter(l => l.type === "cession");
-    const deboursLig = (m.lignes || []).filter(l => l.type === "materiel" && l.devis === "debours");
-    const deboursDep = !!(m.deplacement && m.deplacement.devis === "debours");
-    const multiEch   = (m.echeances || []).filter(e => num(e.pct) > 0).length > 1;
-    const impacts = [];
-    if (cessions.length) impacts.push(`${cessions.length} cession${cessions.length > 1 ? "s" : ""} de droits supprimée${cessions.length > 1 ? "s" : ""}`);
-    if (deboursLig.length || deboursDep) impacts.push("les lignes en débours repassent dans le total à encaisser");
-    if (multiEch) impacts.push("l'échéancier est remplacé par un paiement unique");
-    impacts.push("prestation NON DÉCLARÉE (CA = 0, pas d'URSSAF)");
-    impacts.push("plus aucune majoration : prix catalogue brut, moins la remise (le total baisse)");
-    if (!await uiConfirm(
-      "Une prestation rapide ne produit aucun document (ni devis, ni facture), n'a ni acompte ni cession de droits, et n'est pas déclarée.\n\n"
-      + "Conséquences sur le brouillon en cours :\n" + impacts.map(s => "• " + s).join("\n"),
-      { title: "Passer en prestation rapide", confirmLabel: "Convertir", kind: "warn" }
-    )) return;
     m.lignes = (m.lignes || []).filter(l => l.type !== "cession");
     m.lignes.forEach(l => {
       if (l.type !== "materiel") return;
@@ -9955,6 +9940,15 @@ function rBinModal() {
 // l'utilisateur. Plus récent en premier. id = clé stable, sert au "lu/non-lu".
 // Format des items : { h: titre court, b: explication 1-3 phrases }.
 const APP_CHANGELOG = [
+  {
+    id: "2026-07-quick-no-confirm",
+    date: "2026-07-15",
+    title: "Prestation rapide — bascule directe",
+    items: [
+      { h: "Plus de pop-up de confirmation",
+        b: "Cliquer « Prestation rapide » dans Mission bascule le brouillon immédiatement, sans fenêtre de confirmation. La conversion (cessions retirées, débours réintégrés, paiement unique) reste identique." }
+    ]
+  },
   {
     id: "2026-07-compte-v2",
     date: "2026-07-15",
