@@ -12271,9 +12271,9 @@ function rMS() {
       titleHtml: quick ? ` <span class="mode-pill">Prestation rapide</span>` : "",
       actions: refMeta ? `<span class="v2-meta">${esc(refMeta)}</span>` : ""
     })}
-    ${rMissionModeCards()}
     <div class="ms-grid">
       <div class="ms-form">
+        ${rMissionModeCards()}
         <div class="devis-banners" id="devisBanners">${rDevisBanners()}</div>
         ${rDevisAccordion()}
       </div>
