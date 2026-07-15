@@ -17,7 +17,7 @@
 | 1 | Arbitrages transverses (questions ci-dessous) | ✅ | ☐ décisions | ☐ |
 | 2 | Socle transverse (néon, couleurs hors palette, .btn→.mk-btn, typo labels) | ✅ | ✅ TERMINÉ 2026-07-14/15 (Q5 halos, Q4 labels, Q11 ⋮, pills, rayons, purge Q14, toggles Q2 — reste : typo inter-onglets §14 à lisser par onglet) | ☐ |
 | 3 | Mission (`rMS`) | ✅ | ✅ 2026-07-15 | ☐ |
-| 4 | Accueil / Suivi devis (`rAC`) | ✅ | ☐ | ☐ |
+| 4 | Accueil / Suivi devis (`rAC`) | ✅ | ✅ 2026-07-15 | ☐ |
 | 5 | Catalogue (`rCatalogue`) | ✅ | ☐ | ☐ |
 | 6 | Bilan comptable (`rCP`) | ✅ | ☐ | ☐ |
 | 7 | Clients (`rCL`) | ✅ | ☐ | ☐ |
@@ -221,19 +221,31 @@ cocher ici → push.
 
 ## 4. ACCUEIL (`rAC`)
 
-- [ ] Titres de section colorés : « À relancer » `--warning`, « Annulés/refusés » `--text-dim`
+> **✅ SESSION FAITE (2026-07-15)** — vérifiée par 3 captures headless (Accueil listes, Accueil
+> volet déplié, Historique). Titres de section colorés (warn/dim) + hint à droite + compteur
+> `(N)` · pastille de ligne colorée par `devisStageLabel().kind` (dot-info/warn/done/refused,
+> late garde l'override ember) · **conteneur unique** `.ac-list` (carte glass + séparateurs
+> `.ac-row-wrap`, lignes plates) — **profite aussi à l'Historique** (year-seps en sous-en-têtes
+> internes) · volet aplati (`--surface-sunken`, `border-top`, plus de shadow/radius élevé) +
+> `.ac-row-panel .suv-expanded-panel{padding:0}` · chip facture mono 10px sunken · rev tag
+> discret `· revN` sur les lignes (badge jade conservé en Historique des versions + corbeille) ·
+> chevron `chevronDown` → rotate 180° · `st` calculé une fois dans `devisRowHtml` (dot + chip).
+> **Non repris (cosmétique assumé)** : pill « à encaisser » reste `--ember-300` (les deux teintes
+> sont admises par la palette).
+
+- [x] Titres de section colorés : « À relancer » `--warning`, « Annulés/refusés » `--text-dim`
   (814 + classes dans rAC 17696-17720).
-- [ ] Hint de section aligné à droite de la ligne de titre (11px `#4A4757`), pas en dessous.
-- [ ] Pastille de ligne colorée par état : dériver du `kind` de `devisStageLabel` (834-835 ;
+- [x] Hint de section aligné à droite de la ligne de titre (11px `#4A4757`), pas en dessous.
+- [x] Pastille de ligne colorée par état : dériver du `kind` de `devisStageLabel` (834-835 ;
   paiement azure, refusé `#F08C4B`, envoyé `#4A4757`, relance ember).
-- [ ] Padding cumulé du volet : `.ac-row-panel .suv-expanded-panel{padding:0}` (826 + 454) —
+- [x] Padding cumulé du volet : `.ac-row-panel .suv-expanded-panel{padding:0}` (826 + 454) —
   corrige Accueil ET Historique.
-- [ ] Chip facture en mono 10px `--surface-sunken` bordure `--border-soft` padding 2px 7px (663-665).
-- [ ] Tag rev discret sur les lignes : « · revN » mono `--text-dim` au lieu du badge jade (466,
+- [x] Chip facture en mono 10px `--surface-sunken` bordure `--border-soft` padding 2px 7px (663-665).
+- [x] Tag rev discret sur les lignes : « · revN » mono `--text-dim` au lieu du badge jade (466,
   14711) — le badge jade reste OK dans Historique des versions. (Ou garder partout — trancher.)
-- [ ] Volet « carte élevée » (shadow + radius 12, 821-826) vs sous-panneau translucide maquette —
+- [x] Volet « carte élevée » (shadow + radius 12, 821-826) vs sous-panneau translucide maquette —
   choix de phase 2, confirmer ou passer en `--surface-sunken` sans shadow.
-- [ ] Conteneur unique vs cartes séparées (816, 832) — selon Q6.
+- [x] Conteneur unique vs cartes séparées (816, 832) — selon Q6.
 - [ ] Cosmétique : radius CTA `--radius-sm` (515) · grille/gap ligne (832) · chevron bas→180°
   (845-846, 14716) · compteur avec parenthèses (17695) · pill « à encaisser » `#F5B84C` vs
   `#F5943C` (851) · micro-écarts pastilles timeline (559-563).
