@@ -6029,6 +6029,7 @@ function rDevisPreview() {
         <div class="dp-meta-block dp-meta-box">
           <div class="dp-meta-ref">${esc(formatRef(d.ref, "devis"))} <span class="dp-rev-tag">rev${currentRevForPreview()}</span></div>
           <div class="dp-meta-row"><span class="lbl">Émission</span><strong>${dateFR(d.dateEmission) || "—"}</strong></div>
+          <div class="dp-meta-row"><span class="lbl">Prestation</span><strong>${d.datePrestation ? esc(dateFR(d.datePrestation)) : "À convenir"}</strong></div>
           ${(() => {
             // La date concrète est calculée à partir de la durée saisie. Si on n'a pas (encore)
             // de date d'émission, fallback sur la mention "valable N jours".
@@ -9911,6 +9912,15 @@ function rBinModal() {
 // Format des items : { h: titre court, b: explication 1-3 phrases }.
 const APP_CHANGELOG = [
   {
+    id: "2026-07-date-presta-aconvenir",
+    date: "2026-07-15",
+    title: "Date de prestation « à convenir »",
+    items: [
+      { h: "Affichée par défaut sur le devis et la facture",
+        b: "Tant que la date de prestation n'est pas renseignée, le devis et la facture affichent « À convenir » au lieu de ne rien montrer. Dès que tu saisis la date, elle remplace la mention." }
+    ]
+  },
+  {
     id: "2026-07-toggles-uniformes",
     date: "2026-07-15",
     title: "Boutons bascule uniformisés",
@@ -11394,7 +11404,7 @@ function rFactureMetaHtml(facture, dv, devisId, datePrestation) {
   return `<div class="dp-facture-meta">
     <div class="dp-fm-row"><span class="lbl">Référence</span><strong>${esc(formatRef(facture.ref, "facture"))}</strong></div>
     <div class="dp-fm-row"><span class="lbl">Date d'émission</span><strong>${esc(dateFR(facture.dateEmission))}</strong></div>
-    ${datePrestation ? `<div class="dp-fm-row"><span class="lbl">Date de prestation</span><strong>${esc(dateFR(datePrestation))}</strong></div>` : ""}
+    <div class="dp-fm-row"><span class="lbl">Date de prestation</span><strong>${datePrestation ? esc(dateFR(datePrestation)) : "À convenir"}</strong></div>
     <div class="dp-fm-row"><span class="lbl">Date d'échéance</span><strong style="color:var(--warning)">${esc(dateFR(facture.dateEcheance))}</strong></div>
     <div class="dp-fm-row dp-fm-ref-devis"><span class="lbl">Devis lié</span><span>${esc((dv && dv.ref) || devisId)}</span></div>
   </div>`;
@@ -11442,7 +11452,7 @@ function rFactureAcompteBody(facture, dv, devisId) {
         <div class="dp-meta-block dp-meta-box">
           <div class="dp-meta-ref">${esc(factureRefLabel)}</div>
           <div class="dp-meta-row"><span class="lbl">Émission</span><strong>${esc(dateFR(facture.dateEmission))}</strong></div>
-          ${datePrestation ? `<div class="dp-meta-row"><span class="lbl">Prestation</span><strong>${esc(dateFR(datePrestation))}</strong></div>` : ""}
+          <div class="dp-meta-row"><span class="lbl">Prestation</span><strong>${datePrestation ? esc(dateFR(datePrestation)) : "À convenir"}</strong></div>
           <div class="dp-meta-row"><span class="lbl">Échéance</span><strong>${esc(dateFR(facture.dateEcheance))}</strong></div>
           <div class="dp-validity-mention">Devis lié : ${esc(devisRef)}</div>
         </div>
