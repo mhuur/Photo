@@ -53,3 +53,9 @@ Les tokens vivent dans le 1ᵉʳ `:root` d'`index.html` — cf. § Charte V2 de
   tableau mensuel — les KPI (cumul YTD) et le graphe (12 mois glissants) ne
   bougent pas. Les remonter en actions d'en-tête laisserait croire qu'ils
   pilotent toute la page.
+- **Historique : pas de chip « En cours »** dans la barre de filtres. L'onglet
+  ne liste que les devis CLOS (Soldé / Refusé / Annulé) ; les devis vivants sont
+  dans l'Accueil. Les chips sont donc « Tous · Soldé · Refusé / Annulé ·
+  Corbeille ». **Pas d'en-tête de colonnes** (cohérent avec l'Accueil : les
+  lignes se lisent seules). La corbeille retient les **30 derniers items**
+  (pas « 30 jours » — la spec Refonte.md §8 se trompe sur ce point).

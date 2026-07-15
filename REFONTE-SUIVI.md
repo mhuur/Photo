@@ -22,7 +22,7 @@
 | 6 | Bilan comptable (`rCP`) | ✅ | ✅ 2026-07-15 | ☐ |
 | 7 | Clients (`rCL`) | ✅ | ✅ 2026-07-15 | ☐ |
 | 8 | Profil (`rPF`) | ✅ | ✅ 2026-07-15 | ☐ |
-| 9 | Historique (`rSV`) | ✅ | ☐ | ☐ |
+| 9 | Historique (`rSV`) | ✅ | ✅ 2026-07-15 | ☐ |
 | 10 | Achats (`rAchats`) | ✅ | ☐ | ☐ |
 | 11 | Bugs & suggestions (`rBG`) | ✅ | ☐ | ☐ |
 | 12 | Mon Compte (`rCompte`) | ✅ | ☐ | ☐ |
@@ -333,14 +333,17 @@ cocher ici → push.
 
 ## 9. HISTORIQUE (`rSV`)
 
-- [ ] Corbeille reskin V2 : lignes type `.ac-row` + `.mk-btn` (15708-15725).
-- [ ] `.btn ghost` de « Historique des versions » → `.mk-btn` (15106, 15112) ; `▸` → Lucide (472).
-- [ ] `#4ade80` → `var(--success)` (633) ; `#a7e8c0`/`#f3c4a2` → dérivés tokens (603-605).
-- [ ] Ellipsis sur `.ac-row-ref` (`overflow:hidden`, 842).
-- [ ] Pills `.dv-stage` selon décision socle.
-- [ ] À consigner au README (pas de code) : pas de chip « En cours » (devis clos only, les
-  vivants sont dans l'Accueil) · pas d'en-tête de colonnes (cohérent Accueil) · libellés
-  « Soldé »/« Refusé / Annulé » corrects (la spec §8 « 30 jours » est fausse : rétention = 30 items).
+> **✅ SESSION FAITE (2026-07-15)** — la liste principale (`devisRowHtml`), les couleurs
+> (`#4ade80`/`#a7e8c0`/`#f3c4a2` → 0 restant), le `▸`, l'ellipsis `.ac-row-ref`, les pills
+> `.dv-stage` et le passage `.btn`→`.mk-btn` étaient **déjà faits au socle / session Accueil**.
+> Seul reste livré ici : **corbeille des devis (`rSuiviBinView`) reskinnée** — `<table class="hist">`
+> à en-têtes → conteneur `.ac-list` + lignes `.suv-bin-line` (grid date/ref/supprimé/montant/actions,
+> boutons `.mk-btn`), cohérente avec le reste de l'Historique. CSS `.suv-bin-row` (mort) remplacé
+> par `.suv-bin-line`. Écarts consignés au README.
+
+- [x] Corbeille reskin V2 : `.ac-list` + `.suv-bin-line` + `.mk-btn`.
+- [x] `.mk-btn` (versions + corbeille), `▸` Lucide, couleurs remappées, ellipsis, pills — **socle**.
+- [x] README : pas de chip « En cours » (clos only) · pas d'en-tête de colonnes · rétention 30 items.
 
 ## 10. ACHATS (`rAchats`)
 
