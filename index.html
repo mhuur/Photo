@@ -7967,20 +7967,10 @@ const INFO_HTML = {
     <p style="margin:0 0 8px;font-size:12px;line-height:1.5">Coche cette case si le devis est signé chez le client (mariage, séance à domicile, événement) ou à distance (visio, email) plutôt que dans ton local pro.</p>
     <p style="margin:0 0 4px;font-size:12px;line-height:1.5;font-weight:600">Effet sur le devis :</p>
     <ul style="margin:0 0 8px;padding-left:18px;font-size:12px;line-height:1.5">
-      <li><strong>Coché + clientèle Mixte ou Particulier</strong> : ajoute la mention obligatoire <em>Droit de rétractation 14 jours</em> (art. L221-18 C. conso.).</li>
+      <li><strong>Coché</strong> : ajoute la mention obligatoire <em>Droit de rétractation 14 jours</em> (art. L221-18 C. conso.).</li>
       <li><strong>Non coché</strong> : pas de mention rétractation sur le devis.</li>
-      <li><strong>Clientèle Entreprise</strong> : aucune mention quel que soit le réglage (rétractation non applicable B2B).</li>
     </ul>
     <p style="margin:0;font-size:12px;line-height:1.5;color:var(--text-muted)">Sanction si oubli sur un contrat à domicile : annulation possible du contrat par le client.</p>
-  `,
-  clienteleType: `
-    <div class="tt-title" style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:8px">Type de clientèle</div>
-    <p style="margin:0 0 8px;font-size:12px;line-height:1.5">Détermine les mentions légales obligatoires affichées sur le devis et la facture.</p>
-    <ul style="margin:0;padding-left:18px;font-size:12px;line-height:1.55">
-      <li><strong>Mixte</strong> — clientèle mixte particuliers + entreprises. Bloc <em>Médiation de la consommation</em> affiché (obligatoire L612-1 C. conso.). Pénalités B2B + indemnité 40 € présentes.</li>
-      <li><strong>Particulier</strong> (B2C) — bloc <em>Médiation de la consommation</em> affiché. Si "Contrat signé hors établissement" coché, mention <em>rétractation 14 j</em> ajoutée (art. L221-18 C. conso.).</li>
-      <li><strong>Entreprise</strong> (B2B) — pas de bloc Médiation, pas de rétractation. Pénalités de retard 3× taux légal + indemnité forfaitaire 40 € obligatoires (C. com. L441-10).</li>
-    </ul>
   `,
   bulkEmail: `
     <div class="tt-title" style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:8px">Mail groupé en BCC</div>
@@ -9940,6 +9930,17 @@ function rBinModal() {
 // l'utilisateur. Plus récent en premier. id = clé stable, sert au "lu/non-lu".
 // Format des items : { h: titre court, b: explication 1-3 phrases }.
 const APP_CHANGELOG = [
+  {
+    id: "2026-07-clientele-mixte",
+    date: "2026-07-15",
+    title: "Type de clientèle — plus rien à choisir sur le devis",
+    items: [
+      { h: "Le sélecteur Mixte / Particulier / Entreprise disparaît du devis",
+        b: "Toutes les mentions légales sont désormais incluses par défaut (médiation de la consommation ET pénalités de retard), comme le faisait déjà l'option « Mixte ». Plus besoin d'y penser à chaque devis. Le réglage reste modifiable une seule fois dans Profil si un jour tu ne factures plus que des entreprises." },
+      { h: "La case « Contrat hors établissement » reste",
+        b: "Elle continue d'ajouter la mention de rétractation 14 jours (mariage, séance chez le client). Les devis déjà archivés gardent exactement leurs mentions d'origine." }
+    ]
+  },
   {
     id: "2026-07-vocab-neutre",
     date: "2026-07-15",
@@ -12499,7 +12500,6 @@ function rEditSectionRaw(key, title, bodyHtml, numLabel = "") {
 function rDevisSectionIdentification() {
   const d = S.mission;
   const duree = (typeof d.dureeValidite === "number" && d.dureeValidite > 0) ? d.dureeValidite : 30;
-  const eff = (d.client.type || (S.identite || {}).clienteleType || "mixte");
   // Prestation rapide : pas de devis émis → « durée de validité » sans objet.
   const quick = isMissionQuick();
   return `
@@ -12527,17 +12527,7 @@ function rDevisSectionIdentification() {
     </div>
 
     ${quick ? "" : `
-    <h5 style="display:flex;align-items:center;gap:var(--space-xs)">
-      Type de clientèle pour ce devis
-      <button type="button" class="lg-info-icon" tabindex="0" aria-label="Impact du type de clientèle"
-        onmouseenter="showInfo(event, 'clienteleType')" onmouseleave="hideInfo()" onfocus="showInfo(event, 'clienteleType')" onblur="hideInfo()">${ICO_SZ('info', 13)}</button>
-    </h5>
     <div class="identif-clientele-row">
-      <div class="seg seg-neon">
-        <button class="${eff==="mixte"?"on":""}" onclick="upd('mission.client.type', 'mixte');render()">Mixte</button>
-        <button class="${eff==="b2c"?"on":""}" onclick="upd('mission.client.type', 'b2c');render()">Particulier</button>
-        <button class="${eff==="b2b"?"on":""}" onclick="upd('mission.client.type', 'b2b');render()">Entreprise</button>
-      </div>
       <label class="identif-checkbox">
         <input type="checkbox" ${d.contratHorsEtab?"checked":""} onchange="upd('mission.contratHorsEtab', this.checked)">
         <span>Contrat signé hors établissement <span class="lbl-opt">(mariage, séance chez le client…)</span></span>
