@@ -7945,17 +7945,6 @@ const INFO_HTML = {
     </ul>
     <p style="margin:0;font-size:12px;line-height:1.5;color:var(--text-muted)">Vide = tarif catalogue de la prestation sélectionnée. Modifie le catalogue global via l'onglet Tarifs si tu veux changer le tarif par défaut.</p>
   `,
-  ref: `
-    <div class="tt-title" style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:8px">Format de la référence</div>
-    <p style="margin:0 0 8px;font-size:12px;line-height:1.5"><code style="font-family:monospace;background:var(--surface-2);padding:1px 6px;border-radius:3px">DEV-YYYYMM-NNN</code></p>
-    <ul style="margin:0 0 8px;padding-left:18px;font-size:12px;line-height:1.6">
-      <li><strong>DEV</strong> — préfixe (toujours)</li>
-      <li><strong>YYYYMM</strong> — année et mois d'émission (ex : 202605)</li>
-      <li><strong>NNN</strong> — séquence du mois, tous clients confondus (001, 002, 003…)</li>
-    </ul>
-    <p style="margin:0;font-size:12px;line-height:1.5;color:var(--text-muted)">Exemple : <code style="font-family:monospace">DEV-202605-003</code> = 3<sup>e</sup> devis de mai 2026.</p>
-    <p style="margin:6px 0 0;font-size:12px;line-height:1.5;color:var(--text-muted)">Les devis émis avant la bascule au nouveau format conservent leur référence d'origine (<code style="font-family:monospace">DEVIS-…</code>) — engagement commercial immutable.</p>
-  `,
   contratHorsEtab: `
     <div class="tt-title" style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:8px">Contrat signé hors établissement</div>
     <p style="margin:0 0 8px;font-size:12px;line-height:1.5">Coche cette case si le devis est signé chez le client (mariage, séance à domicile, événement) ou à distance (visio, email) plutôt que dans ton local pro.</p>
@@ -8012,9 +8001,6 @@ window.showInfo = function(evt, key) {
 window.hideInfo = function() {
   if (_paiementTooltipEl) _paiementTooltipEl.style.display = "none";
 };
-// Alias rétro-compat pour le tooltip Référence (avant le refacto)
-window.showRefInfo = function(evt) { window.showInfo(evt, "ref"); };
-window.hideRefInfo = function() { window.hideInfo(); };
 
 // ▼ rLigne — rendu d'une ligne (heures/matériel/cession)
 function rLigne(l) {
@@ -12509,8 +12495,7 @@ function rDevisSectionIdentification() {
     <div class="row identif-dates-row${quick ? " quick" : ""}">
       <div class="field"><label>Référence (auto)</label>
         <input type="text" value="${esc(d.ref || "")}" disabled
-          onmouseenter="showInfo(event, 'ref')" onmouseleave="hideInfo()"
-          style="opacity:.7;font-variant-numeric:tabular-nums;cursor:help">
+          style="opacity:.7;font-variant-numeric:tabular-nums">
       </div>
       <div class="field"><label>Date d'émission</label>
         <input type="date" value="${esc(d.dateEmission)}" oninput="upd('mission.dateEmission', this.value)">
