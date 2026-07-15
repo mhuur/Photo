@@ -20,7 +20,7 @@
 | 4 | Accueil / Suivi devis (`rAC`) | ✅ | ✅ 2026-07-15 | ☐ |
 | 5 | Catalogue (`rCatalogue`) | ✅ | ✅ 2026-07-15 | ☐ |
 | 6 | Bilan comptable (`rCP`) | ✅ | ✅ 2026-07-15 | ☐ |
-| 7 | Clients (`rCL`) | ✅ | ☐ | ☐ |
+| 7 | Clients (`rCL`) | ✅ | ✅ 2026-07-15 | ☐ |
 | 8 | Profil (`rPF`) | ✅ | ☐ | ☐ |
 | 9 | Historique (`rSV`) | ✅ | ☐ | ☐ |
 | 10 | Achats (`rAchats`) | ✅ | ☐ | ☐ |
@@ -289,18 +289,27 @@ cocher ici → push.
 
 ## 7. CLIENTS (`rCL`)
 
-- [ ] **Table posée nue sur la photo** : wrapper `.v2-panel` ou fond glass sur lignes (990, 1000,
-  16455).
-- [ ] Bouton « + Nouveau client » en `.mk-btn azure cta` dans l'en-tête (16420, 16423).
-- [ ] `.btn` → `.mk-btn` partout (cf. socle).
-- [ ] En-tête du volet fiche : avatar 48px + nom Big Shoulders 22px uppercase + encaissé jade à
-  droite (16356-16360, 1027) ; badge type selon Q9.
-- [ ] Labels de section volet en mono (`.cli-section h4` 1042, `.cli-dl dt` 1055).
-- [ ] Inputs du volet sur `--field-bg` + radius tokens (1034, 1058, 1066) ; recherche sans halo
-  + radius token (986-988).
-- [ ] Cosmétique : icône contacts `mail` au lieu de `send` (16311) · tag revN sur devis du client
-  (16382) · fond volet `--surface-glass` (1024).
-- [ ] Améliorations : contacts en sous-cartes `--surface-sunken` · icône `pin` devant l'adresse.
+> **✅ SESSION FAITE (2026-07-15)** — vérifiée par capture headless (lecture + édition, stats
+> stubbées pour l'encaissé + les lignes de devis). `table.cli-table` en verre
+> (`--surface-glass` + `--border-soft` + radius-lg + overflow) ; volet déplié en `--surface-sunken`.
+> En-tête de fiche redessiné : `.cli-panel-id` (avatar 44px + nom `h3` en **Big Shoulders 22px
+> uppercase** + `.cli-meta` mono « N° · ville ») et `.cli-panel-enc` à droite (encaissé jade + label
+> mono). Labels `.cli-section h4` et `.cli-dl dt` en mono. Tous les inputs (head edit, dl, contacts)
+> sur `--field-bg` + `--radius-md`, glow de focus retiré ; recherche idem (radius token + halo azur
+> supprimé). Email contact `ICONS.send` → `ICONS.mail`. Tag revN (`.suv-rev-tag`, préfixe « · »)
+> sur les devis du client **quand rev > 0** seulement (colonne ref élargie 130→172px pour éviter
+> l'ellipse). `clientsStats` : encaissé **net des remboursements** (Q12) — un acompte remboursé
+> compte 0.
+
+- [x] Table en verre (`table.cli-table` glass).
+- [x] Boutons déjà en `.mk-btn` (fait au socle) — vérifiés.
+- [x] En-tête volet : avatar + nom Big Shoulders + encaissé jade. (Badge type : **abandonné**, Q9.)
+- [x] Labels de section volet en mono (`.cli-section h4`, `.cli-dl dt`).
+- [x] Inputs volet + recherche sur `--field-bg`, radius tokens, sans halo.
+- [x] Cosmétique : icône `mail` sur email · tag revN sur devis du client · volet en `--surface-sunken`.
+- [~] Améliorations **différées** (marginal) : contacts read-mode en sous-cartes (les séparateurs
+  pointillés actuels sont propres, et sous-carte sunken sur volet sunken ne contrasterait pas) ·
+  icône `pin` devant l'adresse (le label `dt` « Adresse » le dit déjà). À reprendre si demandé.
 
 ## 8. PROFIL (`rPF`)
 
