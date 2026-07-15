@@ -21,7 +21,7 @@
 | 5 | Catalogue (`rCatalogue`) | ✅ | ✅ 2026-07-15 | ☐ |
 | 6 | Bilan comptable (`rCP`) | ✅ | ✅ 2026-07-15 | ☐ |
 | 7 | Clients (`rCL`) | ✅ | ✅ 2026-07-15 | ☐ |
-| 8 | Profil (`rPF`) | ✅ | ☐ | ☐ |
+| 8 | Profil (`rPF`) | ✅ | ✅ 2026-07-15 | ☐ |
 | 9 | Historique (`rSV`) | ✅ | ☐ | ☐ |
 | 10 | Achats (`rAchats`) | ✅ | ☐ | ☐ |
 | 11 | Bugs & suggestions (`rBG`) | ✅ | ☐ | ☐ |
@@ -313,12 +313,23 @@ cocher ici → push.
 
 ## 8. PROFIL (`rPF`)
 
-- [ ] Cartes « CGV & mentions » et « URSSAF » selon Q8.
-- [ ] Carte Modèles d'e-mails : retirer le h3 redondant (18157), h4 → `.v2-label` (18164, 18176),
-  `.btn ghost`→`.mk-btn subtle` (18189), glyphes (cf. socle), copy périmée (cf. B10).
-- [ ] Logo : placeholder carré pointillés + icône camera + « Importer » (10875-10878).
-- [ ] `#c0392b` → `var(--danger)` (17836) ; « ✗ » SIRET → `ICO_SZ('x',12)` pattern flex (17842).
-- [ ] Labels 13px → selon Q4.
+> **✅ SESSION FAITE (2026-07-15)** — vérifiée par capture headless pleine hauteur. `rPF` était
+> déjà largement V2 au socle (cartes `.v2-panel pf-card`, `.mk-btn`). Ajouté : **carte « Cotisations
+> URSSAF »** (édite `identite.urssafPct` en clair, note 22 %/23,1 % CFP) et **carte « CGV & mentions
+> par défaut »** — statut de chaque bloc (préambule/conditions/signature/sections) + boutons vers
+> les éditeurs globaux `textEditorOpen(...)` / `cgvSectionAdd` / `cgvSectionEditOpen(id)` (modales
+> rendues dans le shell de `render()`, donc ouvrables depuis n'importe quel onglet). ⚠ **Ces blocs
+> vivent dans `S.mission`** (le modèle propagé par `missionNew`) : éditer depuis Profil touche le
+> même contenu que l'aperçu du devis — hint le précise. Logo : état vide → placeholder carré
+> pointillés (`.logo-placeholder`, icône camera + « Importer »). Modèles e-mails : h3 redondant
+> supprimé, les 2 `<h4>` → `.v2-label` mono. Nouvelles classes CSS : `.pf-cgv-*`, `.logo-placeholder`.
+
+- [x] Cartes « CGV & mentions » + « URSSAF » (Q8).
+- [x] Carte Modèles d'e-mails : h3 retiré, h4 → `.v2-label`, `.mk-btn` (déjà), glyphes Lucide (déjà).
+- [x] Logo : placeholder carré pointillés + camera + « Importer ».
+- [x] `#c0392b`/✗ SIRET : **déjà fait au socle** (SIRET status en `var(--danger)` + `ICO_SZ('x',12)`).
+  Le `#c0392b` restant est dans le CSS du **document imprimé** (`.dp-mediateur-empty`) — exempté.
+- [x] Labels : `.v2-label` mono partout (Q4 traité au socle).
 
 ## 9. HISTORIQUE (`rSV`)
 
