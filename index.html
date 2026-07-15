@@ -238,6 +238,20 @@
   .pf-card .row:last-of-type{margin-bottom:0}
   .pf-card .hint{max-width:none}
   .pf-card .gmail-tpl-lexique{max-width:none}
+  /* Profil — carte CGV & mentions par défaut : liste de blocs éditables */
+  .pf-cgv-list{display:flex;flex-direction:column;gap:8px}
+  .pf-cgv-row{display:flex;align-items:center;gap:12px;padding:11px 13px;background:var(--surface-sunken);border:1px solid var(--border-soft);border-radius:var(--radius-md)}
+  .pf-cgv-info{display:flex;flex-direction:column;gap:2px;min-width:0;flex:1}
+  .pf-cgv-name{font-size:13px;font-weight:600;color:var(--text)}
+  .pf-cgv-status{font-family:var(--font-mono);font-size:9.5px;text-transform:uppercase;letter-spacing:.1em;color:var(--text-dim)}
+  .pf-cgv-status.ok{color:var(--success)}
+  .pf-cgv-subs{display:flex;flex-direction:column;gap:6px;margin:2px 0 4px 13px;padding-left:12px;border-left:1px solid var(--border-soft)}
+  .pf-cgv-sub{display:flex;align-items:center;gap:10px;font-size:12.5px;color:var(--text-muted)}
+  .pf-cgv-sub-name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .pf-cgv-sub-num{font-family:var(--font-mono);font-size:10px;color:var(--text-dim);font-variant-numeric:tabular-nums;flex-shrink:0}
+  /* Logo — placeholder carré pointillés (état vide) */
+  .logo-field .logo-placeholder{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;width:120px;height:80px;border:1px dashed var(--border-light);border-radius:var(--radius-md);background:var(--surface-sunken);color:var(--text-dim);cursor:pointer;font-family:var(--font-mono);font-size:10px;text-transform:uppercase;letter-spacing:.1em;transition:border-color .15s,color .15s;flex-shrink:0}
+  .logo-field .logo-placeholder:hover{border-color:var(--primary);color:var(--primary)}
 
   /* Curseur de voile */
   .cpt-scrim-row{display:flex;align-items:center;gap:var(--space-md)}
@@ -9857,6 +9871,19 @@ function rBinModal() {
 // Format des items : { h: titre court, b: explication 1-3 phrases }.
 const APP_CHANGELOG = [
   {
+    id: "2026-07-profil-v2",
+    date: "2026-07-15",
+    title: "Mon Profil — deux cartes en plus",
+    items: [
+      { h: "Taux URSSAF réglable ici",
+        b: "Une carte « Cotisations URSSAF » regroupe ton taux (22 % hors CFP, 23,1 % avec) au même endroit que le reste de ton identité — plus besoin d'aller le chercher dans un devis." },
+      { h: "CGV & mentions par défaut",
+        b: "Une carte liste le préambule, les conditions de paiement, la signature et les sections de CGV appliqués à chaque nouveau devis, chacun avec un bouton pour l'éditer directement." },
+      { h: "Finitions",
+        b: "Le logo affiche un cadre d'import quand il est vide, et la carte des modèles d'e-mails est allégée (plus de titre en double)." }
+    ]
+  },
+  {
     id: "2026-07-clients-v2",
     date: "2026-07-15",
     title: "Clients — fiche relookée",
@@ -10943,7 +10970,11 @@ function rLogoField() {
     </div>`;
   }
   return `<div class="logo-field">
-    <label class="mk-btn subtle">${ICO_SZ('camera',14)} Choisir un logo<input type="file" accept="image/*" onchange="logoUpload(this)" hidden></label>
+    <label class="logo-placeholder" title="Importer un logo">
+      ${ICO_SZ('camera', 22)}
+      <span>Importer</span>
+      <input type="file" accept="image/*" onchange="logoUpload(this)" hidden>
+    </label>
     <span class="hint" style="margin:0">PNG/JPG/SVG · transparent recommandé · max ~800 KB · réutilisé sur tous tes devis</span>
   </div>`;
 }
@@ -17577,6 +17608,15 @@ window.accueilOpenDevis = function(devisId) {
 // ▼ rPF — RENDERER onglet Profil
 function rPF() {
   const id = S.identite || DEFAULT_S.identite;
+  // CGV & mentions par défaut : elles vivent dans S.mission (modèle propagé à
+  // chaque nouveau devis via missionNew). On expose leur statut + un accès aux
+  // éditeurs globaux (textEditorOpen / cgvSectionEditOpen), qui s'ouvrent
+  // par-dessus n'importe quel onglet.
+  const m = S.mission || {};
+  const cgvSecs = Array.isArray(m.cgvSections) ? m.cgvSections : [];
+  const cgvPreambFilled = (m.cgvPreambule || "").trim().length > 0;
+  const cgvCondFilled   = (m.conditionsPaiement || "").trim().length > 0;
+  const cgvSigFilled    = (m.signatureBlock || "").trim().length > 0;
   const formeOpts = [
     ["micro-bnc", "Micro-entrepreneur (BNC)"],
     ["ei",        "Entrepreneur individuel (EI)"],
@@ -17699,6 +17739,19 @@ function rPF() {
     </div>
 
     <div class="v2-panel pf-card">
+    <div class="v2-label pf-card-label">Cotisations URSSAF</div>
+    <div class="row">
+      <div class="field narrow"><label>Taux de cotisation</label>
+        <div class="lock-field with-unit">
+          <input type="number" step="0.1" min="0" value="${esc(id.urssafPct ?? "22")}" oninput="upd('identite.urssafPct', this.value)">
+          <span class="lock-unit">%</span>
+        </div>
+      </div>
+    </div>
+    <div class="hint" style="margin-top:var(--space-sm)">Taux micro-BNC appliqué au net photographe et à la provision URSSAF du bilan. <strong>22 %</strong> hors CFP · <strong>23,1 %</strong> avec la contribution à la formation professionnelle (CFP). Source unique, figée sur chaque devis à l'archivage.</div>
+    </div>
+
+    <div class="v2-panel pf-card">
     <div class="v2-label pf-card-label">Logo</div>
     <div style="margin-top:var(--space-md)">${rLogoField()}</div>
     </div>
@@ -17778,6 +17831,47 @@ function rPF() {
       <div class="field narrow"><label>BIC</label>
         <input type="text" value="${esc((id.bank || {}).bic || "")}" oninput="upd('identite.bank.bic', this.value)" placeholder="ABCDEFGH" style="font-variant-numeric:tabular-nums;text-transform:uppercase">
       </div>
+    </div>
+    </div>
+
+    <div class="v2-panel pf-card pf-wide">
+    <div class="v2-label pf-card-label">CGV & mentions par défaut</div>
+    <div class="hint" style="margin:var(--space-sm) 0 var(--space-md)">Le modèle de conditions générales appliqué à chaque nouveau devis. Ces textes s'éditent aussi directement dans l'aperçu d'un devis — ici, c'est le même contenu, accessible depuis ton identité.</div>
+    <div class="pf-cgv-list">
+      <div class="pf-cgv-row">
+        <div class="pf-cgv-info">
+          <span class="pf-cgv-name">Préambule des CGV</span>
+          <span class="pf-cgv-status ${cgvPreambFilled ? "ok" : ""}">${cgvPreambFilled ? "Personnalisé" : "Vide"}</span>
+        </div>
+        <button class="mk-btn subtle" onclick="textEditorOpen('cgvPreambule')">${ICO_SZ('edit', 14)} Modifier</button>
+      </div>
+      <div class="pf-cgv-row">
+        <div class="pf-cgv-info">
+          <span class="pf-cgv-name">Conditions de paiement</span>
+          <span class="pf-cgv-status ${cgvCondFilled ? "ok" : ""}">${cgvCondFilled ? "Personnalisées" : "Vide"}</span>
+        </div>
+        <button class="mk-btn subtle" onclick="textEditorOpen('conditionsPaiement')">${ICO_SZ('edit', 14)} Modifier</button>
+      </div>
+      <div class="pf-cgv-row">
+        <div class="pf-cgv-info">
+          <span class="pf-cgv-name">Bloc signature</span>
+          <span class="pf-cgv-status ${cgvSigFilled ? "ok" : ""}">${cgvSigFilled ? "Personnalisé" : "Défaut"}</span>
+        </div>
+        <button class="mk-btn subtle" onclick="textEditorOpen('signatureBlock')">${ICO_SZ('edit', 14)} Modifier</button>
+      </div>
+      <div class="pf-cgv-row">
+        <div class="pf-cgv-info">
+          <span class="pf-cgv-name">Sections de CGV</span>
+          <span class="pf-cgv-status ${cgvSecs.length ? "ok" : ""}">${cgvSecs.length} section${cgvSecs.length > 1 ? "s" : ""}</span>
+        </div>
+        <button class="mk-btn subtle" onclick="cgvSectionAdd()">${ICO_SZ('plus', 14)} Ajouter</button>
+      </div>
+      ${cgvSecs.length ? `<div class="pf-cgv-subs">${cgvSecs.map((s, i) => `
+        <div class="pf-cgv-sub">
+          <span class="pf-cgv-sub-num">${String(i + 1).padStart(2, "0")}</span>
+          <span class="pf-cgv-sub-name">${esc(s.title) || "(section sans titre)"}</span>
+          <button class="mk-iconbtn sm" title="Modifier cette section" onclick="cgvSectionEditOpen('${s.id}')">${ICO_SZ('edit', 13)}</button>
+        </div>`).join("")}</div>` : ""}
     </div>
     </div>
 
@@ -17995,14 +18089,9 @@ function rGmailTemplatesSection() {
   `;
 
   return `
-    <h3 style="margin-top:32px">Modèles de relance Gmail</h3>
-    <div class="hint" style="max-width:780px;margin-bottom:14px">
-      Ces modèles s'utilisent quand tu cliques sur le bouton de relance ${ICO_SZ('send', 12)} d'un devis (Accueil, Historique) : ils pré-remplissent le brouillon Gmail.
-    </div>
-
     ${lexique}
 
-    <h4 style="margin:24px 0 10px;font-size:13px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;font-weight:600">Relance devis (sans réponse)</h4>
+    <div class="v2-label" style="margin:24px 0 10px">Relance devis · sans réponse</div>
     <div class="row" style="max-width:780px;flex-direction:column;gap:8px">
       <div class="field" style="max-width:none"><label>Sujet</label>
         ${insertToolbar("tpl-devis-subject", "prefs.gmailTemplates.devis.subject")}
@@ -18014,7 +18103,7 @@ function rGmailTemplatesSection() {
       </div>
     </div>
 
-    <h4 style="margin:24px 0 10px;font-size:13px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;font-weight:600">Relance paiement (en attente)</h4>
+    <div class="v2-label" style="margin:24px 0 10px">Relance paiement · en attente</div>
     <div class="row" style="max-width:780px;flex-direction:column;gap:8px">
       <div class="field" style="max-width:none"><label>Sujet</label>
         ${insertToolbar("tpl-paiement-subject", "prefs.gmailTemplates.paiement.subject")}
