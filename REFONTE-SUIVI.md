@@ -23,7 +23,7 @@
 | 7 | Clients (`rCL`) | ✅ | ✅ 2026-07-15 | ☐ |
 | 8 | Profil (`rPF`) | ✅ | ✅ 2026-07-15 | ☐ |
 | 9 | Historique (`rSV`) | ✅ | ✅ 2026-07-15 | ☐ |
-| 10 | Achats (`rAchats`) | ✅ | ☐ | ☐ |
+| 10 | Achats (`rAchats`) | ✅ | ✅ 2026-07-15 | ☐ |
 | 11 | Bugs & suggestions (`rBG`) | ✅ | ☐ | ☐ |
 | 12 | Mon Compte (`rCompte`) | ✅ | ☐ | ☐ |
 | 13 | Sidebar + en-têtes + audit CSS global | ✅ (2ᵉ passe) | ✅ 2026-07-14 (reste : cosmétiques « à trancher » + Q13 libellés NAV) | ☐ |
@@ -347,15 +347,21 @@ cocher ici → push.
 
 ## 10. ACHATS (`rAchats`)
 
-- [ ] `📅`/`●` → Lucide (16582-16588, cf. socle) ; `.btn` → `.mk-btn` (17489, 17513).
-- [ ] Bouton « + Ajouter » dans l'en-tête (`v2PageHead("achats", {actions})`, 17442) — ou acter
-  les 2 boutons par-table.
-- [ ] Carte « Synthèse coûts horaires » au système V2 : `.v2-panel`, label mono, montant en
-  Big Shoulders, labels de contrôles mono (789-808).
-- [ ] Champs « Heures annuelles »/« Facteur sécurité » en `.lock-field.with-unit` (17457-17462).
-- [ ] Cosmétique : « (années) » 13px dans un th 9px (17521) · `.tr-badge` → pill V2 (1620-1623) ·
-  KPI 3 renommé « Dépenses /an … déduites du résultat » (17435-17437).
-- [ ] Améliorations : « Coût annuel » (dotation) en jade comme maquette · « prochain
+> **✅ SESSION FAITE (2026-07-15)** — vérifiée par capture. Glyphes `📅`/`●`, `.tr-badge` (pill V2)
+> et `.btn`→`.mk-btn` étaient **déjà faits au socle**. Livré ici : **carte « Synthèse coûts horaires »
+> au système V2** — `.tr-cost-card` en `--surface-glass` (dégradé azur du header supprimé), eyebrow
+> mono, valeur en **Big Shoulders** (`--font-display` 40px), labels de contrôles mono. Les deux
+> réglages passent en **`.lock-field.with-unit`** (« Heures annuelles » → `h`, « Facteur sécurité »
+> → `%`, plus de parenthèse d'unité dans le label). KPI 3 « Charges / an » → **« Dépenses / an »**
+> (vocabulaire du bilan). « (années) » 13px → 8.5px atténué dans l'en-tête Durée.
+
+- [x] Carte « Synthèse coûts horaires » V2 (glass, eyebrow mono, valeur Big Shoulders, labels mono).
+- [x] « Heures annuelles » / « Facteur sécurité » en `.lock-field.with-unit`.
+- [x] KPI « Dépenses / an » · « (années) » atténué · `.tr-badge` pill + glyphes Lucide (socle).
+- [x] En-tête : **acté** les 2 boutons « + Ajouter » par-table (abonnement ≠ investissement : un
+  seul bouton d'en-tête serait ambigu). Consigné au README.
+- [~] Améliorations **non retenues** : « Coût annuel » en jade — **écarté** (jade = net positif dans
+  la palette ; l'appliquer à une charge jurerait avec la convention du Bilan). « Prochain
   prélèvement » = feature schéma, plus tard.
 
 ## 11. BUGS & SUGGESTIONS (`rBG`) — selon Q7

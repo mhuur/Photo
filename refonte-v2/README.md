@@ -59,3 +59,9 @@ Les tokens vivent dans le 1ᵉʳ `:root` d'`index.html` — cf. § Charte V2 de
   Corbeille ». **Pas d'en-tête de colonnes** (cohérent avec l'Accueil : les
   lignes se lisent seules). La corbeille retient les **30 derniers items**
   (pas « 30 jours » — la spec Refonte.md §8 se trompe sur ce point).
+- **Achats : deux boutons « + Ajouter » par-table**, pas un seul dans l'en-tête.
+  Abonnement et investissement sont deux entités distinctes (schémas et tables
+  séparés) : un unique bouton d'en-tête serait ambigu. Chaque bouton reste
+  au-dessus de sa table. Le « Coût annuel » d'amortissement reste neutre (pas
+  jade) : dans la palette, jade = net positif — le teinter jurerait avec la
+  convention du Bilan où l'amortissement est une dépense.
