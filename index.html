@@ -980,11 +980,11 @@
   .cli-toolbar .btn svg{width:14px;height:14px;vertical-align:-2px;margin-right:5px}
   .cli-search-wrap{position:relative;flex:1;min-width:280px;max-width:520px}
   .cli-search-wrap > svg{position:absolute;left:14px;top:50%;transform:translateY(-50%);width:16px;height:16px;color:var(--text-dim);pointer-events:none}
-  .cli-search-wrap > input{width:100%;padding:11px 14px 11px 40px;border:1px solid var(--border);border-radius:8px;font:inherit;font-size:14px;background:var(--field-bg);color:var(--text);transition:border-color .15s,box-shadow .15s,background .15s;box-sizing:border-box}
-  .cli-search-wrap > input:hover{border-color:rgba(69,193,253,.4)}
-  .cli-search-wrap > input:focus{outline:none;border-color:var(--primary);background:rgba(69,193,253,.08);box-shadow:inset 0 0 0 1px rgba(69,193,253,.22)}
+  .cli-search-wrap > input{width:100%;padding:11px 14px 11px 40px;border:1px solid var(--border);border-radius:var(--radius-md);font:inherit;font-size:14px;background:var(--field-bg);color:var(--text);transition:border-color .15s,background .15s;box-sizing:border-box}
+  .cli-search-wrap > input:hover{border-color:var(--border-light)}
+  .cli-search-wrap > input:focus{outline:none;border-color:var(--primary);background:var(--field-bg)}
   /* Table épurée — pas de bordures de cellules, juste un séparateur fin entre lignes */
-  table.cli-table{width:100%;border-collapse:collapse}
+  table.cli-table{width:100%;border-collapse:collapse;background:var(--surface-glass);border:1px solid var(--border-soft);border-radius:var(--radius-lg);overflow:hidden}
   table.cli-table thead th{text-align:left;padding:10px 14px;font-family:var(--font-mono);font-size:9px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.1em;font-weight:700;border-bottom:1px solid var(--border);user-select:none}
   table.cli-table thead th.cli-sortable{cursor:pointer;transition:color .12s}
   table.cli-table thead th.cli-sortable:hover{color:var(--text-muted)}
@@ -1012,31 +1012,38 @@
   table.cli-table td.cli-enc.dim{color:var(--text-dim);font-weight:400}
   .cli-enc-total{font-family:var(--font-mono);font-size:10px;font-weight:400;letter-spacing:0;text-transform:none;color:var(--success);margin-left:6px}
   /* Historique des devis d'un client (panneau déplié) */
-  .cli-devis-row{display:grid;grid-template-columns:80px 130px auto minmax(0,1fr);gap:12px;align-items:center;padding:9px 2px;border-top:1px solid var(--border-soft);cursor:pointer;transition:background .12s}
+  .cli-devis-row{display:grid;grid-template-columns:80px 172px auto minmax(0,1fr);gap:12px;align-items:center;padding:9px 2px;border-top:1px solid var(--border-soft);cursor:pointer;transition:background .12s}
   .cli-devis-row:hover{background:rgba(46,134,240,.07)}
   .cli-devis-date{font-family:var(--font-mono);font-size:11px;color:var(--text-muted);font-variant-numeric:tabular-nums}
   .cli-devis-ref{font-family:var(--font-mono);font-size:10.5px;color:var(--text-dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .cli-devis-ref .suv-rev-tag{margin-left:4px;background:transparent;border:0;color:var(--text-dim);padding:0;font-weight:400;font-size:9.5px;letter-spacing:0}
+  .cli-devis-ref .suv-rev-tag::before{content:"· "}
   .cli-devis-amt{font-size:13px;font-weight:700;color:var(--ink-100);text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
   /* Detail panel : pas d'encadrés, juste un fond surface-2 et de l'espace */
-  table.cli-table tr.cli-detail td{padding:0;background:var(--surface-2);border-bottom:1px solid var(--border)}
+  table.cli-table tr.cli-detail td{padding:0;background:var(--surface-sunken);border-bottom:1px solid var(--border)}
   .cli-panel{padding:24px 28px}
-  .cli-panel-head{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;padding-bottom:18px;border-bottom:1px solid var(--border-soft);margin-bottom:20px}
-  .cli-panel-head h3{margin:0;font-size:18px;font-weight:600;color:var(--text);line-height:1.2}
-  .cli-panel-head .cli-meta{font-size:13px;color:var(--text-dim);font-variant-numeric:tabular-nums}
-  .cli-panel-head .cli-city{font-size:13px;color:var(--text-muted);width:100%;margin-top:2px}
+  /* En-tête de fiche : avatar + nom en Big Shoulders + encaissé jade à droite */
+  .cli-panel-head{display:flex;align-items:center;gap:16px;padding-bottom:18px;border-bottom:1px solid var(--border-soft);margin-bottom:20px}
+  .cli-panel-id{display:flex;align-items:center;gap:14px;min-width:0}
+  .cli-panel-id-txt{display:flex;flex-direction:column;gap:3px;min-width:0}
+  .cli-panel-head h3{margin:0;font-family:var(--font-display);font-size:22px;font-weight:600;line-height:1;color:var(--ink-000);text-transform:uppercase;letter-spacing:.01em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .cli-panel-head .cli-meta{font-family:var(--font-mono);font-size:10px;color:var(--text-dim);text-transform:uppercase;letter-spacing:.1em}
+  .cli-panel-enc{margin-left:auto;display:flex;flex-direction:column;align-items:flex-end;gap:1px;flex-shrink:0}
+  .cli-panel-enc-val{font-size:20px;font-weight:700;color:var(--success);font-variant-numeric:tabular-nums;line-height:1}
+  .cli-panel-enc-lbl{font-family:var(--font-mono);font-size:9px;color:var(--text-dim);text-transform:uppercase;letter-spacing:.12em}
   /* En mode édition : champs Nom + N° en haut du panneau, en gros */
   .cli-panel-head.edit{padding-bottom:20px;margin-bottom:22px}
   .cli-panel-head.edit .cli-head-fields{width:100%;display:grid;grid-template-columns:1fr 110px;gap:14px}
   .cli-panel-head.edit label{display:block;font-size:11px;font-weight:600;color:var(--text-dim);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px}
-  .cli-panel-head.edit input{width:100%;padding:10px 12px;border:1px solid var(--border-light);border-radius:6px;background:var(--surface);color:var(--text);font:inherit;font-size:15px;box-sizing:border-box;transition:border-color .12s,box-shadow .12s}
+  .cli-panel-head.edit input{width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:var(--radius-md);background:var(--field-bg);color:var(--text);font:inherit;font-size:15px;box-sizing:border-box;transition:border-color .12s}
   .cli-panel-head.edit input::placeholder{color:var(--text-dim);opacity:.7}
-  .cli-panel-head.edit input:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 3px var(--primary-soft)}
+  .cli-panel-head.edit input:focus{outline:none;border-color:var(--primary)}
   .cli-panel-head.edit .cli-head-name input{font-weight:600}
   .cli-panel-head.edit .cli-head-num input{font-variant-numeric:tabular-nums;text-align:center}
   /* Grid 2 colonnes Contacts | Informations — sans bordure */
   .cli-panel-grid{display:grid;grid-template-columns:1fr 1fr;gap:36px;align-items:start}
   @media (max-width:900px){ .cli-panel-grid{grid-template-columns:1fr;gap:24px} }
-  .cli-section h4{margin:0 0 14px;font-size:11px;font-weight:600;color:var(--text-dim);text-transform:uppercase;letter-spacing:.06em}
+  .cli-section h4{margin:0 0 14px;font-family:var(--font-mono);font-size:9.5px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.14em}
   /* Contact card — pas d'encadré, juste de l'espace + ligne fine */
   .cli-contact{padding:8px 0;border-bottom:1px dashed var(--border-soft)}
   .cli-contact:last-child{border-bottom:0}
@@ -1049,19 +1056,19 @@
   .cli-add-contact:hover{border-color:var(--primary);color:var(--primary);background:var(--primary-soft)}
   /* Definition list — Apple Settings style */
   .cli-dl{display:grid;grid-template-columns:90px 1fr;gap:8px 16px;font-size:13.5px;align-items:baseline}
-  .cli-dl dt{color:var(--text-dim);font-size:12px;text-transform:uppercase;letter-spacing:.04em;font-weight:500;align-self:center}
+  .cli-dl dt{font-family:var(--font-mono);color:var(--text-dim);font-size:9.5px;text-transform:uppercase;letter-spacing:.1em;font-weight:700;align-self:center}
   .cli-dl dd{margin:0;color:var(--text);min-height:1.5em}
   .cli-dl dd.dim{color:var(--text-dim)}
-  .cli-dl input{padding:6px 10px;border:1px solid var(--border-light);border-radius:5px;font:inherit;font-size:13px;background:var(--surface);color:var(--text);width:100%;box-sizing:border-box;transition:border-color .12s,box-shadow .12s}
+  .cli-dl input{padding:6px 10px;border:1px solid var(--border);border-radius:var(--radius-md);font:inherit;font-size:13px;background:var(--field-bg);color:var(--text);width:100%;box-sizing:border-box;transition:border-color .12s}
   .cli-dl input::placeholder{color:var(--text-dim);opacity:.6;font-style:italic}
-  .cli-dl input:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 2px var(--primary-soft)}
+  .cli-dl input:focus{outline:none;border-color:var(--primary)}
   /* Edit-mode contacts */
   .cli-contact-edit{display:flex;align-items:flex-start;gap:8px;padding:8px 0;border-bottom:1px dashed var(--border-soft)}
   .cli-contact-edit:last-child{border-bottom:0}
   .cli-contact-edit-num{flex-shrink:0;width:22px;height:22px;display:flex;align-items:center;justify-content:center;background:var(--primary-soft);color:var(--primary);border-radius:50%;font-size:11px;font-weight:700;font-variant-numeric:tabular-nums;margin-top:5px}
   .cli-contact-edit-fields{flex:1;display:flex;flex-direction:column;gap:5px;min-width:0}
-  .cli-contact-edit-fields input{padding:6px 10px;border:1px solid var(--border);border-radius:5px;background:var(--surface);color:var(--text);font:inherit;font-size:13px;transition:border-color .12s}
-  .cli-contact-edit-fields input:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 2px var(--primary-soft)}
+  .cli-contact-edit-fields input{padding:6px 10px;border:1px solid var(--border);border-radius:var(--radius-md);background:var(--field-bg);color:var(--text);font:inherit;font-size:13px;transition:border-color .12s}
+  .cli-contact-edit-fields input:focus{outline:none;border-color:var(--primary)}
   .cli-contact-edit-del{background:transparent;border:0;color:var(--text-dim);cursor:pointer;font-size:14px;line-height:1;padding:4px 7px;border-radius:4px;align-self:flex-start;margin-top:5px;transition:all .12s}
   .cli-contact-edit-del:hover{background:var(--danger-soft);color:var(--danger)}
   /* Footer actions */
@@ -9850,6 +9857,19 @@ function rBinModal() {
 // Format des items : { h: titre court, b: explication 1-3 phrases }.
 const APP_CHANGELOG = [
   {
+    id: "2026-07-clients-v2",
+    date: "2026-07-15",
+    title: "Clients — fiche relookée",
+    items: [
+      { h: "En-tête de fiche plus vivant",
+        b: "Quand tu déplies un client, son en-tête affiche désormais son avatar, son nom en grande typo, et le total encaissé en vert à droite — d'un coup d'œil tu vois qui c'est et ce qu'il a rapporté." },
+      { h: "« Encaissé » net des remboursements",
+        b: "Le montant encaissé d'un client déduit maintenant les acomptes qui lui ont été remboursés (devis annulé) : c'est ce qu'il a réellement laissé, pas un chiffre gonflé." },
+      { h: "Répertoire plus soigné",
+        b: "La liste et la fiche adoptent le fond en verre dépoli, les libellés passent dans la petite typo technique, et les devis d'un client affichent leur numéro de révision." }
+    ]
+  },
+  {
     id: "2026-07-bilan-v2",
     date: "2026-07-15",
     title: "Bilan comptable — lecture en couleurs",
@@ -16018,7 +16038,11 @@ function clientsStats() {
     if (!c) continue;
     const st = get(c.id);
     st.groups.push(g);
-    st.encaisse += (g.lignes || []).filter(entryEncaisse).reduce((s, e) => s + num(e.montant), 0);
+    // « Encaissé » NET des remboursements (Q12) : un acompte encaissé puis
+    // remboursé (devis annulé, argent rendu) ne compte plus dans ce que le
+    // client a réellement laissé. Le bilan, lui, le régularise sur son mois.
+    st.encaisse += (g.lignes || []).filter(entryEncaisse).reduce((s, e) =>
+      s + (String(e.dateRemboursement || "").length >= 7 ? 0 : num(e.montant)), 0);
   }
   for (const st of map.values()) {
     st.groups.sort((a, b) => (b.dateMax || b.dateMin || "").localeCompare(a.dateMax || a.dateMin || ""));
@@ -16116,7 +16140,7 @@ function rCL() {
           <div class="cli-contact">
             <span class="nm">${esc(c.name || "(sans nom)")}${c.poste ? ` <span class="cli-contact-poste">— ${esc(c.poste)}</span>` : ""}</span>
             ${c.phone ? `<a class="ln" href="tel:${esc((c.phone || "").replace(/\s/g, ""))}">${ICONS.phone}${esc(c.phone)}</a>` : ""}
-            ${c.email ? `<a class="ln" href="${esc(buildGmailUrl(c.email, '', ''))}" title="Composer un mail à ${esc(c.email)}">${ICONS.send}${esc(c.email)}</a>` : ""}
+            ${c.email ? `<a class="ln" href="${esc(buildGmailUrl(c.email, '', ''))}" title="Composer un mail à ${esc(c.email)}">${ICONS.mail}${esc(c.email)}</a>` : ""}
           </div>
         `).join(""));
 
@@ -16162,9 +16186,14 @@ function rCL() {
         </div>
       ` : `
         <div class="cli-panel-head">
-          <h3>${esc(e.name) || "(sans nom)"}</h3>
-          <span class="cli-meta">N° ${esc(e.num) || "—"}</span>
-          ${cityLine ? `<span class="cli-city">${esc(cityLine)}</span>` : ""}
+          <div class="cli-panel-id">
+            ${clientAvatarHtml(e.name, e.id, 44)}
+            <div class="cli-panel-id-txt">
+              <h3>${esc(e.name) || "(sans nom)"}</h3>
+              <span class="cli-meta">N° ${esc(e.num) || "—"}${cityLine ? ` · ${esc(cityLine)}` : ""}</span>
+            </div>
+          </div>
+          ${st.encaisse > 0 ? `<div class="cli-panel-enc"><span class="cli-panel-enc-val">${fmt(st.encaisse)}</span><span class="cli-panel-enc-lbl">encaissés</span></div>` : ""}
         </div>`;
 
       const actions = editing ? `
@@ -16187,7 +16216,7 @@ function rCL() {
         ? st.groups.map(g => `
             <div class="cli-devis-row" onclick="clientsOpenDevis('${g.devisId}')" title="Ouvrir ce devis dans l'Historique">
               <span class="cli-devis-date">${esc(dateFR(g.dateMin || g.dateMax))}</span>
-              <span class="cli-devis-ref">${esc(g.ref) || "—"}</span>
+              <span class="cli-devis-ref">${esc(g.ref) || "—"}${(() => { const rv = computeRevisionNumber(g.devisId); return rv > 0 ? ` <span class="suv-rev-tag" title="Révision active">rev${rv}</span>` : ""; })()}</span>
               ${devisStageChipHtml(g.devisId)}
               <span class="cli-devis-amt">${fmt(g.total)}</span>
             </div>`).join("")
