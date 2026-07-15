@@ -3276,12 +3276,6 @@
   /* Variante succès — toggles porteurs d'un statut positif (ex. Déclaré) */
   .seg.seg-neon button.on.ok{background:var(--success-dark);color:#fff}
   .seg.seg-neon button.on.ok:hover{background:var(--success);color:#fff}
-  /* Variante .violet — un fuchsia #c026d3 hérité de l'ancien thème, hors palette
-     V2. Devenue le toggle SECONDAIRE (Refacturé/Direct, Acompte/Avance) : sélection
-     en creux (bordure + texte azure) au lieu d'un aplat, pour ne pas rivaliser
-     visuellement avec les toggles de 1er niveau posés juste au-dessus. */
-  .seg.seg-neon.violet button.on:not(.warn):not(.ok){background:var(--primary-soft);color:var(--primary);box-shadow:inset 0 0 0 1px rgba(69,193,253,.45)}
-  .seg.seg-neon.violet button.on:not(.warn):not(.ok):hover{background:rgba(69,193,253,.18);color:var(--primary)}
 </style>
 </head>
 <body>
@@ -9931,6 +9925,15 @@ function rBinModal() {
 // Format des items : { h: titre court, b: explication 1-3 phrases }.
 const APP_CHANGELOG = [
   {
+    id: "2026-07-toggles-uniformes",
+    date: "2026-07-15",
+    title: "Boutons bascule uniformisés",
+    items: [
+      { h: "Un seul style partout",
+        b: "Les bascules « Arrondi du total » et « Affichage sur le devis » adoptent le même bleu plein que toutes les autres (mode de transport, facturation…). Fini le style « en creux » à part : un seul repère visuel dans l'app." }
+    ]
+  },
+  {
     id: "2026-07-clientele-mixte",
     date: "2026-07-15",
     title: "Type de clientèle — plus rien à choisir sur le devis",
@@ -12704,7 +12707,7 @@ function rDevisSectionDeplacement() {
     affichageBlock = `
       <h5>Affichage sur le devis</h5>
       <div class="depl-toggle-row">
-        <div class="seg seg-neon violet">
+        <div class="seg seg-neon">
           <button class="${afficheMode==='afficher'?'on':''}" onclick="updDeplAfficheMode('afficher')">Ligne séparée</button>
           <button class="${afficheMode==='lisser'?'on':''}" onclick="updDeplAfficheMode('lisser')" title="Le déplacement est inclus dans le tarif horaire (pas de ligne séparée).">Inclus dans tarif</button>
         </div>
@@ -12756,7 +12759,7 @@ function rDevisArrondiBlock() {
   const sens = a.sens || "proche";
   const PALIERS = ["1", "5", "10", "50", "100"];
 
-  const seg = `<div class="seg seg-neon violet">
+  const seg = `<div class="seg seg-neon">
     <button class="${mode === "none" ? "on" : ""}" onclick="arrondiSetMode('none')">Aucun</button>
     <button class="${mode === "palier" ? "on" : ""}" onclick="arrondiSetMode('palier')" title="Arrondir le total au palier choisi.">Palier</button>
     <button class="${mode === "cible" ? "on" : ""}" onclick="arrondiSetMode('cible')" title="Saisir le total exact voulu (ex. « le client veut 1 200 € »).">Total cible</button>
@@ -12767,13 +12770,13 @@ function rDevisArrondiBlock() {
     controls = `
       <div class="arrondi-row">
         <span class="field-label-only">Arrondir à</span>
-        <div class="seg seg-neon violet">
+        <div class="seg seg-neon">
           ${PALIERS.map(p => `<button class="${String(a.palier) === p ? "on" : ""}" onclick="arrondiSet('palier','${p}')">${p} €</button>`).join("")}
         </div>
       </div>
       <div class="arrondi-row">
         <span class="field-label-only">Sens</span>
-        <div class="seg seg-neon violet">
+        <div class="seg seg-neon">
           <button class="${sens === "proche" ? "on" : ""}" onclick="arrondiSet('sens','proche')">Au plus proche</button>
           <button class="${sens === "inf" ? "on" : ""}" onclick="arrondiSet('sens','inf')" title="Toujours vers le bas — geste commercial.">Inférieur</button>
           <button class="${sens === "sup" ? "on" : ""}" onclick="arrondiSet('sens','sup')" title="Toujours vers le haut.">Supérieur</button>
