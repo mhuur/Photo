@@ -353,7 +353,7 @@
   .totals .line.total{border-top:1px solid var(--border);margin-top:6px;padding-top:10px;font-weight:600;font-size:15px;color:var(--primary)}
   .totals .line.muted{color:var(--text-muted);font-size:13px}
   .hint{font-size:13px;color:var(--text-dim);margin:-4px 0 8px}
-  table.hist{width:100%;border-collapse:collapse;background:var(--surface);border:1px solid var(--border);border-radius:8px;overflow:hidden;margin-top:8px;font-size:13px;box-shadow:var(--shadow-sm)}
+  table.hist{width:100%;border-collapse:collapse;background:var(--surface-glass);border:1px solid var(--border-soft);border-radius:var(--radius-lg);overflow:hidden;margin-top:8px;font-size:13px}
   table.hist th{background:transparent;text-align:left;padding:10px 12px;font-family:var(--font-mono);font-size:9px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.1em;border-bottom:1px solid var(--border);font-weight:700}
   table.hist td{padding:6px 8px;border-bottom:1px solid var(--border-soft);vertical-align:middle}
   table.hist tr:last-child td{border-bottom:0}
@@ -1498,11 +1498,13 @@
   .tr-cell-input:focus{outline:none;border-color:var(--primary);background:var(--surface-2)}
   .tr-cell-input.num{text-align:right;font-variant-numeric:tabular-nums;width:90px}
   .tr-cell-input.center{text-align:center}
-  .tarif-input-wrap{display:inline-flex;align-items:center;gap:4px;justify-content:flex-end}
-  .tr-tarif-input{width:64px;text-align:right;border:1px solid transparent;background:var(--surface-2);color:var(--text);padding:4px 8px;border-radius:4px;font-variant-numeric:tabular-nums;font-weight:600;height:var(--input-h);box-sizing:border-box;transition:border-color .12s,background .12s;font:inherit}
-  .tr-tarif-input:hover{background:var(--surface)}
-  .tr-tarif-input:focus{outline:none;border-color:var(--primary);background:var(--surface-2)}
-  .tarif-input-wrap .unit{color:var(--text-dim);font-size:13px}
+  /* Unité €/h DANS la même boîte que l'input (pattern .lock-field.with-unit). */
+  .tarif-input-wrap{display:inline-flex;align-items:center;justify-content:flex-end;background:var(--field-bg);border:1px solid var(--border);border-radius:var(--radius-md);height:var(--input-h);padding-right:8px;box-sizing:border-box;transition:border-color .12s,background .12s}
+  .tarif-input-wrap:hover{border-color:rgba(69,193,253,.4)}
+  .tarif-input-wrap:focus-within{border-color:var(--primary)}
+  .tr-tarif-input{width:64px;text-align:right;border:0;background:transparent;color:var(--text);padding:4px 4px 4px 8px;font-variant-numeric:tabular-nums;font-weight:600;height:100%;box-sizing:border-box;font:inherit}
+  .tr-tarif-input:hover,.tr-tarif-input:focus{background:transparent;outline:none}
+  .tarif-input-wrap .unit{color:var(--text-dim);font-size:12px;flex-shrink:0}
   /* Tarifs cells colors */
   table.hist td.net-cell{font-variant-numeric:tabular-nums;font-weight:600;text-align:right}
   table.hist td.net-cell.ok{color:var(--success)}
@@ -1560,7 +1562,7 @@
   .catalog-table tr.catalog-group-row{background:linear-gradient(90deg,rgba(69,193,253,.10),rgba(69,193,253,.02))}
   .catalog-table tr.catalog-group-row td{border-top:1px solid rgba(69,193,253,.4);padding-top:10px;padding-bottom:10px}
   .catalog-table td.catalog-group-cell{padding:6px 8px}
-  .catalog-table .catalog-group-libelle{font-weight:700;text-transform:uppercase;letter-spacing:.06em;font-size:13px;color:var(--primary);background:transparent;border-color:transparent}
+  .catalog-table .catalog-group-libelle{font-family:var(--font-mono);font-weight:700;text-transform:uppercase;letter-spacing:.12em;font-size:11px;color:var(--primary);background:transparent;border-color:transparent}
   .catalog-table .catalog-group-libelle:focus{background:var(--surface-2);border-color:var(--primary)}
   .catalog-table .catalog-group-libelle::placeholder{font-weight:600;color:var(--text-dim);text-transform:uppercase}
   /* Toolbar : groupe (séparateur) + nouvelle prestation alignés à droite */
@@ -1574,10 +1576,11 @@
   .catalog-table th.catalog-th-cell-cible,
   .catalog-table td.cible-cell{border-left:1px solid rgba(69,193,253,.20);border-right:1px solid rgba(69,193,253,.20);background:rgba(69,193,253,.04)}
   .catalog-table td.cible-cell{text-align:right;padding:6px 10px}
-  .catalog-table td.cible-cell .tr-tarif-input{font-size:14px;font-weight:700;color:#45C1FD;width:80px;background:var(--field-bg);border:1px solid rgba(69,193,253,.45);border-radius:6px;padding:4px 10px}
-  .catalog-table td.cible-cell .tr-tarif-input:hover{border-color:var(--primary);background:rgba(69,193,253,.10)}
-  .catalog-table td.cible-cell .tr-tarif-input:focus{outline:none;border-color:var(--primary);background:rgba(69,193,253,.12);box-shadow:inset 0 0 0 1px rgba(69,193,253,.30)}
-  .catalog-table td.cible-cell .tarif-input-wrap{gap:6px}
+  /* La boîte porte l'accent azure ; l'input à l'intérieur reste transparent. */
+  .catalog-table td.cible-cell .tarif-input-wrap{border-color:rgba(69,193,253,.45)}
+  .catalog-table td.cible-cell .tarif-input-wrap:hover{background:rgba(69,193,253,.10)}
+  .catalog-table td.cible-cell .tarif-input-wrap:focus-within{border-color:var(--primary);background:rgba(69,193,253,.12);box-shadow:inset 0 0 0 1px rgba(69,193,253,.30)}
+  .catalog-table td.cible-cell .tr-tarif-input{font-size:14px;font-weight:700;color:#45C1FD;width:64px}
   .catalog-table td.cible-cell .tarif-input-wrap .unit{color:#45C1FD;font-weight:600;font-size:12px}
   /* Colonne Tarif final (déclaré ou au black, dynamique) */
   .catalog-table td.tarif-final-cell{font-variant-numeric:tabular-nums;text-align:right;font-weight:700;font-size:14px;padding-right:14px}
@@ -1596,10 +1599,11 @@
   .catalog-table thead th:nth-child(2){text-align:left}
   .catalog-th{display:inline-flex;flex-direction:column;align-items:center;gap:2px;line-height:1.2;width:100%}
   .catalog-th-left{align-items:flex-start}
-  .catalog-th-title{font-size:13px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.04em}
-  .catalog-th-sub{font-size:11px;font-weight:400;color:var(--text-dim);text-transform:none;letter-spacing:0}
+  /* Headers de colonnes en mono, cohérents avec table.hist th (le reste de l'app). */
+  .catalog-th-title{font-family:var(--font-mono);font-size:9.5px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.1em}
+  .catalog-th-sub{font-size:9px;font-weight:400;color:var(--text-dim);text-transform:none;letter-spacing:0}
   /* Colonnes mises en valeur — header coloré */
-  .catalog-th-key .catalog-th-title{font-size:14px;font-weight:700;letter-spacing:.05em}
+  .catalog-th-key .catalog-th-title{font-size:10px;letter-spacing:.12em}
   .catalog-th-cible .catalog-th-title{color:#45C1FD}
   .catalog-th-final-decl .catalog-th-title{color:#45C1FD}
   .catalog-th-final-black .catalog-th-title{color:var(--warning)}
@@ -2702,7 +2706,7 @@
   .ech-row .pct-wrap input:focus{outline:none}
   .ech-row .pct-wrap .unit{color:var(--text-dim);font-size:13px}
   /* (i) info button on échéance rows — tooltip shows acompte suggestion */
-  .ech-info-icon{position:relative;background:transparent;border:1px solid var(--border-light);color:var(--text-muted);width:22px;height:22px;border-radius:50%;cursor:help;font-size:13px;font-weight:600;font-style:italic;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .15s;padding:0;line-height:1}
+  .ech-info-icon{position:relative;background:transparent;border:1px solid var(--border-light);color:var(--text-muted);width:22px;height:22px;border-radius:50%;cursor:help;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .15s;padding:0;line-height:1}
   .ech-info-icon:hover,.ech-info-icon:focus{border-color:var(--primary);color:var(--primary);background:var(--primary-soft);outline:none}
   .ech-info-tooltip{position:absolute;bottom:calc(100% + 8px);left:50%;transform:translateX(-50%);background:var(--surface);border:1px solid var(--border);border-radius:8px;box-shadow:0 12px 32px rgba(0,0,0,.45);padding:10px 14px;width:300px;font-size:12px;font-style:normal;font-weight:400;text-align:left;color:var(--text-muted);line-height:1.5;letter-spacing:normal;display:none;z-index:1000;pointer-events:none;white-space:normal}
   .ech-info-tooltip strong{color:var(--text);font-weight:600}
@@ -3020,7 +3024,9 @@
   .lg-toggle-pmt{min-width:150px;flex-shrink:0}
   .lg-toggle-pmt button{flex:1;padding:0 14px;font-size:13px;font-weight:500}
   /* Info icon (i) — opens a tooltip on hover/focus */
-  .lg-info-icon{background:transparent;border:1px solid var(--border-light);color:var(--text-muted);width:22px;height:22px;border-radius:50%;cursor:help;font-size:13px;font-weight:600;font-style:italic;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .15s;padding:0;line-height:1}
+  .lg-info-icon{background:transparent;border:1px solid var(--border-light);color:var(--text-muted);width:22px;height:22px;border-radius:50%;cursor:help;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .15s;padding:0;line-height:1}
+  .lg-info-icon svg,.ech-info-icon svg{width:13px;height:13px}
+  .edit-section-body h5 .lg-info-icon svg{width:11px;height:11px}
   .lg-info-icon:hover,.lg-info-icon:focus{border-color:var(--primary);color:var(--primary);background:var(--primary-soft);outline:none}
   /* Tooltip element appended to body, positioned via JS */
   .paiement-tooltip-wrap{position:fixed;z-index:9999;background:var(--surface);border:1px solid var(--border);border-radius:8px;box-shadow:0 12px 32px rgba(0,0,0,.45);padding:0;width:380px;max-width:calc(100vw - 24px);font-size:12px;pointer-events:none}
@@ -8016,7 +8022,7 @@ function rLigne(l) {
         ${devisToggleHtml}
         ${paiementModeHtml}
         ${justifBtn}
-        ${quick ? "" : `<button class="lg-info-icon" onmouseenter="showPaiementInfo(event, 'ligne', '${l.id}')" onmouseleave="hidePaiementInfo()" onfocus="showPaiementInfo(event, 'ligne', '${l.id}')" onblur="hidePaiementInfo()" tabindex="0" aria-label="Voir les conséquences fiscales de ce choix">i</button>`}
+        ${quick ? "" : `<button class="lg-info-icon" onmouseenter="showPaiementInfo(event, 'ligne', '${l.id}')" onmouseleave="hidePaiementInfo()" onfocus="showPaiementInfo(event, 'ligne', '${l.id}')" onblur="hidePaiementInfo()" tabindex="0" aria-label="Voir les conséquences fiscales de ce choix">${ICO_SZ('info', 13)}</button>`}
         ${expandBtn}
         <button class="lg-del" onclick="ligneDel('${l.id}')" title="Supprimer">${ICO_SZ('x', 16)}</button>
       </div>
@@ -9831,6 +9837,19 @@ function rBinModal() {
 // l'utilisateur. Plus récent en premier. id = clé stable, sert au "lu/non-lu".
 // Format des items : { h: titre court, b: explication 1-3 phrases }.
 const APP_CHANGELOG = [
+  {
+    id: "2026-07-catalogue-v2",
+    date: "2026-07-15",
+    title: "Catalogue et tableaux — finitions",
+    items: [
+      { h: "En-têtes de colonnes homogènes",
+        b: "Les titres de colonnes du Catalogue passent dans la petite typo technique du reste de l'app (avant ils étaient nettement plus gros), et l'unité « €/h » se loge maintenant à l'intérieur de la boîte de saisie du tarif." },
+      { h: "Tableaux translucides",
+        b: "Les tableaux (Catalogue, Bilan, Historique, Achats) adoptent le fond en verre dépoli des autres panneaux : la photo de fond respire un peu à travers, comme sur les cartes." },
+      { h: "Plus de « i » tapé au clavier",
+        b: "Les petites bulles d'aide « i » (dans le devis, le catalogue, les clients…) deviennent une vraie icône, cohérentes avec le reste de l'interface." }
+    ]
+  },
   {
     id: "2026-07-accueil-v2",
     date: "2026-07-15",
@@ -12294,7 +12313,7 @@ function rDevisSectionIdentification() {
     <h5 style="display:flex;align-items:center;gap:var(--space-xs)">
       Type de clientèle pour ce devis
       <button type="button" class="lg-info-icon" tabindex="0" aria-label="Impact du type de clientèle"
-        onmouseenter="showInfo(event, 'clienteleType')" onmouseleave="hideInfo()" onfocus="showInfo(event, 'clienteleType')" onblur="hideInfo()">i</button>
+        onmouseenter="showInfo(event, 'clienteleType')" onmouseleave="hideInfo()" onfocus="showInfo(event, 'clienteleType')" onblur="hideInfo()">${ICO_SZ('info', 13)}</button>
     </h5>
     <div class="identif-clientele-row">
       <div class="seg seg-neon">
@@ -12306,7 +12325,7 @@ function rDevisSectionIdentification() {
         <input type="checkbox" ${d.contratHorsEtab?"checked":""} onchange="upd('mission.contratHorsEtab', this.checked)">
         <span>Contrat signé hors établissement <span class="lbl-opt">(mariage, séance chez le client…)</span></span>
         <button type="button" class="lg-info-icon" tabindex="0" aria-label="Impact de cette case"
-          onmouseenter="showInfo(event, 'contratHorsEtab')" onmouseleave="hideInfo()" onfocus="showInfo(event, 'contratHorsEtab')" onblur="hideInfo()">i</button>
+          onmouseenter="showInfo(event, 'contratHorsEtab')" onmouseleave="hideInfo()" onfocus="showInfo(event, 'contratHorsEtab')" onblur="hideInfo()">${ICO_SZ('info', 13)}</button>
       </label>
     </div>`}
   `;
@@ -12366,7 +12385,7 @@ function rDevisSectionPrestations() {
         <label style="display:flex;align-items:center;gap:var(--space-xs)">
           Override (€/h)
           <button type="button" class="lg-info-icon" tabindex="0" aria-label="Quand utiliser l'override"
-            onmouseenter="showInfo(event, 'tarifHOverride')" onmouseleave="hideInfo()" onfocus="showInfo(event, 'tarifHOverride')" onblur="hideInfo()">i</button>
+            onmouseenter="showInfo(event, 'tarifHOverride')" onmouseleave="hideInfo()" onfocus="showInfo(event, 'tarifHOverride')" onblur="hideInfo()">${ICO_SZ('info', 13)}</button>
         </label>
         <input type="number" step="0.01" min="0" inputmode="decimal"
           placeholder="${_catTarif > 0 ? _catTarif.toFixed(2).replace('.',',') : 'tarif catalogue'}"
@@ -12402,7 +12421,7 @@ function rDevisSectionPrestations() {
     <div class="lg-add"><button class="mk-btn subtle" type="button" onclick="ligneAdd('materiel')">${ICO_SZ('plus', 14)} Matériel</button></div>
 
     ${quick ? "" : `
-    <h5>Cession de droits <button type="button" class="lg-info-icon" tabindex="0" aria-label="Étendue, durée, territoire, supports (CPI L131-3)" title="Étendue, durée, territoire, supports — Conformément au CPI L131-3">i</button></h5>
+    <h5>Cession de droits <button type="button" class="lg-info-icon" tabindex="0" aria-label="Étendue, durée, territoire, supports (CPI L131-3)" title="Étendue, durée, territoire, supports — Conformément au CPI L131-3">${ICO_SZ('info', 13)}</button></h5>
     <div class="lg-list" id="lgListCessions">
       ${cessions.length ? cessions.map(l => rLigneDraggable(l)).join("") : `<div class="lg-empty">Aucune cession de droits — recommandé pour formaliser l'usage des photos par le client</div>`}
     </div>
@@ -12507,7 +12526,7 @@ function rDevisSectionDeplacement() {
         <button class="${devis==='debours'?'on warn':''}" onclick="updDeplDevis('debours')">Débours</button>
       </div>
       ${paiementToggle}
-      <button class="lg-info-icon" onmouseenter="showPaiementInfo(event, 'depl')" onmouseleave="hidePaiementInfo()" tabindex="0" aria-label="Voir les conséquences fiscales">i</button>
+      <button class="lg-info-icon" onmouseenter="showPaiementInfo(event, 'depl')" onmouseleave="hidePaiementInfo()" tabindex="0" aria-label="Voir les conséquences fiscales">${ICO_SZ('info', 13)}</button>
     </div>`}
 
     ${affichageBlock}
@@ -12614,7 +12633,7 @@ function rDevisSectionAjustements() {
             <input type="number" step="1" min="0" max="${ri.remiseMaxPct}" value="${esc(d.remisePct)}" oninput="updRemise(this.value, ${ri.remiseMaxPct})">
             <span class="lock-unit">%</span>
           </div>
-          <button type="button" class="ech-info-icon" tabindex="0" onmouseenter="showRemiseInfo(event)" onmouseleave="hideRemiseInfo()" onfocus="showRemiseInfo(event)" onblur="hideRemiseInfo()" aria-label="Voir le détail du calcul de remise">i</button>
+          <button type="button" class="ech-info-icon" tabindex="0" onmouseenter="showRemiseInfo(event)" onmouseleave="hideRemiseInfo()" onfocus="showRemiseInfo(event)" onblur="hideRemiseInfo()" aria-label="Voir le détail du calcul de remise">${ICO_SZ('info', 13)}</button>
         </div>
       </div>
     </div>
@@ -12681,7 +12700,7 @@ function rDevisSectionModalites() {
         // contient « acompte ».
         const showSuggestion = idx === 0 || isAcompte;
         const suggestion = showSuggestion
-          ? `<button type="button" class="ech-info-icon" tabindex="0"><span class="ech-info-tooltip" role="tooltip">${tooltipBody}</span>i</button>`
+          ? `<button type="button" class="ech-info-icon" tabindex="0"><span class="ech-info-tooltip" role="tooltip">${tooltipBody}</span>${ICO_SZ('info', 13)}</button>`
           : `<div class="ech-info-spacer" aria-hidden="true"></div>`;
         return `<div class="ech-row">
           <input class="lbl" value="${esc(e.label)}" placeholder="Libellé (ex: Acompte, Livraison…)" oninput="echeanceUpd('${e.id}','label',this.value)">
@@ -16188,7 +16207,7 @@ function rCL() {
       <span style="display:inline-flex;align-items:center;gap:6px">
         <button class="mk-btn subtle" onclick="clientsEnterSelectMode()">${ICONS.send}Mail groupé</button>
         <button type="button" class="lg-info-icon" tabindex="0" aria-label="Qu'est-ce que le mail groupé en BCC ?"
-          onmouseenter="showInfo(event, 'bulkEmail')" onmouseleave="hideInfo()" onfocus="showInfo(event, 'bulkEmail')" onblur="hideInfo()">i</button>
+          onmouseenter="showInfo(event, 'bulkEmail')" onmouseleave="hideInfo()" onfocus="showInfo(event, 'bulkEmail')" onblur="hideInfo()">${ICO_SZ('info', 13)}</button>
       </span>
       <span class="cli-spacer"></span>
       <button class="mk-btn subtle" onclick="clientsExportCSV()" title="Exporter la liste en CSV">${ICONS.download}CSV</button>
@@ -17085,7 +17104,7 @@ function rCatalogue() {
         <label>Remise non déclarée
           <span class="catalog-remise-range">(0 à ${urssafPct.toString().replace(".", ",")} %)</span>
           <button type="button" class="lg-info-icon" tabindex="0" aria-label="À quoi sert cette remise"
-            onmouseenter="showInfo(event, 'remiseNoire')" onmouseleave="hideInfo()" onfocus="showInfo(event, 'remiseNoire')" onblur="hideInfo()">i</button>
+            onmouseenter="showInfo(event, 'remiseNoire')" onmouseleave="hideInfo()" onfocus="showInfo(event, 'remiseNoire')" onblur="hideInfo()">${ICO_SZ('info', 13)}</button>
         </label>
         <div class="lock-field with-unit">
           <input type="number" step="0.5" min="0" max="${urssafPct}" value="${esc(S.identite?.remiseNoirePct ?? "0")}" data-remise-noire oninput="updRemiseNoire(this.value)">

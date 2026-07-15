@@ -18,7 +18,7 @@
 | 2 | Socle transverse (néon, couleurs hors palette, .btn→.mk-btn, typo labels) | ✅ | ✅ TERMINÉ 2026-07-14/15 (Q5 halos, Q4 labels, Q11 ⋮, pills, rayons, purge Q14, toggles Q2 — reste : typo inter-onglets §14 à lisser par onglet) | ☐ |
 | 3 | Mission (`rMS`) | ✅ | ✅ 2026-07-15 | ☐ |
 | 4 | Accueil / Suivi devis (`rAC`) | ✅ | ✅ 2026-07-15 | ☐ |
-| 5 | Catalogue (`rCatalogue`) | ✅ | ☐ | ☐ |
+| 5 | Catalogue (`rCatalogue`) | ✅ | ✅ 2026-07-15 | ☐ |
 | 6 | Bilan comptable (`rCP`) | ✅ | ☐ | ☐ |
 | 7 | Clients (`rCL`) | ✅ | ☐ | ☐ |
 | 8 | Profil (`rPF`) | ✅ | ☐ | ☐ |
@@ -252,15 +252,20 @@ cocher ici → push.
 
 ## 5. CATALOGUE (`rCatalogue`)
 
-- [ ] `#fcd34d`→`var(--warning)`, `#86efac`→`var(--success)` (1617-1618).
-- [ ] Supprimer glows (1589-1604, 1553).
-- [ ] Headers de colonnes 13-14px → 9.5-10px mono cohérents avec le reste (1611-1614 ;
-  sous-titres 11px→9px).
-- [ ] Unité `€/h` DANS la boîte de l'input tarif (pattern `.lock-field.with-unit`) (17290-17293,
-  1513-1517).
-- [ ] Bouton info « i » texte → `ICO_SZ('info', 14)` (17318-17319, 3034).
-- [ ] Cosmétique : `table.hist` glass (`--surface-glass` + `--border-soft`) — décision globale
-  (touche Compta/Historique aussi) · libellé de groupe en mono (1575).
+> **✅ SESSION FAITE (2026-07-15)** — vérifiée par capture headless. Couleurs Tailwind + glows :
+> déjà faits au socle. Cette session : headers `.catalog-th-title` en mono 9.5px (+ key 10px,
+> sub 9px) · unité €/h DANS la boîte (`.tarif-input-wrap` devient la boîte bordée, `.tr-tarif-input`
+> transparent dedans ; cible-cell garde l'accent azure) · `.catalog-group-libelle` en mono ·
+> **`table.hist` en `--surface-glass` + `--border-soft` + radius-lg (GLOBAL** : Catalogue, Bilan,
+> Historique, Achats) · **bouton info « i » → `ICO_SZ('info',13)` PARTOUT** (10 occurrences,
+> `.lg-info-icon` + `.ech-info-icon`, CSS italic retiré).
+
+- [x] `#fcd34d`→`var(--warning)`, `#86efac`→`var(--success)` — fait au socle.
+- [x] Supprimer glows — fait au socle.
+- [x] Headers de colonnes → mono 9.5px.
+- [x] Unité `€/h` DANS la boîte de l'input tarif.
+- [x] Bouton info « i » → Lucide (global, 10 sites).
+- [x] `table.hist` glass (global) · libellé de groupe en mono.
 
 ## 6. BILAN (`rCP`)
 
