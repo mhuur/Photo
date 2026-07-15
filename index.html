@@ -871,6 +871,7 @@
   .cp-noir-tag{font-family:var(--font-mono);font-size:8.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--ember-300);cursor:help}
   .cp-kpi-value.cp-kpi-warn{color:var(--ember-300)}
   .cp-kpi-value.cp-kpi-ok{color:var(--success)}
+  .cp-kpi-value.cp-kpi-azure{color:var(--primary)}
   .cp-kpi-value.cp-kpi-danger{color:var(--danger)}
 
   /* Compta : graphique CA mensuel inline (12 derniers mois) */
@@ -890,7 +891,7 @@
   .cp-chart-bar.current{fill:var(--azure-fill-hi)}
   .cp-chart-bar-noir{fill:rgba(245,148,60,.6);transition:filter .12s;cursor:default}
   .cp-chart-bar-noir:hover{filter:brightness(1.2)}
-  .cp-chart-val{font-size:9px;text-anchor:middle;fill:var(--text-muted);font-variant-numeric:tabular-nums;pointer-events:none}
+  .cp-chart-val{font-family:var(--font-mono);font-size:9px;text-anchor:middle;fill:var(--text-muted);font-variant-numeric:tabular-nums;pointer-events:none}
   .cp-chart-mon{font-family:var(--font-mono);font-size:9px;text-anchor:middle;fill:var(--text-dim);font-weight:700;text-transform:uppercase;letter-spacing:.08em}
   .cp-chart-yr{font-size:9px;text-anchor:middle;fill:var(--ink-500)}
 
@@ -909,6 +910,12 @@
   .hist thead tr.cp-grouphdr th.cp-grp-bilan{color:var(--success)}
   .hist th.cp-grp-sep, .hist td.cp-grp-sep{border-left:1px solid var(--border)}
   .hist td.cp-num{text-align:right;font-variant-numeric:tabular-nums;padding-right:14px;white-space:nowrap}
+  /* Couleurs par colonne « où va l'argent » — appliquées aux lignes mensuelles ;
+     les sous-totaux (gris) et le total général (azur) gardent leur emphase propre
+     grâce à leur spécificité supérieure. */
+  .hist td.cp-col-salaire{color:var(--success)}
+  .hist td.cp-col-ursaf{color:var(--warning)}
+  .hist td.cp-col-tresorerie{color:var(--primary)}
   .hist td.cp-zero{text-align:right;padding-right:14px;white-space:nowrap}
   .hist td.cp-zero > span{color:var(--text-dim);opacity:.45}
   /* Le marqueur « noir » reste plein contraste même dans une cellule à zéro
@@ -918,10 +925,15 @@
   .hist td.cp-marge.pos{color:var(--success)}
   .hist td.cp-marge.neg{color:var(--danger)}
   .hist tr.subtotal td:first-child{white-space:nowrap}
+  /* Titre de section « Bilan mensuel » : même traitement mono que .cp-chart-title */
+  .cp-table-title{font-family:var(--font-mono);font-size:11px;font-weight:700;color:var(--text-soft);text-transform:uppercase;letter-spacing:.16em;border-bottom:none;padding-bottom:0;margin:22px 0 12px;display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+  .cp-table-title .cp-table-hint{font-family:'Inter',system-ui,sans-serif;font-weight:400;font-size:11px;color:var(--text-dim);text-transform:none;letter-spacing:.01em}
+  /* Rappel métier sous le tableau (compta de caisse, composition des colonnes) */
+  .cp-legend-note{font-size:11px;color:var(--text-dim);line-height:1.55;margin:12px 2px 0;max-width:860px}
 
   /* Compta : jauges seuils micro-BNC + franchise TVA */
   .cp-seuils{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px;margin:0 0 22px}
-  .cp-seuil{padding:12px 14px;background:var(--surface);border:1px solid var(--border-light);border-radius:8px}
+  .cp-seuil{padding:12px 14px;background:var(--surface-glass);border:1px solid var(--border-soft);border-radius:var(--radius-lg)}
   .cp-seuil-label{display:flex;justify-content:space-between;align-items:baseline;gap:10px;font-size:13px;color:var(--text);margin-bottom:8px}
   .cp-seuil-label > span:first-child{font-weight:600}
   .cp-seuil-val{font-variant-numeric:tabular-nums;font-size:12px;color:var(--text-muted)}
@@ -9838,6 +9850,19 @@ function rBinModal() {
 // Format des items : { h: titre court, b: explication 1-3 phrases }.
 const APP_CHANGELOG = [
   {
+    id: "2026-07-bilan-v2",
+    date: "2026-07-15",
+    title: "Bilan comptable — lecture en couleurs",
+    items: [
+      { h: "Chaque colonne a sa couleur",
+        b: "Dans le tableau du bilan, le Salaire net s'affiche en vert, l'URSSAF en orange (avec un « − » car c'est ce qui sort) et la Trésorerie en bleu — d'un coup d'œil on voit où va l'argent. Les indicateurs du haut suivent la même logique." },
+      { h: "Rappel des règles sous le tableau",
+        b: "Une ligne rappelle que le bilan est en compta de caisse (une recette compte le mois où l'argent arrive), comment se calculent les dépenses et le salaire net." },
+      { h: "Repère « au noir » plus net",
+        b: "L'écart entre l'encaissé et le CA déclaré (la part non déclarée) est signalé par un discret « · noir » dans la colonne CA, et les cartes de seuils adoptent le fond en verre dépoli." }
+    ]
+  },
+  {
     id: "2026-07-catalogue-v2",
     date: "2026-07-15",
     title: "Catalogue et tableaux — finitions",
@@ -16827,15 +16852,17 @@ function bilanRender() {
   // translucide (sinon le fond du sous-total surface-2 disparaît).
   const dash = `<span>—</span>`;
   const cellH = v => num(v) === 0 ? `<td class="cp-zero cp-grp-sep">${dash}</td>` : `<td class="cp-num cp-grp-sep">${num(v).toFixed(2).replace(".", ",")}</td>`;
-  const cell  = (v, sep) => num(v) === 0 ? `<td class="cp-zero${sep ? ' cp-grp-sep' : ''}">${dash}</td>` : `<td class="cp-num${sep ? ' cp-grp-sep' : ''}">${fmt(v)}</td>`;
+  const cell  = (v, sep, cls) => num(v) === 0 ? `<td class="cp-zero${sep ? ' cp-grp-sep' : ''}">${dash}</td>` : `<td class="cp-num${sep ? ' cp-grp-sep' : ''}${cls ? ' ' + cls : ''}">${fmt(v)}</td>`;
   const cellMarge = v => v === 0 ? `<td class="cp-zero">${dash}</td>` : `<td class="cp-marge ${v >= 0 ? 'pos' : 'neg'}">${fmt(v)}</td>`;
+  // URSSAF : montant qui SORT (provision à reverser) → signe « − » + teinte ambre.
+  const cellUrssaf = v => num(v) === 0 ? `<td class="cp-zero">${dash}</td>` : `<td class="cp-num cp-col-ursaf">−&nbsp;${fmt(v)}</td>`;
   // Colonne CA : signale l'écart avec l'encaissé, qui EST la part au noir.
   // Sans ce marqueur, un mois où CA < Payé se lit comme une anomalie de saisie
   // alors que c'est le fonctionnement normal des prestations non déclarées.
   const cellCA = r => {
     const noir = r2(num(r.paye) - num(r.ca));
     const tag = noir > 0.005
-      ? ` <span class="cp-noir-tag" title="Part encaissée mais NON déclarée : ${fmt(noir)}. Le CA ne compte que le déclaré (seuils micro-BNC / TVA).">noir</span>`
+      ? ` <span class="cp-noir-tag" title="Part encaissée mais NON déclarée : ${fmt(noir)}. Le CA ne compte que le déclaré (seuils micro-BNC / TVA).">· noir</span>`
       : "";
     if (num(r.ca) === 0) return `<td class="cp-zero">${dash}${tag}</td>`;
     return `<td class="cp-num">${fmt(r.ca)}${tag}</td>`;
@@ -16857,9 +16884,9 @@ function bilanRender() {
     ${cellH(r.heures)}
     ${cell(r.paye)}
     ${cellCA(r)}
-    ${cell(r.salaire, true)}
-    ${cell(r.ursaf)}
-    ${cell(r.tresorerie)}
+    ${cell(r.salaire, true, 'cp-col-salaire')}
+    ${cellUrssaf(r.ursaf)}
+    ${cell(r.tresorerie, false, 'cp-col-tresorerie')}
     ${cell(r.frais)}
     ${cell(r.abos, true)}
     ${cell(r.amort)}
@@ -16923,9 +16950,9 @@ function rCP() {
     <div class="cp-kpi-grid">
       <div class="cp-kpi"><span class="cp-kpi-label">CA mois (${esc(MOIS_FR[today.getMonth()])} ${esc(currentYear)})</span><strong class="cp-kpi-value">${fmt(caMois)}</strong></div>
       <div class="cp-kpi"><span class="cp-kpi-label">CA cumulé ${esc(currentYear)}</span><strong class="cp-kpi-value">${fmt(ytd.ca)}</strong></div>
-      <div class="cp-kpi"><span class="cp-kpi-label">Salaire net cumulé</span><strong class="cp-kpi-value">${fmt(ytd.salaire)}</strong></div>
+      <div class="cp-kpi"><span class="cp-kpi-label">Salaire net cumulé</span><strong class="cp-kpi-value cp-kpi-ok">${fmt(ytd.salaire)}</strong></div>
       <div class="cp-kpi"><span class="cp-kpi-label">URSSAF à provisionner</span><strong class="cp-kpi-value cp-kpi-warn">${fmt(ytd.ursaf)}</strong></div>
-      <div class="cp-kpi"><span class="cp-kpi-label">Marge nette ${esc(currentYear)}</span><strong class="cp-kpi-value cp-kpi-${ytd.marge >= 0 ? 'ok' : 'danger'}">${fmt(ytd.marge)}</strong></div>
+      <div class="cp-kpi"><span class="cp-kpi-label">Marge nette ${esc(currentYear)}</span><strong class="cp-kpi-value cp-kpi-${ytd.marge >= 0 ? 'azure' : 'danger'}">${fmt(ytd.marge)}</strong></div>
     </div>
 
     <div class="cp-seuils">
@@ -16949,7 +16976,7 @@ function rCP() {
 
     ${comptaChartHtml()}
 
-    <h3>Bilan mensuel <span class="hint" style="font-weight:normal;font-size:13px;color:var(--text-muted);margin-left:8px">(calculé automatiquement depuis Suivi — abonnements et matériel inclus)</span></h3>
+    <h3 class="cp-table-title">Bilan mensuel <span class="cp-table-hint">calculé automatiquement depuis Suivi — abonnements et matériel inclus</span></h3>
 
     ${yearsAvailable.length > 0 ? `<div class="cp-toolbar">
       <div class="suv-chip-bar" style="margin:0">
@@ -16989,7 +17016,8 @@ function rCP() {
       </thead>
       <tbody>${bilan.body}</tbody>
       ${bilan.foot ? `<tfoot>${bilan.foot}</tfoot>` : ""}
-    </table>` : `<div class="empty">${comptaFilterYears.size > 0 ? "Aucun mois ne correspond aux années sélectionnées." : "Aucun encaissement enregistré pour le moment."}</div>`}
+    </table>
+    <p class="cp-legend-note">Compta de caisse (art. 93 CGI) : une recette compte le mois où l'argent arrive, pas celui de la prestation. Dépenses = achats + abonnements + amortissements. Salaire net = CA déclaré − URSSAF.</p>` : `<div class="empty">${comptaFilterYears.size > 0 ? "Aucun mois ne correspond aux années sélectionnées." : "Aucun encaissement enregistré pour le moment."}</div>`}
   `;
 }
 
