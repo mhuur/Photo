@@ -25,7 +25,7 @@
 | 9 | Historique (`rSV`) | ✅ | ✅ 2026-07-15 | ☐ |
 | 10 | Achats (`rAchats`) | ✅ | ✅ 2026-07-15 | ☐ |
 | 11 | Bugs & suggestions (`rBG`) | ✅ | ✅ 2026-07-15 | ☐ |
-| 12 | Mon Compte (`rCompte`) | ✅ | ☐ | ☐ |
+| 12 | Mon Compte (`rCompte`) | ✅ | ✅ 2026-07-15 | ☐ |
 | 13 | Sidebar + en-têtes + audit CSS global | ✅ (2ᵉ passe) | ✅ 2026-07-14 (reste : cosmétiques « à trancher » + Q13 libellés NAV) | ☐ |
 
 **Méthode par session** : 1 onglet = re-vérifier les lignes citées (elles dérivent) → corriger →
@@ -383,20 +383,34 @@ cocher ici → push.
 - [x] Pastille statut (clic = avance) + badge type (clic = bascule) au motif V2.
 - [x] Panneaux verre, dates mono, quick-add riche conservé + toggle Bug/Suggestion.
 
-## 12. MON COMPTE (`rCompte`)
+## 12. MON COMPTE (`rCompte`) — DERNIER ONGLET
 
-- [ ] Nom en Big Shoulders 22px uppercase (207).
-- [ ] Badge « Propriétaire » jade pill 999px (210-211).
-- [ ] Indicateur « Synchronisé » (dot + mono jade) sur la carte profil (18020-18034).
-- [ ] Déconnexion : encart ember pleine largeur + `.mk-btn ghost` (18032).
-- [ ] Membres : avatar initiales + pill statut « Vous / Membre validé / En attente » (18382-18408).
-- [ ] Corbeille : `.bin-item-restore` sans glow, boutons `.mk-btn` (2914-2915).
-- [ ] Mises à jour : dot ember par entrée non lue (capturer `lastSeen` avant bump, 10463-10488) ·
-  date en mono à droite (265, 10476).
-- [ ] Cosmétique : `.maj-entry`/`.ws-row` en `--surface-sunken` (263, 347).
-- [ ] À noter (pas corriger) : pas de « + Inviter » (modèle = demande+approbation) · « sélecteur
-  de compte Google » forcé en dur, checkbox sans objet · structure chips vs grille = choix
-  phase 6 à consigner au README.
+> **✅ SESSION FAITE (2026-07-15)** — vérifiée par 4 captures (Général, Partage, Corbeille, MAJ).
+> Nom `.cpt-id-name` en **Big Shoulders 22px uppercase**. Badge « Propriétaire » jade : déjà fait.
+> Indicateur **« Synchronisé »** (`.cpt-sync`, dot + mono jade) sous le mail. Déconnexion sortie de
+> la carte identité → **encart ember pleine largeur** (`.cpt-signout`, `.mk-btn ghost`) en bas de
+> Général. Membres (`rShareSection`) : **avatar initiales** (`.ws-avatar`, `wsInitials`) + **pastille
+> de statut** (`.ws-status-pill` : Membre validé jade / En attente ember). Corbeille (`binListHtml`) :
+> boutons Restaurer/purge → `.mk-btn subtle`/`ghost` (CSS `.bin-item-restore/-purge` mort supprimé),
+> `.bin-item` en sunken + date mono. Mises à jour : **dot ember par entrée non lue** (`rMajLogSection`
+> fige `prevSeen` AVANT le bump ; 1ʳᵉ visite = 0 dot) + date **mono à droite** + `.maj-entry` sunken.
+> `.ws-row` sunken.
+
+- [x] Nom Big Shoulders · badge Propriétaire jade (déjà) · indicateur « Synchronisé ».
+- [x] Déconnexion en encart ember pleine largeur (`.mk-btn ghost`).
+- [x] Membres : avatar initiales + pastille statut (Membre validé / En attente).
+- [x] Corbeille : boutons `.mk-btn`, items sunken, dates mono.
+- [x] Mises à jour : dot ember par entrée non lue + date mono à droite ; `.maj-entry`/`.ws-row` sunken.
+- [x] Consigné au README : pas de « + Inviter » · sélecteur de compte Google forcé · chips vs grille.
+
+---
+
+## 🎉 REFONTE V2 TERMINÉE (2026-07-15)
+
+**Les 13 sessions du plan sont bouclées** (Socle + Sidebar + 11 onglets). Chaque onglet a été
+recadré au système V2 (panneaux verre, typos Big Shoulders / Space Mono, pastilles au motif unique,
+`.mk-btn`, tokens), vérifié par capture headless (et smoke test vm pour Mission + Bugs). Les écarts
+assumés sont consignés dans `refonte-v2/README.md`. `index.html` + `CLAUDE.md` font désormais autorité.
 
 ## 13. SIDEBAR + EN-TÊTES — audit fait (2026-07-14, 2ᵉ passe)
 

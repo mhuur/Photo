@@ -65,3 +65,10 @@ Les tokens vivent dans le 1ᵉʳ `:root` d'`index.html` — cf. § Charte V2 de
   au-dessus de sa table. Le « Coût annuel » d'amortissement reste neutre (pas
   jade) : dans la palette, jade = net positif — le teinter jurerait avec la
   convention du Bilan où l'amortissement est une dépense.
+- **Mon Compte : sous-navigation par chips**, pas la grille de cartes de la
+  maquette (choix phase 6, chaque chip = une section à part). **Pas de bouton
+  « + Inviter » dans Partage** : le modèle d'accès est demande-puis-approbation
+  (une personne demande l'accès, l'owner valide), pas une invitation émise par
+  l'owner. Le **sélecteur de compte Google est forcé en dur** dans le flux
+  d'auth (`buildGmailUrl` / AccountChooser) — pas de réglage utilisateur, donc
+  pas de case à cocher associée.
