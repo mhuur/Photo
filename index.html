@@ -211,9 +211,17 @@
   .cpt-id-avatar img{width:100%;height:100%;object-fit:cover;display:block}
   .cpt-id-initials{font-size:15px;font-weight:700;color:var(--ink-200)}
   .cpt-id-txt{flex:1;min-width:160px}
-  .cpt-id-name{font-size:15px;font-weight:700;color:#fff}
-  .cpt-id-mail{font-size:12px;color:var(--text-dim);word-break:break-all;margin-top:2px}
+  .cpt-id-name{font-family:var(--font-display);font-size:22px;font-weight:600;line-height:1;color:#fff;text-transform:uppercase;letter-spacing:.01em}
+  .cpt-id-mail{font-size:12px;color:var(--text-dim);word-break:break-all;margin-top:4px}
+  /* Indicateur « Synchronisé » : point + mono jade (les données vivent dans le cloud) */
+  .cpt-sync{display:inline-flex;align-items:center;gap:6px;margin-top:7px;font-family:var(--font-mono);font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.12em;color:var(--success)}
+  .cpt-sync-dot{width:6px;height:6px;border-radius:50%;background:var(--success);flex-shrink:0}
   .cpt-id-role{display:flex;flex-direction:column;gap:4px;align-items:flex-end}
+  /* Encart de déconnexion : ton ember, pleine largeur, en bas de la section Général */
+  .cpt-signout{display:flex;align-items:center;gap:16px;flex-wrap:wrap;padding:14px 18px;background:rgba(232,117,28,.06);border:1px solid rgba(232,117,28,.28);border-radius:var(--radius-lg)}
+  .cpt-signout-txt{flex:1;display:flex;flex-direction:column;gap:2px;min-width:180px}
+  .cpt-signout-txt strong{font-size:13px;color:var(--text);font-weight:600}
+  .cpt-signout-txt span{font-size:12px;color:var(--text-muted)}
   .cpt-role-pill{display:inline-block;padding:2px 9px;border-radius:999px;font-family:var(--font-mono);font-size:8.5px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;background:transparent;border:1px solid var(--border);color:var(--text-soft)}
   /* Owner en jade (maquette Mon Compte : badge « Propriétaire » jade). */
   .cpt-role-pill.owner{border-color:rgba(2,220,185,.35);color:var(--success)}
@@ -282,10 +290,13 @@
   .placeholder-chip:active{transform:translateY(0);box-shadow:0 1px 2px rgba(2,220,185,.2)}
   /* Vue Mises à jour — changelog vulgarisé pour l'utilisateur (onglet majlog) */
   .maj-list{display:flex;flex-direction:column;gap:var(--space-xl);max-width:880px}
-  .maj-entry{background:var(--surface);border:1px solid var(--border-soft);border-radius:var(--radius-lg);padding:var(--space-lg)}
-  .maj-entry-head{display:flex;align-items:baseline;gap:var(--space-md);margin-bottom:var(--space-md);padding-bottom:var(--space-sm);border-bottom:1px solid var(--border-soft)}
-  .maj-entry-date{font-size:11px;color:var(--text-muted);font-variant-numeric:tabular-nums;text-transform:uppercase;letter-spacing:.04em;flex-shrink:0}
+  .maj-entry{background:var(--surface-sunken);border:1px solid var(--border-soft);border-radius:var(--radius-lg);padding:var(--space-lg)}
+  .maj-entry.maj-unread{border-color:rgba(245,148,60,.32)}
+  .maj-entry-head{display:flex;align-items:center;gap:var(--space-md);margin-bottom:var(--space-md);padding-bottom:var(--space-sm);border-bottom:1px solid var(--border-soft)}
+  .maj-unread-dot{width:7px;height:7px;border-radius:50%;background:var(--ember-300);flex-shrink:0}
   .maj-entry-title{margin:0;font-size:16px;font-weight:600;color:var(--text)}
+  /* Date à droite, en mono technique */
+  .maj-entry-date{margin-left:auto;font-family:var(--font-mono);font-size:9.5px;color:var(--text-dim);font-variant-numeric:tabular-nums;text-transform:uppercase;letter-spacing:.1em;flex-shrink:0}
   .maj-entry-items{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:var(--space-md)}
   .maj-entry-items li{display:flex;flex-direction:column;gap:4px;padding-left:var(--space-md);border-left:2px solid rgba(2,220,185,.30)}
   .maj-entry-items li strong{font-size:13px;font-weight:600;color:var(--text)}
@@ -353,8 +364,13 @@
   .ws-status p{margin:8px 0 0;font-size:13px;color:var(--text-muted);line-height:1.5}
   /* === Section Partage dans Profil === */
   .ws-list{display:flex;flex-direction:column;gap:8px;max-width:780px}
-  .ws-row{display:flex;align-items:center;gap:14px;padding:12px 14px;background:var(--surface);border:1px solid var(--border-soft);border-radius:8px}
-  .ws-row.pending{border-color:var(--warning);background:rgba(232,117,28,.04)}
+  .ws-row{display:flex;align-items:center;gap:14px;padding:12px 14px;background:var(--surface-sunken);border:1px solid var(--border-soft);border-radius:var(--radius-lg)}
+  .ws-row.pending{border-color:var(--warning);background:rgba(232,117,28,.06)}
+  /* Avatar initiales du membre + pastille de statut (motif V2 outline) */
+  .ws-avatar{width:38px;height:38px;border-radius:50%;flex-shrink:0;display:inline-flex;align-items:center;justify-content:center;background:var(--surface-2);border:1px solid var(--border);font-family:var(--font-display);font-size:14px;font-weight:600;color:var(--text-soft);letter-spacing:.02em}
+  .ws-status-pill{font-family:var(--font-mono);font-size:8.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;padding:3px 9px;border-radius:999px;background:transparent;border:1px solid;flex-shrink:0}
+  .ws-status-pill.ok{color:var(--success);border-color:rgba(2,220,185,.4)}
+  .ws-status-pill.wait{color:var(--ember-300);border-color:rgba(245,148,60,.4)}
   .ws-row-info{flex:1;display:flex;flex-direction:column;gap:2px;min-width:0}
   .ws-row-info strong{font-size:14px;color:var(--text);font-weight:600}
   .ws-row-info .ws-mail{font-size:12.5px;color:var(--text-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -2956,16 +2972,12 @@
 
   /* === Corbeille modale === */
   .bin-list{display:flex;flex-direction:column;gap:6px;max-height:50vh;overflow-y:auto;padding:4px 0}
-  .bin-item{display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--surface);border:1px solid var(--border-light);border-radius:6px;transition:border-color .12s}
-  .bin-item:hover{border-color:var(--primary)}
-  .bin-item-kind{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--text-dim);padding:2px 8px;background:var(--surface-2);border-radius:10px;flex-shrink:0}
+  .bin-item{display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--surface-sunken);border:1px solid var(--border-soft);border-radius:var(--radius-md);transition:border-color .12s}
+  .bin-item:hover{border-color:var(--border-light)}
+  .bin-item-kind{font-family:var(--font-mono);font-size:8.5px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--text-dim);padding:2px 8px;background:var(--surface-2);border-radius:999px;flex-shrink:0}
   .bin-item-label{flex:1;font-size:13px;font-weight:500;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
-  .bin-item-date{font-size:11px;color:var(--text-dim);font-style:italic;flex-shrink:0}
-  .bin-item-restore{flex-shrink:0;background:transparent;border:1px solid var(--success);color:var(--success);cursor:pointer;font:inherit;font-size:11px;font-weight:600;padding:4px 10px;border-radius:5px;transition:all .12s}
-  .bin-item-restore:hover{background:rgba(2,220,185,.1);color:var(--success)}
-  .bin-item-purge{flex-shrink:0;background:transparent;border:1px solid transparent;color:var(--text-dim);cursor:pointer;font:inherit;font-size:14px;line-height:1;width:24px;height:24px;border-radius:5px;display:inline-flex;align-items:center;justify-content:center;padding:0;transition:all .12s}
-  .bin-item-purge:hover{color:var(--danger);background:var(--danger-soft);border-color:var(--danger)}
-  .bin-empty{padding:30px;text-align:center;color:var(--text-dim);font-style:italic;font-size:13px}
+  .bin-item-date{font-family:var(--font-mono);font-size:10px;color:var(--text-dim);flex-shrink:0}
+  .bin-empty{padding:30px;text-align:center;color:var(--text-dim);font-size:13px}
 
   /* Lien d'accès corbeille — petit, sous le bloc CGV de la preview */
   .dp-bin-link{display:inline-flex;align-items:center;gap:5px;margin-top:10px;padding:5px 10px;background:transparent;color:var(--text-dim);border:1px solid transparent;border-radius:5px;cursor:pointer;font:inherit;font-size:11px;font-weight:500;transition:all .12s}
@@ -9909,8 +9921,8 @@ function binListHtml() {
       <span class="bin-item-kind">${esc(BIN_KIND_LBL[it.kind] || it.kind)}</span>
       <span class="bin-item-label">${esc(it.label || "(sans nom)")}</span>
       <span class="bin-item-date">${esc(bugRelativeTime(it.deletedAt))}</span>
-      <button class="bin-item-restore" onclick="binRestore('${esc(it.id)}')" title="Restaurer">${ICO_SZ('cornerUpLeft', 13)} Restaurer</button>
-      <button class="bin-item-purge" onclick="binPurge('${esc(it.id)}')" title="Supprimer définitivement">${ICO_SZ('x', 13)}</button>
+      <button class="mk-btn subtle" onclick="binRestore('${esc(it.id)}')" title="Restaurer">${ICO_SZ('cornerUpLeft', 13)} Restaurer</button>
+      <button class="mk-btn ghost" onclick="binPurge('${esc(it.id)}')" title="Supprimer définitivement">${ICO_SZ('trash', 13)}</button>
     </div>`).join("")}</div>`;
 }
 
@@ -9943,6 +9955,19 @@ function rBinModal() {
 // l'utilisateur. Plus récent en premier. id = clé stable, sert au "lu/non-lu".
 // Format des items : { h: titre court, b: explication 1-3 phrases }.
 const APP_CHANGELOG = [
+  {
+    id: "2026-07-compte-v2",
+    date: "2026-07-15",
+    title: "Mon Compte — finitions",
+    items: [
+      { h: "Carte d'identité plus claire",
+        b: "Ton nom s'affiche en grande typo, avec un repère « Synchronisé » vert (tes données sont bien dans le cloud). La déconnexion a son propre encart en bas, distinct du reste." },
+      { h: "Membres du workspace en avatars",
+        b: "Chaque membre a un avatar d'initiales et une pastille de statut (Membre validé / En attente), plus lisible d'un coup d'œil." },
+      { h: "Nouveautés repérables",
+        b: "Dans « Mises à jour », les entrées non lues depuis ta dernière visite portent un point orange." }
+    ]
+  },
   {
     id: "2026-07-bugs-v2",
     date: "2026-07-15",
@@ -10729,23 +10754,30 @@ const APP_CHANGELOG = [
 // À l'affichage, on marque la dernière entrée comme vue
 // (S.prefs.lastSeenMajVersion) pour retirer le dot « nouveau » de la sidebar.
 function rMajLogSection() {
-  if (APP_CHANGELOG.length > 0) {
-    if (!S.prefs) S.prefs = {};
-    const latest = APP_CHANGELOG[0].id;
-    if (S.prefs.lastSeenMajVersion !== latest) {
-      S.prefs.lastSeenMajVersion = latest;
-      // Save asynchrone pour ne pas réentrer dans le render courant.
-      setTimeout(save, 0);
-    }
+  if (!S.prefs) S.prefs = {};
+  // Fige le nombre d'entrées NON LUES avant de marquer tout comme vu : une
+  // entrée est « nouvelle » si elle précède, dans la liste (récent→ancien),
+  // celle que l'user avait vue en dernier. 1ʳᵉ visite (aucune vue) = 0 dot
+  // (le badge du chip signale déjà la nouveauté ; on évite un mur de points).
+  const prevSeen = S.prefs.lastSeenMajVersion || "";
+  let unreadCount = 0;
+  if (prevSeen && APP_CHANGELOG.length) {
+    const idx = APP_CHANGELOG.findIndex(e => e.id === prevSeen);
+    unreadCount = idx < 0 ? APP_CHANGELOG.length : idx;
+  }
+  if (APP_CHANGELOG.length && S.prefs.lastSeenMajVersion !== APP_CHANGELOG[0].id) {
+    S.prefs.lastSeenMajVersion = APP_CHANGELOG[0].id;
+    setTimeout(save, 0); // save asynchrone pour ne pas réentrer dans le render
   }
   return `
     <div class="hint" style="margin-bottom:var(--space-lg)">Ce qui a évolué dans l'application, du plus récent au plus ancien.</div>
     <div class="maj-list">
-      ${APP_CHANGELOG.map(entry => `
-        <section class="maj-entry">
+      ${APP_CHANGELOG.map((entry, i) => `
+        <section class="maj-entry${i < unreadCount ? " maj-unread" : ""}">
           <header class="maj-entry-head">
-            <span class="maj-entry-date">${esc(dateFR(entry.date))}</span>
+            ${i < unreadCount ? `<span class="maj-unread-dot" title="Nouveau depuis ta dernière visite"></span>` : ""}
             <h3 class="maj-entry-title">${esc(entry.title)}</h3>
+            <span class="maj-entry-date">${esc(dateFR(entry.date))}</span>
           </header>
           <ul class="maj-entry-items">
             ${entry.items.map(it => `
@@ -18076,12 +18108,12 @@ function rCompteGeneral() {
         <div class="cpt-id-txt">
           <div class="cpt-id-name">${esc((user && user.displayName) || "—")}</div>
           <div class="cpt-id-mail">${esc((user && user.email) || "")}</div>
+          <div class="cpt-sync"><span class="cpt-sync-dot"></span>Synchronisé</div>
         </div>
         <div class="cpt-id-role">
           <span class="cpt-role-pill ${isOwner ? "owner" : ""}">${isOwner ? "Propriétaire" : "Membre"}</span>
           ${isOwner && memberCount ? `<span class="v2-meta">${memberCount} membre${memberCount > 1 ? "s" : ""}</span>` : ""}
         </div>
-        <button class="mk-btn subtle" onclick="signOut()">${ICO_SZ('logOut', 14)} Se déconnecter</button>
       </div>
     </div>
 
@@ -18097,6 +18129,14 @@ function rCompteGeneral() {
         </div>
       </div>
       <div class="hint" style="margin-top:var(--space-sm)">Un devis envoyé sans réponse depuis plus longtemps apparaît dans « À relancer » sur l'Accueil.</div>
+    </div>
+
+    <div class="cpt-signout">
+      <div class="cpt-signout-txt">
+        <strong>Déconnexion</strong>
+        <span>Ferme la session sur cet appareil. Tes données restent sauvegardées dans le cloud.</span>
+      </div>
+      <button class="mk-btn ghost" onclick="signOut()">${ICO_SZ('logOut', 14)} Se déconnecter</button>
     </div>
   `;
 }
@@ -18422,6 +18462,9 @@ function rShareSection() {
   const pending = workspaceState.pendingRequests || {};
   const memberKeys = Object.keys(members);
   const pendingKeys = Object.keys(pending);
+  // Initiales pour l'avatar d'un membre / d'une demande.
+  const wsInitials = (o) => (((o && (o.name || o.email)) || "?")
+    .split(/[\s@.]/).filter(Boolean).map(s => s[0]).join("").slice(0, 2) || "?").toUpperCase();
 
   const memberRows = memberKeys.length === 0
     ? `<div class="ws-empty">Aucun membre pour l'instant.</div>`
@@ -18429,11 +18472,13 @@ function rShareSection() {
         const m = members[uid];
         const added = m.addedAt ? dateFR(m.addedAt.slice(0, 10)) : "";
         return `<div class="ws-row">
+          <span class="ws-avatar">${esc(wsInitials(m))}</span>
           <div class="ws-row-info">
             <strong>${esc(m.name || "(sans nom)")}</strong>
             <span class="ws-mail">${esc(m.email || "")}</span>
             ${added ? `<span class="ws-date">ajouté le ${esc(added)}</span>` : ""}
           </div>
+          <span class="ws-status-pill ok">Membre validé</span>
           <button class="mk-btn ghost" onclick="removeMember('${esc(uid)}')">${ICO_SZ('trash', 14)} Retirer</button>
         </div>`;
       }).join("");
@@ -18444,11 +18489,13 @@ function rShareSection() {
         const r = pending[uid];
         const ts = r.requestedAt ? dateFR(r.requestedAt.slice(0, 10)) : "";
         return `<div class="ws-row pending">
+          <span class="ws-avatar">${esc(wsInitials(r))}</span>
           <div class="ws-row-info">
             <strong>${esc(r.name || "(sans nom)")}</strong>
             <span class="ws-mail">${esc(r.email || "")}</span>
             ${ts ? `<span class="ws-date">demandé le ${esc(ts)}</span>` : ""}
           </div>
+          <span class="ws-status-pill wait">En attente</span>
           <div style="display:flex;gap:6px">
             <button class="mk-btn green" onclick="approveRequest('${esc(uid)}')">${ICO_SZ('check', 14)} Approuver</button>
             <button class="mk-btn ghost" onclick="rejectRequest('${esc(uid)}')">Refuser</button>
