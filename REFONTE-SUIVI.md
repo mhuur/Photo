@@ -37,7 +37,7 @@ cocher ici → push.
 ## QUESTIONS OUVERTES — ✅ TOUTES ARBITRÉES (2026-07-14)
 
 **Décisions :**
-1. Mission : **accordéon conservé** (écart assumé → README).
+1. Mission : ~~accordéon conservé~~ **RENVERSÉ 2026-07-15** → sections empilées toujours ouvertes (maquette). Accordéon + machinerie supprimés.
 2. Toggles : **fill azure sur les toggles de 1ᵉʳ niveau**, secondaires restent en creux.
 3. Rayons : **aligner sur la maquette** (tokens : contrôles 4px, cartes 6px).
 4. Labels de champ : **densifier** (11px, labels de zone en mono).

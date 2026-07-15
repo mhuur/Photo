@@ -294,24 +294,14 @@
   .row{display:flex;gap:var(--gap-field);margin-bottom:var(--gap-row);flex-wrap:wrap}
   .row-section-break{margin-top:var(--space-sm)}
   /* Edit accordion (Édition du devis section) — collapsible groups */
-  .edit-accordion-list{display:flex;flex-direction:column;gap:var(--space-sm);margin-top:var(--space-xs);margin-bottom:var(--space-lg);max-width:880px}
-  /* Accordéon Mission — style néon : transparent au repos, bordure primary qui s'éclaire au hover, glow marqué à l'ouverture */
-  .edit-section{background:var(--surface-glass);border:1px solid var(--border-soft);border-radius:var(--radius-lg);overflow:hidden;transition:border-color .2s,box-shadow .2s,background .2s}
-  .edit-section:hover:not(.open){border-color:var(--border-light)}
-  .edit-section.open{border-color:rgba(69,193,253,.45);background:rgba(69,193,253,.05)}
-  .edit-section-header{width:100%;display:flex;align-items:center;gap:10px;padding:10px 14px;background:transparent;border:0;color:var(--text);font:inherit;font-size:13px;font-weight:600;cursor:pointer;text-align:left;transition:background .12s,color .12s}
-  .edit-section-header:hover{background:rgba(69,193,253,.05)}
-  .edit-section.open .edit-section-header:hover{background:rgba(69,193,253,.08)}
-  .edit-section-header:focus{outline:none}
-  .edit-section.open .edit-section-title{color:var(--primary)}
-  .edit-section-chevron{font-size:11px;color:var(--text-muted);transition:transform .2s ease,color .2s,filter .2s;flex-shrink:0;width:14px;display:inline-flex;align-items:center;justify-content:center}
-  .edit-section.open .edit-section-chevron{transform:rotate(90deg);color:var(--primary)}
-  .edit-section-title{flex:1;font-family:var(--font-mono);font-size:11px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--text-soft);transition:color .2s}
-  .edit-section-action{margin-left:auto;padding:5px 12px;font-size:11px;font-weight:500;letter-spacing:0;text-transform:none;flex-shrink:0}
-  .edit-section-body{padding:var(--space-md) var(--space-lg) var(--space-lg);border-top:1px solid rgba(69,193,253,.2);background:rgba(69,193,253,.02)}
-  .edit-section-body[hidden]{display:none}
-  .edit-section-body > h4:first-child{margin-top:var(--space-sm)}
-  /* Sous-titres dans une section accordion (h5) */
+  .edit-accordion-list{display:flex;flex-direction:column;gap:var(--space-md);margin-top:var(--space-xs);margin-bottom:var(--space-lg);max-width:880px}
+  /* Sections du formulaire devis — cartes statiques TOUJOURS ouvertes (maquette
+     V2 : padding 18/20/22, en-tête num + titre mono, corps visible). */
+  .edit-section{background:var(--surface-glass);border:1px solid var(--border-soft);border-radius:var(--radius-lg);padding:18px 20px 22px}
+  .edit-section-head{display:flex;align-items:baseline;gap:10px;margin-bottom:16px}
+  .edit-section-title{font-family:var(--font-mono);font-size:11px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--text-soft)}
+  .edit-section-body > h4:first-child{margin-top:0}
+  /* Sous-titres dans une section (h5) */
   .edit-section-body h5{margin:var(--space-lg) 0 var(--space-sm);font-family:var(--font-mono);font-size:10px;font-weight:700;color:var(--ink-400);text-transform:uppercase;letter-spacing:.16em;border:0;padding:0}
   .edit-section-body h5:first-child{margin-top:var(--space-xs)}
   .field{display:flex;flex-direction:column;flex:1;min-width:160px}
@@ -3113,9 +3103,8 @@
   .ms-ech-line span:last-child{font-variant-numeric:tabular-nums;white-space:nowrap}
   .ms-preview-toggle{font-family:var(--font-mono);font-size:10px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;background:transparent;border:1px dashed var(--border-light);color:var(--text-muted);border-radius:var(--radius-md);padding:11px 0;cursor:pointer;width:100%;transition:color .15s,border-color .15s}
   .ms-preview-toggle:hover{color:var(--ink-000);border-color:var(--border-strong,rgba(255,255,255,.44))}
-  /* Numéro de section « 01 » dans l'accordéon Mission */
+  /* Numéro de section « 01 » (en-tête statique de la carte Mission) */
   .edit-section-num{font-family:var(--font-mono);font-size:10px;color:var(--ink-500);flex-shrink:0}
-  .edit-section.open .edit-section-num{color:var(--primary)}
   .devis-banner{font-size:12px;line-height:1.45;padding:11px 14px;border-radius:var(--radius-lg);display:flex;gap:8px;align-items:flex-start}
   .devis-banner.err{background:var(--danger-soft);border:1px solid var(--danger);color:var(--danger)}
   /* Warn (maquette) : texte gris lisible, seule l'icône porte l'ambre. */
@@ -3130,14 +3119,6 @@
   .devis-banner-link{background:none;border:0;padding:0;color:var(--primary);cursor:pointer;font:inherit;text-decoration:underline}
   .devis-pane-actions{display:flex;gap:8px;align-items:center}
   .devis-pane-actions .btn[disabled]{opacity:.5;cursor:not-allowed;box-shadow:none}
-
-  /* Compact summary chip in accordion header — "3 lignes · 850 €" */
-  .edit-section-summary{font-size:12px;color:var(--text-muted);font-weight:500;display:inline-flex;align-items:center;gap:8px;padding-right:6px;flex-shrink:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:50%}
-  .edit-section-summary .dot{width:3px;height:3px;border-radius:50%;background:var(--text-dim)}
-  .edit-section-summary .amt{color:var(--text);font-variant-numeric:tabular-nums}
-  .edit-section-summary .warn{color:var(--warning)}
-  .edit-section-summary .err{color:var(--danger)}
-  .edit-section.open .edit-section-summary{opacity:.5}
 
   /* Drag handle + dragging state on lignes */
   .lg-row-wrap{position:relative;transition:opacity .15s}
@@ -9837,6 +9818,15 @@ function rBinModal() {
 // Format des items : { h: titre court, b: explication 1-3 phrases }.
 const APP_CHANGELOG = [
   {
+    id: "2026-07-mission-sections-ouvertes",
+    date: "2026-07-15",
+    title: "Nouveau devis — toutes les sections d'un coup d'œil",
+    items: [
+      { h: "Fini le formulaire replié",
+        b: "Les sections du devis (Identification, Prestations, Déplacements…) ne se déplient plus une par une : elles sont désormais toutes ouvertes et empilées, chacune dans sa carte. Plus besoin de cliquer pour passer de l'une à l'autre — tout est visible en faisant défiler." }
+    ]
+  },
+  {
     id: "2026-07-mission-v2",
     date: "2026-07-15",
     title: "Nouveau devis — finitions de la refonte",
@@ -10767,74 +10757,6 @@ function rTextEditorModal() {
   </div>`;
 }
 
-// ============ EDIT ACCORDION ============
-// Module-scoped state: which sections are open. Default: all closed.
-const _editSectionOpen = { logo: false, photographe: false, modalites: false, signature: false, cgv: false };
-
-// ▼ rEditSection — wrapper accordéon éditable
-function rEditSection(key, title, bodyHtml, headerActionHtml = "") {
-  const open = !!_editSectionOpen[key];
-  return `<div class="edit-section ${open ? 'open' : ''}" data-edit-section="${key}">
-    <button type="button" class="edit-section-header" onclick="editSectionToggle('${key}')" aria-expanded="${open}">
-      <span class="edit-section-chevron" aria-hidden="true">${ICO_SZ('chevronRight', 14)}</span>
-      <span class="edit-section-title">${esc(title)}</span>
-      ${headerActionHtml}
-    </button>
-    <div class="edit-section-body" ${open ? '' : 'hidden'}>${bodyHtml}</div>
-  </div>`;
-}
-
-// Clés des sections accordéon de l'onglet Mission. Pour ces clés on impose
-// "max 1 ouvert à la fois" + "click hors zone ferme". Les autres clés (Profil
-// : logo, photographe, signature, cgv) gardent leur comportement libre.
-const _MISSION_SECTION_KEYS = ["identification","prestations","deplacement","majorations","conditions"];
-
-function _editSectionApplyDom(key) {
-  const el = document.querySelector(`.edit-section[data-edit-section="${key}"]`);
-  if (!el) return;
-  const open = !!_editSectionOpen[key];
-  el.classList.toggle("open", open);
-  const body = el.querySelector(".edit-section-body");
-  const header = el.querySelector(".edit-section-header");
-  if (body) body.hidden = !open;
-  if (header) header.setAttribute("aria-expanded", open ? "true" : "false");
-}
-
-window.editSectionToggle = function(key) {
-  const willOpen = !_editSectionOpen[key];
-  // Mission : on ferme les autres sections Mission avant d'ouvrir celle-ci.
-  if (willOpen && _MISSION_SECTION_KEYS.includes(key)) {
-    _MISSION_SECTION_KEYS.forEach(k => {
-      if (k !== key && _editSectionOpen[k]) {
-        _editSectionOpen[k] = false;
-        _editSectionApplyDom(k);
-      }
-    });
-  }
-  _editSectionOpen[key] = willOpen;
-  _editSectionApplyDom(key);
-  // À l'ouverture : scroll pour amener le header du volet près du haut du
-  // viewport, avec ~100px de marge → laisse 1-2 volets fermés visibles
-  // au-dessus pour repère. requestAnimationFrame laisse le DOM appliquer
-  // l'état "open" (body visible) avant de mesurer.
-  if (willOpen) {
-    const el = document.querySelector(`.edit-section[data-edit-section="${key}"]`);
-    if (el) {
-      requestAnimationFrame(() => {
-        const rect = el.getBoundingClientRect();
-        const targetY = window.scrollY + rect.top - 100;
-        window.scrollTo({ top: Math.max(0, targetY), behavior: "smooth" });
-      });
-    }
-  }
-};
-
-// NOTE: pas de listener click-outside pour fermer les volets Mission.
-// Fermeture explicite uniquement : (a) clic sur la bande-titre du volet
-// ouvert (toggle off), (b) clic sur la bande-titre d'un autre volet
-// Mission (willOpen ferme les autres). Permet d'interagir avec la preview
-// PDF / sidebar sans perdre l'édition en cours.
-
 // ▼ rPaiementFields — bloc IBAN/BIC/banque dans le devis
 function rPaiementFields() {
   const p = (S.mission && S.mission.paiement) || {};
@@ -11737,97 +11659,11 @@ function rDeplLisserTooltipBody(b, t) {
 //                      snapshot dirty detection. Logique pure sauf event handlers.
 // ============================================================================
 
-// ----------------------------------------------------------------------------
-// SECTION SUMMARIES — pures, pas d'accès DOM. Génèrent les chips compacts
-// affichés dans les en-têtes d'accordéon ("3 lignes · 850 €").
-// ----------------------------------------------------------------------------
-function devisSectionSummaries() {
-  const d = S.mission;
-  const t = totals();
-
-  // 1. Identification & client
-  const cliName = (d.client && d.client.name) ||
-    (d.client && d.client.id && (S.clients.entries.find(c => c.id === d.client.id) || {}).name) || "";
-  const idSummary = cliName
-    ? `<span class="amt">${esc(cliName)}</span>`
-    : `<span class="warn">Aucun client</span>`;
-
-  // 2. Prestations — compte des lignes facturables (heures + cession + matériel principal)
-  const lignesFact = (d.lignes || []).filter(l =>
-    l.type === "heures" ||
-    l.type === "cession" ||
-    (l.type === "materiel" && l.devis !== "debours")
-  ).length;
-  const prestaSummary = lignesFact > 0
-    ? `<span>${lignesFact} ligne${lignesFact > 1 ? "s" : ""}</span><span class="dot"></span><span class="amt">${fmt(t.lignes)}</span>`
-    : `<span class="warn">Aucune prestation</span>`;
-
-  // 3. Déplacement & débours
-  const deplDevis = d.deplacement.devis || "principal";
-  const deboursLignes = (d.lignes || []).filter(l => l.type === "materiel" && l.devis === "debours").length;
-  const deplBits = [];
-  if (t.depl > 0) deplBits.push(deplDevis === "debours" ? `Débours ${fmt(t.depl)}` : `Trajet ${fmt(t.depl)}`);
-  if (deboursLignes > 0) deplBits.push(`${deboursLignes} matériel${deboursLignes > 1 ? "s" : ""} débours`);
-  const deplSummary = deplBits.length ? `<span class="amt">${esc(deplBits.join(" · "))}</span>` : `<span>Pas de déplacement</span>`;
-
-  // 4. Ajustements — remise + URSSAF
-  const remisePct = num(d.remisePct);
-  const ri = computeRemiseInfo();
-  const remiseClass = remisePct > ri.remiseMaxPct ? "warn" : (remisePct > 0 ? "amt" : "");
-  const adjBits = [];
-  if (remisePct > 0) adjBits.push(`<span class="${remiseClass}">${remisePct.toString().replace(".",",")}% remise</span>`);
-  if (missionIsDeclared(d)) adjBits.push(`<span>URSSAF ${getUrssafPct(d).toString().replace(".",",")}%</span>`);
-  const adjSummary = adjBits.length ? adjBits.join('<span class="dot"></span>') : `<span>Par défaut</span>`;
-
-  // 5. Modalités — somme des % + IBAN
-  const pctSum = t.echeancesTotal;
-  const ok100 = pctSum === 100;
-  const echBit = ok100
-    ? `<span class="amt">${(d.echeances || []).length} échéance${(d.echeances || []).length > 1 ? "s" : ""}</span>`
-    : `<span class="err">${pctSum.toString().replace(".",",")}% (≠100)</span>`;
-  const ibanBit = (S.identite && S.identite.bank && S.identite.bank.iban) ? `<span>IBAN ${ICO_SZ('check', 12)}</span>` : `<span class="warn">IBAN manquant</span>`;
-  const modSummary = `${echBit}<span class="dot"></span>${ibanBit}`;
-
-  // 6. Conditions & signature — sections CGV
-  const cgvCount = (d.cgvSections || []).filter(s => s && (s.title || s.body)).length;
-  const condSummary = cgvCount > 0
-    ? `<span class="amt">${cgvCount} section${cgvCount > 1 ? "s" : ""} CGV</span>`
-    : `<span class="warn">CGV vides</span>`;
-
-  // Section fusionnée « Majorations & paiements » : combine les éléments
-  // marquants de remise/URSSAF + état des échéances + IBAN. En prestation
-  // rapide, la section se réduit à la remise + URSSAF (ni échéancier ni IBAN
-  // affichés) → le résumé suit.
-  const majSummaryBits = [];
-  if (Math.abs(t.arrondi) >= 0.005) majSummaryBits.push(`<span class="amt">arrondi ${fmt(t.total)}</span>`);
-  if (remisePct > 0) majSummaryBits.push(`<span class="${remiseClass}">${remisePct.toString().replace(".",",")}% remise</span>`);
-  if (isMissionQuick()) {
-    // Ni URSSAF ni IBAN en prestation rapide : la section n'est plus que la remise.
-    if (!majSummaryBits.length) majSummaryBits.push(`<span>Aucune remise</span>`);
-  } else {
-    majSummaryBits.push(echBit);
-    majSummaryBits.push(ibanBit);
-  }
-  const majorationsSummary = majSummaryBits.join('<span class="dot"></span>');
-
-  return {
-    identification: idSummary,
-    prestations:    prestaSummary,
-    deplacement:    deplSummary,
-    ajustements:    adjSummary,
-    modalites:      modSummary,
-    majorations:    majorationsSummary,
-    conditions:     condSummary
-  };
-}
-
-// Refresh in place — appelée par refreshTotals() après chaque oninput
+// Refresh in place — appelée par refreshTotals() après chaque oninput.
+// Les sections du formulaire sont statiques (plus de puce de résumé à
+// rafraîchir depuis 2026-07-15) : seuls le récap sticky et les bannières
+// se re-rendent live.
 function refreshDevisHeaders() {
-  const sums = devisSectionSummaries();
-  for (const key of Object.keys(sums)) {
-    const el = document.querySelector(`.edit-section[data-edit-section="${key}"] .edit-section-summary`);
-    if (el) el.innerHTML = sums[key];
-  }
   // Récap sticky : montants, échéancier, statut, enable/disable de « Terminer ».
   // Sans <input> à l'intérieur → réécrire son innerHTML ne coûte aucun focus.
   const aside = document.getElementById("missionAside");
@@ -12171,18 +12007,8 @@ function rLigneDraggable(l) {
 // ============================================================================
 // ▼ rMS — RENDERER onglet Mission/Devis
 function rMS() {
-  // Au premier rendu après un load, on ouvre la 1re section. Ensuite, on
-  // respecte le choix de l'user (1 seul volet ouvert à la fois — voir
-  // editSectionToggle + listener click hors zone).
-  // ⚠ Ces clés doivent être EXACTEMENT celles rendues par rDevisAccordion.
-  // Elles listaient encore « ajustements » et « modalites » (sections disparues
-  // d'une refonte précédente) ; or `modalites` est pré-initialisée à false dans
-  // _editSectionOpen → `=== undefined` était faux → noneTouched TOUJOURS faux →
-  // la 1re section ne s'ouvrait jamais. Bug silencieux, attrapé au smoke test.
-  const sectionKeys = ["identification", "prestations", "deplacement", "majorations", "conditions"];
-  const noneTouched = sectionKeys.every(k => _editSectionOpen[k] === undefined);
-  if (noneTouched) _editSectionOpen.identification = true;
-
+  // Sections du formulaire TOUJOURS ouvertes (maquette V2, arbitrage 2026-07-15) :
+  // plus d'accordéon, chaque section est une carte statique empilée.
   const quick = isMissionQuick();
   const d = S.mission;
   const refMeta = [d.ref, d.dateEmission ? `émis le ${dateFR(d.dateEmission)}` : ""].filter(Boolean).join(" · ");
@@ -12320,13 +12146,12 @@ function rMissionAsideInner() {
 function rDV() { return ""; }
 
 // ----------------------------------------------------------------------------
-// Accordéon — 6 sections. Le résumé est passé séparément du titre et inséré
-// comme frère flex de .edit-section-title (margin-left:auto via CSS) → pas
-// collé au titre.
+// Sections du formulaire devis — cartes statiques TOUJOURS ouvertes (maquette
+// V2, arbitrage 2026-07-15 : l'accordéon est abandonné). Empilées, chacune
+// avec son numéro + titre mono.
 // ----------------------------------------------------------------------------
-// ▼ rDevisAccordion — squelette des 6 sections du formulaire devis
+// ▼ rDevisAccordion — squelette des sections du formulaire devis
 function rDevisAccordion() {
-  const sums = devisSectionSummaries();
   // Le logo vit dans l'onglet Profil ; le champ « photographe » (legacy) est un
   // simple fallback de l'identité Profil. Le reste (CGV, préambule, signature)
   // est éditable in-place dans la preview ET depuis la section « Conditions &
@@ -12334,24 +12159,20 @@ function rDevisAccordion() {
   // + une ligne, et son bouton « ＋ section CGV » vit DANS le bloc CGV, donc
   // invisible tant qu'aucune CGV n'existe (impasse : rien pour créer la 1ʳᵉ).
   // Prestation rapide : ni CGV, ni modalités de paiement (échéancier, délai,
-  // IBAN) — aucun document n'est produit. La section « Majorations » se réduit
-  // à la remise + URSSAF.
+  // IBAN) — aucun document n'est produit. La remise fusionne dans « Déplacement
+  // & remise » (spec §2 : 3 sections en rapide).
   const quick = isMissionQuick();
   // Numérotation « 01 · 02 · … » calculée sur les sections RÉELLEMENT rendues :
   // en mode rapide la section CGV disparaît, la numérotation ne doit pas sauter.
   let n = 0;
   const no = () => String(++n).padStart(2, "0");
-  // Mode rapide (spec §2) : 3 sections — la remise fusionne dans « Déplacement
-  // & remise » (rDevisSectionAjustements est déjà réduite à la remise en quick).
-  // La clé « majorations » n'est alors pas rendue : sans danger pour le test
-  // noneTouched (elle n'est jamais pré-initialisée, cf. piège sectionKeys).
   return `<div class="edit-accordion-list">
-    ${rEditSectionRaw("identification", "Identification & client",     sums.identification, rDevisSectionIdentification(), "", no())}
-    ${rEditSectionRaw("prestations",    quick ? "Prestation" : "Prestations", sums.prestations, rDevisSectionPrestations(), "", no())}
-    ${rEditSectionRaw("deplacement",    quick ? "Déplacement & remise" : "Déplacements", sums.deplacement,
-        quick ? `${rDevisSectionDeplacement()}<hr class="section-merge-sep">${rDevisSectionAjustements()}` : rDevisSectionDeplacement(), "", no())}
-    ${quick ? "" : rEditSectionRaw("majorations", "Majorations & paiements", sums.majorations, rDevisSectionMajorations(), "", no())}
-    ${quick ? "" : rEditSectionRaw("conditions", "Conditions & CGV",   sums.conditions,     rDevisSectionCgv(), "", no())}
+    ${rEditSectionRaw("identification", "Identification & client", rDevisSectionIdentification(), no())}
+    ${rEditSectionRaw("prestations",    quick ? "Prestation" : "Prestations", rDevisSectionPrestations(), no())}
+    ${rEditSectionRaw("deplacement",    quick ? "Déplacement & remise" : "Déplacements",
+        quick ? `${rDevisSectionDeplacement()}<hr class="section-merge-sep">${rDevisSectionAjustements()}` : rDevisSectionDeplacement(), no())}
+    ${quick ? "" : rEditSectionRaw("majorations", "Majorations & paiements", rDevisSectionMajorations(), no())}
+    ${quick ? "" : rEditSectionRaw("conditions", "Conditions & CGV", rDevisSectionCgv(), no())}
   </div>`;
 }
 
@@ -12396,18 +12217,16 @@ function rDevisSectionMajorations() {
 
 // `num` : index affiché (« 01 », « 02 »…) à gauche du titre, charte V2. Optionnel
 // — les accordéons hors Mission (Profil, etc.) n'en passent pas.
-function rEditSectionRaw(key, title, summaryHtml, bodyHtml, headerActionHtml = "", numLabel = "") {
-  const open = !!_editSectionOpen[key];
-  return `<div class="edit-section ${open ? 'open' : ''}" data-edit-section="${key}">
-    <button type="button" class="edit-section-header" onclick="editSectionToggle('${key}')" aria-expanded="${open}">
-      <span class="edit-section-chevron" aria-hidden="true">${ICO_SZ('chevronRight', 14)}</span>
+// Carte de section statique (plus d'accordéon) : numéro + titre mono, corps
+// toujours visible. `data-edit-section` conservé (ciblé par le focus des lignes).
+function rEditSectionRaw(key, title, bodyHtml, numLabel = "") {
+  return `<section class="edit-section" data-edit-section="${key}">
+    <div class="edit-section-head">
       ${numLabel ? `<span class="edit-section-num">${esc(numLabel)}</span>` : ""}
       <span class="edit-section-title">${esc(title)}</span>
-      <span class="edit-section-summary" data-summary="${key}">${summaryHtml}</span>
-      ${headerActionHtml}
-    </button>
-    <div class="edit-section-body" ${open ? '' : 'hidden'}>${bodyHtml}</div>
-  </div>`;
+    </div>
+    <div class="edit-section-body">${bodyHtml}</div>
+  </section>`;
 }
 
 // ----------------------------------------------------------------------------

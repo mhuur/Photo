@@ -37,9 +37,9 @@ Les tokens vivent dans le 1ᵉʳ `:root` d'`index.html` — cf. § Charte V2 de
 
 ## Écarts assumés — vague 2 (arbitrages du 2026-07-14, cf. REFONTE-SUIVI.md)
 
-- **Mission garde son accordéon** (1 section ouverte à la fois), pas les 5
-  sections empilées de la maquette : le formulaire est long, l'accordéon garde
-  le récap sticky en vue.
+- ~~Mission garde son accordéon~~ **RENVERSÉ le 2026-07-15** : le formulaire
+  Mission passe aux **sections empilées toujours ouvertes** comme la maquette
+  (l'accordéon repliable est abandonné, sa machinerie supprimée).
 - **Pas de badge type entreprise/particulier sur la fiche client** : le schéma
   n'a pas de champ `type` et on ne veut ni le dériver du SIRET ni l'ajouter.
 - **Bandeau KPI du Bilan : composition conservée** (CA mois · CA cumulé ·
