@@ -306,7 +306,7 @@
   .edit-section.open .edit-section-title{color:var(--primary)}
   .edit-section-chevron{font-size:11px;color:var(--text-muted);transition:transform .2s ease,color .2s,filter .2s;flex-shrink:0;width:14px;display:inline-flex;align-items:center;justify-content:center}
   .edit-section.open .edit-section-chevron{transform:rotate(90deg);color:var(--primary)}
-  .edit-section-title{flex:1;letter-spacing:.01em;transition:color .2s,text-shadow .2s}
+  .edit-section-title{flex:1;font-family:var(--font-mono);font-size:11px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--text-soft);transition:color .2s}
   .edit-section-action{margin-left:auto;padding:5px 12px;font-size:11px;font-weight:500;letter-spacing:0;text-transform:none;flex-shrink:0}
   .edit-section-body{padding:var(--space-md) var(--space-lg) var(--space-lg);border-top:1px solid rgba(69,193,253,.2);background:rgba(69,193,253,.02)}
   .edit-section-body[hidden]{display:none}
@@ -318,7 +318,7 @@
   .field.sm{max-width:140px}
   .field label{font-size:11px;color:var(--text-muted);margin-bottom:var(--space-xs)}
   .field input:not([type="checkbox"]):not([type="radio"]),.field select{height:var(--input-h)}
-  .field input,.field textarea,.field select{padding:var(--space-sm) var(--space-md);border:1px solid var(--border-soft);border-radius:var(--radius-md);font:inherit;background:var(--field-bg);color:var(--text);transition:border-color .15s,box-shadow .15s,background .15s;font-variant-numeric:tabular-nums}
+  .field input,.field textarea,.field select{padding:var(--space-sm) var(--space-md);border:1px solid var(--border);border-radius:var(--radius-md);font:inherit;background:var(--field-bg);color:var(--text);transition:border-color .15s,box-shadow .15s,background .15s;font-variant-numeric:tabular-nums}
   .field input:hover:not(:disabled),.field textarea:hover:not(:disabled),.field select:hover:not(:disabled){border-color:rgba(69,193,253,.4)}
   .field input:focus,.field textarea:focus,.field select:focus{outline:none;border-color:var(--primary);background:rgba(69,193,253,.08);box-shadow:inset 0 0 0 1px rgba(69,193,253,.22)}
   .field textarea{min-height:60px;resize:vertical}
@@ -506,6 +506,10 @@
   .mk-btn.blue,.mk-btn.azure{background:var(--azure-fill);color:#fff}
   .mk-btn.subtle{background:var(--surface-sunken);color:var(--text-soft);border-color:var(--border)}
   .mk-btn.subtle:hover{border-color:var(--border-light);filter:brightness(1.12)}
+  /* outline : secondaire NEUTRE totalement transparent (maquette : « Annuler »
+     du récap Mission). ≠ ghost, qui est le contour EMBER des actions négatives. */
+  .mk-btn.outline{background:transparent;color:var(--text-soft);border-color:var(--border-light)}
+  .mk-btn.outline:hover{border-color:rgba(255,255,255,.44);color:var(--ink-000)}
   .mk-btn.ghost{background:transparent;color:var(--ember-200);border-color:rgba(240,140,75,.4)}
   .mk-btn.ghost:hover{background:rgba(240,140,75,.08);border-color:rgba(240,140,75,.6);filter:none}
   /* CTA de header (mono uppercase, cf. « + Nouveau devis » de la maquette). */
@@ -960,7 +964,7 @@
   .cli-toolbar .btn svg{width:14px;height:14px;vertical-align:-2px;margin-right:5px}
   .cli-search-wrap{position:relative;flex:1;min-width:280px;max-width:520px}
   .cli-search-wrap > svg{position:absolute;left:14px;top:50%;transform:translateY(-50%);width:16px;height:16px;color:var(--text-dim);pointer-events:none}
-  .cli-search-wrap > input{width:100%;padding:11px 14px 11px 40px;border:1px solid var(--border-soft);border-radius:8px;font:inherit;font-size:14px;background:var(--field-bg);color:var(--text);transition:border-color .15s,box-shadow .15s,background .15s;box-sizing:border-box}
+  .cli-search-wrap > input{width:100%;padding:11px 14px 11px 40px;border:1px solid var(--border);border-radius:8px;font:inherit;font-size:14px;background:var(--field-bg);color:var(--text);transition:border-color .15s,box-shadow .15s,background .15s;box-sizing:border-box}
   .cli-search-wrap > input:hover{border-color:rgba(69,193,253,.4)}
   .cli-search-wrap > input:focus{outline:none;border-color:var(--primary);background:rgba(69,193,253,.08);box-shadow:inset 0 0 0 1px rgba(69,193,253,.22)}
   /* Table épurée — pas de bordures de cellules, juste un séparateur fin entre lignes */
@@ -1040,7 +1044,7 @@
   .cli-contact-edit:last-child{border-bottom:0}
   .cli-contact-edit-num{flex-shrink:0;width:22px;height:22px;display:flex;align-items:center;justify-content:center;background:var(--primary-soft);color:var(--primary);border-radius:50%;font-size:11px;font-weight:700;font-variant-numeric:tabular-nums;margin-top:5px}
   .cli-contact-edit-fields{flex:1;display:flex;flex-direction:column;gap:5px;min-width:0}
-  .cli-contact-edit-fields input{padding:6px 10px;border:1px solid var(--border-soft);border-radius:5px;background:var(--surface);color:var(--text);font:inherit;font-size:13px;transition:border-color .12s}
+  .cli-contact-edit-fields input{padding:6px 10px;border:1px solid var(--border);border-radius:5px;background:var(--surface);color:var(--text);font:inherit;font-size:13px;transition:border-color .12s}
   .cli-contact-edit-fields input:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 2px var(--primary-soft)}
   .cli-contact-edit-del{background:transparent;border:0;color:var(--text-dim);cursor:pointer;font-size:14px;line-height:1;padding:4px 7px;border-radius:4px;align-self:flex-start;margin-top:5px;transition:all .12s}
   .cli-contact-edit-del:hover{background:var(--danger-soft);color:var(--danger)}
@@ -1129,7 +1133,7 @@
 
   /* Client picker */
   .cli-pick{position:relative;max-width:320px}
-  .cli-pick .selected{display:flex;align-items:center;gap:10px;height:var(--input-h);padding:0 12px;background:var(--field-bg);border:1px solid var(--border-soft);border-radius:6px;font-size:13px;transition:border-color .15s,box-shadow .15s,background .15s}
+  .cli-pick .selected{display:flex;align-items:center;gap:10px;height:var(--input-h);padding:0 12px;background:var(--field-bg);border:1px solid var(--border);border-radius:6px;font-size:13px;transition:border-color .15s,box-shadow .15s,background .15s}
   .cli-pick .selected:hover{border-color:rgba(69,193,253,.4)}
   .cli-pick .selected .name{flex:1;color:var(--text);font-weight:500}
   .cli-pick .selected .num{color:var(--text-muted);font-size:13px;font-variant-numeric:tabular-nums}
@@ -1390,7 +1394,7 @@
 
   /* Locked field with ⋮ menu (URSSAF) */
   .lock-field{display:flex;align-items:stretch;gap:0;width:100%;max-width:120px;position:relative;height:var(--input-h)}
-  .lock-field input{flex:1;width:50px;height:var(--input-h);text-align:center;font-variant-numeric:tabular-nums;background:var(--field-bg);color:var(--text);border:1px solid var(--border-soft);transition:background .15s,border-color .15s,box-shadow .15s}
+  .lock-field input{flex:1;width:50px;height:var(--input-h);text-align:center;font-variant-numeric:tabular-nums;background:var(--field-bg);color:var(--text);border:1px solid var(--border);transition:background .15s,border-color .15s,box-shadow .15s}
   .lock-field input:not(:disabled):hover{border-color:rgba(69,193,253,.4)}
   .lock-field input:focus{outline:none;border-color:var(--primary);background:rgba(69,193,253,.08);box-shadow:inset 0 0 0 1px rgba(69,193,253,.22)}
   .lock-field input:disabled{opacity:0.85;cursor:not-allowed;background:var(--field-bg);color:var(--text);position:relative}
@@ -2684,10 +2688,10 @@
      pour étiqueter une zone (ex. « Échéances » au-dessus de la liste). */
   .field-label-only{font-size:11px;color:var(--text-muted);margin-bottom:var(--space-xs);margin-top:var(--space-md)}
   .ech-row{display:flex;align-items:center;gap:10px;background:transparent;border:0;border-radius:0;padding:2px 0}
-  .ech-row input.lbl{flex:1;height:var(--input-h);border:1px solid var(--border-soft);background:var(--field-bg);color:var(--text);font:inherit;font-size:13px;padding:0 10px;border-radius:6px;min-width:0;transition:border-color .15s,box-shadow .15s,background .15s}
+  .ech-row input.lbl{flex:1;height:var(--input-h);border:1px solid var(--border);background:var(--field-bg);color:var(--text);font:inherit;font-size:13px;padding:0 10px;border-radius:6px;min-width:0;transition:border-color .15s,box-shadow .15s,background .15s}
   .ech-row input.lbl:hover{border-color:rgba(69,193,253,.4)}
   .ech-row input.lbl:focus{outline:none;border-color:var(--primary);background:rgba(69,193,253,.08);box-shadow:inset 0 0 0 1px rgba(69,193,253,.22)}
-  .ech-row .pct-wrap{display:flex;align-items:center;gap:3px;height:var(--input-h);background:var(--field-bg);border:1px solid var(--border-soft);border-radius:6px;padding:0 8px;width:90px;transition:border-color .15s,box-shadow .15s,background .15s;flex-shrink:0;box-sizing:border-box}
+  .ech-row .pct-wrap{display:flex;align-items:center;gap:3px;height:var(--input-h);background:var(--field-bg);border:1px solid var(--border);border-radius:6px;padding:0 8px;width:90px;transition:border-color .15s,box-shadow .15s,background .15s;flex-shrink:0;box-sizing:border-box}
   .ech-row .pct-wrap:hover{border-color:rgba(69,193,253,.4)}
   .ech-row .pct-wrap:focus-within{border-color:var(--primary);background:rgba(69,193,253,.08);box-shadow:inset 0 0 0 1px rgba(69,193,253,.22)}
   .ech-row .pct-wrap input{width:50px;height:100%;border:0;background:transparent;text-align:right;color:var(--text);font:inherit;font-size:13px;font-variant-numeric:tabular-nums;padding:0}
@@ -2744,7 +2748,7 @@
   .client-line-picker{flex:0 0 auto;min-width:0}
   .client-line-contact{flex:1 1 320px;min-width:280px;max-width:480px;display:flex;align-items:center}
   /* Match cli-pick .selected exactly so client + contact boxes line up perfectly */
-  .contact-inline{display:flex;align-items:center;gap:10px;height:var(--input-h);background:var(--field-bg);border:1px solid var(--border-soft);border-radius:6px;padding:0 12px;font-size:13px;color:var(--text);width:100%;box-sizing:border-box;transition:border-color .15s,box-shadow .15s,background .15s}
+  .contact-inline{display:flex;align-items:center;gap:10px;height:var(--input-h);background:var(--field-bg);border:1px solid var(--border);border-radius:6px;padding:0 12px;font-size:13px;color:var(--text);width:100%;box-sizing:border-box;transition:border-color .15s,box-shadow .15s,background .15s}
   .contact-inline:hover{border-color:rgba(69,193,253,.4)}
   .contact-inline-lbl{color:var(--text-muted);font-size:13px;font-variant-numeric:tabular-nums;flex-shrink:0}
   .contact-inline-val{flex:1;color:var(--text);font-size:13px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
@@ -2991,17 +2995,17 @@
   .lg-cession-detail{padding:10px 14px;background:rgba(0,0,0,.18);border:1px solid var(--border-soft);border-radius:6px;display:flex;flex-direction:column;gap:8px;margin-left:0;margin-top:2px}
   .lg-cession-detail .row{margin:0;gap:10px}
   .lg-cession-detail .field label{font-size:11px;color:var(--text-muted);margin-bottom:2px}
-  .lg-cession-detail input[type="text"]{height:var(--input-h);padding:0 10px;border:1px solid var(--border-soft);border-radius:6px;background:var(--field-bg);color:var(--text);font:inherit;font-size:13px;transition:border-color .15s,box-shadow .15s,background .15s}
+  .lg-cession-detail input[type="text"]{height:var(--input-h);padding:0 10px;border:1px solid var(--border);border-radius:6px;background:var(--field-bg);color:var(--text);font:inherit;font-size:13px;transition:border-color .15s,box-shadow .15s,background .15s}
   .lg-cession-detail input[type="text"]:hover{border-color:rgba(69,193,253,.4)}
   .lg-cession-detail input[type="text"]:focus{outline:none;border-color:var(--primary);background:rgba(69,193,253,.08);box-shadow:inset 0 0 0 1px rgba(69,193,253,.22)}
   .lg-cession-detail .lg-desc{margin:0;min-height:32px}
-  .lg-title{flex:1;min-width:160px;height:var(--input-h);padding:0 10px;border:1px solid var(--border-soft);border-radius:6px;background:var(--field-bg);color:var(--text);font:inherit;font-size:13px;font-weight:500;transition:border-color .15s,box-shadow .15s,background .15s}
+  .lg-title{flex:1;min-width:160px;height:var(--input-h);padding:0 10px;border:1px solid var(--border);border-radius:6px;background:var(--field-bg);color:var(--text);font:inherit;font-size:13px;font-weight:500;transition:border-color .15s,box-shadow .15s,background .15s}
   .lg-title:hover{border-color:rgba(69,193,253,.4)}
   .lg-title:focus{outline:none;border-color:var(--primary);background:rgba(69,193,253,.08);box-shadow:inset 0 0 0 1px rgba(69,193,253,.22)}
-  .lg-num{width:80px;height:var(--input-h);padding:0 10px;border:1px solid var(--border-soft);border-radius:6px;background:var(--field-bg);color:var(--text);font:inherit;font-size:13px;text-align:right;font-variant-numeric:tabular-nums;transition:border-color .15s,box-shadow .15s,background .15s;flex-shrink:0}
+  .lg-num{width:80px;height:var(--input-h);padding:0 10px;border:1px solid var(--border);border-radius:6px;background:var(--field-bg);color:var(--text);font:inherit;font-size:13px;text-align:right;font-variant-numeric:tabular-nums;transition:border-color .15s,box-shadow .15s,background .15s;flex-shrink:0}
   .lg-num:hover{border-color:rgba(69,193,253,.4)}
   .lg-num:focus{outline:none;border-color:var(--primary);background:rgba(69,193,253,.08);box-shadow:inset 0 0 0 1px rgba(69,193,253,.22)}
-  .lg-prix{display:flex;align-items:center;gap:4px;width:90px;height:var(--input-h);background:var(--field-bg);border:1px solid var(--border-soft);border-radius:6px;padding:0 10px;transition:border-color .15s,box-shadow .15s,background .15s;flex-shrink:0;box-sizing:border-box}
+  .lg-prix{display:flex;align-items:center;gap:4px;width:90px;height:var(--input-h);background:var(--field-bg);border:1px solid var(--border);border-radius:6px;padding:0 10px;transition:border-color .15s,box-shadow .15s,background .15s;flex-shrink:0;box-sizing:border-box}
   .lg-prix:hover{border-color:rgba(69,193,253,.4)}
   .lg-prix:focus-within{border-color:var(--primary);background:rgba(69,193,253,.08);box-shadow:inset 0 0 0 1px rgba(69,193,253,.22)}
   .lg-prix input{flex:1;width:100%;height:100%;border:0;background:transparent;color:var(--text);font:inherit;font-size:13px;font-variant-numeric:tabular-nums;text-align:right;padding:0;min-width:0}
@@ -3051,7 +3055,7 @@
   .lg-expand.has{color:var(--primary)}
   .lg-del{background:transparent;border:0;color:var(--text-dim);font-size:18px;line-height:1;cursor:pointer;height:var(--input-h);width:30px;display:flex;align-items:center;justify-content:center;padding:0;border-radius:4px;flex-shrink:0}
   .lg-del:hover{background:var(--danger-soft);color:var(--danger)}
-  .lg-desc{width:100%;padding:8px 10px;border:1px solid var(--border-soft);border-radius:6px;background:var(--field-bg);color:var(--text-muted);font:inherit;font-size:13px;resize:vertical;min-height:60px;transition:border-color .15s,box-shadow .15s,background .15s,color .15s;box-sizing:border-box}
+  .lg-desc{width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:6px;background:var(--field-bg);color:var(--text-muted);font:inherit;font-size:13px;resize:vertical;min-height:60px;transition:border-color .15s,box-shadow .15s,background .15s,color .15s;box-sizing:border-box}
   .lg-desc:hover{border-color:rgba(69,193,253,.4)}
   .lg-desc:focus{outline:none;border-color:var(--primary);background:rgba(69,193,253,.08);box-shadow:inset 0 0 0 1px rgba(69,193,253,.22);color:var(--text)}
 
@@ -3064,7 +3068,9 @@
   /* Banners err/warn/dirty sous la toolbar Mission (refonte UX : actions en haut) */
   .devis-banners{display:flex;flex-direction:column;gap:8px;margin-bottom:14px;max-width:880px}
   .devis-banners:empty{display:none}
-  .mode-pill{display:inline-block;vertical-align:2px;font-size:11px;font-weight:600;color:var(--accent);background:rgba(2,220,185,.12);border:1px solid rgba(2,220,185,.30);border-radius:var(--radius-sm);padding:2px 8px;letter-spacing:.3px}
+  /* Pill « Prestation rapide » du h1 : ember — toute la sémantique « au noir »
+     est ambre (statut du récap, bannière quick), le jade disait le contraire. */
+  .mode-pill{display:inline-block;vertical-align:2px;font-family:var(--font-mono);font-size:8.5px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--ember-300);background:transparent;border:1px solid rgba(245,148,60,.33);border-radius:999px;padding:3px 9px}
   /* ===== Mission V2 (phase 3) — mode cards + formulaire à gauche, récap
      sticky à droite. La toolbar Terminer/Annuler est absorbée par le récap :
      l'action de validation est ainsi TOUJOURS visible, au même endroit que le
@@ -3089,7 +3095,8 @@
   .ms-recap-head{font-family:var(--font-mono);font-size:10px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:var(--primary);margin-bottom:14px}
   .ms-line{display:flex;justify-content:space-between;gap:12px;padding:5px 0;font-size:12px;color:var(--text-soft)}
   .ms-line span:last-child{font-variant-numeric:tabular-nums;white-space:nowrap}
-  .ms-line.muted{color:var(--text-dim)}
+  /* Composantes en --text-soft (défaut .ms-line), URSSAF en .muted (--text-muted) — maquette. */
+  .ms-line.muted{color:var(--text-muted)}
   .ms-line.minus{color:var(--warning)}
   .ms-line.total{margin-top:6px;padding-top:9px;border-top:1px solid var(--border);font-size:14px;font-weight:700;color:#fff}
   .ms-line.net{font-size:13px;font-weight:700;color:var(--success)}
@@ -3109,12 +3116,18 @@
   /* Numéro de section « 01 » dans l'accordéon Mission */
   .edit-section-num{font-family:var(--font-mono);font-size:10px;color:var(--ink-500);flex-shrink:0}
   .edit-section.open .edit-section-num{color:var(--primary)}
-  .devis-banner{font-size:12px;line-height:1.45;padding:8px 10px;border-radius:6px;display:flex;gap:8px;align-items:flex-start}
+  .devis-banner{font-size:12px;line-height:1.45;padding:11px 14px;border-radius:var(--radius-lg);display:flex;gap:8px;align-items:flex-start}
   .devis-banner.err{background:var(--danger-soft);border:1px solid var(--danger);color:var(--danger)}
-  .devis-banner.warn{background:var(--warning-soft);border:1px solid var(--warning);color:var(--warning)}
+  /* Warn (maquette) : texte gris lisible, seule l'icône porte l'ambre. */
+  .devis-banner.warn{background:rgba(232,117,28,.07);border:1px solid rgba(245,148,60,.3);color:var(--text-soft)}
+  .devis-banner.warn .devis-banner-ico{color:var(--warning)}
+  /* Encart « Prestation rapide — au noir » : liseré ember, pas de cadre. */
+  .devis-banner.quick{background:rgba(245,148,60,.07);border:0;border-left:2px solid var(--ember-300);border-radius:0 var(--radius-lg) var(--radius-lg) 0;color:var(--text-soft)}
+  .devis-banner.quick .devis-banner-ico{color:var(--ember-300)}
   .devis-banner.info{background:var(--primary-soft);border:1px solid var(--primary);color:var(--primary)}
   .devis-banner ul{margin:2px 0 0 16px;padding:0}
   .devis-banner-ico{flex-shrink:0;font-weight:700}
+  .devis-banner-link{background:none;border:0;padding:0;color:var(--primary);cursor:pointer;font:inherit;text-decoration:underline}
   .devis-pane-actions{display:flex;gap:8px;align-items:center}
   .devis-pane-actions .btn[disabled]{opacity:.5;cursor:not-allowed;box-shadow:none}
 
@@ -3774,6 +3787,7 @@ const ICO_PATHS = {
   circleFilled:  '<circle cx="12" cy="12" r="9" fill="currentColor" stroke="none"/>',
   calendar:      '<path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/>',
   arrowRight:    '<path d="M5 12h14"/><path d="m12 5 7 7-7 7"/>',
+  zap:           '<path d="M4 14a1 1 0 0 1-.78-1.63l9.9-10.2a.5.5 0 0 1 .86.46l-1.92 6.02A1 1 0 0 0 13 10h7a1 1 0 0 1 .78 1.63l-9.9 10.2a.5.5 0 0 1-.86-.46l1.92-6.02A1 1 0 0 0 11 14z"/>',
   clipboard:     '<rect width="8" height="4" x="8" y="2" rx="1" ry="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/>',
   lightbulb:     '<path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5"/><path d="M9 18h6"/><path d="M10 22h4"/>',
   banknote:      '<rect width="20" height="12" x="2" y="6" rx="2"/><circle cx="12" cy="12" r="2"/><path d="M6 12h.01M18 12h.01"/>',
@@ -4750,7 +4764,7 @@ function quickTagHtml(devisId) {
 // Échéancier du mode rapide : une seule ligne à 100 % → buildEcheanceLines
 // produit une entry unique (isSolde), donc aucune étape « acompte » dans le
 // parcours. Même id que le fallback de buildEcheanceLines (cohérence).
-const QUICK_ECHEANCES = [{ id: "ech-full", label: "Paiement", pct: "100" }];
+const QUICK_ECHEANCES = [{ id: "ech-full", label: "À réception", pct: "100" }];
 function isQuickEcheancier(echeances) {
   const list = (echeances || []).filter(e => num(e.pct) > 0);
   return list.length === 1 && list[0].id === "ech-full";
@@ -9823,6 +9837,19 @@ function rBinModal() {
 // Format des items : { h: titre court, b: explication 1-3 phrases }.
 const APP_CHANGELOG = [
   {
+    id: "2026-07-mission-v2",
+    date: "2026-07-15",
+    title: "Nouveau devis — finitions de la refonte",
+    items: [
+      { h: "La prestation rapide s'explique enfin",
+        b: "Un encart orange en tête du formulaire rappelle le régime : au noir, aucun document, échéance unique encaissée « À réception ». Le formulaire rapide se resserre en 3 sections (la remise rejoint le déplacement), la carte porte une icône éclair et la pastille du titre passe à l'orange — cohérente avec tout ce qui dit « au noir »." },
+      { h: "Formulaire plus net",
+        b: "Les titres de sections (01 Identification, 02 Prestations…) passent dans la typo technique de la charte, les toggles principaux (clientèle, transport, acompte/avance, heures/jours) se remplissent en bleu quand ils sont actifs, et les bordures des champs sont un peu plus marquées." },
+      { h: "Avertissement IBAN utile",
+        b: "La bannière « IBAN non renseigné » devient lisible (texte clair, icône orange) et propose un lien direct pour compléter le Profil. Dans le récap, les composantes du total sont plus lisibles et « Annuler » adopte un contour neutre." }
+    ]
+  },
+  {
     id: "2026-07-arbitrages-v2",
     date: "2026-07-14",
     title: "Finitions charte — rayons, focus, étiquettes",
@@ -12195,7 +12222,7 @@ function rMissionModeCards() {
   return `<div class="ms-mode">
     ${card(!quick, "devis", "fileText", "Devis", "Document complet · déclaré · échéancier & CGV",
       "Devis complet : document imprimable, CGV, acomptes, échéancier et factures.")}
-    ${card(quick, "quick", "camera", "Prestation rapide", "Aucun document · au noir · encaissement direct",
+    ${card(quick, "quick", "zap", "Prestation rapide", "Aucun document · au noir · encaissement direct",
       "Prestation rapide : aucun document, paiement unique, ni acompte ni CGV. Recette NON déclarée (CA = 0, pas d'URSSAF).")}
   </div>`;
 }
@@ -12233,13 +12260,13 @@ function rMissionAsideInner() {
 
   const line = (label, value, cls = "") => `<div class="ms-line ${cls}"><span>${label}</span><span>${value}</span></div>`;
   const comp = [];
-  if (t.totalHeures > 0) comp.push(line(`Heures (${esc(t.totalHeures.toFixed(2).replace(".", ","))} h)`, fmt(t.lignes), "muted"));
-  else if (t.lignes > 0) comp.push(line("Prestations", fmt(t.lignes), "muted"));
-  if (t.depl > 0)    comp.push(line("Déplacement", fmt(t.depl), "muted"));
-  if (t.autres > 0)  comp.push(line("Autres", fmt(t.autres), "muted"));
+  if (t.totalHeures > 0) comp.push(line(`Heures (${esc(t.totalHeures.toFixed(2).replace(".", ","))} h)`, fmt(t.lignes)));
+  else if (t.lignes > 0) comp.push(line("Prestations", fmt(t.lignes)));
+  if (t.depl > 0)    comp.push(line("Déplacement", fmt(t.depl)));
+  if (t.autres > 0)  comp.push(line("Autres", fmt(t.autres)));
   if (t.remise > 0)  comp.push(line(`Remise (${esc(String(num(d.remisePct)).replace(".", ","))} %)`, "− " + fmt(t.remise), "minus"));
   if (t.arrondi !== 0) comp.push(line("Arrondi", (t.arrondi > 0 ? "+ " : "− ") + fmt(Math.abs(t.arrondi)), "minus"));
-  if (t.debours > 0) comp.push(line("Débours (remboursés)", fmt(t.debours), "muted"));
+  if (t.debours > 0) comp.push(line("Débours (remboursés)", fmt(t.debours)));
 
   // Total HT / Total encaissé selon le statut fiscal (missionIsDeclared est la
   // source unique : une prestation rapide est TOUJOURS au noir).
@@ -12278,7 +12305,7 @@ function rMissionAsideInner() {
       ${netBlock}
       <div class="ms-recap-actions">
         <button class="mk-btn azure cta" onclick="missionTerminer()" ${!canTerminer ? "disabled" : ""} title="${esc(terminerTitle)}">${ICO_SZ('check', 14)} ${esc(terminerLabel)}</button>
-        <button class="mk-btn subtle cta" onclick="missionCancel()" title="Quitte la vue Mission et efface le brouillon en cours. Les paramètres verrouillés (URSSAF, Indemnité km, Marge avancés) restent en place pour le prochain devis.">${ICO_SZ('x', 14)} Annuler</button>
+        <button class="mk-btn outline cta" onclick="missionCancel()" title="Quitte la vue Mission et efface le brouillon en cours. Les paramètres verrouillés (URSSAF, Indemnité km, Marge avancés) restent en place pour le prochain devis.">${ICO_SZ('x', 14)} Annuler</button>
       </div>
       ${status}
     </div>
@@ -12314,11 +12341,16 @@ function rDevisAccordion() {
   // en mode rapide la section CGV disparaît, la numérotation ne doit pas sauter.
   let n = 0;
   const no = () => String(++n).padStart(2, "0");
+  // Mode rapide (spec §2) : 3 sections — la remise fusionne dans « Déplacement
+  // & remise » (rDevisSectionAjustements est déjà réduite à la remise en quick).
+  // La clé « majorations » n'est alors pas rendue : sans danger pour le test
+  // noneTouched (elle n'est jamais pré-initialisée, cf. piège sectionKeys).
   return `<div class="edit-accordion-list">
     ${rEditSectionRaw("identification", "Identification & client",     sums.identification, rDevisSectionIdentification(), "", no())}
-    ${rEditSectionRaw("prestations",    "Prestations",                 sums.prestations,    rDevisSectionPrestations(), "", no())}
-    ${rEditSectionRaw("deplacement",    "Déplacements",                sums.deplacement,    rDevisSectionDeplacement(), "", no())}
-    ${rEditSectionRaw("majorations",    quick ? "Remise" : "Majorations & paiements", sums.majorations, rDevisSectionMajorations(), "", no())}
+    ${rEditSectionRaw("prestations",    quick ? "Prestation" : "Prestations", sums.prestations, rDevisSectionPrestations(), "", no())}
+    ${rEditSectionRaw("deplacement",    quick ? "Déplacement & remise" : "Déplacements", sums.deplacement,
+        quick ? `${rDevisSectionDeplacement()}<hr class="section-merge-sep">${rDevisSectionAjustements()}` : rDevisSectionDeplacement(), "", no())}
+    ${quick ? "" : rEditSectionRaw("majorations", "Majorations & paiements", sums.majorations, rDevisSectionMajorations(), "", no())}
     ${quick ? "" : rEditSectionRaw("conditions", "Conditions & CGV",   sums.conditions,     rDevisSectionCgv(), "", no())}
   </div>`;
 }
@@ -12353,8 +12385,8 @@ function rDevisSectionCgv() {
 // Section fusionnée « Majorations & paiements » : remise/URSSAF (ex
 // Ajustements) + échéances/délai/IBAN (ex Modalités de paiement). Un
 // séparateur visuel et des h5 distincts pour garder la hiérarchie.
+// N'est plus appelée en mode rapide : la remise vit dans « Déplacement & remise ».
 function rDevisSectionMajorations() {
-  if (isMissionQuick()) return rDevisSectionAjustements();
   return `
     ${rDevisSectionAjustements()}
     <hr class="section-merge-sep">
@@ -12858,13 +12890,19 @@ function rDevisBanners() {
   const bannerErr = v.errors.length
     ? `<div class="devis-banner err"><span class="devis-banner-ico">${ICO_SZ('alertOctagon', 16)}</span><div>Émission bloquée :<ul>${v.errors.map(e => `<li>${esc(e)}</li>`).join("")}</ul></div></div>`
     : "";
+  const hasIbanWarn = v.warnings.some(w => w.includes("IBAN"));
   const bannerWarn = v.warnings.length
-    ? `<div class="devis-banner warn"><span class="devis-banner-ico">${ICO_SZ('alertTriangle', 16)}</span><div>${v.warnings.map(esc).join(" · ")}</div></div>`
+    ? `<div class="devis-banner warn"><span class="devis-banner-ico">${ICO_SZ('alertTriangle', 16)}</span><div>${v.warnings.map(esc).join(" · ")}${hasIbanWarn ? ` — <button type="button" class="devis-banner-link" onclick="setTab('profil')">compléter dans Mon Profil</button>` : ""}</div></div>`
+    : "";
+  // Prestation rapide : rappel permanent du régime — c'est la seule trace
+  // visible de l'échéancier forcé QUICK_ECHEANCES pour l'utilisateur.
+  const bannerQuick = isMissionQuick()
+    ? `<div class="devis-banner quick"><span class="devis-banner-ico">${ICO_SZ('alertTriangle', 16)}</span><div><strong>Prestation rapide — au noir.</strong> Aucun document émis, pas d'acompte ni de CGV : échéance unique de 100 % encaissée à réception.</div></div>`
     : "";
   const bannerDirty = (inSuivi && dirty)
     ? `<div class="devis-banner info"><span class="devis-banner-ico">${ICO_SZ('circleFilled', 12)}</span><div>Modifications non enregistrées dans Suivi.</div></div>`
     : "";
-  return `${bannerErr}${bannerWarn}${bannerDirty}`;
+  return `${bannerErr}${bannerWarn}${bannerQuick}${bannerDirty}`;
 }
 
 // rMissionToolbarInner supprimé (phase 3) : les boutons Terminer / Annuler

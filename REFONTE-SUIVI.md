@@ -15,8 +15,8 @@
 |---|-------|-------|---------|-------------|
 | 0 | Bugs fonctionnels (indépendants du style) | ✅ | ✅ 2026-07-14 | ☐ |
 | 1 | Arbitrages transverses (questions ci-dessous) | ✅ | ☐ décisions | ☐ |
-| 2 | Socle transverse (néon, couleurs hors palette, .btn→.mk-btn, typo labels) | ✅ | ✅ partie non ambiguë 2026-07-14 (reste : Q5 halos focus, Q4 typo, Q11 ⋮, motif pills, typo inter-onglets) | ☐ |
-| 3 | Mission (`rMS`) | ✅ | ☐ | ☐ |
+| 2 | Socle transverse (néon, couleurs hors palette, .btn→.mk-btn, typo labels) | ✅ | ✅ TERMINÉ 2026-07-14/15 (Q5 halos, Q4 labels, Q11 ⋮, pills, rayons, purge Q14, toggles Q2 — reste : typo inter-onglets §14 à lisser par onglet) | ☐ |
+| 3 | Mission (`rMS`) | ✅ | ✅ 2026-07-15 | ☐ |
 | 4 | Accueil / Suivi devis (`rAC`) | ✅ | ☐ | ☐ |
 | 5 | Catalogue (`rCatalogue`) | ✅ | ☐ | ☐ |
 | 6 | Bilan comptable (`rCP`) | ✅ | ☐ | ☐ |
@@ -191,6 +191,15 @@ cocher ici → push.
   filtre année en chips, soit tout retirer.
 
 ## 3. MISSION (`rMS`) — corrections de peau
+
+> **✅ SESSION FAITE (2026-07-15)** — bannière quick (+ lien Profil sur l'IBAN), titres de
+> section mono, fusion « Déplacement & remise » en quick + « Prestation » singulier,
+> Annuler en `.mk-btn.outline` (nouvelle variante neutre, documentée CLAUDE.md), bordures
+> d'inputs `--border`, récap recoloré, icône `zap`, mode-pill ember, échéance quick
+> « À réception ». Toggles fill + arrondi ri + ⋮ + rayons : déjà couverts par le socle.
+> Validé par smoke test vm 18/18 (scratchpad). **Non repris (assumés)** : bouton retour
+> dans l'en-tête (la sidebar assure le retour) · réf d'en-tête reste en `.v2-meta` 10px
+> (primitive partagée).
 
 - [ ] Bannière quick absente : encart `border-left:2px #F5943C` « Prestation rapide — au noir.
   Aucun document émis, pas d'acompte ni de CGV, échéance unique à 100 % » dans `rDevisBanners`
