@@ -19,7 +19,7 @@
 | 3 | Mission (`rMS`) | ✅ | ✅ 2026-07-15 | ☐ |
 | 4 | Accueil / Suivi devis (`rAC`) | ✅ | ✅ 2026-07-15 | ☐ |
 | 5 | Catalogue (`rCatalogue`) | ✅ | ✅ 2026-07-15 | ☐ |
-| 6 | Bilan comptable (`rCP`) | ✅ | ☐ | ☐ |
+| 6 | Bilan comptable (`rCP`) | ✅ | ✅ 2026-07-15 | ☐ |
 | 7 | Clients (`rCL`) | ✅ | ☐ | ☐ |
 | 8 | Profil (`rPF`) | ✅ | ☐ | ☐ |
 | 9 | Historique (`rSV`) | ✅ | ☐ | ☐ |
@@ -269,14 +269,23 @@ cocher ici → push.
 
 ## 6. BILAN (`rCP`)
 
-- [ ] Couleurs par colonne : URSSAF ambre (avec « − »), Salaire net jade, Trésorerie azure
-  (17181-17204) ; KPI selon Q10.
-- [ ] Rappel métier sous le tableau : « Compta de caisse (art. 93 CGI) · Dépenses = achats/abos/
-  amortissements · Salaire net = CA déclaré − URSSAF » (11px text-dim, après 17204).
-- [ ] « Bilan mensuel » h3 → mono comme `.cp-chart-title` (288 vs 874).
-- [ ] Tag noir : préfixe « · » (17050) ; `cellCA` zéro atténué (cf. B10).
-- [ ] Chip année dans l'en-tête (actions `v2PageHead`) ou acter le filtre chips actuel (17166-17179).
-- [ ] Cosmétique : `.cp-seuil` + `table.hist` en glass (916, 363) · `.cp-chart-val` en mono (888).
+> **✅ SESSION FAITE (2026-07-15)** — vérifiée par capture headless (données semées : 2 mois,
+> un devis au noir → tag « · noir »). Couleurs de colonnes via classes `.cp-col-{salaire|ursaf|
+> tresorerie}` posées dans `rowCells`/`bilanRender` (helper `cell` prend un 3ᵉ arg `cls`) ;
+> URSSAF a son propre helper `cellUrssaf` qui préfixe « − ». Les lignes mensuelles ET les
+> agrégats héritent la couleur (visuel homogène, le total général garde sa bordure azur + gros
+> corps). KPI : Salaire → `cp-kpi-ok` (jade), Marge ≥0 → `cp-kpi-azure` (nouveau), URSSAF ambre,
+> CA neutres. `.cp-table-title` = h3 mono, `.cp-legend-note` = rappel métier, `.cp-chart-val` mono,
+> `.cp-seuil` en glass.
+
+- [x] Couleurs par colonne : URSSAF ambre (avec « − »), Salaire net jade, Trésorerie azure ; KPI (Q10 : Salaire jade, Marge azure).
+- [x] Rappel métier sous le tableau (`.cp-legend-note`, compta de caisse + composition).
+- [x] « Bilan mensuel » h3 → mono (`.cp-table-title`, hint en Inter normal).
+- [x] Tag noir : préfixe « · » (`>· noir<` dans `cellCA`).
+- [x] Cosmétique : `.cp-seuil` en glass · `.cp-chart-val` en mono · `table.hist` glass (fait au socle).
+- [x] Filtre année : **acté** — chips « Toutes les années / 20XX » + Exporter CSV restent dans la
+  toolbar du tableau (ils ne filtrent QUE la table, pas les KPI ni le graphe 12 mois → les mettre
+  dans l'en-tête de page laisserait croire qu'ils filtrent tout). Consigné au README.
 
 ## 7. CLIENTS (`rCL`)
 

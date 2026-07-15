@@ -48,3 +48,8 @@ Les tokens vivent dans le 1ᵉʳ `:root` d'`index.html` — cf. § Charte V2 de
 - **Libellés de navigation renommés** : « Missions / Devis en cours /
   Achats / Abonnements » au lieu de « Mission / Suivi devis / Achats » (choix
   utilisateur, propagé aux h1 par construction).
+- **Bilan : le filtre par année reste dans la toolbar du tableau**, pas dans
+  l'en-tête de page. Les chips « Toutes les années / 20XX » ne filtrent QUE le
+  tableau mensuel — les KPI (cumul YTD) et le graphe (12 mois glissants) ne
+  bougent pas. Les remonter en actions d'en-tête laisserait croire qu'ils
+  pilotent toute la page.
