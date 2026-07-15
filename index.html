@@ -412,8 +412,6 @@
   td.suv-nowrap{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:280px}
   table.hist th.sortable{cursor:pointer;user-select:none;white-space:nowrap}
   table.hist th.sortable:hover{background:var(--surface-hi)}
-  table.hist th .arr{font-size:13px;opacity:.3;margin-left:4px}
-  table.hist th .arr.on{opacity:1;color:var(--primary)}
   table.hist tr.suv-row{cursor:pointer}
   table.hist tr.suv-row:hover td{background:var(--surface-2)}
   table.hist tr.suv-row td{padding:9px 12px;font-size:13px}
@@ -951,29 +949,6 @@
   .ico-btn[title*="Supprimer"]:hover{background:var(--danger-soft);color:var(--danger)}
   td.ref-cell{color:var(--text);font-variant-numeric:tabular-nums}
   td.ref-cell .muted{color:var(--text-dim)}
-  /* Menu déroulant ancré sous l'en-tête « Date » (tri + filtre année).
-     Rendu hors de la table en position:fixed pour échapper au stacking
-     thead/tbody. Coordonnées calculées par positionThMenu() après render. */
-  .th-filter-badge{display:inline-block;margin-left:6px;padding:1px 7px;border-radius:9px;background:var(--primary-soft);color:var(--primary);font-size:11px;font-weight:700;font-variant-numeric:tabular-nums;letter-spacing:0;text-transform:none;line-height:1.4}
-  .th-menu-backdrop{position:fixed;inset:0;z-index:1000;background:transparent;cursor:default}
-  .th-menu{position:fixed;top:0;left:0;z-index:1001;min-width:240px;
-    background:var(--surface);border:1px solid var(--border-light);border-radius:8px;
-    box-shadow:0 4px 16px rgba(0,0,0,.35);padding:6px;display:flex;flex-direction:column;gap:2px;
-    font-weight:400;text-transform:none;letter-spacing:0;font-size:13px;color:var(--text)}
-  .th-menu-section{font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.04em;padding:6px 10px 4px}
-  .th-menu-divider{height:1px;background:var(--border-soft);margin:4px 0}
-  .th-menu-item{display:grid;grid-template-columns:18px 1fr auto;gap:8px;align-items:center;
-    padding:6px 10px;background:transparent;border:0;border-radius:5px;cursor:pointer;
-    font:inherit;font-size:13px;color:var(--text);text-align:left;transition:background .12s}
-  .th-menu-item:hover{background:var(--surface-2)}
-  .th-menu-item.on{background:var(--primary-soft);color:var(--text)}
-  .th-menu-radio{font-size:14px;line-height:1;color:var(--text-muted)}
-  .th-menu-item.on .th-menu-radio{color:var(--primary)}
-  .th-menu-check{font-size:14px;line-height:1;color:var(--text-muted)}
-  .th-menu-item.on .th-menu-check{color:var(--primary)}
-  .th-menu-label{font-weight:500}
-  .th-menu-count{font-size:11px;font-weight:700;font-variant-numeric:tabular-nums;color:var(--text-muted);background:var(--surface-2);padding:1px 7px;border-radius:9px;line-height:1.4}
-  .th-menu-item.on .th-menu-count{background:var(--surface);color:var(--text)}
   .toolbar{display:flex;gap:8px;align-items:center;margin:14px 0 4px;flex-wrap:wrap}
   .toolbar .spacer{flex:1}
   .toolbar .search{flex:1;min-width:200px;max-width:340px;padding:8px 12px;border:1px solid var(--border-light);border-radius:6px;font:inherit;background:var(--surface);color:var(--text)}
@@ -3328,8 +3303,7 @@ const DEFAULT_CATALOG = [
 //                            ▼ rDevisSectionPrestations  ▼ rDevisSectionDeplacement
 //                            ▼ rDevisSectionAjustements  ▼ rDevisSectionModalites
 //                            ▼ rDevisSectionConditions  ▼ rDevisPaneFooterInner
-//   SUIVI                    ▼ validateDevis  ▼ suiviAdd  ▼ suiviAddLigne
-//                            ▼ suiviExpandedRowHtml  ▼ rSV
+//   SUIVI                    ▼ validateDevis  ▼ suiviAdd  ▼ suiviAddLigne  ▼ rSV
 //   AUTRES TABS              ▼ rCL (Clients)  ▼ rCP (Compta)  ▼ rTR (Tarifs)
 //                            ▼ rPF (Profil)   ▼ rBG (Notes/bugs)
 // =============================================================
@@ -7953,7 +7927,7 @@ function rLigne(l) {
       <div class="lg-row">
         <input class="lg-title" placeholder="Intitulé (ex : Préparation, Shooting, Post-prod…)" value="${esc(l.intitule)}" oninput="ligneUpd('${l.id}','intitule',this.value)">
         <input class="lg-num" type="number" step="0.25" placeholder="0" value="${esc(l.duree)}" oninput="ligneUpd('${l.id}','duree',this.value)">
-        <div class="seg seg-neon violet lg-toggle">
+        <div class="seg seg-neon lg-toggle">
           <button class="${l.unit==='h'?'on':''}" onclick="ligneSetUnit('${l.id}','h')">heures</button>
           <button class="${l.unit==='j'?'on':''}" onclick="ligneSetUnit('${l.id}','j')">jours</button>
         </div>
@@ -8002,7 +7976,7 @@ function rLigne(l) {
     // brut, dans le total. Les 2 toggles ne pilotent donc plus rien : masqués.
     const quick = isMissionQuick();
     const isDebours = !quick && l.devis === "debours";
-    const devisToggleHtml = quick ? "" : `<div class="seg seg-neon violet lg-toggle">
+    const devisToggleHtml = quick ? "" : `<div class="seg seg-neon lg-toggle">
           <button class="${(l.devis||'principal')==='principal'?'on':''}" onclick="ligneSetDevis('${l.id}','principal')">Principal</button>
           <button class="${l.devis==='debours'?'on warn':''}" onclick="ligneSetDevis('${l.id}','debours')">Débours</button>
         </div>`;
@@ -8012,11 +7986,11 @@ function rLigne(l) {
     const paiementModeHtml = quick
       ? ""
       : isDebours
-      ? `<div class="seg seg-neon violet lg-toggle lg-toggle-pmt" title="Mode de refacturation des débours">
+      ? `<div class="seg seg-neon lg-toggle lg-toggle-pmt" title="Mode de refacturation des débours">
           <button class="${pmt==='acompte'?'on':''}" onclick="ligneSetPaiement('${l.id}','acompte')" title="Tu avances le frais, le client te rembourse au centime près. Apparaît sur la feuille débours.">Refacturé</button>
           <button class="${pmt==='fact-direct'?'on':''}" onclick="ligneSetPaiement('${l.id}','fact-direct')" title="Le client règle directement le fournisseur. Hors devis fiscal, mais listé sur la feuille débours pour info.">Direct</button>
         </div>`
-      : `<div class="seg seg-neon violet lg-toggle lg-toggle-pmt" title="Mode de paiement (obligatoire)">
+      : `<div class="seg seg-neon lg-toggle lg-toggle-pmt" title="Mode de paiement (obligatoire)">
           <button class="${pmt==='acompte'?'on':''}" onclick="ligneSetPaiement('${l.id}','acompte')" title="Inclus dans l'acompte à la commande">Acompte</button>
           <button class="${pmt==='avance'?'on':''}" onclick="ligneSetPaiement('${l.id}','avance')" title="Tu avances la dépense, marge appliquée">Avance</button>
         </div>`;
@@ -12445,7 +12419,7 @@ function rDevisSectionIdentification() {
         onmouseenter="showInfo(event, 'clienteleType')" onmouseleave="hideInfo()" onfocus="showInfo(event, 'clienteleType')" onblur="hideInfo()">i</button>
     </h5>
     <div class="identif-clientele-row">
-      <div class="seg seg-neon violet">
+      <div class="seg seg-neon">
         <button class="${eff==="mixte"?"on":""}" onclick="upd('mission.client.type', 'mixte');render()">Mixte</button>
         <button class="${eff==="b2c"?"on":""}" onclick="upd('mission.client.type', 'b2c');render()">Particulier</button>
         <button class="${eff==="b2b"?"on":""}" onclick="upd('mission.client.type', 'b2b');render()">Entreprise</button>
@@ -12578,11 +12552,11 @@ function rDevisSectionDeplacement() {
   // d'avance) et aucun débours ⇒ le déplacement est au coût réel dans le total.
   // Les deux toggles ne pilotent plus rien : le bloc entier disparaît.
   const paiementToggle = isDebours
-    ? `<div class="seg seg-neon violet" title="Mode de refacturation des débours">
+    ? `<div class="seg seg-neon" title="Mode de refacturation des débours">
         <button class="${pmt==='acompte'?'on':''}" onclick="updDeplPaiementType('acompte')" title="Tu avances le déplacement, le client te rembourse au centime près.">Refacturé</button>
         <button class="${pmt==='fact-direct'?'on':''}" onclick="updDeplPaiementType('fact-direct')" title="Le client règle directement le transporteur. Hors devis fiscal.">Direct</button>
       </div>`
-    : `<div class="seg seg-neon violet" title="Mode de paiement">
+    : `<div class="seg seg-neon" title="Mode de paiement">
         <button class="${pmt==='acompte'?'on':''}" onclick="updDeplPaiementType('acompte')" title="Inclus dans l'acompte à la commande">Acompte</button>
         <button class="${pmt==='avance'?'on':''}" onclick="updDeplPaiementType('avance')" title="Tu avances la dépense, marge appliquée">Avance</button>
       </div>`;
@@ -12638,7 +12612,7 @@ function rDevisSectionDeplacement() {
   return `
     <h5>Mode de transport</h5>
     <div class="depl-toggle-row">
-      <div class="seg seg-neon violet">
+      <div class="seg seg-neon">
         <button class="${mode==='voiture'?'on':''}" onclick="updMissionMode('voiture')">Voiture</button>
         <button class="${mode==='transports'?'on':''}" onclick="updMissionMode('transports')">Transports</button>
       </div>
@@ -12650,7 +12624,7 @@ function rDevisSectionDeplacement() {
     ${quick ? "" : `
     <h5>Facturation</h5>
     <div class="depl-toggle-row">
-      <div class="seg seg-neon violet">
+      <div class="seg seg-neon">
         <button class="${devis==='principal'?'on':''}" onclick="updDeplDevis('principal')">Principal</button>
         <button class="${devis==='debours'?'on warn':''}" onclick="updDeplDevis('debours')">Débours</button>
       </div>
@@ -15177,26 +15151,11 @@ function suiviHistoryHtml(devisId) {
   </details>`;
 }
 
-function suiviExpandedRowHtml(g) {
-  if (suiviExpandedDevis !== g.devisId) return "";
-  const panel = suiviExpandedPanelHtml(g);
-  if (!panel) return "";
-  return `<tr class="suv-expanded-row" onclick="event.stopPropagation();">
-    <td colspan="6">${panel}</td>
-  </tr>`;
-}
-
-let suiviSort = { field: "date", dir: "desc" };
-
 // devisId du devis dont le volet inline est déplié, ou null. Un seul à la fois.
 let suiviExpandedDevis = null;
 
-// devisId dont le dropdown ⋮ (actions de cycle de vie) est ouvert, ou null.
+// devisId dont le dropdown (actions de cycle de vie) est ouvert, ou null.
 let suiviMoreMenuOpen = null;
-
-// Identifiant de la colonne dont le menu d'en-tête est ouvert, ou null.
-// Permet à un click sur l'en-tête « Date » de trier ET d'afficher le filtre année.
-let suiviHeaderMenu = null;
 
 // === SUIVI v2 — filtres
 // suiviFilterPrincipal : "all" | "envoye" | "en_cours" | "termine" | "refuse"
@@ -15204,9 +15163,6 @@ let suiviFilterPrincipal = (() => {
   try { return localStorage.getItem("suiviFilterPrincipal") || "all"; }
   catch (e) { return "all"; }
 })();
-// Set vide = pas de filtre (toutes les années visibles).
-// Set non vide = filtrer aux années cochées (multi-sélection).
-let suiviFilterYears = new Set();
 let suiviSelected = new Set();
 
 function suiviSetFilterPrincipal(k) {
@@ -15444,136 +15400,6 @@ function rClientInfoModal() {
   </div>`;
 }
 
-function suiviSortKey(field) {
-  if (suiviSort.field === field) {
-    suiviSort.dir = suiviSort.dir === "asc" ? "desc" : "asc";
-  } else {
-    suiviSort.field = field;
-    suiviSort.dir = field === "date" ? "desc" : "asc";
-  }
-  render();
-}
-
-// Click sur l'en-tête « Date » : ouvre/ferme le menu déroulant. Le tri et le
-// filtre se choisissent ensuite dans le menu (pattern Excel / Google Sheets).
-function suiviHeaderMenuToggleDate() {
-  suiviHeaderMenu = (suiviHeaderMenu === "date") ? null : "date";
-  render();
-  if (suiviHeaderMenu) requestAnimationFrame(positionThMenu);
-}
-window.suiviHeaderMenuToggleDate = suiviHeaderMenuToggleDate;
-
-function suiviHeaderMenuClose() {
-  if (suiviHeaderMenu === null) return;
-  suiviHeaderMenu = null;
-  render();
-}
-window.suiviHeaderMenuClose = suiviHeaderMenuClose;
-
-// Choix d'un sens de tri depuis le menu : applique + ferme le menu.
-function suiviPickSort(field, dir) {
-  suiviHeaderMenu = null;
-  suiviSort.field = field;
-  suiviSort.dir = dir;
-  render();
-}
-window.suiviPickSort = suiviPickSort;
-
-// Multi-sélection des années dans le menu. Toggle l'année dans le set ; le
-// menu reste ouvert. L'utilisateur peut cocher/décocher plusieurs années
-// avant de fermer (clic sur backdrop).
-function suiviToggleYear(y) {
-  if (suiviFilterYears.has(y)) suiviFilterYears.delete(y);
-  else suiviFilterYears.add(y);
-  // On ne ferme pas suiviExpandedDevis ici : le filtre change, mais on ne
-  // ferme pas le volet déplié (cohérence avec la logique sticky du devis).
-  // Toutefois on referme le volet pour que la liste se rafraîchisse net.
-  suiviExpandedDevis = null;
-  render();
-  if (suiviHeaderMenu) requestAnimationFrame(positionThMenu);
-}
-window.suiviToggleYear = suiviToggleYear;
-
-// « Toutes les années » = vider le set (= pas de filtre).
-function suiviClearYears() {
-  suiviFilterYears.clear();
-  suiviExpandedDevis = null;
-  render();
-  if (suiviHeaderMenu) requestAnimationFrame(positionThMenu);
-}
-window.suiviClearYears = suiviClearYears;
-
-// Menu déroulant ancré sous l'en-tête « Date » : choix de sens de tri puis
-// filtre par année (multi-sélection). Le menu est rendu hors de la table
-// (au top-level de rSV) avec position:fixed pour échapper au stacking
-// thead/tbody. Backdrop transparent pour fermer au clic en dehors.
-function suiviDateMenuHtml() {
-  const years = suiviYears();
-  const all = suiviGroupsAll();
-  const countYear = (y) => all.filter(g => g.lignes.some(e => (e.date || "").startsWith(y))).length;
-  const stop = "event.stopPropagation();";
-  const sortActive = suiviSort.field === "date";
-  const isAsc = sortActive && suiviSort.dir === "asc";
-  const isDesc = sortActive && suiviSort.dir === "desc";
-  const allYears = suiviFilterYears.size === 0;
-  return `
-    <div class="th-menu-backdrop" onclick="${stop}suiviHeaderMenuClose()"></div>
-    <div class="th-menu" id="thMenuDate" onclick="${stop}">
-      <div class="th-menu-section">Trier</div>
-      <button type="button" class="th-menu-item ${isAsc ? 'on' : ''}"
-        onclick="${stop}suiviPickSort('date','asc')">
-        <span class="th-menu-radio">${isAsc ? '●' : '○'}</span>
-        <span class="th-menu-label">${ICO_SZ('arrowUp', 12)} Plus ancien d'abord</span>
-      </button>
-      <button type="button" class="th-menu-item ${isDesc ? 'on' : ''}"
-        onclick="${stop}suiviPickSort('date','desc')">
-        <span class="th-menu-radio">${isDesc ? '●' : '○'}</span>
-        <span class="th-menu-label">${ICO_SZ('arrowDown', 12)} Plus récent d'abord</span>
-      </button>
-      <div class="th-menu-divider"></div>
-      <div class="th-menu-section">Filtrer par année</div>
-      <button type="button" class="th-menu-item ${allYears ? 'on' : ''}"
-        onclick="${stop}suiviClearYears()">
-        <span class="th-menu-check">${allYears ? '☑' : '☐'}</span>
-        <span class="th-menu-label">Toutes les années</span>
-        <span class="th-menu-count">${all.length}</span>
-      </button>
-      ${years.map(y => {
-        const checked = suiviFilterYears.has(y);
-        return `<button type="button" class="th-menu-item ${checked ? 'on' : ''}"
-          onclick="${stop}suiviToggleYear('${esc(y)}')">
-          <span class="th-menu-check">${checked ? '☑' : '☐'}</span>
-          <span class="th-menu-label">${esc(y)}</span>
-          <span class="th-menu-count">${countYear(y)}</span>
-        </button>`;
-      }).join("")}
-    </div>`;
-}
-window.suiviSortKey = suiviSortKey;
-
-// Positionne le menu déroulant Date sous l'en-tête de la colonne au moyen
-// de getBoundingClientRect(). Appelé via requestAnimationFrame après chaque
-// render pour rester synchro (open/close, scroll, resize).
-function positionThMenu() {
-  const th = document.querySelector('table.hist th.th-date');
-  const menu = document.getElementById('thMenuDate');
-  if (!th || !menu) return;
-  const rect = th.getBoundingClientRect();
-  menu.style.top = `${rect.bottom + 4}px`;
-  menu.style.left = `${rect.left}px`;
-}
-window.positionThMenu = positionThMenu;
-
-function suiviYears() {
-  const ys = new Set();
-  for (const e of S.suivi.entries) {
-    const y = (e.date || "").slice(0, 4);
-    if (y) ys.add(y);
-  }
-  return [...ys].sort().reverse();
-}
-
-const STATUT_ORDER = { envoye: 0, en_cours: 1, attente: 2, termine: 3, refuse: 4, annule: 5 };
 
 // Filtre : ne retient que les entries appartenant à la rev ACTIVE de leur chaîne.
 // Les versions historiques (rev1, rev2 d'une chaîne dont rev3 est active) ne
@@ -15649,19 +15475,10 @@ function suiviGroups() {
     list = list.filter(g => g.devisId === sticky || g.statutPrin === "termine");
   }
   // "all" : déjà filtré sur les clos ci-dessus, on laisse passer.
-  // Filtre année (existant)
-  if (suiviFilterYears.size > 0) list = list.filter(g => g.devisId === sticky || g.lignes.some(e => suiviFilterYears.has((e.date || "").slice(0, 4))));
-
-  // Tri
-  const dir = suiviSort.dir === "asc" ? 1 : -1;
-  const f = suiviSort.field;
-  list.sort((a, b) => {
-    if (f === "statut")  return ((STATUT_ORDER[a.statutPrin] ?? 99) - (STATUT_ORDER[b.statutPrin] ?? 99)) * dir;
-    if (f === "date")    return (a.dateMax || "").localeCompare(b.dateMax || "") * dir;
-    if (f === "ref")     return a.ref.localeCompare(b.ref, "fr", { numeric: true }) * dir;
-    if (f === "montant") return (a.total - b.total) * dir;
-    return a.client.localeCompare(b.client, "fr") * dir;
-  });
+  // Tri par date décroissante — seule convention depuis la refonte V2 (le tri
+  // par colonne et le filtre année de l'ancienne table ont été purgés le
+  // 2026-07-15, plus aucun point d'entrée UI).
+  list.sort((a, b) => (b.dateMax || "").localeCompare(a.dateMax || ""));
   return list;
 }
 
@@ -15671,15 +15488,10 @@ function dateFR(iso) {
   return `${d}/${m}/${y}`;
 }
 
-function arr(field) {
-  if (suiviSort.field !== field) return `<span class="arr">↕</span>`;
-  return `<span class="arr on">${suiviSort.dir === "asc" ? "▲" : "▼"}</span>`;
-}
-
 function statutLabel(k) { const s = STATUTS.find(x => x[0] === k); return s ? s[1] : k; }
 
 // ============================================================================
-// SUIVI v2 — Volet inline (replace ancienne modale, voir suiviExpandedRowHtml)
+// SUIVI v2 — Volet inline (a remplacé l'ancienne modale)
 // ============================================================================
 
 // (corps du panneau = suiviParcoursHtml : frise + bande d'action + échéancier)
