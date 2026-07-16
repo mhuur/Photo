@@ -16888,7 +16888,7 @@ function amortizationAnalysis() {
 //   monthsCovered = nb de mois de cette fenêtre (≤ 12)
 //   annualized    = h12 × 12 / monthsCovered
 //   gapExcluded   = true si une dormance a été retirée du calcul
-const ACTIVITY_GAP_MONTHS = 4; // ≥ 4 mois vides consécutifs = interruption, pas un creux
+const ACTIVITY_GAP_MONTHS = 3; // ≥ 3 mois vides consécutifs = interruption, pas un creux
 function heuresReelles() {
   const rows = bilanCompute();
   const byYM = {};
