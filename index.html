@@ -990,12 +990,15 @@
   .cp-marge-ratio{font-family:var(--font-mono);font-size:9px;font-weight:700;color:var(--text-dim);letter-spacing:.04em;margin-left:3px}
   /* Mois en cours : léger fond azure pour se repérer dans une longue table */
   .hist tr.cp-current-month td{background:rgba(46,134,240,.07)}
-  /* En-têtes de table figés au scroll (bilan). overflow:visible car un ancêtre en
-     overflow:hidden casserait position:sticky (il devient le conteneur de collage). */
-  .cp-bilan-table{overflow:visible}
-  .cp-bilan-table thead th{position:sticky;z-index:3}
-  .cp-bilan-table thead tr.cp-grouphdr th{top:0}
-  .cp-bilan-table thead tr:not(.cp-grouphdr) th{top:28px;background:var(--surface-2)}
+  /* En-têtes de table figés au scroll (bilan). ⚠ overflow:visible OBLIGATOIRE :
+     table.hist{overflow:hidden} casse position:sticky (l'ancêtre en overflow
+     devient le conteneur de collage). Spécificité .hist.cp-bilan-table (0,2,0)
+     pour battre table.hist (0,1,1). Hauteur de la 1re ligne d'en-tête figée à
+     26px → la 2e ligne se cale exactement dessous (top:26px), sans gap ni chevauchement. */
+  .hist.cp-bilan-table{overflow:visible}
+  .hist.cp-bilan-table thead th{position:sticky;z-index:3;background:var(--surface-2)}
+  .hist.cp-bilan-table thead tr.cp-grouphdr th{top:0;height:26px;box-sizing:border-box}
+  .hist.cp-bilan-table thead tr:not(.cp-grouphdr) th{top:26px}
   .hist tr.subtotal td:first-child{white-space:nowrap}
   /* Titre de section « Bilan mensuel » : même traitement mono que .cp-chart-title */
   .cp-table-title{font-family:var(--font-mono);font-size:11px;font-weight:700;color:var(--text-soft);text-transform:uppercase;letter-spacing:.16em;border-bottom:none;padding-bottom:0;margin:22px 0 12px;display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
@@ -17551,7 +17554,7 @@ function rCP() {
           <th style="text-align:right" title="Frais débours refacturés (avancés pour le client)">Débours</th>
           <th class="cp-grp-sep" style="text-align:right" title="Charge mensuelle des abonnements actifs">Abos</th>
           <th style="text-align:right" title="Charge mensuelle d'amortissement matériel">Matériel</th>
-          <th style="text-align:right" title="Profit économique réel : Salaire + Provision − Abos − Matériel">Marge</th>
+          <th style="text-align:right" title="Profit économique réel de l'activité = CA déclaré − URSSAF − Abos − Matériel. Différent du Salaire (ce que tu te verses) : la Marge ré-intègre la Provision mise de côté, qui reste un gain de l'activité. Marge > Salaire = tu constitues une réserve ; Marge < Salaire = tu puises dedans.">Marge</th>
         </tr>
       </thead>
       <tbody>${bilan.body}</tbody>
