@@ -936,6 +936,24 @@
   .cp-chart-val{font-family:var(--font-mono);font-size:9px;text-anchor:middle;fill:var(--text-muted);font-variant-numeric:tabular-nums;pointer-events:none}
   .cp-chart-mon{font-family:var(--font-mono);font-size:9px;text-anchor:middle;fill:var(--text-dim);font-weight:700;text-transform:uppercase;letter-spacing:.08em}
   .cp-chart-yr{font-size:9px;text-anchor:middle;fill:var(--ink-500)}
+  /* Cagnotte matériel : barres cumulées depuis la ligne zéro (jade > 0, ember < 0) */
+  .tr-cag-bar{transition:filter .12s;cursor:default}
+  .tr-cag-bar:hover{filter:brightness(1.18)}
+  .tr-cag-bar.pos{fill:var(--jade-fill)}
+  .tr-cag-bar.pos.current{fill:var(--jade-400)}
+  .tr-cag-bar.neg{fill:rgba(245,148,60,.7)}
+  .tr-cag-bar.neg.current{fill:var(--ember-400)}
+  .cp-legend-swatch.cag-pos{background:var(--jade-fill)}
+  .cp-legend-swatch.cag-neg{background:rgba(245,148,60,.7)}
+  /* Trésorerie : toggle unité (an|mois) dans la table abonnements */
+  .tr-unit-toggle{font-family:var(--font-mono);font-size:9px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--text-muted);background:var(--surface-sunken);border:1px solid var(--border);border-radius:var(--radius-sm);padding:3px 7px;cursor:pointer;transition:all .12s;white-space:nowrap}
+  .tr-unit-toggle:hover{color:var(--primary);border-color:var(--primary)}
+  .tr-amount-cell{display:flex;align-items:center;gap:6px;justify-content:flex-end}
+  .tr-amount-cell input{max-width:92px}
+  /* Trésorerie : cellule « remboursé par l'activité » */
+  table.hist td.tr-payback-cell{text-align:right;padding-right:14px;font-variant-numeric:tabular-nums}
+  .tr-payback-pct{color:var(--warning);font-weight:600;font-size:13px}
+  .tr-payback-date{color:var(--success);font-weight:600;font-size:12px;display:inline-flex;align-items:center;gap:4px}
 
   /* Compta : toolbar (chips + bouton export) */
   .cp-toolbar{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin-bottom:10px}
@@ -3451,7 +3469,7 @@ const DEFAULT_S = {
   compta:   {},
   abonnements: { entries: [] },
   investissements: { entries: [] },
-  tarifs: { catalog: JSON.parse(JSON.stringify(DEFAULT_CATALOG)), heuresAnnuelles: "900", facteurSecurite: "0", viewMode: "declare", viewBlackMode: "reduit" },
+  tarifs: { catalog: JSON.parse(JSON.stringify(DEFAULT_CATALOG)), heuresAnnuelles: "900", heuresMode: "auto", facteurSecurite: "0", viewMode: "declare", viewBlackMode: "reduit" },
   bin:    { items: [] },
   bugs: { items: [] },
   prefs: {
@@ -3546,8 +3564,9 @@ S.clients.entries.forEach(c => {
 migrateClientNums();
 if (!S.abonnements || !Array.isArray(S.abonnements.entries)) S.abonnements = { ...DEFAULT_S.abonnements };
 if (!S.investissements || !Array.isArray(S.investissements.entries)) S.investissements = { ...DEFAULT_S.investissements };
-if (!S.tarifs || !Array.isArray(S.tarifs.catalog) || !S.tarifs.catalog.length) S.tarifs = { catalog: JSON.parse(JSON.stringify(DEFAULT_CATALOG)), heuresAnnuelles: "900", facteurSecurite: "0", viewMode: "declare" };
+if (!S.tarifs || !Array.isArray(S.tarifs.catalog) || !S.tarifs.catalog.length) S.tarifs = { catalog: JSON.parse(JSON.stringify(DEFAULT_CATALOG)), heuresAnnuelles: "900", heuresMode: "auto", facteurSecurite: "0", viewMode: "declare" };
 if (!S.tarifs.heuresAnnuelles) S.tarifs.heuresAnnuelles = "900";
+if (!S.tarifs.heuresMode) S.tarifs.heuresMode = "auto";
 if (typeof S.tarifs.facteurSecurite === "undefined") S.tarifs.facteurSecurite = "0";
 if (S.tarifs.viewMode !== "declare" && S.tarifs.viewMode !== "noir") S.tarifs.viewMode = "declare";
 if (S.tarifs.viewBlackMode !== "fixe" && S.tarifs.viewBlackMode !== "reduit") S.tarifs.viewBlackMode = "reduit";
@@ -4061,7 +4080,7 @@ const NAV = [
   { id: "nav-compta", label: "Comptabilité", icon: "barChart", items: [
     ["compta",  "Bilan comptable",      "pieChart"],
     ["suivi",   "Historique",           "history"],
-    ["achats",  "Achats / Abonnements", "cart"]
+    ["achats",  "Trésorerie",           "wallet"]
   ]}
 ];
 
@@ -4075,7 +4094,7 @@ const TAB_EYEBROW = {
   profil:     "Émetteur des devis",
   compta:     "Micro-BNC · comptabilité de caisse",
   suivi:      "Archive des devis",
-  achats:     "Dépenses & investissements",
+  achats:     "Trésorerie · cagnotte matériel",
   bugs:       "Retours",
   compte:     "Compte & workspace"
 };
@@ -4301,7 +4320,7 @@ async function loadFromCloud(ownerUid) {
       if (d.compta)  S.compta  = Object.assign({}, DEFAULT_S.compta,  d.compta);
       if (d.abonnements) S.abonnements = { ...DEFAULT_S.abonnements, ...d.abonnements, entries: Array.isArray(d.abonnements.entries) ? d.abonnements.entries : [] };
       if (d.investissements) S.investissements = { ...DEFAULT_S.investissements, ...d.investissements, entries: Array.isArray(d.investissements.entries) ? d.investissements.entries : [] };
-      if (d.tarifs && Array.isArray(d.tarifs.catalog) && d.tarifs.catalog.length) S.tarifs = { catalog: d.tarifs.catalog, heuresAnnuelles: d.tarifs.heuresAnnuelles || S.tarifs.heuresAnnuelles || "900", facteurSecurite: d.tarifs.facteurSecurite || S.tarifs.facteurSecurite || "0" };
+      if (d.tarifs && Array.isArray(d.tarifs.catalog) && d.tarifs.catalog.length) S.tarifs = { catalog: d.tarifs.catalog, heuresAnnuelles: d.tarifs.heuresAnnuelles || S.tarifs.heuresAnnuelles || "900", heuresMode: d.tarifs.heuresMode || S.tarifs.heuresMode || "auto", facteurSecurite: d.tarifs.facteurSecurite || S.tarifs.facteurSecurite || "0" };
       if (d.bugs)    S.bugs    = { items: Array.isArray(d.bugs.items) ? d.bugs.items : (Array.isArray(d.bugs.entries) ? d.bugs.entries.map(e => ({ id: e.id, text: e.title || "", steps: e.desc ? [e.desc] : [], validated: e.status === "fixed", createdAt: e.date ? new Date(e.date).getTime() || Date.now() : Date.now() })) : []) };
       if (d.bin)     S.bin     = { items: Array.isArray(d.bin.items) ? d.bin.items : [] };
       if (d.prefs)   S.prefs   = { ...DEFAULT_S.prefs, ...d.prefs };
@@ -4563,7 +4582,7 @@ function subscribeWorkspaceData(ownerUid) {
     if (d.compta)  S.compta  = Object.assign({}, DEFAULT_S.compta,  d.compta);
     if (d.abonnements) S.abonnements = { ...DEFAULT_S.abonnements, ...d.abonnements, entries: Array.isArray(d.abonnements.entries) ? d.abonnements.entries : [] };
     if (d.investissements) S.investissements = { ...DEFAULT_S.investissements, ...d.investissements, entries: Array.isArray(d.investissements.entries) ? d.investissements.entries : [] };
-    if (d.tarifs && Array.isArray(d.tarifs.catalog) && d.tarifs.catalog.length) S.tarifs = { catalog: d.tarifs.catalog, heuresAnnuelles: d.tarifs.heuresAnnuelles || S.tarifs.heuresAnnuelles || "900", facteurSecurite: d.tarifs.facteurSecurite || S.tarifs.facteurSecurite || "0" };
+    if (d.tarifs && Array.isArray(d.tarifs.catalog) && d.tarifs.catalog.length) S.tarifs = { catalog: d.tarifs.catalog, heuresAnnuelles: d.tarifs.heuresAnnuelles || S.tarifs.heuresAnnuelles || "900", heuresMode: d.tarifs.heuresMode || S.tarifs.heuresMode || "auto", facteurSecurite: d.tarifs.facteurSecurite || S.tarifs.facteurSecurite || "0" };
     if (d.bugs)    S.bugs    = { items: Array.isArray(d.bugs.items) ? d.bugs.items : [] };
     if (d.bin)     S.bin     = { items: Array.isArray(d.bin.items) ? d.bin.items : [] };
     if (d.prefs)   S.prefs   = { ...DEFAULT_S.prefs, ...d.prefs };
@@ -16535,6 +16554,7 @@ function addAbonnement() {
     id:        uid(),
     libelle:   "",
     annuel:    "0",
+    unit:      "an",   // préférence de saisie (an|mois) — `annuel` reste canonique
     dateDebut: "",
     dateFin:   ""
   });
@@ -16570,6 +16590,42 @@ function refreshAbonnementMensuel(id) {
   if (cell) cell.textContent = fmt(num(e.annuel) / 12);
 }
 window.refreshAbonnementMensuel = refreshAbonnementMensuel;
+
+// ▼ aboUnit — préférence de SAISIE d'un abonnement (an|mois). `annuel` reste la
+// valeur canonique stockée ; l'unité ne change que l'affichage/la conversion.
+function aboUnit(e) { return e.unit === "mois" ? "mois" : "an"; }
+// Valeur affichée dans l'input selon l'unité (mensuel = annuel ÷ 12).
+function aboDisplayValue(e) {
+  const annuel = num(e.annuel);
+  return aboUnit(e) === "mois" ? r2(annuel / 12) : r2(annuel);
+}
+// Saisie du montant : reconvertit vers `annuel` selon l'unité active.
+function editAbonnementMontant(id, val) {
+  const e = S.abonnements.entries.find(x => x.id === id);
+  if (!e) return;
+  const n = num(val);
+  e.annuel = String(aboUnit(e) === "mois" ? r2(n * 12) : r2(n));
+  save();
+}
+window.editAbonnementMontant = editAbonnementMontant;
+// Bascule an↔mois — n'altère PAS `annuel` (juste l'affichage) → aucune dérive.
+function toggleAboUnit(id) {
+  const e = S.abonnements.entries.find(x => x.id === id);
+  if (!e) return;
+  e.unit = aboUnit(e) === "mois" ? "an" : "mois";
+  save();
+  render();
+}
+window.toggleAboUnit = toggleAboUnit;
+
+// ▼ tarifHeuresMode — bascule le dénominateur du coût horaire entre « auto »
+// (heures réelles glissantes) et « manuel » (valeur forcée pour un scénario).
+function tarifHeuresMode(mode) {
+  S.tarifs.heuresMode = mode === "manuel" ? "manuel" : "auto";
+  save();
+  render();
+}
+window.tarifHeuresMode = tarifHeuresMode;
 
 function addInvestissement() {
   S.investissements.entries.unshift({
@@ -16686,7 +16742,7 @@ function aboActifNow(e) {
 }
 
 function tauxMatos() {
-  const heures = num(S.tarifs.heuresAnnuelles) || 900;
+  const heures = heuresEffectives();
   const heuresParMois = heures / 12;
   const today = new Date();
   const CURRENT_YEAR = today.getFullYear();
@@ -16809,6 +16865,186 @@ function amortizationAnalysis() {
   const totalInvested = r2(invStatus.reduce((s, x) => s + x.prix, 0));
   const totalAmorti   = r2(invStatus.reduce((s, x) => s + x.amorti, 0));
   return { invStatus, totalInvested, totalAmorti };
+}
+
+// ============ TRÉSORERIE — moteur (étape 1) ============
+// Tout ce bloc DÉRIVE de bilanCompute (recettes rattachées au mois d'encaissement,
+// remboursements déjà négativés) → JAMAIS un second calcul des recettes. Les
+// entries Suivi déjà figées ne sont pas réécrites : seuls les nouveaux devis
+// utiliseront la base « heures réelles ». Le remboursement (invPayback) est
+// purement informatif : aucune garde d'ordre ni statut n'en dépend.
+
+// ▼ heuresReelles — heures RÉELLEMENT facturées (encaissées) sur 12 mois glissants,
+// annualisées si l'historique est plus court. Remplace le « 900 h/an » deviné, qui
+// n'était qu'un dénominateur du coût horaire matériel. Un mois sans heures mais
+// dans une période active compte comme un vrai zéro (creux d'activité) ; les mois
+// « abo seul » (aucune activité) ne bornent PAS l'annualisation.
+//   h12           = heures encaissées dans la fenêtre 12 mois
+//   monthsCovered = mois d'activité réelle DANS la fenêtre (≤ 12)
+//   annualized    = h12 × 12 / monthsCovered (= h12 dès 12 mois d'historique)
+function heuresReelles() {
+  const rows = bilanCompute();
+  const today = new Date();
+  const currentYM = isoDateLocal(today).slice(0, 7);
+  const windowYMs = [];
+  for (let i = 0; i < 12; i++) {
+    const d = new Date(today.getFullYear(), today.getMonth() - i, 1);
+    windowYMs.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`);
+  }
+  const windowSet = new Set(windowYMs);
+  const windowStartYM = windowYMs[windowYMs.length - 1];
+  let h12 = 0;
+  for (const r of rows) if (windowSet.has(r.ym)) h12 += num(r.heures);
+  const activeRows = rows.filter(r => num(r.heures) > 0 || num(r.paye) > 0);
+  if (!activeRows.length || h12 <= 0) {
+    return { h12: r2(h12), annualized: 0, monthsCovered: 0, hasEnough: false };
+  }
+  const earliestActiveYM = activeRows[activeRows.length - 1].ym; // rows triés desc
+  const effectiveStartYM = earliestActiveYM > windowStartYM ? earliestActiveYM : windowStartYM;
+  const monthsCovered = Math.min(12, _ymMonthsBetween(effectiveStartYM, currentYM) + 1);
+  const annualized = monthsCovered > 0 ? r2(h12 * 12 / monthsCovered) : 0;
+  return { h12: r2(h12), annualized, monthsCovered, hasEnough: monthsCovered >= 12 };
+}
+
+// ▼ heuresEffectives — nb d'heures au dénominateur du coût horaire matériel.
+// « Auto pur + override manuel » (arbitrage 2026-07-16) :
+//   heuresMode === "manuel" → valeur saisie (scénario forcé)
+//   sinon (auto, défaut)    → heures réelles annualisées ; repli sur la valeur
+//                             saisie (ou 900) tant qu'il n'y a pas d'historique.
+function heuresEffectives() {
+  const manual = num(S.tarifs.heuresAnnuelles);
+  if (S.tarifs.heuresMode === "manuel") return manual > 0 ? manual : 900;
+  const hr = heuresReelles();
+  if (hr.annualized > 0) return hr.annualized;
+  return manual > 0 ? manual : 900;
+}
+
+// ▼ tresoCashflow — CAGNOTTE MATÉRIEL cumulée, mois par mois. La part « trésorerie »
+// de chaque encaissement (déjà mise de côté pour matériel + abos) REMPLIT le pot ;
+// les achats (prix PLEIN à leur date, ≠ amortissement) et les abos payés le VIDENT.
+// Le cumul répond à « mon activité finance-t-elle mon matériel ? ».
+function tresoCashflow() {
+  const bilan = bilanCompute();
+  const byYM = {};
+  for (const r of bilan) byYM[r.ym] = r;
+  const achatsByYM = {};
+  for (const inv of (S.investissements.entries || [])) {
+    const prix = num(inv.prix);
+    const ym = (inv.date || "").slice(0, 7);
+    if (prix <= 0 || ym.length !== 7) continue;
+    achatsByYM[ym] = (achatsByYM[ym] || 0) + prix;
+  }
+  const today = new Date();
+  const todayYM = isoDateLocal(today).slice(0, 7);
+  const candidates = [...Object.keys(byYM), ...Object.keys(achatsByYM), todayYM].sort();
+  if (!candidates.length) return [];
+  const startYM = candidates[0];
+  const series = [];
+  let cumul = 0;
+  let y = parseInt(startYM.slice(0, 4), 10);
+  let m = parseInt(startYM.slice(5, 7), 10);
+  while (`${y}-${String(m).padStart(2, "0")}` <= todayYM) {
+    const ym = `${y}-${String(m).padStart(2, "0")}`;
+    const row = byYM[ym];
+    const inflow   = row ? num(row.tresorerie) : 0;
+    const outAbo   = row ? num(row.abos) : _abonnementsForMonth(ym);
+    const outAchat = achatsByYM[ym] || 0;
+    const net = r2(inflow - outAbo - outAchat);
+    cumul = r2(cumul + net);
+    series.push({ ym, inflow: r2(inflow), outAbo: r2(outAbo), outAchat: r2(outAchat), net, cumul });
+    m++; if (m > 12) { y++; m = 1; }
+  }
+  return series;
+}
+
+// ▼ invPayback — remboursement RÉEL de chaque équipement par l'activité (≠ amort
+// comptable). Fonds disponible = cumul (trésorerie encaissée − abos payés) mois par
+// mois. Remboursement FIFO (ordre d'achat) : l'équipement i est « remboursé » au 1er
+// mois (≥ son achat) où le fonds couvre la somme des prix 1..i ; sinon pourcentage
+// partiel sur le reliquat. Le fonds N'EST PAS net des achats (ce sont les achats
+// qu'on cherche justement à rembourser) — d'où les seuils cumulés.
+function invPayback() {
+  const invs = [...(S.investissements.entries || [])]
+    .filter(x => num(x.prix) > 0 && /^\d{4}-\d{2}/.test(x.date || ""))
+    .sort((a, b) => (a.date || "").localeCompare(b.date || ""));
+  if (!invs.length) return [];
+  const bilan = bilanCompute();
+  const byYM = {};
+  for (const r of bilan) byYM[r.ym] = r;
+  const today = new Date();
+  const todayYM = isoDateLocal(today).slice(0, 7);
+  const firstYM = [...Object.keys(byYM), invs[0].date.slice(0, 7), todayYM].sort()[0];
+  const monthsAsc = [];
+  const fundByYM = {};
+  let cumul = 0;
+  let y = parseInt(firstYM.slice(0, 4), 10);
+  let m = parseInt(firstYM.slice(5, 7), 10);
+  while (`${y}-${String(m).padStart(2, "0")}` <= todayYM) {
+    const ym = `${y}-${String(m).padStart(2, "0")}`;
+    const row = byYM[ym];
+    const inflow = row ? num(row.tresorerie) : 0;
+    const outAbo = row ? num(row.abos) : _abonnementsForMonth(ym);
+    cumul = r2(cumul + inflow - outAbo);
+    fundByYM[ym] = cumul;
+    monthsAsc.push(ym);
+    m++; if (m > 12) { y++; m = 1; }
+  }
+  const fundNow = monthsAsc.length ? fundByYM[monthsAsc[monthsAsc.length - 1]] : 0;
+  let threshold = 0;
+  return invs.map(inv => {
+    const prix = r2(num(inv.prix));
+    const prevThreshold = threshold;
+    threshold = r2(threshold + prix);
+    const purchaseYM = inv.date.slice(0, 7);
+    let paybackYM = null;
+    for (const ym of monthsAsc) {
+      if (ym < purchaseYM) continue;
+      if (fundByYM[ym] >= threshold) { paybackYM = ym; break; }
+    }
+    const covered = Math.max(0, r2(fundNow - prevThreshold));
+    const pct = paybackYM ? 100 : (prix > 0 ? Math.min(100, r2(covered / prix * 100)) : 0);
+    return { id: inv.id, date: inv.date, descriptif: inv.descriptif || "", prix,
+             paybackYM, reimbursed: !!paybackYM, pct };
+  });
+}
+
+// ▼ tresoStats — KPI de l'onglet Trésorerie. Tout dérivé (cagnotte via tresoCashflow,
+// coûts fixes via _abonnementsForMonth/_amortMatosForMonth, contribution horaire via
+// bilanCompute). Point mort = coûts fixes mensuels ÷ contribution horaire (part
+// « trésorerie » générée par heure facturée sur 12 mois glissants) = nb d'heures à
+// facturer dans le mois pour que la cagnotte ne baisse pas.
+function tresoStats() {
+  const today = new Date();
+  const todayYM = isoDateLocal(today).slice(0, 7);
+  const cf = tresoCashflow();
+  const cagnotte = cf.length ? cf[cf.length - 1].cumul : 0;
+  const coutFixeMensuel = r2(_abonnementsForMonth(todayYM) + _amortMatosForMonth(todayYM));
+  const rows = bilanCompute();
+  const windowSet = new Set();
+  for (let i = 0; i < 12; i++) {
+    const d = new Date(today.getFullYear(), today.getMonth() - i, 1);
+    windowSet.add(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`);
+  }
+  let treso12 = 0, h12 = 0;
+  for (const r of rows) if (windowSet.has(r.ym)) { treso12 += num(r.tresorerie); h12 += num(r.heures); }
+  const tm = tauxMatos();
+  const contributionHoraire = h12 > 0 ? r2(treso12 / h12) : tm.tauxAvecSecurite;
+  // Point mort = coûts fixes mensuels ÷ coût horaire matériel (le taux RÉELLEMENT
+  // appliqué aux devis). On divise le grand chiffre affiché → transparent et
+  // vérifiable. contributionHoraire (réalisé sur 12 mois) reste exposé pour info.
+  const pointMortHeures = tm.tauxAvecSecurite > 0 ? r2(coutFixeMensuel / tm.tauxAvecSecurite) : 0;
+  const hr = heuresReelles();
+  return {
+    cagnotte,
+    coutFixeMensuel,
+    contributionHoraire,
+    pointMortHeures,
+    coutHoraireMateriel: tm.tauxAvecSecurite,
+    heuresReelles12: r2(h12),
+    heuresAnnualisees: hr.annualized,
+    heuresMode: S.tarifs.heuresMode === "manuel" ? "manuel" : "auto",
+    hasHistory: hr.hasEnough
+  };
 }
 
 const MOIS_FR = ["janv.","févr.","mars","avr.","mai","juin","juil.","août","sept.","oct.","nov.","déc."];
@@ -17080,7 +17316,11 @@ function bilanCompute() {
       const b = byMonth[ym] || { heures:0, paye:0, ca:0, salaire:0, ursaf:0, tresorerie:0, frais:0 };
       const abos  = _abonnementsForMonth(ym);
       const amort = _amortMatosForMonth(ym);
-      const marge = r2(b.salaire - abos - amort);
+      // Marge = profit économique réel du mois. On REMET la trésorerie (part
+      // encaissée mise de côté pour financer matériel + abos) avant d'en déduire
+      // ces charges, sinon on les compterait deux fois (le salaire est déjà net
+      // de la trésorerie). Marge = Salaire + Trésorerie − Abos − Matériel.
+      const marge = r2(b.salaire + num(b.tresorerie) - abos - amort);
       return { ym, ...b, abos, amort, marge };
     })
     // Élide uniquement les mois "vraiment vides" (avant tout abo/matériel/encaissement).
@@ -17156,12 +17396,12 @@ function bilanRender() {
     const next = data[i + 1];
     if (!next || next.ym.slice(0, 4) !== y) {
       const a = annual[y];
-      a.marge = r2(a.salaire - a.abos - a.amort); // recalcul propre
+      a.marge = r2(a.salaire + a.tresorerie - a.abos - a.amort); // recalcul propre (cf. marge = salaire + tréso − charges)
       rows.push(`<tr class="subtotal"><td>Sous-total ${esc(y)}</td>${rowCells(a)}</tr>`);
     }
   }
 
-  grand.marge = r2(grand.salaire - grand.abos - grand.amort);
+  grand.marge = r2(grand.salaire + grand.tresorerie - grand.abos - grand.amort);
   const foot = `<tr class="grandtotal"><td>Total général</td>${rowCells(grand)}</tr>`;
 
   return { body: rows.join(""), foot };
@@ -17179,13 +17419,14 @@ function rCP() {
   const monthRow = allData.find(r => r.ym === currentYM);
   const ytdRows = allData.filter(r => r.ym.slice(0, 4) === currentYear);
   const ytd = ytdRows.reduce((acc, r) => ({
-    ca:      acc.ca      + r.ca,
-    salaire: acc.salaire + r.salaire,
-    ursaf:   acc.ursaf   + r.ursaf,
-    abos:    acc.abos    + r.abos,
-    amort:   acc.amort   + r.amort,
-  }), { ca:0, salaire:0, ursaf:0, abos:0, amort:0 });
-  ytd.marge = r2(ytd.salaire - ytd.abos - ytd.amort);
+    ca:         acc.ca         + r.ca,
+    salaire:    acc.salaire    + r.salaire,
+    tresorerie: acc.tresorerie + r.tresorerie,
+    ursaf:      acc.ursaf      + r.ursaf,
+    abos:       acc.abos       + r.abos,
+    amort:      acc.amort      + r.amort,
+  }), { ca:0, salaire:0, tresorerie:0, ursaf:0, abos:0, amort:0 });
+  ytd.marge = r2(ytd.salaire + ytd.tresorerie - ytd.abos - ytd.amort);
   const caMois = monthRow ? monthRow.ca : 0;
 
   // Seuils micro-BNC (BNC photographe : 77 700 € HT) et franchise TVA (39 100 €)
@@ -17267,7 +17508,7 @@ function rCP() {
           <th style="text-align:right" title="Frais débours refacturés (avancés pour le client)">Débours</th>
           <th class="cp-grp-sep" style="text-align:right" title="Charge mensuelle des abonnements actifs">Abos</th>
           <th style="text-align:right" title="Charge mensuelle d'amortissement matériel">Matériel</th>
-          <th style="text-align:right" title="Salaire − Abos − Matériel">Marge</th>
+          <th style="text-align:right" title="Profit économique réel : Salaire + Trésorerie − Abos − Matériel">Marge</th>
         </tr>
       </thead>
       <tbody>${bilan.body}</tbody>
@@ -17431,93 +17672,143 @@ function rCatalogue() {
   `;
 }
 
-// ▼ rAchats — vue Achats / Abonnements. Synthèse coût horaire matériel +
-// abonnements pro + investissements (amortissement). Alimente le coût matériel
-// affiché dans le Catalogue.
+// ▼ tresoCashflowChartHtml — courbe (barres cumulées) de la CAGNOTTE MATÉRIEL sur
+// les 24 derniers mois. Jade au-dessus de zéro (l'activité finance le matériel),
+// ember en dessous (à découvert, gros achat pas encore digéré). Dérive de
+// tresoCashflow → jamais un second calcul.
+function tresoCashflowChartHtml() {
+  const full = tresoCashflow();
+  if (!full.length) return "";
+  const series = full.slice(-24);
+  const currentYM = isoDateLocal(new Date()).slice(0, 7);
+  const cumuls = series.map(s => s.cumul);
+  const maxV = Math.max(0, ...cumuls);
+  const minV = Math.min(0, ...cumuls);
+  const range = (maxV - minV) || 1;
+  const W = 720, H = 240, TOP = 18, BOT = 46, GAP = 6;
+  const plotH = H - TOP - BOT;
+  const zeroY = TOP + (maxV / range) * plotH;
+  const stride = W / series.length;
+  const barW = Math.max(6, Math.min(30, stride - GAP));
+  const bars = series.map((s, i) => {
+    const x = i * stride + (stride - barW) / 2;
+    const cx = x + barW / 2;
+    const v = s.cumul;
+    const pos = v >= 0;
+    const h = Math.max(1, Math.abs(v) / range * plotH);
+    const y = pos ? zeroY - h : zeroY;
+    const [yr, mo] = s.ym.split("-");
+    const monLbl = MOIS_FR[parseInt(mo, 10) - 1].slice(0, 3);
+    const isCurrent = s.ym === currentYM;
+    const tip = `${monLbl} ${yr} — cagnotte ${fmt(v)}`;
+    const showLbl = series.length <= 14 || i % 3 === 0 || i === series.length - 1;
+    return `
+      <rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${barW.toFixed(1)}" height="${h.toFixed(1)}" rx="2"
+        class="tr-cag-bar ${pos ? 'pos' : 'neg'}${isCurrent ? ' current' : ''}"><title>${esc(tip)}</title></rect>
+      ${showLbl ? `<text x="${cx.toFixed(1)}" y="${(H - 26).toFixed(1)}" class="cp-chart-mon">${esc(monLbl)}</text>
+      <text x="${cx.toFixed(1)}" y="${(H - 13).toFixed(1)}" class="cp-chart-yr">${esc(yr)}</text>` : ""}`;
+  }).join("");
+  return `
+    <div class="cp-chart-wrap" style="max-width:780px">
+      <div class="cp-chart-head">
+        <span class="cp-chart-title">Cagnotte matériel — ${series.length} derniers mois</span>
+        <div class="cp-chart-legend">
+          <span class="cp-legend-item"><span class="cp-legend-swatch cag-pos"></span>Financé</span>
+          <span class="cp-legend-item"><span class="cp-legend-swatch cag-neg"></span>À découvert</span>
+        </div>
+      </div>
+      <svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet" class="cp-chart-svg" role="img" aria-label="Cagnotte matériel cumulée sur 24 mois">
+        ${bars}
+        <line x1="0" y1="${zeroY.toFixed(1)}" x2="${W}" y2="${zeroY.toFixed(1)}" class="cp-chart-axis"/>
+      </svg>
+    </div>`;
+}
+
+// ▼ rAchats — onglet TRÉSORERIE (clé `achats`). Cagnotte matériel (activité
+// finance-t-elle le matériel ?), point mort, coût horaire fondé sur les heures
+// RÉELLES, abonnements (saisie €/an ou €/mois), matériel (amortissement comptable
+// + remboursement réel par l'activité). Tout dérive du moteur de l'étape 1.
 function rAchats() {
-  // Abonnements
-  const abEntries = S.abonnements.entries;
-  const abActif = abEntries.filter(aboActifNow);
-  const abTotalAnnuel = abActif.reduce((s, e) => s + num(e.annuel), 0);
-  const abRows = abEntries.map(e => {
-    const isActif = aboActifNow(e);
-    return `
-    <tr class="${isActif ? "" : "row-inactive"}">
-      <td><input value="${esc(e.libelle)}" oninput="editAbonnement('${e.id}','libelle',this.value)" placeholder="Libellé" class="tr-cell-input"></td>
-      <td><input type="date" value="${esc(e.dateDebut || "")}" oninput="editAbonnement('${e.id}','dateDebut',this.value)" onchange="refreshTauxMatos()" class="tr-cell-input"></td>
-      <td>${rDateOrEnCoursCell(e.id, e.dateFin)}</td>
-      <td class="amount"><input type="number" step="0.01" value="${esc(e.annuel)}" oninput="editAbonnement('${e.id}','annuel',this.value); refreshAbonnementMensuel('${e.id}')" onchange="refreshTauxMatos()" class="tr-cell-input num"></td>
-      <td class="amount muted-cell" id="ab-mens-${e.id}">${fmt(num(e.annuel) / 12)}</td>
-      <td class="actions"><button title="Supprimer" onclick="deleteAbonnementConfirm('${e.id}')">${ICO_SZ('trash', 13)}</button></td>
-    </tr>`;
-  }).join("");
-
-  // Investissements (amortissement) — combined with real amortization analysis
-  const am = amortizationAnalysis();
-  const amortMap = {};
-  for (const it of am.invStatus) amortMap[it.id] = it;
-  const invEntries = [...S.investissements.entries].sort((a, b) => (b.date || "").localeCompare(a.date || ""));
-  const invTotal = invEntries.reduce((s, e) => s + num(e.prix), 0);
-  const invRows = invEntries.map(e => {
-    const prix = num(e.prix);
-    const duree = num(e.dureeVie) || 5;
-    const annuel = duree > 0 ? r2(prix / duree) : 0;
-    const am1 = amortMap[e.id] || { amorti: 0, reste: prix, fullyAmorti: false };
-    const badge = am1.fullyAmorti
-      ? `<span class="tr-badge ok">${ICO_SZ('check', 11)} Amorti</span>`
-      : am1.amorti > 0
-      ? `<span class="tr-badge partial">Partiel</span>`
-      : `<span class="tr-badge none">Non</span>`;
-    return `
-    <tr class="${am1.fullyAmorti ? 'row-amorti' : ''}">
-      <td><input type="date" value="${esc(e.date)}" oninput="editInvestissement('${e.id}','date',this.value)" onchange="refreshTauxMatos()" class="tr-cell-input"></td>
-      <td><input value="${esc(e.descriptif)}" oninput="editInvestissement('${e.id}','descriptif',this.value)" placeholder="Descriptif" class="tr-cell-input"></td>
-      <td class="amount"><input type="number" step="0.01" value="${esc(e.prix)}" oninput="editInvestissement('${e.id}','prix',this.value)" onchange="refreshTauxMatos()" class="tr-cell-input num"></td>
-      <td class="amount"><input type="number" step="0.5" min="0.5" value="${esc(e.dureeVie || "5")}" oninput="editInvestissement('${e.id}','dureeVie',this.value)" onchange="refreshTauxMatos()" class="tr-cell-input num center"></td>
-      <td class="amount muted-cell">${fmt(annuel)}</td>
-      <td class="amount tr-amorti-cell">${fmt(am1.amorti)}</td>
-      <td class="amount tr-reste-cell ${am1.reste > 0 ? 'pending' : 'done'}">${fmt(am1.reste)}</td>
-      <td class="center">${badge}</td>
-      <td class="actions"><button title="Supprimer" onclick="deleteInvestissementConfirm('${e.id}')">${ICO_SZ('trash', 13)}</button></td>
-    </tr>`;
-  }).join("");
-
+  const st = tresoStats();
+  const hr = heuresReelles();
   const tm = tauxMatos();
+  const isAuto = st.heuresMode === "auto";
 
-  // Bande de KPI (charte V2). ⚠ `tm.materielAnnuel` est PROSPECTIF : c'est la
-  // charge d'amortissement des 12 MOIS À VENIR (un équipement qui finit de
-  // s'amortir dans 4 mois ne compte que 4 mensualités). Le sous-titre le dit,
-  // et on ne compte que les équipements ENCORE en cours d'amortissement — pas
-  // ceux déjà soldés, qui ne coûtent plus rien.
-  const abosAn = r2(tm.mensuelActif * 12);
-  const amortAn = r2(tm.materielAnnuel);
-  const invEnCours = (am.invStatus || []).filter(it => !it.fullyAmorti).length;
-  const kpisHtml = `<div class="cp-kpi-grid" style="grid-template-columns:repeat(3,1fr);max-width:780px">
+  // --- Bande KPI ---
+  const cagnottePos = st.cagnotte >= 0;
+  const pmTxt = st.pointMortHeures > 0 ? `${num(st.pointMortHeures).toFixed(1)} h` : "—";
+  const kpisHtml = `<div class="cp-kpi-grid" style="grid-template-columns:repeat(4,1fr);max-width:1000px">
     <div class="cp-kpi">
-      <span class="cp-kpi-label">Abonnements / an</span>
-      <strong class="cp-kpi-value">${fmt(abosAn)}</strong>
-      <span class="cp-kpi-sub">${fmt(tm.mensuelActif)} / mois · ${abActif.length} en cours</span>
+      <span class="cp-kpi-label">Cagnotte matériel</span>
+      <strong class="cp-kpi-value ${cagnottePos ? 'cp-kpi-ok' : 'cp-kpi-warn'}">${fmt(st.cagnotte)}</strong>
+      <span class="cp-kpi-sub">${cagnottePos ? "ton activité finance ton matériel" : "à découvert — achats pas encore digérés"}</span>
     </div>
     <div class="cp-kpi">
-      <span class="cp-kpi-label">Amortissements</span>
-      <strong class="cp-kpi-value">${fmt(amortAn)}</strong>
-      <span class="cp-kpi-sub">12 mois à venir · ${invEnCours} équipement${invEnCours > 1 ? "s" : ""} en cours</span>
+      <span class="cp-kpi-label">Coût fixe mensuel</span>
+      <strong class="cp-kpi-value">${fmt(st.coutFixeMensuel)}</strong>
+      <span class="cp-kpi-sub">abonnements actifs + usure matériel</span>
     </div>
     <div class="cp-kpi">
-      <span class="cp-kpi-label">Dépenses / an</span>
-      <strong class="cp-kpi-value cp-kpi-warn">${fmt(r2(abosAn + amortAn))}</strong>
-      <span class="cp-kpi-sub">déduites de la marge du bilan</span>
+      <span class="cp-kpi-label">Point mort</span>
+      <strong class="cp-kpi-value">${esc(pmTxt)}<span style="font-size:12px;font-weight:600;color:var(--text-dim)"> / mois</span></strong>
+      <span class="cp-kpi-sub">à facturer pour couvrir tes coûts fixes</span>
+    </div>
+    <div class="cp-kpi">
+      <span class="cp-kpi-label">Coût horaire matériel</span>
+      <strong class="cp-kpi-value cp-kpi-azure">${fmt(st.coutHoraireMateriel)}<span style="font-size:12px;font-weight:600;color:var(--text-dim)"> /h</span></strong>
+      <span class="cp-kpi-sub">à répercuter dans tes tarifs</span>
     </div>
   </div>`;
 
-  return `
-    ${v2PageHead("achats")}
+  // --- Sensibilité du coût horaire aux heures facturées ---
+  const annualBasis = r2(tm.tauxBrut * tm.heures);      // coût annuel matériel + abos
+  const facteurMul = 1 + (tm.facteur / 100);
+  const coutAt = h => h > 0 ? r2(annualBasis / h * facteurMul) : 0;
+  const heuresUsed = tm.heures;
+  // Scénarios pessimiste / actuel / optimiste autour du réel (arrondis à la dizaine).
+  const round10 = h => Math.max(10, Math.round(h / 10) * 10);
+  const scLow = round10(heuresUsed * 0.6);
+  const scHi  = round10(heuresUsed * 1.5);
+  const sensibilite = (hr.h12 > 0 || heuresUsed > 0) ? `
+    <div class="hint" style="max-width:780px;margin-top:10px">
+      <span style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+        <span style="flex-shrink:0">${ICO_SZ('info', 13)}</span>
+        <span>Sensibilité : à <strong>${scLow} h</strong> → ${fmt(coutAt(scLow))}/h · à <strong>${Math.round(heuresUsed)} h</strong> (retenu) → ${fmt(coutAt(heuresUsed))}/h · à <strong>${scHi} h</strong> → ${fmt(coutAt(scHi))}/h. Moins tu factures d'heures, plus ton matériel te coûte cher à l'heure.</span>
+      </span>
+    </div>` : "";
 
-    ${kpisHtml}
+  // --- Carte coût horaire ---
+  const heuresControl = isAuto
+    ? `<div class="tr-cost-control">
+         <label>Heures / an</label>
+         <div class="seg seg-neon">
+           <button class="on ok" onclick="tarifHeuresMode('auto')">${ICO_SZ('check', 13)} Auto</button>
+           <button onclick="tarifHeuresMode('manuel')">Manuel</button>
+         </div>
+       </div>
+       <div class="tr-cost-control">
+         <label>Heures retenues (réel)</label>
+         <div class="lock-field with-unit"><input type="number" value="${Math.round(heuresUsed)}" disabled title="Heures réelles facturées sur 12 mois glissants${hr.hasEnough ? "" : ", annualisées"} — passe en Manuel pour forcer une valeur"><span class="lock-unit">h</span></div>
+       </div>`
+    : `<div class="tr-cost-control">
+         <label>Heures / an</label>
+         <div class="seg seg-neon">
+           <button onclick="tarifHeuresMode('auto')">Auto</button>
+           <button class="on" onclick="tarifHeuresMode('manuel')">${ICO_SZ('check', 13)} Manuel</button>
+         </div>
+       </div>
+       <div class="tr-cost-control">
+         <label>Heures forcées</label>
+         <div class="lock-field with-unit"><input id="heuresInput" type="number" step="10" min="1" value="${esc(S.tarifs.heuresAnnuelles || "900")}" oninput="tarifHeuresAnnuelles(this.value)"><span class="lock-unit">h</span></div>
+       </div>`;
 
-    <h3>Synthèse coûts horaires</h3>
-    <div class="hint" style="max-width:780px">Coût horaire à intégrer dans tes tarifs (Net = Tarif − URSSAF − ce coût). Heures : estimation prudente ≈ 900 h/an. Facteur sécurité : marge pour les imprévus (ex. 15 %).</div>
+  const heuresNote = isAuto
+    ? (hr.h12 > 0
+        ? `${Math.round(hr.h12)} h facturées sur 12 mois${hr.hasEnough ? "" : ` · annualisé à ${Math.round(hr.annualized)} h`}`
+        : "pas encore d'historique — repli sur 900 h")
+    : "mode manuel — valeur forcée, ignore le réel";
 
+  const costCard = `
     <section class="tr-cost-card">
       <header class="tr-cost-head">
         <div class="tr-cost-headline">
@@ -17525,13 +17816,7 @@ function rAchats() {
           <span class="tr-cost-value">${fmt(tm.tauxAvecSecurite)}<span class="tr-cost-unit">/h</span></span>
         </div>
         <div class="tr-cost-controls">
-          <div class="tr-cost-control">
-            <label>Heures annuelles</label>
-            <div class="lock-field with-unit">
-              <input id="heuresInput" type="number" step="10" min="1" value="${esc(S.tarifs.heuresAnnuelles || "900")}" oninput="tarifHeuresAnnuelles(this.value)">
-              <span class="lock-unit">h</span>
-            </div>
-          </div>
+          ${heuresControl}
           <div class="tr-cost-control">
             <label>Facteur sécurité</label>
             <div class="lock-field with-unit">
@@ -17543,11 +17828,15 @@ function rAchats() {
       </header>
       <div class="tr-cost-breakdown">
         <div class="tr-cost-row">
-          <span class="tr-cost-row-label">Abonnements pro<span class="tr-cost-row-note">${fmt(r2(tm.mensuelActif * 12))}/an ÷ ${esc(tm.heures)} h</span></span>
+          <span class="tr-cost-row-label">Base horaire<span class="tr-cost-row-note">${esc(heuresNote)}</span></span>
+          <span class="tr-cost-row-amt">${Math.round(heuresUsed)} h retenues</span>
+        </div>
+        <div class="tr-cost-row">
+          <span class="tr-cost-row-label">Abonnements pro<span class="tr-cost-row-note">${fmt(r2(tm.mensuelActif * 12))}/an ÷ ${Math.round(tm.heures)} h</span></span>
           <span class="tr-cost-row-amt">${fmt(tm.tauxAbo)}/h</span>
         </div>
         <div class="tr-cost-row">
-          <span class="tr-cost-row-label">Amortissement matériel<span class="tr-cost-row-note">${fmt(tm.materielAnnuel)}/an ÷ ${esc(tm.heures)} h</span></span>
+          <span class="tr-cost-row-label">Amortissement matériel<span class="tr-cost-row-note">${fmt(tm.materielAnnuel)}/an ÷ ${Math.round(tm.heures)} h</span></span>
           <span class="tr-cost-row-amt">${fmt(tm.tauxInv)}/h</span>
         </div>
         <div class="tr-cost-row tr-cost-row--total">
@@ -17559,33 +17848,102 @@ function rAchats() {
           <span class="tr-cost-row-amt">+${fmt(r2(tm.tauxAvecSecurite - tm.tauxBrut))}/h</span>
         </div>` : ""}
       </div>
-    </section>
+    </section>`;
+
+  // --- Abonnements ---
+  const abEntries = S.abonnements.entries;
+  const abActif = abEntries.filter(aboActifNow);
+  const abTotalAnnuel = abActif.reduce((s, e) => s + num(e.annuel), 0);
+  const abRows = abEntries.map(e => {
+    const isActif = aboActifNow(e);
+    const unit = aboUnit(e);
+    return `
+    <tr class="${isActif ? "" : "row-inactive"}">
+      <td><input value="${esc(e.libelle)}" oninput="editAbonnement('${e.id}','libelle',this.value)" placeholder="Libellé" class="tr-cell-input"></td>
+      <td><input type="date" value="${esc(e.dateDebut || "")}" oninput="editAbonnement('${e.id}','dateDebut',this.value)" onchange="refreshTauxMatos()" class="tr-cell-input"></td>
+      <td>${rDateOrEnCoursCell(e.id, e.dateFin)}</td>
+      <td class="amount">
+        <div class="tr-amount-cell">
+          <input type="number" step="0.01" value="${esc(aboDisplayValue(e))}" oninput="editAbonnementMontant('${e.id}',this.value); refreshAbonnementMensuel('${e.id}')" onchange="refreshTauxMatos()" class="tr-cell-input num">
+          <button type="button" class="tr-unit-toggle" title="Basculer la saisie : € par an / € par mois" onclick="toggleAboUnit('${e.id}')">${unit === "mois" ? "€/mois" : "€/an"}</button>
+        </div>
+      </td>
+      <td class="amount muted-cell" id="ab-mens-${e.id}">${fmt(num(e.annuel) / 12)}</td>
+      <td class="actions"><button title="Supprimer" onclick="deleteAbonnementConfirm('${e.id}')">${ICO_SZ('trash', 13)}</button></td>
+    </tr>`;
+  }).join("");
+
+  // --- Investissements : amortissement comptable + remboursement réel (payback) ---
+  const am = amortizationAnalysis();
+  const amortMap = {};
+  for (const it of am.invStatus) amortMap[it.id] = it;
+  const pbMap = {};
+  for (const p of invPayback()) pbMap[p.id] = p;
+  const invEntries = [...S.investissements.entries].sort((a, b) => (b.date || "").localeCompare(a.date || ""));
+  const invTotal = invEntries.reduce((s, e) => s + num(e.prix), 0);
+  const nbRembourses = Object.values(pbMap).filter(p => p.reimbursed).length;
+  const paybackCell = (p) => {
+    if (!p) return `<span class="tr-payback-pct" style="color:var(--text-dim)">—</span>`;
+    if (p.reimbursed) {
+      const [yr, mo] = p.paybackYM.split("-");
+      return `<span class="tr-payback-date" title="Remboursé par l'activité : la part « trésorerie » encaissée a couvert son prix à cette date (≠ amortissement comptable)">${ICO_SZ('check', 11)} ${esc(MOIS_FR[parseInt(mo, 10) - 1])} ${esc(yr)}</span>`;
+    }
+    return `<span class="tr-payback-pct" title="Remboursé à ${num(p.pct).toFixed(0)} % par l'activité (part « trésorerie » encaissée). Distinct de l'amortissement comptable.">${num(p.pct).toFixed(0)} %</span>`;
+  };
+  const invRows = invEntries.map(e => {
+    const prix = num(e.prix);
+    const duree = num(e.dureeVie) || 5;
+    const annuel = duree > 0 ? r2(prix / duree) : 0;
+    const am1 = amortMap[e.id] || { amorti: 0, reste: prix, fullyAmorti: false };
+    return `
+    <tr class="${am1.fullyAmorti ? 'row-amorti' : ''}">
+      <td><input type="date" value="${esc(e.date)}" oninput="editInvestissement('${e.id}','date',this.value)" onchange="refreshTauxMatos()" class="tr-cell-input"></td>
+      <td><input value="${esc(e.descriptif)}" oninput="editInvestissement('${e.id}','descriptif',this.value)" placeholder="Descriptif" class="tr-cell-input"></td>
+      <td class="amount"><input type="number" step="0.01" value="${esc(e.prix)}" oninput="editInvestissement('${e.id}','prix',this.value)" onchange="refreshTauxMatos()" class="tr-cell-input num"></td>
+      <td class="amount"><input type="number" step="0.5" min="0.5" value="${esc(e.dureeVie || "5")}" oninput="editInvestissement('${e.id}','dureeVie',this.value)" onchange="refreshTauxMatos()" class="tr-cell-input num center"></td>
+      <td class="amount muted-cell">${fmt(annuel)}</td>
+      <td class="amount tr-amorti-cell">${fmt(am1.amorti)}</td>
+      <td class="amount tr-reste-cell ${am1.reste > 0 ? 'pending' : 'done'}">${fmt(am1.reste)}</td>
+      <td class="tr-payback-cell">${paybackCell(pbMap[e.id])}</td>
+      <td class="actions"><button title="Supprimer" onclick="deleteInvestissementConfirm('${e.id}')">${ICO_SZ('trash', 13)}</button></td>
+    </tr>`;
+  }).join("");
+
+  return `
+    ${v2PageHead("achats")}
+
+    ${kpisHtml}
+
+    ${tresoCashflowChartHtml()}
+
+    <h3>Coût horaire matériel</h3>
+    <div class="hint" style="max-width:780px">Coût à répercuter dans tes tarifs (Net = Tarif − URSSAF − ce coût). Le nombre d'heures vient <strong>automatiquement de ton activité réelle</strong> (12 mois glissants) — plus besoin de deviner. Facteur sécurité : marge pour les imprévus (ex. 15 %).</div>
+
+    ${costCard}
+    ${sensibilite}
 
     <h3>Abonnements professionnels</h3>
-    <div class="hint">Coût mensuel calculé automatiquement à partir du coût annuel. Le total ne compte que les abonnements <span style="color:var(--success);font-weight:600">En cours</span> (case cochée). Décocher pour saisir une date de fin.</div>
+    <div class="hint">Saisis le montant en <strong>€/an</strong> ou <strong>€/mois</strong> (bouton à droite du champ) — l'outil convertit. Le total ne compte que les abonnements <span style="color:var(--success);font-weight:600">En cours</span>. Renseigne une date de fin pour résilier.</div>
     <div class="toolbar">
       <button class="mk-btn subtle" onclick="addAbonnement()">+ Ajouter un abonnement</button>
     </div>
     <table class="hist">
       <thead>
         <tr>
-          <!-- min-width explicite : les en-têtes passés en mono 9px (charte V2)
-               sont bien plus étroits, et le layout auto laissait la colonne se
-               comprimer jusqu'à tronquer le libellé saisi. -->
           <th style="min-width:220px">Libellé</th>
           <th style="width:140px">Date début</th>
           <th style="width:160px">Date fin</th>
-          <th style="width:150px;text-align:right">Coût annuel (€)</th>
-          <th style="width:150px;text-align:right">Coût mensuel (€)</th>
+          <th style="width:170px;text-align:right">Montant</th>
+          <th style="width:130px;text-align:right">Coût mensuel (€)</th>
           <th style="width:36px"></th>
         </tr>
       </thead>
       <tbody>${abRows}</tbody>
-      ${abActif.length ? `<tfoot><tr><td colspan="3">Total des abonnements actifs</td><td style="text-align:right">${fmt(abTotalAnnuel)}</td><td style="text-align:right">${fmt(abTotalAnnuel/12)}</td><td></td></tr></tfoot>` : ""}
+      ${abActif.length ? `<tfoot><tr><td colspan="3">Total des abonnements actifs</td><td style="text-align:right">${fmt(abTotalAnnuel)} <span style="color:var(--text-dim);font-weight:400">/an</span></td><td style="text-align:right">${fmt(abTotalAnnuel/12)}</td><td></td></tr></tfoot>` : ""}
     </table>
 
-    <h3>Investissements et amortissement matériel</h3>
-    <div class="hint">Achats de matériel à amortir. Chaque ligne se voit attribuer une <strong>durée d'amortissement</strong> (en années) qui détermine le coût annuel : <code>prix ÷ durée de vie</code>.</div>
+    <h3>Matériel : amortissement &amp; remboursement</h3>
+    <div class="hint" style="max-width:900px"><strong>Amorti / Reste</strong> = usure comptable (fiscale, linéaire sur la durée de vie). <strong>Remboursé</strong> = quand l'activité a réellement dégagé de quoi couvrir l'achat (part « trésorerie » encaissée, ordre d'achat) — une date si c'est fait, sinon un pourcentage. Les deux notions sont différentes : un boîtier peut être « amorti à 40 % » sur le papier tout en étant déjà remboursé par tes prestations.</div>
     <div class="hint">Durées indicatives : boîtier pro 4-5 ans · objectif 8-10 ans · ordinateur 3-4 ans · disque dur 4-5 ans · flash/accessoires 5-7 ans.</div>
     <div class="toolbar">
       <button class="mk-btn subtle" onclick="addInvestissement()">+ Ajouter un investissement</button>
@@ -17594,13 +17952,13 @@ function rAchats() {
       <thead>
         <tr>
           <th style="width:120px">Date</th>
-          <th style="min-width:220px">Descriptif</th>
+          <th style="min-width:200px">Descriptif</th>
           <th style="width:100px;text-align:right">Prix (€)</th>
           <th style="width:90px;text-align:center">Durée <span style="font-weight:400;font-size:8.5px;text-transform:none;letter-spacing:0;opacity:.75">(années)</span></th>
-          <th style="width:110px;text-align:right">Coût annuel</th>
-          <th style="width:110px;text-align:right">Amorti</th>
+          <th style="width:105px;text-align:right">Coût annuel</th>
+          <th style="width:105px;text-align:right">Amorti</th>
           <th style="width:110px;text-align:right">Reste à amortir</th>
-          <th style="width:90px;text-align:center">Statut</th>
+          <th style="width:110px;text-align:right" title="Quand l'activité a réellement couvert cet achat (≠ amortissement comptable)">Remboursé</th>
           <th style="width:36px"></th>
         </tr>
       </thead>
@@ -17612,11 +17970,7 @@ function rAchats() {
         <td style="text-align:right;font-weight:700">${fmt(tm.investissementsAnnuels)}</td>
         <td style="text-align:right;color:var(--success);font-weight:700">${fmt(am.totalAmorti)}</td>
         <td style="text-align:right;color:var(--warning);font-weight:700">${fmt(r2(am.totalInvested - am.totalAmorti))}</td>
-        <td style="text-align:center">${am.totalAmorti >= am.totalInvested
-          ? `<span style="color:var(--success);font-weight:600;font-size:13px">100 %</span>`
-          : am.totalInvested > 0
-          ? `<span style="color:var(--warning);font-weight:600;font-size:13px">${Math.round(am.totalAmorti / am.totalInvested * 100)} %</span>`
-          : ""}</td>
+        <td style="text-align:right;font-weight:700;color:var(--success)">${nbRembourses}/${invEntries.length} <span style="color:var(--text-dim);font-weight:400">remb.</span></td>
         <td></td>
       </tr></tfoot>` : ""}
     </table>
@@ -18494,7 +18848,7 @@ async function backupImport(input) {
   if (d.abonnements)     S.abonnements     = { ...DEFAULT_S.abonnements, ...d.abonnements, entries: Array.isArray(d.abonnements.entries) ? d.abonnements.entries : [] };
   if (d.investissements) S.investissements = { ...DEFAULT_S.investissements, ...d.investissements, entries: Array.isArray(d.investissements.entries) ? d.investissements.entries : [] };
   if (d.tarifs && Array.isArray(d.tarifs.catalog) && d.tarifs.catalog.length) {
-    S.tarifs = { catalog: d.tarifs.catalog, heuresAnnuelles: d.tarifs.heuresAnnuelles || "900", facteurSecurite: d.tarifs.facteurSecurite || "0" };
+    S.tarifs = { catalog: d.tarifs.catalog, heuresAnnuelles: d.tarifs.heuresAnnuelles || "900", heuresMode: d.tarifs.heuresMode || "auto", facteurSecurite: d.tarifs.facteurSecurite || "0" };
   }
   if (d.bugs)  S.bugs  = { items: Array.isArray(d.bugs.items) ? d.bugs.items : [] };
   if (d.bin)   S.bin   = { items: Array.isArray(d.bin.items) ? d.bin.items : [] };

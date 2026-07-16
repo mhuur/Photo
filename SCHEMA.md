@@ -130,6 +130,7 @@ Source : `index.html` (bloc `const DEFAULT_S = { ... };`).
 - **tarifs** _(object)_
   - **catalog**: string _(default `"<DEFAULT_CATALOG>"`)_
   - **heuresAnnuelles**: string _(default `"900"`)_
+  - **heuresMode**: string _(default `"auto"`)_
   - **facteurSecurite**: string _(default `"0"`)_
   - **viewMode**: string _(default `"declare"`)_
   - **viewBlackMode**: string _(default `"reduit"`)_
