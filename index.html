@@ -16875,35 +16875,52 @@ function amortizationAnalysis() {
 // purement informatif : aucune garde d'ordre ni statut n'en dépend.
 
 // ▼ heuresReelles — heures RÉELLEMENT facturées (encaissées) sur 12 mois glissants,
-// annualisées si l'historique est plus court. Remplace le « 900 h/an » deviné, qui
-// n'était qu'un dénominateur du coût horaire matériel. Un mois sans heures mais
-// dans une période active compte comme un vrai zéro (creux d'activité) ; les mois
-// « abo seul » (aucune activité) ne bornent PAS l'annualisation.
-//   h12           = heures encaissées dans la fenêtre 12 mois
-//   monthsCovered = mois d'activité réelle DANS la fenêtre (≤ 12)
-//   annualized    = h12 × 12 / monthsCovered (= h12 dès 12 mois d'historique)
+// annualisées sur la PÉRIODE DE REPRISE. Remplace le « 900 h/an » deviné, qui
+// n'était qu'un dénominateur du coût horaire matériel.
+//
+// ⚠ Dormance : une longue interruption (arrêt médical, pause) NE DOIT PAS écraser
+// le taux — sinon 3 mois de reprise étalés sur 12 donneraient un coût horaire
+// artificiellement bas. On recule depuis le mois courant et on s'arrête dès qu'on
+// traverse ACTIVITY_GAP_MONTHS mois consécutifs SANS activité : la période
+// dormante d'avant la reprise est exclue. Les creux courts (≤ GAP−1 mois, saison,
+// délai d'encaissement) restent inclus comme de vrais zéros.
+//   h12           = heures encaissées dans la fenêtre retenue (post-reprise)
+//   monthsCovered = nb de mois de cette fenêtre (≤ 12)
+//   annualized    = h12 × 12 / monthsCovered
+//   gapExcluded   = true si une dormance a été retirée du calcul
+const ACTIVITY_GAP_MONTHS = 4; // ≥ 4 mois vides consécutifs = interruption, pas un creux
 function heuresReelles() {
   const rows = bilanCompute();
+  const byYM = {};
+  for (const r of rows) byYM[r.ym] = r;
   const today = new Date();
-  const currentYM = isoDateLocal(today).slice(0, 7);
-  const windowYMs = [];
+  // months[0] = mois courant … months[11] = il y a 11 mois
+  const months = [];
   for (let i = 0; i < 12; i++) {
     const d = new Date(today.getFullYear(), today.getMonth() - i, 1);
-    windowYMs.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`);
+    const ym = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+    const row = byYM[ym];
+    const h = row ? num(row.heures) : 0;
+    const active = row ? (num(row.heures) > 0 || num(row.paye) > 0) : false;
+    months.push({ ym, h, active });
   }
-  const windowSet = new Set(windowYMs);
-  const windowStartYM = windowYMs[windowYMs.length - 1];
-  let h12 = 0;
-  for (const r of rows) if (windowSet.has(r.ym)) h12 += num(r.heures);
-  const activeRows = rows.filter(r => num(r.heures) > 0 || num(r.paye) > 0);
-  if (!activeRows.length || h12 <= 0) {
-    return { h12: r2(h12), annualized: 0, monthsCovered: 0, hasEnough: false };
+  // Recule depuis le mois courant ; coupe au 1er trou de ≥ GAP mois inactifs.
+  let cut = 12, zeroRun = 0;
+  for (let i = 0; i < 12; i++) {
+    if (!months[i].active) {
+      zeroRun++;
+      if (zeroRun >= ACTIVITY_GAP_MONTHS) { cut = i - zeroRun + 1; break; }
+    } else zeroRun = 0;
   }
-  const earliestActiveYM = activeRows[activeRows.length - 1].ym; // rows triés desc
-  const effectiveStartYM = earliestActiveYM > windowStartYM ? earliestActiveYM : windowStartYM;
-  const monthsCovered = Math.min(12, _ymMonthsBetween(effectiveStartYM, currentYM) + 1);
+  const windowMonths = months.slice(0, Math.max(0, cut));
+  const h12 = r2(windowMonths.reduce((s, m) => s + m.h, 0));
+  const activeCount = windowMonths.filter(m => m.active).length;
+  if (!activeCount || h12 <= 0) {
+    return { h12: 0, annualized: 0, monthsCovered: 0, hasEnough: false, gapExcluded: cut < 12 };
+  }
+  const monthsCovered = windowMonths.length;
   const annualized = monthsCovered > 0 ? r2(h12 * 12 / monthsCovered) : 0;
-  return { h12: r2(h12), annualized, monthsCovered, hasEnough: monthsCovered >= 12 };
+  return { h12, annualized, monthsCovered, hasEnough: monthsCovered >= 12, gapExcluded: cut < 12 };
 }
 
 // ▼ heuresEffectives — nb d'heures au dénominateur du coût horaire matériel.
@@ -17804,7 +17821,11 @@ function rAchats() {
 
   const heuresNote = isAuto
     ? (hr.h12 > 0
-        ? `${Math.round(hr.h12)} h facturées sur 12 mois${hr.hasEnough ? "" : ` · annualisé à ${Math.round(hr.annualized)} h`}`
+        ? (hr.gapExcluded
+            ? `${Math.round(hr.h12)} h sur ${hr.monthsCovered} mois depuis la reprise · annualisé à ${Math.round(hr.annualized)} h (période d'arrêt exclue)`
+            : hr.hasEnough
+              ? `${Math.round(hr.h12)} h facturées sur 12 mois`
+              : `${Math.round(hr.h12)} h sur ${hr.monthsCovered} mois · annualisé à ${Math.round(hr.annualized)} h`)
         : "pas encore d'historique — repli sur 900 h")
     : "mode manuel — valeur forcée, ignore le réel";
 
@@ -17917,7 +17938,7 @@ function rAchats() {
     ${tresoCashflowChartHtml()}
 
     <h3>Coût horaire matériel</h3>
-    <div class="hint" style="max-width:780px">Coût à répercuter dans tes tarifs (Net = Tarif − URSSAF − ce coût). Le nombre d'heures vient <strong>automatiquement de ton activité réelle</strong> (12 mois glissants) — plus besoin de deviner. Facteur sécurité : marge pour les imprévus (ex. 15 %).</div>
+    <div class="hint" style="max-width:780px">Coût à répercuter dans tes tarifs (Net = Tarif − URSSAF − ce coût). Le nombre d'heures vient <strong>automatiquement de ton activité réelle</strong> (12 mois glissants, ou depuis la reprise si tu as connu une longue interruption) — plus besoin de deviner. Facteur sécurité : marge pour les imprévus (ex. 15 %).</div>
 
     ${costCard}
     ${sensibilite}
