@@ -984,6 +984,18 @@
   .hist td.cp-marge{text-align:right;font-variant-numeric:tabular-nums;padding-right:14px;font-weight:600;white-space:nowrap}
   .hist td.cp-marge.pos{color:var(--success)}
   .hist td.cp-marge.neg{color:var(--danger)}
+  /* Mois d'arrêt : marge (charges fixes seules) grisée pour ne pas dominer la table */
+  .hist td.cp-marge.dim{color:var(--text-dim);font-weight:500;opacity:.7}
+  /* Taux de marge (%) sur les sous-totaux / total général */
+  .cp-marge-ratio{font-family:var(--font-mono);font-size:9px;font-weight:700;color:var(--text-dim);letter-spacing:.04em;margin-left:3px}
+  /* Mois en cours : léger fond azure pour se repérer dans une longue table */
+  .hist tr.cp-current-month td{background:rgba(46,134,240,.07)}
+  /* En-têtes de table figés au scroll (bilan). overflow:visible car un ancêtre en
+     overflow:hidden casserait position:sticky (il devient le conteneur de collage). */
+  .cp-bilan-table{overflow:visible}
+  .cp-bilan-table thead th{position:sticky;z-index:3}
+  .cp-bilan-table thead tr.cp-grouphdr th{top:0}
+  .cp-bilan-table thead tr:not(.cp-grouphdr) th{top:28px;background:var(--surface-2)}
   .hist tr.subtotal td:first-child{white-space:nowrap}
   /* Titre de section « Bilan mensuel » : même traitement mono que .cp-chart-title */
   .cp-table-title{font-family:var(--font-mono);font-size:11px;font-weight:700;color:var(--text-soft);text-transform:uppercase;letter-spacing:.16em;border-bottom:none;padding-bottom:0;margin:22px 0 12px;display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
@@ -17366,7 +17378,15 @@ function bilanRender() {
   const dash = `<span>—</span>`;
   const cellH = v => num(v) === 0 ? `<td class="cp-zero cp-grp-sep">${dash}</td>` : `<td class="cp-num cp-grp-sep">${num(v).toFixed(2).replace(".", ",")}</td>`;
   const cell  = (v, sep, cls) => num(v) === 0 ? `<td class="cp-zero${sep ? ' cp-grp-sep' : ''}">${dash}</td>` : `<td class="cp-num${sep ? ' cp-grp-sep' : ''}${cls ? ' ' + cls : ''}">${fmt(v)}</td>`;
-  const cellMarge = v => v === 0 ? `<td class="cp-zero">${dash}</td>` : `<td class="cp-marge ${v >= 0 ? 'pos' : 'neg'}">${fmt(v)}</td>`;
+  // Marge : grisée (dim) sur les mois d'arrêt (aucun revenu → charges fixes seules),
+  // sinon vert/rouge. `ratio` (facultatif, sur sous-totaux/total) = marge / encaissé.
+  const cellMarge = (v, opts = {}) => {
+    const ratioTag = (opts.ratio != null && isFinite(opts.ratio))
+      ? ` <span class="cp-marge-ratio" title="Taux de marge : marge ÷ encaissé">${Math.round(opts.ratio)}&nbsp;%</span>` : "";
+    if (v === 0 && !ratioTag) return `<td class="cp-zero">${dash}</td>`;
+    const cls = opts.dormant ? "cp-marge dim" : `cp-marge ${v >= 0 ? "pos" : "neg"}`;
+    return `<td class="${cls}">${fmt(v)}${ratioTag}</td>`;
+  };
   // URSSAF : montant qui SORT (provision à reverser) → signe « − » + teinte ambre.
   const cellUrssaf = v => num(v) === 0 ? `<td class="cp-zero">${dash}</td>` : `<td class="cp-num cp-col-ursaf">−&nbsp;${fmt(v)}</td>`;
   // Colonne CA : signale l'écart avec l'encaissé, qui EST la part au noir.
@@ -17393,7 +17413,7 @@ function bilanRender() {
 
   // Ordre des colonnes : | Heures · Payé · CA | Salaire · URSSAF · Trésorerie · Débours | Abos · Matériel · Marge |
   // sep=true sur la 1re col de chaque groupe pour la border-left.
-  const rowCells = r => `
+  const rowCells = (r, opts = {}) => `
     ${cellH(r.heures)}
     ${cell(r.paye)}
     ${cellCA(r)}
@@ -17403,23 +17423,29 @@ function bilanRender() {
     ${cell(r.frais)}
     ${cell(r.abos, true)}
     ${cell(r.amort)}
-    ${cellMarge(r.marge)}`;
+    ${cellMarge(r.marge, opts)}`;
 
+  const currentYM = isoDateLocal(new Date()).slice(0, 7);
   const rows = [];
   for (let i = 0; i < data.length; i++) {
     const r = data[i];
     const y = r.ym.slice(0, 4);
-    rows.push(`<tr><td>${esc(monthLabel(r.ym))}</td>${rowCells(r)}</tr>`);
+    // Mois d'arrêt = aucun encaissement ni heures → marge = charges fixes seules.
+    const dormant = num(r.paye) === 0 && num(r.heures) === 0;
+    const trCls = r.ym === currentYM ? ' class="cp-current-month"' : "";
+    rows.push(`<tr${trCls}><td>${esc(monthLabel(r.ym))}</td>${rowCells(r, { dormant })}</tr>`);
     const next = data[i + 1];
     if (!next || next.ym.slice(0, 4) !== y) {
       const a = annual[y];
       a.marge = r2(a.salaire + a.tresorerie - a.abos - a.amort); // recalcul propre (cf. marge = salaire + tréso − charges)
-      rows.push(`<tr class="subtotal"><td>Sous-total ${esc(y)}</td>${rowCells(a)}</tr>`);
+      const ratio = a.paye > 0 ? (a.marge / a.paye * 100) : null;
+      rows.push(`<tr class="subtotal"><td>Sous-total ${esc(y)}</td>${rowCells(a, { ratio })}</tr>`);
     }
   }
 
   grand.marge = r2(grand.salaire + grand.tresorerie - grand.abos - grand.amort);
-  const foot = `<tr class="grandtotal"><td>Total général</td>${rowCells(grand)}</tr>`;
+  const grandRatio = grand.paye > 0 ? (grand.marge / grand.paye * 100) : null;
+  const foot = `<tr class="grandtotal"><td>Total général</td>${rowCells(grand, { ratio: grandRatio })}</tr>`;
 
   return { body: rows.join(""), foot };
 }
@@ -17507,7 +17533,7 @@ function rCP() {
       <button class="mk-btn subtle" onclick="comptaExportCSV()" title="Télécharger le bilan filtré au format CSV (Excel-compatible)">${ICO_SZ('download', 13)} Exporter CSV</button>
     </div>` : ""}
 
-    ${bilan.body ? `<table class="hist">
+    ${bilan.body ? `<table class="hist cp-bilan-table">
       <thead>
         <tr class="cp-grouphdr">
           <th rowspan="2" style="width:110px;text-align:left;background:var(--surface-2)">Mois</th>
@@ -17521,17 +17547,17 @@ function rCP() {
           <th style="text-align:right" title="CA déclaré uniquement (utilisé pour les seuils micro-BNC / TVA)">CA</th>
           <th class="cp-grp-sep" style="text-align:right" title="Part qui rentre sur le compte perso">Salaire</th>
           <th style="text-align:right">URSSAF</th>
-          <th style="text-align:right" title="Pool qui finance matériel + abonnements + sécurité">Trésorerie</th>
+          <th style="text-align:right" title="Part de l'encaissé mise de côté pour financer matériel + abonnements. Alimente la cagnotte de l'onglet Trésorerie.">Provision</th>
           <th style="text-align:right" title="Frais débours refacturés (avancés pour le client)">Débours</th>
           <th class="cp-grp-sep" style="text-align:right" title="Charge mensuelle des abonnements actifs">Abos</th>
           <th style="text-align:right" title="Charge mensuelle d'amortissement matériel">Matériel</th>
-          <th style="text-align:right" title="Profit économique réel : Salaire + Trésorerie − Abos − Matériel">Marge</th>
+          <th style="text-align:right" title="Profit économique réel : Salaire + Provision − Abos − Matériel">Marge</th>
         </tr>
       </thead>
       <tbody>${bilan.body}</tbody>
       ${bilan.foot ? `<tfoot>${bilan.foot}</tfoot>` : ""}
     </table>
-    <p class="cp-legend-note">Compta de caisse (art. 93 CGI) : une recette compte le mois où l'argent arrive, pas celui de la prestation. Dépenses = achats + abonnements + amortissements. Salaire net = CA déclaré − URSSAF.</p>` : `<div class="empty">${comptaFilterYears.size > 0 ? "Aucun mois ne correspond aux années sélectionnées." : "Aucun encaissement enregistré pour le moment."}</div>`}
+    <p class="cp-legend-note">Compta de caisse (art. 93 CGI) : une recette compte le mois où l'argent arrive, pas celui de la prestation. <strong>Salaire net</strong> = CA déclaré − URSSAF. <strong>Provision</strong> = part mise de côté pour matériel + abonnements (elle alimente la cagnotte de l'onglet Trésorerie). <strong>Marge</strong> = Salaire + Provision − Abos − Matériel = ton profit économique réel. Un mois sans revenu est négatif : les charges fixes (abos, amortissement) courent même à l'arrêt.</p>` : `<div class="empty">${comptaFilterYears.size > 0 ? "Aucun mois ne correspond aux années sélectionnées." : "Aucun encaissement enregistré pour le moment."}</div>`}
   `;
 }
 
