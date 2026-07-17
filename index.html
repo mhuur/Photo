@@ -3214,8 +3214,11 @@
   .ms-status{display:flex;align-items:center;gap:8px;justify-content:center;margin-top:var(--space-md);font-family:var(--font-mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase}
   .ms-status::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor;flex-shrink:0}
   .ms-status.ok{color:var(--success)}
-  .ms-status.ko{color:var(--warning)}
   .ms-status.quick{color:var(--ember-300)}
+  /* KO : liste de TOUTES les raisons de blocage (gauche, une puce par ligne) */
+  .ms-status-errors{display:flex;flex-direction:column;gap:5px;margin-top:var(--space-md);font-family:var(--font-mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--warning)}
+  .ms-status-errors > span{display:flex;align-items:flex-start;gap:8px;text-align:left;line-height:1.4}
+  .ms-status-errors > span::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor;flex-shrink:0;margin-top:2px}
   .ms-ech{background:var(--surface-glass);border:1px solid var(--border-soft);border-radius:var(--radius-md);padding:16px 20px}
   .ms-ech-head{font-family:var(--font-mono);font-size:10px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:var(--text-dim);margin-bottom:10px}
   .ms-ech-line{display:flex;justify-content:space-between;gap:10px;font-size:12px;color:var(--text-soft);padding:4px 0}
@@ -9984,6 +9987,15 @@ function rBinModal() {
 // Format des items : { h: titre court, b: explication 1-3 phrases }.
 const APP_CHANGELOG = [
   {
+    id: "2026-07-blocage-recap",
+    date: "2026-07-17",
+    title: "Raisons de blocage regroupées dans le récap",
+    items: [
+      { h: "Fini l'encadré rouge en double",
+        b: "L'encadré rouge « Émission bloquée » en haut du formulaire faisait doublon avec le récap. Il est supprimé : le récap (sous le prix) liste désormais TOUTES les raisons qui empêchent de terminer le devis, pas seulement la première." }
+    ]
+  },
+  {
     id: "2026-07-flash-login",
     date: "2026-07-17",
     title: "Plus de « flash » de l'écran de connexion au rechargement",
@@ -12477,11 +12489,14 @@ function rMissionAsideInner() {
     : line("Net photographe (prestation rapide)", fmt(t.total), "net");
 
   // Statut : réutilise validateDevis (source unique) — pas de règle parallèle.
+  // KO → liste TOUTES les raisons de blocage (l'encadré rouge du formulaire a été
+  // supprimé, ce récap est donc le seul endroit qui les affiche → il les faut
+  // toutes, pas seulement la première).
   const status = quick
     ? `<div class="ms-status quick">Non déclaré</div>`
     : v.ok
       ? `<div class="ms-status ok">Prêt à émettre</div>`
-      : `<div class="ms-status ko">${esc(v.errors[0] || "Incomplet")}</div>`;
+      : `<div class="ms-status-errors">${(v.errors.length ? v.errors : ["Incomplet"]).map(e => `<span>${esc(e)}</span>`).join("")}</div>`;
 
   const canTerminer = inSuivi ? dirty : v.ok;
   const terminerLabel = inSuivi
@@ -13083,9 +13098,8 @@ function rDevisBanners() {
   const v = validateDevis();
   const dirty = devisIsDirty();
   const inSuivi = !!devisCurrentSuiviEntry();
-  const bannerErr = v.errors.length
-    ? `<div class="devis-banner err"><span class="devis-banner-ico">${ICO_SZ('alertOctagon', 16)}</span><div>Émission bloquée :<ul>${v.errors.map(e => `<li>${esc(e)}</li>`).join("")}</ul></div></div>`
-    : "";
+  // Encadré rouge « Émission bloquée » SUPPRIMÉ (2026-07-17) : faisait doublon avec
+  // le récap sticky, qui liste désormais toutes les raisons de blocage (ms-status-errors).
   const hasIbanWarn = v.warnings.some(w => w.includes("IBAN"));
   const bannerWarn = v.warnings.length
     ? `<div class="devis-banner warn"><span class="devis-banner-ico">${ICO_SZ('alertTriangle', 16)}</span><div>${v.warnings.map(esc).join(" · ")}${hasIbanWarn ? ` — <button type="button" class="devis-banner-link" onclick="setTab('profil')">compléter dans Mon Profil</button>` : ""}</div></div>`
@@ -13098,7 +13112,7 @@ function rDevisBanners() {
   const bannerDirty = (inSuivi && dirty)
     ? `<div class="devis-banner info"><span class="devis-banner-ico">${ICO_SZ('circleFilled', 12)}</span><div>Modifications non enregistrées dans Suivi.</div></div>`
     : "";
-  return `${bannerErr}${bannerWarn}${bannerQuick}${bannerDirty}`;
+  return `${bannerWarn}${bannerQuick}${bannerDirty}`;
 }
 
 // rMissionToolbarInner supprimé (phase 3) : les boutons Terminer / Annuler
