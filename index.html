@@ -246,17 +246,6 @@
   .pf-card .row:last-of-type{margin-bottom:0}
   .pf-card .hint{max-width:none}
   .pf-card .gmail-tpl-lexique{max-width:none}
-  /* Profil — carte CGV & mentions par défaut : liste de blocs éditables */
-  .pf-cgv-list{display:flex;flex-direction:column;gap:8px}
-  .pf-cgv-row{display:flex;align-items:center;gap:12px;padding:11px 13px;background:var(--surface-sunken);border:1px solid var(--border-soft);border-radius:var(--radius-md)}
-  .pf-cgv-info{display:flex;flex-direction:column;gap:2px;min-width:0;flex:1}
-  .pf-cgv-name{font-size:13px;font-weight:600;color:var(--text)}
-  .pf-cgv-status{font-family:var(--font-mono);font-size:9.5px;text-transform:uppercase;letter-spacing:.1em;color:var(--text-dim)}
-  .pf-cgv-status.ok{color:var(--success)}
-  .pf-cgv-subs{display:flex;flex-direction:column;gap:6px;margin:2px 0 4px 13px;padding-left:12px;border-left:1px solid var(--border-soft)}
-  .pf-cgv-sub{display:flex;align-items:center;gap:10px;font-size:12.5px;color:var(--text-muted)}
-  .pf-cgv-sub-name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  .pf-cgv-sub-num{font-family:var(--font-mono);font-size:10px;color:var(--text-dim);font-variant-numeric:tabular-nums;flex-shrink:0}
   /* Logo — placeholder carré pointillés (état vide) */
   .logo-field .logo-placeholder{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;width:120px;height:80px;border:1px dashed var(--border-light);border-radius:var(--radius-md);background:var(--surface-sunken);color:var(--text-dim);cursor:pointer;font-family:var(--font-mono);font-size:10px;text-transform:uppercase;letter-spacing:.1em;transition:border-color .15s,color .15s;flex-shrink:0}
   .logo-field .logo-placeholder:hover{border-color:var(--primary);color:var(--primary)}
@@ -1532,21 +1521,7 @@
   .devis-preview .dp-doc-ref{color:var(--text);font-weight:700;font-size:18px;font-variant-numeric:tabular-nums;letter-spacing:.01em;text-align:right;flex-shrink:0;align-self:flex-end;line-height:1.2}
   /* Logo field in form */
   .logo-field{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:14px;max-width:520px}
-  /* CGV structured editor */
-  .cgv-edit-list{display:flex;flex-direction:column;gap:10px;margin-bottom:6px}
-  .cgv-edit-empty{padding:18px;background:var(--surface-2);border:1px dashed var(--border);border-radius:6px;color:var(--text-muted);font-size:13px;line-height:1.5;text-align:center}
-  .cgv-edit-row{background:var(--surface-2);border:1px solid var(--border-soft);border-radius:6px;padding:10px 12px}
-  .cgv-edit-head{display:flex;align-items:center;gap:8px;margin-bottom:8px}
-  .cgv-edit-num{color:var(--primary);font-weight:700;font-variant-numeric:tabular-nums;font-size:14px;min-width:24px;flex-shrink:0}
-  .cgv-edit-title{flex:1;background:var(--surface);border:1px solid var(--border-soft);color:var(--text);padding:6px 10px;border-radius:4px;font-size:13px;font-weight:600;height:var(--input-h,34px);outline:none}
-  .cgv-edit-title:focus{border-color:var(--primary)}
-  .cgv-edit-actions{display:flex;gap:4px;flex-shrink:0}
-  .cgv-edit-actions .btn-icon{background:transparent;border:1px solid var(--border-soft);color:var(--text-muted);width:28px;height:28px;border-radius:4px;cursor:pointer;font-size:14px;line-height:1;display:inline-flex;align-items:center;justify-content:center;transition:all .15s}
-  .cgv-edit-actions .btn-icon:hover:not(:disabled){border-color:var(--primary);color:var(--primary)}
-  .cgv-edit-actions .btn-icon:disabled{opacity:.3;cursor:not-allowed}
-  .cgv-edit-actions .btn-icon.danger:hover{border-color:var(--danger,#E8451C);color:var(--danger,#E8451C)}
-  .cgv-edit-body{width:100%;background:var(--surface);border:1px solid var(--border-soft);color:var(--text);padding:8px 10px;border-radius:4px;font-size:13px;line-height:1.5;font-family:inherit;resize:vertical;min-height:64px;outline:none}
-  .cgv-edit-body:focus{border-color:var(--primary)}
+  /* (Ancien éditeur CGV structuré .cgv-edit-* — supprimé : voir .cgvu-* plus bas) */
   .logo-field.has-logo{align-items:flex-start}
   .logo-field .logo-preview{max-width:200px;max-height:80px;width:auto;height:auto;object-fit:contain;background:var(--surface-2);border:1px solid var(--border-light);border-radius:6px;padding:8px}
   .logo-field .logo-actions{display:flex;gap:8px;flex-wrap:wrap}
@@ -2940,45 +2915,7 @@
   .rich-display-edit:hover{color:var(--primary);background:var(--surface)}
 
   /* === Zones éditables in-place dans la preview du devis (style néon) === */
-  /* Wrap autour des sections rich-text rendues dans rDevisPreview, avec
-     bouton ⋮ flottant qui ouvre le textEditor. Masqué à l'impression et
-     dans les snapshots archivés (.view-devis-snapshot). */
-  .dp-rich-zone{position:relative;border-radius:6px;transition:box-shadow .15s,background .15s;padding:2px 4px;margin:0 -4px}
-  .dp-rich-zone:hover{background:rgba(69,193,253,.04);box-shadow:inset 0 0 0 1px rgba(69,193,253,.35)}
-  .dp-rich-menu-btn{position:absolute;top:4px;right:4px;background:var(--bg-2);border:1px solid var(--primary);color:var(--primary);cursor:pointer;border-radius:6px;width:26px;height:26px;font-size:14px;line-height:1;display:flex;align-items:center;justify-content:center;font-weight:700;z-index:5;opacity:0;transition:all .15s;box-shadow:inset 0 0 0 1px rgba(69,193,253,.25)}
-  .dp-rich-zone:hover .dp-rich-menu-btn{opacity:1}
-  .dp-rich-menu-btn:hover{background:rgba(69,193,253,.15);box-shadow:inset 0 0 0 1px rgba(69,193,253,.35);transform:scale(1.05)}
-  /* Masque les boutons d'édition à l'impression et dans les snapshots archivés */
-  @media print{.dp-rich-menu-btn,.dp-rich-zone:hover{background:transparent !important;box-shadow:none !important}.dp-rich-menu-btn{display:none !important}}
-  .view-devis-snapshot .dp-rich-menu-btn{display:none}
-  .view-devis-snapshot .dp-rich-zone:hover{background:transparent;box-shadow:none}
-
-  /* === Section CGV — modal d'édition + liste sommaire formulaire === */
-  .cgv-edit-pos-meta{font-size:11px;color:var(--text-dim);font-weight:500;margin-left:8px;letter-spacing:0;text-transform:none}
-  .cgv-edit-modal-body{display:flex;flex-direction:column;gap:4px;padding:6px 0}
-  .cgv-edit-modal-label{font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.04em}
-  .cgv-edit-modal-input{padding:9px 12px;border:1px solid var(--border-light);border-radius:6px;background:var(--bg-2);color:var(--text);font:inherit;font-size:13px;font-weight:600}
-  .cgv-edit-modal-input:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 2px var(--primary-soft)}
-  .cgv-edit-modal-textarea{padding:10px 12px;border:1px solid var(--border-light);border-radius:6px;background:var(--bg-2);color:var(--text);font:inherit;font-size:13px;font-family:inherit;resize:vertical;line-height:1.55;min-height:160px;width:100%;box-sizing:border-box}
-  .cgv-edit-modal-textarea:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 2px var(--primary-soft)}
-  /* Boutons modal — style néon doux */
-  .modal-actions .cgv-edit-move{font-size:12px;font-weight:600}
-  .modal-actions .cgv-edit-remove{color:var(--danger);border:1px solid var(--danger);background:transparent;font-size:12px;font-weight:600;box-shadow:inset 0 0 0 1px rgba(232,69,28,.25)}
-  .modal-actions .cgv-edit-remove:hover{background:rgba(232,69,28,.08);color:#fff}
-
-  /* Liste sommaire CGV (formulaire de gauche) — minimal */
-  .cgv-summary-list{display:flex;flex-direction:column;gap:4px;max-width:780px}
-  /* Actions CGV (ajouter / charger le modèle) + lignes préambule et signature */
-  .cgv-actions{display:flex;gap:var(--space-sm);flex-wrap:wrap;margin-top:var(--space-md)}
-  .cgv-field-row{display:flex;align-items:center;justify-content:space-between;gap:var(--space-md);flex-wrap:wrap;max-width:780px}
-  .cgv-summary-row{display:flex;align-items:center;gap:10px;padding:8px 12px;background:var(--surface);border:1px solid var(--border-light);border-radius:6px;transition:border-color .12s,background .12s}
-  .cgv-summary-row:hover{border-color:var(--primary);background:rgba(69,193,253,.04)}
-  .cgv-summary-num{font-size:12px;font-weight:700;color:var(--primary);min-width:22px;font-variant-numeric:tabular-nums}
-  .cgv-summary-title{flex:1;font-size:13px;font-weight:500;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  .cgv-summary-edit{flex-shrink:0;background:transparent;border:1px solid transparent;color:var(--text-dim);cursor:pointer;font-size:14px;line-height:1;width:26px;height:26px;border-radius:5px;display:inline-flex;align-items:center;justify-content:center;font-weight:700;padding:0;transition:all .12s}
-  .cgv-summary-edit:hover{color:var(--primary);background:var(--primary-soft);border-color:var(--primary)}
-
-  /* Bouton « + Ajouter section CGV » en bas du bloc CGV de la preview (style néon) */
+  /* Bouton « Personnaliser les CGV de ce devis » en bas du bloc CGV de l'aperçu */
   .dp-cgv-add-btn{display:inline-flex;align-items:center;gap:6px;margin-top:14px;padding:8px 16px;background:transparent;color:var(--primary);border:1px dashed var(--primary);border-radius:7px;cursor:pointer;font:inherit;font-size:12px;font-weight:600;letter-spacing:.04em;transition:all .15s}
   .dp-cgv-add-btn:hover{background:rgba(69,193,253,.08);border-style:solid;color:#45C1FD}
   @media print{.dp-cgv-add-btn{display:none !important}}
@@ -3431,13 +3368,13 @@ const DEFAULT_CATALOG = [
 //   LIGNES & TOTALS          ▼ rLigne  ▼ totals  ▼ rTauxBreakdown
 //   DISPATCH                 ▼ render  (mission→rMS, suivi→rSV, profil→rPF, ...)
 //   MODALS & SECTIONS        ▼ rContactPickerModal  ▼ rTextEditorModal  ▼ rEditSection
-//                            ▼ rPaiementFields  ▼ rCgvEditor  ▼ rLogoField
+//                            ▼ rPaiementFields  ▼ rLogoField
 //                            ▼ rPrintTipModal  ▼ rViewDevisModal  ▼ rViewFactureModal
 //                            ▼ computePrintFilename
-//   DEVIS — ACCORDION 6×     ▼ rMS  ▼ rDevisAccordion  ▼ rDevisSectionIdentification
+//   DEVIS — SECTIONS         ▼ rMS  ▼ rDevisAccordion  ▼ rDevisSectionIdentification
 //                            ▼ rDevisSectionPrestations  ▼ rDevisSectionDeplacement
 //                            ▼ rDevisSectionAjustements  ▼ rDevisSectionModalites
-//                            ▼ rDevisSectionConditions  ▼ rDevisPaneFooterInner
+//                            ▼ rDevisPaneFooterInner
 //   SUIVI                    ▼ validateDevis  ▼ suiviAdd  ▼ suiviAddLigne  ▼ rSV
 //   AUTRES TABS              ▼ rCL (Clients)  ▼ rCP (Compta)  ▼ rTR (Tarifs)
 //                            ▼ rPF (Profil)   ▼ rBG (Notes/bugs)
@@ -9459,7 +9396,6 @@ function render() {
     ${rViewDevisModal()}
     ${rViewFactureModal()}
     ${rClientInfoModal()}
-    ${rCgvSectionEditModal()}
     ${rBinModal()}
     ${rPrintTipModal()}
 `;
@@ -9939,33 +9875,6 @@ window.cgvSectionMoveDown = function(id) {
   render();
 };
 
-// ▼ cgvSectionEditModal — édition in-place d'une section CGV depuis la
-// preview du devis (clic sur ⋮ flottant dans la zone). Regroupe titre +
-// body + actions ordre/suppression dans un modal compact.
-let cgvSectionEditModal = null; // { id }
-
-window.cgvSectionEditOpen = function(id) {
-  cgvSectionEditModal = { id };
-  render();
-  requestAnimationFrame(() => {
-    const ti = document.getElementById("cgvSectionEditTitle");
-    if (ti) { ti.focus(); ti.select(); }
-  });
-};
-window.cgvSectionEditClose = function() {
-  cgvSectionEditModal = null;
-  render();
-};
-// Wrapper qui supprime + ferme le modal (cgvSectionRemove a déjà uiConfirm).
-window.cgvSectionRemoveAndClose = async function(id) {
-  await cgvSectionRemove(id);
-  // Si la section a été effectivement supprimée, on ferme.
-  const stillExists = (S.mission.cgvSections || []).some(s => s.id === id);
-  if (!stillExists) {
-    cgvSectionEditModal = null;
-    render();
-  }
-};
 
 // ▼ binListHtml — SOURCE UNIQUE de la liste de la corbeille générale (S.bin).
 // Rendue à 2 endroits : la modale (ouverte depuis l'éditeur CGV, pour restaurer
@@ -10962,32 +10871,6 @@ function majLogHasUnread() {
   return seen !== APP_CHANGELOG[0].id;
 }
 
-function rCgvSectionEditModal() {
-  if (!cgvSectionEditModal) return "";
-  const sections = S.mission.cgvSections || [];
-  const sec = sections.find(s => s.id === cgvSectionEditModal.id);
-  if (!sec) { cgvSectionEditModal = null; return ""; }
-  const idx = sections.indexOf(sec);
-  const total = sections.length;
-  return `<div class="modal-overlay" onclick="if(event.target===this)cgvSectionEditClose()">
-    <div class="modal-card" style="max-width:680px">
-      <div class="modal-title">Section CGV ${idx + 1}<span class="cgv-edit-pos-meta"> — section ${idx + 1} sur ${total}</span></div>
-      <div class="modal-sub">Modifie le titre et le contenu. Boutons d'ordre et de suppression en bas.</div>
-      <div class="cgv-edit-modal-body">
-        <label class="cgv-edit-modal-label">Titre</label>
-        <input type="text" id="cgvSectionEditTitle" class="cgv-edit-modal-input" placeholder="Ex : Objet, Réservation et acompte, …" value="${esc(sec.title || "")}" oninput="cgvSectionUpdate('${esc(sec.id)}', 'title', this.value)">
-        <label class="cgv-edit-modal-label" style="margin-top:14px">Contenu</label>
-        <textarea class="cgv-edit-modal-textarea" rows="8" placeholder="Contenu de la section…" oninput="cgvSectionUpdate('${esc(sec.id)}', 'body', this.value)">${esc(sec.body || "")}</textarea>
-      </div>
-      <div class="modal-actions">
-        <button class="mk-btn subtle cgv-edit-move" onclick="cgvSectionMoveUp('${esc(sec.id)}')" ${idx === 0 ? 'disabled' : ''} title="Monter cette section">${ICO_SZ('arrowUp', 13)} Monter</button>
-        <button class="mk-btn subtle cgv-edit-move" onclick="cgvSectionMoveDown('${esc(sec.id)}')" ${idx === total - 1 ? 'disabled' : ''} title="Descendre cette section">${ICO_SZ('arrowDown', 13)} Descendre</button>
-        <button class="mk-btn ghost" style="margin-left:auto" onclick="cgvSectionRemoveAndClose('${esc(sec.id)}')" title="Supprimer cette section">${ICO_SZ('trash',13)} Supprimer</button>
-        <button class="mk-btn subtle" onclick="cgvSectionEditClose()">Fermer</button>
-      </div>
-    </div>
-  </div>`;
-}
 
 // Photographer template — populates preambule + sections array
 // ▼ CGV_TEMPLATE — modèle photographe (préambule + 12 sections).
@@ -11221,39 +11104,6 @@ window.paiementClearLegacy = async function() {
   render();
 };
 
-// ▼ rCgvEditor — éditeur des sections CGV
-function rCgvEditor() {
-  const sections = (S.mission.cgvSections || []);
-  // Liste compacte (lecture) : chaque section apparaît juste avec son numéro
-  // + son titre. Pour modifier titre/contenu/ordre : clic sur ⋮ dans la
-  // preview du devis. Le formulaire ne contient plus que la liste sommaire
-  // + bouton « + Ajouter ». Évite la duplication preview ↔ formulaire.
-  const sectionsHtml = sections.map((s, i) => `
-    <div class="cgv-summary-row" data-id="${s.id}">
-      <span class="cgv-summary-num">${i + 1}.</span>
-      <span class="cgv-summary-title">${esc(s.title || "(sans titre)")}</span>
-      <button class="btn-icon cgv-summary-edit" onclick="cgvSectionEditOpen('${s.id}')" title="Modifier">${ICO_SZ('moreVertical', 14)}</button>
-    </div>
-  `).join("");
-
-  return `
-    <div class="hint" style="margin:0 0 12px;font-size:12px;color:var(--text-muted);line-height:1.5;display:flex;align-items:flex-start;gap:6px">
-      <span style="flex-shrink:0;color:var(--warning);margin-top:1px">${ICO_SZ('lightbulb', 14)}</span>
-      <span>Pour modifier le <strong>titre</strong>, le <strong>contenu</strong> ou l'<strong>ordre</strong> des sections, clique sur le menu ${ICO_SZ('moreVertical', 12)} directement dans l'aperçu du devis (ou ici à droite de chaque section).</span>
-    </div>
-
-    <div class="cgv-summary-list">
-      ${sections.length === 0
-        ? `<div class="cgv-edit-empty">Aucune section CGV. Pars du <strong>modèle photographe</strong> (8 sections : acompte, rétractation, annulation, droit à l'image…) puis adapte-le — c'est le plus rapide et ça évite de laisser le sort de l'acompte non écrit.</div>`
-        : sectionsHtml}
-    </div>
-
-    <div class="cgv-actions">
-      <button class="mk-btn subtle" type="button" onclick="cgvSectionAdd()">${ICO_SZ('plus', 14)} Ajouter une section</button>
-      <button class="mk-btn subtle" type="button" onclick="cgvLoadTemplate()" title="Remplit préambule + 8 sections types pour un photographe. Remplace les sections existantes.">${ICO_SZ('clipboard', 14)} Charger le modèle photographe</button>
-    </div>
-  `;
-}
 
 // ▼ rCgvEditorUnified — éditeur CGV UNIFIÉ, foyer unique (Profil).
 // Tout sur une seule page, tout visible, zéro modale pour les sections :
@@ -12689,32 +12539,6 @@ function rDevisAccordion() {
   </div>`;
 }
 
-// ▼ rDevisSectionCgv — § 5/5 : préambule CGV + sections CGV + bloc signature.
-// Point d'entrée TOUJOURS visible (contrairement à la preview, conditionnée à
-// un client + une ligne). Expose le modèle photographe : il qualifie l'acompte
-// et fixe le sort des sommes en cas d'annulation (arrhes vs acompte, L214-1
-// C. conso) — à ne pas laisser vide.
-function rDevisSectionCgv() {
-  const d = S.mission;
-  const hasPreambule = !!(d.cgvPreambule || "").trim();
-  const hasSignature = !!(d.signatureBlock || "").trim();
-  return `
-    <h5>Préambule CGV</h5>
-    <div class="cgv-field-row">
-      <span class="hint" style="margin:0">${hasPreambule ? "Renseigné" : "Vide — le modèle en fournit un."}</span>
-      <button class="mk-btn subtle" type="button" onclick="textEditorOpen('cgvPreambule')">${ICO_SZ('edit', 13)} ${hasPreambule ? "Modifier" : "Rédiger"}</button>
-    </div>
-
-    <h5 style="margin-top:var(--gap-section)">Sections CGV</h5>
-    ${rCgvEditor()}
-
-    <h5 style="margin-top:var(--gap-section)">Bloc signature</h5>
-    <div class="cgv-field-row">
-      <span class="hint" style="margin:0">${hasSignature ? "Personnalisé" : "Bloc par défaut (« Fait à… / Bon pour accord »)."}</span>
-      <button class="mk-btn subtle" type="button" onclick="textEditorOpen('signatureBlock')">${ICO_SZ('edit', 13)} Modifier</button>
-    </div>
-  `;
-}
 
 // Section fusionnée « Majorations & paiements » : remise/URSSAF (ex
 // Ajustements) + échéances/délai/IBAN (ex Modalités de paiement). Un
@@ -13191,23 +13015,6 @@ function rDevisSectionModalites() {
     </div>
 
     ${rPaiementFields()}
-  `;
-}
-
-// ----------------------------------------------------------------------------
-// SECTION 6 — Conditions & signature (logo + photographe + paiement-text + CGV + signature)
-// ----------------------------------------------------------------------------
-// ▼ rDevisSectionConditions — § 6/6 (CGV, signature)
-function rDevisSectionConditions() {
-  const d = S.mission;
-  return `
-    <h5>Logo (optionnel)</h5>
-    ${rLogoField()}
-    <h5>Photographe (en-tête du devis, fallback)</h5>
-    ${renderLockedTextarea("photographe", d.photographe || "", "", "Vos coordonnées en haut à gauche du devis (utilisé si l'identité Profil est vide)…")}
-    <div class="hint" style="margin:14px 0 8px;font-size:12px;color:var(--text-muted);display:flex;align-items:flex-start;gap:6px"><span style="flex-shrink:0;color:var(--warning);margin-top:1px">${ICO_SZ('lightbulb', 14)}</span><span>Tout le reste (<strong>préambule CGV</strong>, <strong>conditions de paiement</strong>, <strong>sections CGV</strong>, <strong>bloc signature</strong>) est désormais éditable directement depuis l'aperçu du devis (clic sur ${ICO_SZ('moreVertical', 12)}).</span></div>
-    <h5>Sections CGV (vue compacte)</h5>
-    ${rCgvEditor()}
   `;
 }
 
