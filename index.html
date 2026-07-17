@@ -9973,6 +9973,23 @@ function rBinModal() {
 // Format des items : { h: titre court, b: explication 1-3 phrases }.
 const APP_CHANGELOG = [
   {
+    id: "2026-07-tresorerie",
+    date: "2026-07-17",
+    title: "Onglet Trésorerie + bilan comptable clarifié",
+    items: [
+      { h: "Nouvel onglet « Trésorerie » (ex Achats / Abonnements)",
+        b: "Suis ta cagnotte matériel (ce que ton activité a mis de côté − tes achats et abonnements), ton point mort (heures à facturer pour couvrir tes coûts fixes) et, pour chaque équipement, quand il a été réellement remboursé par ton activité — distinct de l'amortissement comptable." },
+      { h: "Coût horaire matériel basé sur ton activité RÉELLE",
+        b: "Fini le « 900 h/an » deviné : le coût est calculé sur tes heures réellement facturées (12 mois glissants). Une longue interruption (≥ 3 mois sans activité) est exclue pour ne pas fausser le taux. Bascule Auto / Manuel disponible." },
+      { h: "Abonnements : saisie en € par an OU par mois",
+        b: "Un bouton par ligne bascule l'unité (Adobe en €/mois, une assurance en €/an) — l'outil convertit tout seul." },
+      { h: "Bilan comptable clarifié",
+        b: "Marge corrigée (le vrai profit économique), colonne « Provision », mois d'arrêt grisés au lieu du rouge vif, taux de marge en %, en-tête figé au défilement, KPI URSSAF ramené au mois en cours. Les jauges de seuils micro-BNC / TVA sont retirées." },
+      { h: "Correction : plus de double-comptage des devis révisés",
+        b: "Le bilan comptait à tort toutes les versions d'un devis révisé (CA et URSSAF gonflés). Il ne compte désormais que la version active, comme le reste de l'app." }
+    ]
+  },
+  {
     id: "2026-07-duree-verrouillee",
     date: "2026-07-15",
     title: "Durée de validité verrouillée",
