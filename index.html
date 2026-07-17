@@ -3835,6 +3835,11 @@ if (S.suivi && S.suivi.devis && typeof S.suivi.devis === "object") {
   }
 }
 let user = null;
+// Firebase restaure la session de façon ASYNCHRONE : tant qu'il n'a pas tranché
+// (1er onAuthStateChanged), on ne sait pas si l'user est connecté. Sans ce flag,
+// render() affichait l'écran de login pendant ce court instant → flash du login
+// Google à chaque reload. Tant que false → on montre le spinner, pas le login.
+let authResolved = false;
 let tab = "accueil";
 let cloudT = null;
 
@@ -9326,7 +9331,13 @@ window.compteSetBgScrim = function(v) {
 // ▼ render — DISPATCHER : recompose app.innerHTML par onglet
 function render() {
   applyBgPhoto();
-  // Pas connecté Google → écran de login
+  // Auth pas encore tranchée par Firebase → spinner neutre (PAS le login, sinon
+  // il flashe à chaque reload le temps que la session locale soit restaurée).
+  if (!authResolved) {
+    app.innerHTML = rLoadingScreen();
+    return;
+  }
+  // Auth tranchée ET pas d'user → écran de login
   if (!user) {
     app.innerHTML = rLoginScreen();
     return;
@@ -9972,6 +9983,15 @@ function rBinModal() {
 // l'utilisateur. Plus récent en premier. id = clé stable, sert au "lu/non-lu".
 // Format des items : { h: titre court, b: explication 1-3 phrases }.
 const APP_CHANGELOG = [
+  {
+    id: "2026-07-flash-login",
+    date: "2026-07-17",
+    title: "Plus de « flash » de l'écran de connexion au rechargement",
+    items: [
+      { h: "Un spinner discret le temps que la session se restaure",
+        b: "Au rechargement de la page, l'écran de connexion Google apparaissait une fraction de seconde avant que l'app ne s'affiche. C'était le temps que le navigateur rouvre ta session. Désormais un simple « Chargement… » s'affiche pendant cet instant, l'écran de connexion n'apparaît que si tu es réellement déconnecté." }
+    ]
+  },
   {
     id: "2026-07-tresorerie",
     date: "2026-07-17",
@@ -19268,8 +19288,14 @@ window.addEventListener('resize', () => {
 });
 
 auth.onAuthStateChanged(async u => {
+  authResolved = true; // Firebase a tranché (u = user connecté ou null)
   await initWorkspace(u);
 });
+
+// Filet : si Firebase ne tranche jamais (init KO, très rare), on débloque l'écran
+// au bout de 8 s pour ne pas rester coincé sur le spinner — l'user voit alors le
+// login et peut retenter.
+setTimeout(() => { if (!authResolved) { authResolved = true; render(); } }, 8000);
 
 // Récupère le résultat d'un éventuel signInWithRedirect précédent (mobile).
 // onAuthStateChanged prendra ensuite le relais avec l'utilisateur connecté.
