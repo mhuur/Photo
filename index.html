@@ -1007,18 +1007,6 @@
   .cp-legend-note{font-size:11px;color:var(--text-dim);line-height:1.55;margin:12px 2px 0;max-width:860px}
 
   /* Compta : jauges seuils micro-BNC + franchise TVA */
-  .cp-seuils{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px;margin:0 0 22px}
-  .cp-seuil{padding:12px 14px;background:var(--surface-glass);border:1px solid var(--border-soft);border-radius:var(--radius-lg)}
-  .cp-seuil-label{display:flex;justify-content:space-between;align-items:baseline;gap:10px;font-size:13px;color:var(--text);margin-bottom:8px}
-  .cp-seuil-label > span:first-child{font-weight:600}
-  .cp-seuil-val{font-variant-numeric:tabular-nums;font-size:12px;color:var(--text-muted)}
-  .cp-seuil-bar{height:8px;background:var(--surface-2);border-radius:4px;overflow:hidden}
-  .cp-seuil-fill{height:100%;background:var(--success);transition:width .2s,background .2s}
-  .cp-seuil.warn .cp-seuil-fill{background:var(--warning)}
-  .cp-seuil.danger .cp-seuil-fill{background:var(--danger)}
-  .cp-seuil-pct{margin-top:6px;font-size:11px;color:var(--text-muted)}
-  .cp-seuil.warn .cp-seuil-pct{color:var(--warning)}
-  .cp-seuil.danger .cp-seuil-pct{color:var(--danger)}
 
   .btn.btn-rouge{background:var(--danger);color:#fff}.btn.btn-rouge:hover{background:var(--danger-dark);box-shadow:0 2px 8px rgba(232,69,28,.3)}
   .btn.btn-gris{background:var(--text-dim);color:#fff}.btn.btn-gris:hover{background:var(--text-muted)}
@@ -17496,12 +17484,6 @@ function rCP() {
   const ursafMois = monthRow ? monthRow.ursaf : 0;
 
   // Seuils micro-BNC (BNC photographe : 77 700 € HT) et franchise TVA (39 100 €)
-  const SEUIL_BNC = 77700;
-  const SEUIL_TVA = 39100;
-  const pctBNC = SEUIL_BNC > 0 ? Math.min(100, (ytd.ca / SEUIL_BNC) * 100) : 0;
-  const pctTVA = SEUIL_TVA > 0 ? Math.min(100, (ytd.ca / SEUIL_TVA) * 100) : 0;
-  const seuilCls = pct => pct >= 95 ? "danger" : pct >= 80 ? "warn" : "ok";
-
   // Filtre année : compteurs par année disponibles
   const yearsAvailable = [...new Set(allData.map(r => r.ym.slice(0, 4)))].sort().reverse();
   const allYearsActive = comptaFilterYears.size === 0;
@@ -17516,25 +17498,6 @@ function rCP() {
       <div class="cp-kpi"><span class="cp-kpi-label">Salaire net cumulé</span><strong class="cp-kpi-value cp-kpi-ok">${fmt(ytd.salaire)}</strong></div>
       <div class="cp-kpi"><span class="cp-kpi-label">URSSAF du mois (${esc(MOIS_FR[today.getMonth()])})</span><strong class="cp-kpi-value cp-kpi-warn" title="URSSAF à mettre de côté sur les encaissements de ce mois-ci (22 % du CA déclaré du mois). Le total annuel figure dans le tableau (sous-total).">${fmt(ursafMois)}</strong></div>
       <div class="cp-kpi"><span class="cp-kpi-label">Marge nette ${esc(currentYear)}</span><strong class="cp-kpi-value cp-kpi-${ytd.marge >= 0 ? 'azure' : 'danger'}">${fmt(ytd.marge)}</strong></div>
-    </div>
-
-    <div class="cp-seuils">
-      <div class="cp-seuil ${seuilCls(pctBNC)}">
-        <div class="cp-seuil-label">
-          <span>Plafond micro-BNC</span>
-          <span class="cp-seuil-val">${fmt(ytd.ca)} / ${fmt(SEUIL_BNC)}</span>
-        </div>
-        <div class="cp-seuil-bar"><div class="cp-seuil-fill" style="width:${pctBNC.toFixed(1)}%"></div></div>
-        <div class="cp-seuil-pct">${pctBNC.toFixed(1)} % du seuil annuel atteint</div>
-      </div>
-      <div class="cp-seuil ${seuilCls(pctTVA)}">
-        <div class="cp-seuil-label">
-          <span>Franchise TVA</span>
-          <span class="cp-seuil-val">${fmt(ytd.ca)} / ${fmt(SEUIL_TVA)}</span>
-        </div>
-        <div class="cp-seuil-bar"><div class="cp-seuil-fill" style="width:${pctTVA.toFixed(1)}%"></div></div>
-        <div class="cp-seuil-pct">${pctTVA.toFixed(1)} % du seuil — sortie de franchise au-delà</div>
-      </div>
     </div>
 
     ${comptaChartHtml()}
