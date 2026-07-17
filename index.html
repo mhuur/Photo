@@ -17474,6 +17474,11 @@ function rCP() {
   }), { ca:0, salaire:0, tresorerie:0, ursaf:0, abos:0, amort:0 });
   ytd.marge = r2(ytd.salaire + ytd.tresorerie - ytd.abos - ytd.amort);
   const caMois = monthRow ? monthRow.ca : 0;
+  // URSSAF du MOIS EN COURS uniquement (à mettre de côté sur les encaissements de
+  // ce mois) — PAS le cumul annuel : le cumul ferait « re-provisionner » des mois
+  // déjà déclarés/payés à l'URSSAF (l'app ne suit pas les paiements). Arbitrage
+  // 2026-07-17 : on affiche la part du mois, basta.
+  const ursafMois = monthRow ? monthRow.ursaf : 0;
 
   // Seuils micro-BNC (BNC photographe : 77 700 € HT) et franchise TVA (39 100 €)
   const SEUIL_BNC = 77700;
@@ -17494,7 +17499,7 @@ function rCP() {
       <div class="cp-kpi"><span class="cp-kpi-label">CA mois (${esc(MOIS_FR[today.getMonth()])} ${esc(currentYear)})</span><strong class="cp-kpi-value">${fmt(caMois)}</strong></div>
       <div class="cp-kpi"><span class="cp-kpi-label">CA cumulé ${esc(currentYear)}</span><strong class="cp-kpi-value">${fmt(ytd.ca)}</strong></div>
       <div class="cp-kpi"><span class="cp-kpi-label">Salaire net cumulé</span><strong class="cp-kpi-value cp-kpi-ok">${fmt(ytd.salaire)}</strong></div>
-      <div class="cp-kpi"><span class="cp-kpi-label">URSSAF à provisionner</span><strong class="cp-kpi-value cp-kpi-warn">${fmt(ytd.ursaf)}</strong></div>
+      <div class="cp-kpi"><span class="cp-kpi-label">URSSAF du mois (${esc(MOIS_FR[today.getMonth()])})</span><strong class="cp-kpi-value cp-kpi-warn" title="URSSAF à mettre de côté sur les encaissements de ce mois-ci (22 % du CA déclaré du mois). Le total annuel figure dans le tableau (sous-total).">${fmt(ursafMois)}</strong></div>
       <div class="cp-kpi"><span class="cp-kpi-label">Marge nette ${esc(currentYear)}</span><strong class="cp-kpi-value cp-kpi-${ytd.marge >= 0 ? 'azure' : 'danger'}">${fmt(ytd.marge)}</strong></div>
     </div>
 
