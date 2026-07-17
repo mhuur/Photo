@@ -12234,7 +12234,12 @@ window.suiviUpdateSnapshot = async function() {
   const tresoRatio = (t.tarifH > 0 && tm.tauxAvecSecurite > 0) ? (tm.tauxAvecSecurite / t.tarifH) : 0;
   const applyLine = (prev, echId, echeance, montant, heures) => {
     const ursaf = isDeclared ? r2(montant * urssafPct / 100) : 0;
-    const tresorerie = r2(montant * tresoRatio);
+    // Garde-fou : la provision ne peut pas dépasser ce qui reste après URSSAF,
+    // sinon le salaire deviendrait négatif (coût horaire matériel très élevé sur
+    // une activité faible). On plafonne → salaire ≥ 0.
+    let tresorerie = r2(montant * tresoRatio);
+    const maxTreso = Math.max(0, r2(montant - ursaf));
+    if (tresorerie > maxTreso) tresorerie = maxTreso;
     const salaire = r2(montant - ursaf - tresorerie);
     const en = prev || { id: uid(), commentaires: "", statut: "envoye" };
     en.devisId = e.id; en.date = date; en.client = client; en.prestation = prestation;
@@ -13927,7 +13932,11 @@ async function suiviAdd() {
 
   const mkLine = (echId, echeance, montant, heures) => {
     const ursaf      = isDeclared ? r2(montant * urssafPct / 100) : 0;
-    const tresorerie = r2(montant * tresoRatio);
+    // Garde-fou : provision plafonnée à ce qui reste après URSSAF → salaire ≥ 0
+    // (cf. applyLine). Sinon coût horaire élevé + faible activité = salaire négatif.
+    let tresorerie   = r2(montant * tresoRatio);
+    const maxTreso   = Math.max(0, r2(montant - ursaf));
+    if (tresorerie > maxTreso) tresorerie = maxTreso;
     const salaire    = r2(montant - ursaf - tresorerie);
     return {
       id: uid(), devisId, date, client, prestation, echId,
@@ -17283,6 +17292,12 @@ function bilanCompute() {
     return byMonth[ym];
   };
   for (const e of S.suivi.entries) {
+    // ⚠ Ne compter QUE la révision active de chaque chaîne — comme l'Accueil,
+    // l'Historique et la fiche client (_isActiveEntry). Sans ce filtre, un devis
+    // révisé était compté sur TOUTES ses versions → CA et URSSAF gonflés (double
+    // comptage confirmé par test 2026-07-17). bilanCompute était le seul agrégat
+    // à l'oublier.
+    if (!_isActiveEntry(e)) continue;
     // Bilan de caisse : SEULES les entries encaissées y figurent, rattachées au
     // mois de leur encaissement (et non au mois du devis/prestation).
     if (!entryEncaisse(e)) continue;
