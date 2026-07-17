@@ -65,7 +65,7 @@ Source : `index.html` (bloc `const DEFAULT_S = { ... };`).
     - label: string _(default `"Acompte à la commande"`)_
     - pct: string _(default `"30"`)_
   - **photographe**: string _(default `""`)_
-  - **conditionsPaiement**: string _(default `"Acompte de 30 % à la commande, solde de 70 % à la livrai…`)_
+  - **conditionsPaiement**: string _(default `""`)_
   - **paiement** _(object)_
     - **delai**: string _(default `"30j_fdm"`)_
     - **banque**: string _(default `""`)_

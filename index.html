@@ -3408,7 +3408,7 @@ const DEFAULT_S = {
       { id: "ech2", label: "À la livraison", pct: "70" }
     ],
     photographe: "",
-    conditionsPaiement: "Acompte de 30 % à la commande, solde de 70 % à la livraison.\nRèglement par virement bancaire.\nEn cas de retard de paiement, des pénalités de 3 fois le taux d'intérêt légal seront appliquées.",
+    conditionsPaiement: "",   // LEGACY (texte libre figé) — retiré de l'UI 2026-07-17. Modalités réelles = échéancier + délai + IBAN. Ne plus semer de défaut.
     paiement: { delai: "30j_fdm", banque: "", titulaire: "", iban: "", bic: "", margeAvance: "0", margeUrssaf: "22" },
     cgv: "",
     cgvPreambule: "",
@@ -9933,7 +9933,9 @@ const APP_CHANGELOG = [
       { h: "Réordonner et éditer les articles sans fenêtres qui s'ouvrent",
         b: "Chaque article a son titre et son texte éditables sur place, avec des flèches pour le monter/descendre et une corbeille pour le supprimer (annulation possible). Fini les 8 pop-ups à ouvrir-fermer." },
       { h: "Dans l'aperçu du devis : lecture seule + « Personnaliser »",
-        b: "L'aperçu affiche les CGV proprement, sans les petits menus d'édition partout. Un seul lien « Personnaliser les CGV de ce devis » ouvre le même éditeur si tu veux les adapter pour ce devis précis." }
+        b: "L'aperçu affiche les CGV proprement, sans les petits menus d'édition partout. Un seul lien « Personnaliser les CGV de ce devis » ouvre le même éditeur si tu veux les adapter pour ce devis précis." },
+      { h: "Suppression du champ « Conditions de paiement » (doublon)",
+        b: "Ce vieux texte libre (« Acompte de 30 %… ») était figé et ne suivait pas ton échéancier réel. Il est retiré de l'éditeur : les modalités affichées sur le devis viennent désormais uniquement de ton échéancier (Mission), du délai de paiement et de ton IBAN (Profil)." }
     ]
   },
   {
@@ -11161,10 +11163,15 @@ function rCgvEditorUnified() {
         </div>
       </div>
       <hr class="cgvu-sep">
-      ${richRow("conditionsPaiement", "Conditions de paiement", "Vide — le bloc « Modalités de paiement » (IBAN/BIC) suffit.")}
       ${richRow("signatureBlock", "Bon pour accord (signature)", "Bloc de signature par défaut appliqué.")}
     </div>`;
 }
+// NB : « Conditions de paiement » (S.mission.conditionsPaiement) volontairement
+// ABSENT de l'éditeur — champ LEGACY (texte libre figé) qui ne suit pas
+// l'échéancier. Les modalités réelles = échéancier (Mission) + délai + IBAN
+// (Profil). Il ne s'affiche plus sur le devis que comme filet legacy si aucun
+// IBAN (rDevisPreview: `legacy && !hasBank`), avec bouton « Effacer l'ancien
+// texte » dans rPaiementFields. Défaut vidé dans DEFAULT_S. Ne pas réintroduire.
 
 // ▼ cgvEditorOverlay — overlay « Personnaliser les CGV de ce devis » ouvert
 // depuis l'aperçu (lien live-only). Réutilise rCgvEditorUnified() tel quel :
