@@ -40,9 +40,9 @@ grep -nE "^function r[A-Z]" index.html    # liste tous les renderers (rXX)
 - `hooks/` — git hooks.
 - **Workspace cloud** : doc unique `users/<ownerUid>` partagé via `workspaces/<ownerUid>.members`. Sync live `onSnapshot` + anti-écho `_lastWriteBy` (fenêtre 2s).
 
-**Renderers par onglet** : `rMS` Mission, `rPF` Profil, `rCatalogue`/`rAchats` Catalogue/Achats, `rSV` Historique (ex-Suivi), `rCL` Clients, `rCP` Compta, `rAC` Accueil, `rBG` Notes, `rMAJ` Mises à jour, `rParametres`, `rTemplates`. Helpers : `esc() save() render() upd() num() fmt() r2() dateFR() uid()`.
+**Renderers par onglet** : `rMS` Mission, `rPF` Profil, `rCatalogue`/`rAchats` Catalogue/Trésorerie (clé `achats`, label « Trésorerie », icône `wallet`), `rSV` Historique (ex-Suivi), `rCL` Clients, `rCP` Compta, `rAC` Accueil, `rBG` Notes, `rMAJ` Mises à jour, `rParametres`, `rTemplates`. Helpers : `esc() save() render() upd() num() fmt() r2() dateFR() uid()`.
 
-**Navigation — `NAV` = source unique** : sidebar en 2 groupes dépliables (`Missions` : Devis en cours / Nouveau devis / Catalogue / Clients / Mon Profil — `Comptabilité` : Bilan comptable / Historique / Achats / Abonnements). ⚠ Ces libellés divergent de la maquette (« Mission / Suivi devis / Achats ») : c'est VOLONTAIRE (arbitrage 2026-07-14), ne pas les « rétablir ». `TABS` en est **dérivé** (`NAV.flatMap`), et `pageTitle()` en découle → renommer un label dans `NAV` propage à la sidebar, au h1 de la page ET au select « onglet concerné » des Notes (`BUG_TAB_OPTIONS`, dérivé lui aussi). ⚠ Les **clés** d'onglet (`accueil`, `mission`, `compta`, `suivi`…) ne changent JAMAIS : tous les `setTab('suivi')` du code en dépendent. Seuls les labels et le regroupement bougent. Les `id` de groupe sont préfixés `nav-` car le groupe « Mission » contient un onglet dont la clé est aussi `mission`. Onglet secondaire (pied de sidebar, hors des 2 groupes) → `TABS_AUX_LABELS` (`bugs`, `compte`).
+**Navigation — `NAV` = source unique** : sidebar en 2 groupes dépliables (`Missions` : Devis en cours / Nouveau devis / Catalogue / Clients / Mon Profil — `Comptabilité` : Bilan comptable / Historique / Trésorerie). ⚠ Ces libellés divergent de la maquette (« Mission / Suivi devis / Achats ») : c'est VOLONTAIRE (arbitrage 2026-07-14), ne pas les « rétablir ». `TABS` en est **dérivé** (`NAV.flatMap`), et `pageTitle()` en découle → renommer un label dans `NAV` propage à la sidebar, au h1 de la page ET au select « onglet concerné » des Notes (`BUG_TAB_OPTIONS`, dérivé lui aussi). ⚠ Les **clés** d'onglet (`accueil`, `mission`, `compta`, `suivi`…) ne changent JAMAIS : tous les `setTab('suivi')` du code en dépendent. Seuls les labels et le regroupement bougent. Les `id` de groupe sont préfixés `nav-` car le groupe « Mission » contient un onglet dont la clé est aussi `mission`. Onglet secondaire (pied de sidebar, hors des 2 groupes) → `TABS_AUX_LABELS` (`bugs`, `compte`).
 
 - **`TABS_LEGACY` — onglets dissous, jamais supprimés pour autant** : `parametres`/`majlog` (→ sections de `compte`) et `templates` (→ Profil) ont disparu de la nav en phase 6, mais leurs **clés survivent** dans `S.bugs.items[].tab` (notes déjà classées) et dans les vieux liens `?tab=…`. `TABS_LEGACY` mappe chaque clé morte vers `{ tab, section? }` ; `setTab` y redirige et `pageTitle`/`bugTabLabel` en dérivent leur libellé. **Toute suppression future d'un onglet passe par là**, sinon les notes archivées affichent « — » et le lien ouvre une page vide.
 
@@ -162,7 +162,15 @@ Formulaire rapide (allégé au maximum) : réf, date d'émission, client, catalo
 
 Par entry : `e.montant` = encaissé total (toujours rempli). `e.ca` = part déclarée (0 si au noir). `e.ursaf` = 0 si au noir. `e.salaire`/`e.tresorerie` = remplis quel que soit le statut.
 
-`bilanCompute()` : colonne **Payé** = Σ `montant`, colonne **CA** = Σ `ca` (seuils micro-BNC/TVA). **Ne jamais utiliser `montant - frais` comme fallback pour `ca`** : `ca=0 ∧ montant>0` est volontaire. Promouvoir = faute fiscale.
+`bilanCompute()` : colonne **Payé** = Σ `montant`, colonne **CA** = Σ `ca`. **Ne jamais utiliser `montant - frais` comme fallback pour `ca`** : `ca=0 ∧ montant>0` est volontaire. Promouvoir = faute fiscale.
+
+⚠ **`bilanCompute()` DOIT filtrer `_isActiveEntry`** (comme `rAC`/Historique/fiche client) — sans ça, un devis **révisé** est compté sur TOUTES ses versions → CA et URSSAF **doublés**. C'était le seul agrégat à l'oublier (corrigé 2026-07-17, test dédié). Tout nouvel agrégat sur `S.suivi.entries` filtre pareil.
+
+**Marge du bilan = `salaire + tresorerie − abos − amort`** (profit économique). La trésorerie (provision) finance déjà abos+matériel : l'ancienne formule `salaire − charges` les déduisait **2×**. Inclut l'au-noir et l'amortissement (non-cash). La colonne `tresorerie` est **affichée « Provision »** (classe CSS `cp-col-tresorerie` inchangée) pour ne pas collisionner avec l'onglet Trésorerie.
+
+**KPI « URSSAF du mois » = `monthRow.ursaf`**, PAS le cumul annuel : l'app ne suit pas les paiements URSSAF, donc un cumul ferait « re-provisionner » des mois déjà déclarés/payés (arbitrage 2026-07-17). Les **jauges de seuils** micro-BNC / TVA ont été **retirées** du bilan (non utilisées).
+
+**Garde-fou salaire ≥ 0** : dans `mkLine` (suiviAdd) ET `applyLine` (paste) la provision (`tresorerie = montant × tresoRatio`) est plafonnée à `montant − ursaf` → le salaire ne peut plus devenir négatif quand le coût horaire matériel s'envole sur une activité faible.
 
 `S.mission.declare` (true par défaut) câble la décomposition à `suiviAdd()`. Pas de facture sur devis au noir : `isDevisAuNoir(devisId)` bloque `isFactureApplicable` + `viewFactureOpen` + UI.
 
@@ -171,6 +179,18 @@ Par entry : `e.montant` = encaissé total (toujours rempli). `e.ca` = part décl
 **L'écart `paye − ca` EST la part au noir** — et il doit se VOIR, sinon un mois où `CA < Payé` se lit comme une erreur de saisie. Deux endroits l'exposent : `comptaChartHtml()` (barres **empilées** : déclaré en azure, noir en ember — le graphe ne montrait que le CA, donc sous-estimait visuellement ce qui était rentré) et le marqueur `.cp-noir-tag` dans la colonne CA du bilan (`cellCA`). ⚠ Ne jamais « corriger » cet écart en promouvant `paye` dans `ca` : ce serait une faute fiscale (cf. § Au noir vs déclaré).
 
 **Achats — `tauxMatos().materielAnnuel` est PROSPECTIF** : c'est la charge d'amortissement des **12 mois à venir** (un équipement qui finit de s'amortir dans 4 mois ne compte que 4 mensualités), pas un cumul annuel passé. Tout libellé doit le dire. Le KPI ne compte que les équipements **encore** en cours d'amortissement (`am.invStatus[].fullyAmorti`).
+
+### Onglet Trésorerie (`rAchats`, clé `achats`, label « Trésorerie »)
+
+Moteur ajouté 2026-07-16/17. **Tout DÉRIVE de `bilanCompute`** (jamais un 2ᵉ calcul des recettes — même règle que `devisStageLabel` vs timeline). Ancres `// ▼` dans le bloc « TRÉSORERIE — moteur ».
+
+- **`heuresReelles()` / `heuresEffectives()`** — dénominateur du coût horaire matériel = heures RÉELLEMENT facturées (12 mois glissants, annualisées si < 12), plus le « 900 h/an » figé. **Dormance** : on recule depuis le mois courant et on coupe au 1ᵉʳ trou de `ACTIVITY_GAP_MONTHS` (=3) mois vides consécutifs → une longue interruption (arrêt) est exclue, sinon ses zéros écrasent le taux. Creux ≤ 2 mois tolérés. Mode `S.tarifs.heuresMode` (`auto`|`manuel`) ; `heuresAnnuelles` = valeur forcée en manuel + repli si pas d'historique.
+- **`tresoCashflow()`** — cagnotte matériel cumulée : provision (`tresorerie`) encaissée − achats **PRIX PLEIN à leur date** (≠ amortissement) − abos payés.
+- **`invPayback()`** — remboursement RÉEL par équipement, **FIFO** (ordre d'achat), date ou %. **≠ `amortizationAnalysis`** (amortissement comptable, fonction du seul temps écoulé). Purement informatif : aucune garde d'ordre n'en dépend. Colonne « Remboursé » du tableau matériel, à côté d'Amorti/Reste.
+- **`tresoStats()`** — cagnotte · coût fixe mensuel (`_abonnementsForMonth + _amortMatosForMonth`) · point mort (= coût fixe ÷ coût horaire matériel).
+- **Abonnement `unit`** (`an`|`mois`) = préférence de SAISIE ; `annuel` reste canonique (tous les `num(e.annuel)` inchangés). Helpers `aboUnit`/`aboDisplayValue`/`editAbonnementMontant`/`toggleAboUnit`.
+- **Amortissement (bilan) ≠ Remboursement (Trésorerie)** — piège de vocabulaire : « Amorti » = étalement comptable terminé (temps) ; « Remboursé » = l'activité a réellement couvert l'achat (cash). Les deux tombent à des moments différents. Ne pas les confondre dans un libellé.
+- Schéma : `S.tarifs.heuresMode` (`"auto"`) + `abonnement.unit` (`"an"`) — câblés dans DEFAULT_S + les 4 points load/save (cf. règle « tout nouveau champ »).
 
 ### Rattachement des recettes = date d'ENCAISSEMENT (compta de caisse)
 
